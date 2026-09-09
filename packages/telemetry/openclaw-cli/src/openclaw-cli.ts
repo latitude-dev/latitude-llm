@@ -8,7 +8,7 @@ import { type SpawnSyncReturns, spawnSync } from "node:child_process"
  * versions is intentional — we'd rather fail loudly than ship a
  * config the gateway will quarantine or hooks the dispatcher will block.
  */
-export const MIN_OPENCLAW_VERSION = "2026.4.25"
+export const MIN_OPENCLAW_VERSION = "2026.8.1"
 
 const DEFAULT_TIMEOUT_MS = 10_000
 

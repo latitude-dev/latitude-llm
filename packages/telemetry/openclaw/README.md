@@ -1,291 +1,137 @@
 # @latitude-data/openclaw-telemetry
 
-> [!NOTE]
-> **OpenClaw's official OpenTelemetry exporter is the preferred setup** — the
-> bundled [`@openclaw/diagnostics-otel`](https://docs.openclaw.ai/gateway/opentelemetry)
-> plugin pointed at Latitude's OTLP ingest. It follows OpenTelemetry GenAI
-> semantic conventions, is maintained by OpenClaw, and produces a cleaner
-> `invoke_agent → chat → execute_tool` trace tree.
->
-> This plugin stays supported for one reason: it emits a `session.id`, so it is
-> currently the only way to group a multi-turn conversation into a Latitude
-> **session**. The native exporter doesn't export a session id yet
-> ([openclaw/openclaw#91927](https://github.com/openclaw/openclaw/issues/91927)).
-> If you don't need session grouping, prefer the official exporter —
-> [Latitude docs → OpenClaw telemetry](https://docs.latitude.so/telemetry/openclaw).
+OpenClaw plugin that streams every agent run to [Latitude](https://latitude.so) as OTLP traces: the user prompt and the sending user, the system prompt, every model call with its own tokens, cost and time to first token, the tools the agent was offered and the ones it called, memory reads and writes, subagents, cron runs and compactions, all grouped into one Latitude session per OpenClaw session.
 
-OpenClaw plugin that streams every agent run to [Latitude](https://latitude.so) as OTLP traces — full system prompt, message history, assistant output, token usage, tool I/O, and the running agent's name on every span.
+This is the OpenClaw counterpart to the other harness integrations ([`latitude-telemetry-hermes`](../hermes), [`@latitude-data/claude-code-telemetry`](../claude-code), [`@latitude-data/pi-telemetry`](../pi)).
+
+> OpenClaw also bundles a generic OpenTelemetry exporter (`@openclaw/diagnostics-otel`). It deliberately scrubs session, run and user ids ([openclaw/openclaw#91927](https://github.com/openclaw/openclaw/issues/91927)), exports no system prompt, no tool definitions and no memory, so it cannot produce Latitude sessions, users, tool rollups or the memory ledger. Use this plugin for full fidelity.
 
 ## Requirements
 
-- **OpenClaw 2026.4.25 or newer** on PATH.
+- **OpenClaw 2026.8.1 or newer** on PATH.
 - A **Latitude API key** from `https://console.latitude.so/projects/<your-slug>/settings/keys` and the matching **project slug**.
 
 ## Install
 
-### Recommended — one-shot CLI
-
-The companion CLI handles every step (install, config, validate, restart) in one command:
+### One-shot CLI
 
 ```bash
-npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 install
+npx -y @latitude-data/openclaw-telemetry-cli@0.1.0 install
 ```
 
-It prompts for your API key and project slug, runs `openclaw plugins install` for you, writes the plugin entry into `openclaw.json`, adds the plugin to `plugins.allow`, validates the result, and (on TTY) offers to restart the gateway. See the [CLI README](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw-cli#readme) for the full flag matrix, dry-run mode, custom config dir, and CI usage.
+The installer prompts for the API key and project slug, runs `openclaw plugins install --accept-capabilities`, writes the plugin entry into `openclaw.json`, adds it to `plugins.allow`, validates the result and offers to restart the gateway. See the [CLI README](../openclaw-cli#readme) for flags, dry-run mode, custom config dir and CI usage.
 
 ### Manual install
 
-If you'd rather not use the CLI, do exactly what it does, in four steps:
-
-#### 1. Install the runtime
-
 ```bash
-openclaw plugins install @latitude-data/openclaw-telemetry@0.0.9
-```
+openclaw plugins install @latitude-data/openclaw-telemetry@0.1.0 --accept-capabilities
 
-Pin to an exact version. OpenClaw's `security audit --deep` warns about unpinned install specs, so always include the `@<version>` suffix.
-
-OpenClaw fetches from npm, runs its security scan, copies files into `~/.openclaw/extensions/<id>/`, and creates a (disabled) `plugins.entries["@latitude-data/openclaw-telemetry"]` entry in `~/.openclaw/openclaw.json`.
-
-#### 2. Configure and enable
-
-Run these `openclaw config set` commands (use bracket notation so the scoped package name parses correctly). Substitute your real API key and project slug:
-
-```bash
-openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].config.apiKey' "lat_xxx"
-openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].config.project' "my-project-slug"
-openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].config.allowConversationAccess' true
-openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].hooks.allowConversationAccess' true
-openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].enabled' true
-```
-
-Both `allowConversationAccess` writes are required — see [The two flags](#the-two-flags).
-
-#### 3. Add to `plugins.allow` (optional but recommended)
-
-OpenClaw warns at every gateway restart about non-bundled plugins that auto-load without provenance via `plugins.allow`. Silence the warning:
-
-```bash
-# `config set` can't append to arrays — set the whole list. Include any other
-# plugins you already have in `plugins.allow`.
-openclaw config set 'plugins.allow' '["@latitude-data/openclaw-telemetry"]'
-```
-
-#### 4. Restart the gateway
-
-```bash
+P='plugins.entries["@latitude-data/openclaw-telemetry"]'
+openclaw config set "$P.config.apiKey" "lat_xxx"
+openclaw config set "$P.config.project" "my-project-slug"
+openclaw config set "$P.config.allowConversationAccess" true
+openclaw config set "$P.hooks.allowConversationAccess" true
+openclaw config set "$P.enabled" true
 openclaw gateway restart
 ```
 
-Verify everything's wired:
+`--accept-capabilities` records your consent to the plugin's declared surface; OpenClaw requires it for every non-bundled plugin. Both `allowConversationAccess` keys are required, see [The two flags](#the-two-flags). Optionally add the plugin id to `plugins.allow` to silence OpenClaw's provenance warning at startup (`config set` replaces the whole array, so include any ids already there).
+
+Verify:
 
 ```bash
 openclaw config validate --json
-# → {"valid": true, ...}
-
-grep -E "blocked|plugin not found|latitude" /tmp/openclaw/openclaw-*.log | tail
-# → ready (N plugins: ..., @latitude-data/openclaw-telemetry, ...)
-# → no "blocked", no "plugin not found"
+grep -E "latitude-openclaw|typed hook" /tmp/openclaw/openclaw-*.log | tail
 ```
 
-Send a message to one of your OpenClaw agents — within seconds, traces appear at `https://console.latitude.so/projects/<your-slug>`.
-
-#### Or: hand-edit `~/.openclaw/openclaw.json`
-
-Equivalent to steps 2 + 3 in one paste:
-
-```jsonc
-{
-  "plugins": {
-    "allow": ["@latitude-data/openclaw-telemetry"],
-    "entries": {
-      "@latitude-data/openclaw-telemetry": {
-        "enabled": true,
-        "hooks": {
-          "allowConversationAccess": true
-        },
-        "config": {
-          "apiKey": "lat_xxx",
-          "project": "my-project-slug",
-          "allowConversationAccess": true
-        }
-      }
-    }
-  }
-}
-```
-
-Merge with whatever else is in `openclaw.json`. Then run `openclaw config validate` and `openclaw gateway restart`.
+With `config.debug` on, the gateway log shows `[latitude-openclaw] enabled v0.1.0 ...` at startup and one `exported N spans` line per run.
 
 ## Uninstall
 
-If you installed via the CLI:
-
 ```bash
-npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 uninstall
+npx -y @latitude-data/openclaw-telemetry-cli@0.1.0 uninstall
+# or
+openclaw plugins uninstall @latitude-data/openclaw-telemetry --force && openclaw gateway restart
 ```
-
-Manual uninstall:
-
-```bash
-openclaw plugins uninstall @latitude-data/openclaw-telemetry --force
-openclaw gateway restart
-```
-
-OpenClaw removes the extension files, install record, plugin entry, and the `plugins.allow` entry.
-
-## Targeting staging or local dev
-
-By default the plugin sends to production (`https://ingest.latitude.so`). Override `baseUrl` to point elsewhere:
-
-```bash
-# Staging
-openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].config.baseUrl' \
-  "https://staging-ingest.latitude.so"
-
-# Local dev
-openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].config.baseUrl' \
-  "http://localhost:3002"
-```
-
-The CLI handles this with `--staging` / `--dev` flags.
-
-## Structural-only telemetry (no content capture)
-
-To get trace metadata (timings, token usage, model name, agent name, ids) without prompt/response content, keep `hooks.allowConversationAccess` at `true` so events still dispatch, and set only `config.allowConversationAccess` to `false`:
-
-```bash
-openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].config.allowConversationAccess' false
-openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].hooks.allowConversationAccess' true
-```
-
-Setting `hooks.allowConversationAccess=false` would block dispatch entirely — see [The two flags](#the-two-flags). With this config the plugin still emits the full span tree, just with content attributes (`gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.system_instructions`, tool args/results) scrubbed. Each span carries `latitude.captured.content: false` so the gate state is visible in the Latitude UI.
-
-The CLI handles this with `--no-content`.
 
 ## What gets sent
 
-For each agent run, the plugin emits one trace shaped like the actual run:
+One trace per agent run (a user turn, a cron run, a heartbeat, a subagent run):
 
 ```
-agent (root, traceId = hash(runId))
-├─ compaction         (0..1, rare; budget-triggered)
-├─ model_call         (1..N, one per provider API call)
-├─ tool_call: foo     (between model_calls; sibling of agent)
-├─ model_call
-├─ tool_call: bar
-├─ subagent           (0..N — the child's full agent tree nests under here)
-│   └─ agent
-│       ├─ model_call
-│       └─ tool_call: ...
-└─ model_call         (final)
+interaction                              invoke_agent   prompt, final answer, outcome, sender
+├── search_memory                        memory         the snapshot injected at session start, once per session
+├── llm_request                          chat           tokens, cost, TTFT, system prompt, tool definitions, messages
+├── tool_call:<name>                     execute_tool   arguments, result, error
+│   └── search_memory | upsert_memory    memory         memory tools and memory file writes
+├── tool_call:sessions_spawn
+│   └── subagent                         spawn → ended, with the child run's interaction nested inside
+├── compaction
+└── llm_request
 ```
 
-Five span kinds:
+Every span carries the OpenClaw session id (`session.id`), the sender of a user turn (`user.id`), the agent (`gen_ai.agent.name`), derived tags and `openclaw.*` metadata. A subagent's spans join the parent's trace and session so one delegation reads as one conversation.
 
-- **`agent`** — root of the run. Carries `openclaw.session.key`, `openclaw.agent.id`, `openclaw.agent.name`, aggregated token usage across all generations, run duration, success/error status, the first user prompt, and the full final message list. Attempt-aggregate `gen_ai.*` lands here.
-- **`model_call`** — one per provider API call inside the run. Carries provider, request/response model, `openclaw.api`, `openclaw.transport`, per-call duration, outcome, error category, time-to-first-byte, request payload bytes, response stream bytes, upstream request id hash, and `gen_ai.input.messages` snapshotted at the moment that generation started. Per-call output messages and per-call token usage aren't surfaced by OpenClaw today (attempt-aggregate only); those stay on `agent`.
-- **`tool_call:<name>`** — one per tool invocation. Canonical `gen_ai.tool.*` attributes: `name`, `call.id`, `call.arguments`, `call.result`. Sibling of `agent`, NOT child of `model_call` — tools run between generations, not during them.
-- **`compaction`** — rare; fires when OpenClaw hits the message budget mid-run. Records before/after message counts and the compacted-out count.
-- **`subagent`** — one per child run spawned by this agent. The child's entire `agent` subtree (its own `model_call`s, `tool_call`s, even further-nested `subagent`s) parents itself underneath via cross-runId trace propagation, so a spawn tree is one waterfall in one trace.
+Per-call usage, cost, finish reason and output come from the run's transcript at `agent_end`, matched to each `model_call_started` / `model_call_ended` window by timestamp; OpenClaw's own cost is reported as the span's cost so a model missing from Latitude's catalog still shows a price. Tags are `openclaw`, the channel (`slack`, `telegram`, ...), the agent id, `cron:<job>` on cron runs and `subagent:<agent>` on a run that spawned one, plus whatever `config.tags` adds.
 
-Every span carries `openclaw.agent.id` and `openclaw.agent.name` — multi-agent setups produce spans tagged with the invoking agent's id, letting you filter and group by agent in the Latitude UI. All spans share the same `traceId`, so they group as one trace per agent run (and one trace per spawn tree, by virtue of the subagent linkage).
+Design notes, hook traps and the full attribute tables live in [`dev-docs/openclaw-telemetry.md`](../../../dev-docs/openclaw-telemetry.md).
 
-### Backend caveat: Codex / Claude-Code-style providers
+## Configuration
 
-OpenClaw's `model_call_started` / `model_call_ended` hooks fire from its `selection` layer, which wraps the agent's `streamFn` invocation. For "agentic" backends (Codex, Claude Code) the inner generations happen inside the backend's own loop and don't surface as separate `model_call` events. Result: a Codex-backed run shows ONE `model_call` per attempt instead of N. Anthropic and OpenAI direct don't have this issue. The fix is upstream in OpenClaw — out of scope for this plugin.
+Everything lives under `plugins.entries["@latitude-data/openclaw-telemetry"]`.
 
-## How it works
+### `.config` — read by the plugin
 
-We subscribe to OpenClaw's typed plugin hooks (`src/plugins/hook-types.ts` upstream). The model is "one span per paired before/after (or start/end) event":
-
-| Span | Start hook | End hook |
+| Key | Default | Description |
 | --- | --- | --- |
-| `agent` | `before_agent_start` | `agent_end` |
-| `model_call` | `model_call_started` | `model_call_ended` |
-| `tool_call` | `before_tool_call` | `after_tool_call` |
-| `compaction` | `before_compaction` | `after_compaction` |
-| `subagent` | `subagent_spawned` | `subagent_ended` |
+| `apiKey` | — | Latitude API key (required). |
+| `project` | — | Project slug (required). |
+| `baseUrl` | `https://ingest.latitude.so` | Ingest origin, without `/v1/traces`. |
+| `allowConversationAccess` | `false` | Attach prompts, responses, system prompt, tool I/O and memory bodies. Must match `hooks.allowConversationAccess`. |
+| `serviceName` | `openclaw` | OTLP `service.name`, the Service axis in Latitude. |
+| `tags` | — | Extra tags, array or comma-separated string. |
+| `metadata` | — | Extra metadata, string map. Keys starting with `openclaw.` are ignored. |
+| `memory` | `true` | Emit memory spans. |
+| `memoryContent` | `true` | Include memory bodies and queries on memory spans. |
+| `toolDefinitions` | `true` | Attach the offered tool definitions to each model call. |
+| `maxContentChars` | `262144` | Per-attribute content budget; larger values are truncated from the middle. |
+| `redact` | — | `{ "attributes": ["exact key" or "/regex/flags"], "mask": "******" }`: mask selected attribute values before export, keeping the key. |
+| `enabled` | `true` | Set to `false` to pause emission. |
+| `debug` | `false` | Log diagnostics to the gateway log. |
 
-Two more hooks (`llm_input`, `llm_output`) are subscribed to for **content only** — they don't open or close spans, they just enrich the `agent` span with attempt-aggregate data and seed the rolling history snapshot used by per-call `model_call.gen_ai.input.messages`.
+### `.hooks` — read by OpenClaw
 
-The hook system runs handlers fire-and-forget, so nothing we do here can slow the agent loop. The one exception is `before_tool_call`, which is a `runModifyingHook` — our handler returns `undefined` so OpenClaw dispatches the tool normally. Returning anything else (e.g. `{block: true}`) would block every tool call.
-
-**No runtime wrapping.** We stay inside the supported plugin API rather than monkey-patching `@mariozechner/pi-ai`. The hooks give us everything, at lower risk of breaking on OpenClaw updates.
-
-## Configuration reference
-
-Two blocks live under `plugins.entries["@latitude-data/openclaw-telemetry"]`:
-
-### `.config` — read by the plugin's runtime
-
-| Key | Required | Default | Description |
-| --- | --- | --- | --- |
-| `apiKey` | yes | — | Bearer token for Latitude ingestion. |
-| `project` | yes | — | Slug of the project to route traces into. |
-| `baseUrl` | no | `https://ingest.latitude.so` | Override OTLP ingest origin. The CLI sets this only when `--staging` or `--dev` is passed. |
-| `allowConversationAccess` | no | `false` | When `true`, attach raw prompts, assistant responses, system instructions, and tool I/O to spans. When `false`, emit only timing, token usage, model name, agent id, and structural ids — same span tree, scrubbed payloads. **Must match `hooks.allowConversationAccess` below — see [The two flags](#the-two-flags).** |
-| `redact` | no | — | Custom local attribute redaction before export: `{ "attributes": ["/^gen_ai\\.(input|output)\\.messages$/"], "mask": "[]" }`. Patterns are exact strings, regex source strings, or `/pattern/flags` strings. |
-| `enabled` | no | `true` | Set to `false` to pause emission without uninstalling. |
-| `debug` | no | `false` | Log diagnostic lines to stderr (visible in the gateway log). |
-
-### `.hooks` — read by OpenClaw's runtime
-
-| Key | Required | Default | Description |
-| --- | --- | --- | --- |
-| `allowConversationAccess` | yes (on 2026.4.25+) | — | OpenClaw's hook dispatcher gates `llm_input` / `llm_output` / `before_tool_call` / `after_tool_call` / `agent_end` events on this. When `false` or absent, every typed hook is blocked and the plugin never sees an event — which means no traces, with the gateway log showing `[plugins] typed hook "..." blocked because non-bundled plugins must set plugins.entries.<id>.hooks.allowConversationAccess=true`. |
+| Key | Description |
+| --- | --- |
+| `allowConversationAccess` | OpenClaw's dispatch gate for `llm_input`, `llm_output` and `agent_end`. When absent or `false`, those hooks are never registered for this plugin and no traces are produced. |
 
 ### The two flags
 
-`hooks.allowConversationAccess` and `config.allowConversationAccess` mean different things:
+- `hooks.allowConversationAccess` is the **dispatch gate**: `false` means OpenClaw never forwards the conversation hooks, so nothing is exported.
+- `config.allowConversationAccess` is the **content gate**: `false` means the full span tree still ships, with message, prompt, tool I/O and memory bodies removed and `latitude.captured.content=false` on every span.
 
-- **`hooks.*`** is the **dispatch gate**. `false` → OpenClaw never forwards events to us. No traces.
-- **`config.*`** is the **payload-content gate**. `false` → we emit spans normally but scrub message content from them. Structural-only telemetry.
+Structural-only telemetry is therefore `hooks: true` plus `config: false` (the CLI's `--no-content`).
 
-For *this* plugin we always couple them — the CLI writes both from the same source. If you hand-edit:
+### Targeting staging or local dev
 
-- **Both `true`**: full content capture (the default).
-- `hooks: true` + `config: false`: structural-only telemetry (set via `--no-content`).
-- `hooks: false` + anything: no traces. Don't.
-
-### Environment-variable fallbacks
-
-If a `config.*` key isn't set, the runtime falls back to env vars on the gateway process: `LATITUDE_API_KEY`, `LATITUDE_PROJECT`, `LATITUDE_BASE_URL`, `LATITUDE_DEBUG`, `LATITUDE_OPENCLAW_ENABLED`. Useful for flipping `debug` without editing `openclaw.json`.
-
-## Privacy
-
-The CLI's first-install default writes `allowConversationAccess: true` to both blocks → full content capture. Pass `--no-content` for structural-only telemetry.
-
-For hand-edited configs, leaving `allowConversationAccess` out entirely produces **no traces** (not "structural-only traces") because `hooks.allowConversationAccess` defaults to `false` at OpenClaw's level and dispatch is blocked. Always set both keys explicitly.
-
-To pause emission without uninstalling, set `enabled: false` on the plugin entry, or `LATITUDE_OPENCLAW_ENABLED=0` in the gateway environment.
-
-For field-level PII controls while keeping content capture enabled, add `config.redact`. For example, to send empty message arrays for prompts/responses before anything leaves the gateway:
-
-```jsonc
-{
-  "plugins": {
-    "entries": {
-      "@latitude-data/openclaw-telemetry": {
-        "config": {
-          "redact": {
-            "attributes": ["/^gen_ai\\.(input|output)\\.messages$/"],
-            "mask": "[]"
-          }
-        }
-      }
-    }
-  }
-}
+```bash
+openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].config.baseUrl' "https://staging-ingest.latitude.so"
+openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].config.baseUrl' "http://localhost:3002"
 ```
 
-## Supported OpenClaw versions
-
-Requires **2026.4.25 or newer**. Earlier versions either reject `hooks.allowConversationAccess` outright (≤ 2026.4.21) or have unverified dispatch gating (2026.4.22 – 2026.4.24). The CLI's version check aborts on older versions; manual installs run into validation errors. Run `npm install -g openclaw@latest` to upgrade.
+The CLI has `--staging` / `--dev` for the same.
 
 ## How it fails
 
-Fail-open by design. If the API is unreachable, your key is wrong, or a hook payload is malformed, the plugin logs to stderr (when `debug: true`) and the agent run continues unaffected.
+Fail-open. An unreachable ingest, a bad key or a malformed hook payload is logged (with `debug: true`) and the agent run continues. Exports retry on `429`, `5xx` and network errors and never resend a span that was accepted.
+
+## Development
+
+```bash
+pnpm --filter @latitude-data/openclaw-telemetry test
+pnpm --filter @latitude-data/openclaw-telemetry build && (cd packages/telemetry/openclaw && npm pack)
+openclaw plugins install npm-pack:/path/to/latitude-data-openclaw-telemetry-0.1.0.tgz --accept-capabilities --force
+```
 
 ## License
 

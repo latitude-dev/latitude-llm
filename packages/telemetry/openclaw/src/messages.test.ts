@@ -149,3 +149,132 @@ describe("userMessageFromPrompt + systemInstructionsParts", () => {
     expect(systemInstructionsParts("be helpful")).toEqual([{ type: "text", content: "be helpful" }])
   })
 })
+
+describe("OpenClaw / pi-ai transcript dialect", () => {
+  it("normalizes assistant toolCall blocks into tool_call parts", () => {
+    const msg = normalizeMessage({
+      role: "assistant",
+      content: [
+        { type: "thinking", thinking: "let me see" },
+        { type: "text", text: "Running it" },
+        { type: "toolCall", id: "t1", name: "exec", arguments: { command: "ls" } },
+      ],
+      usage: {},
+      timestamp: 1,
+    })
+    expect(msg).toEqual({
+      role: "assistant",
+      parts: [
+        { type: "reasoning", content: "let me see" },
+        { type: "text", content: "Running it" },
+        { type: "tool_call", id: "t1", name: "exec", arguments: { command: "ls" } },
+      ],
+    })
+  })
+
+  it("normalizes toolResult messages into tool_call_response parts with the tool name and error flag", () => {
+    const msg = normalizeMessage({
+      role: "toolResult",
+      toolCallId: "t1",
+      toolName: "exec",
+      content: [
+        { type: "text", text: "line 1" },
+        { type: "text", text: "line 2" },
+      ],
+      isError: true,
+      timestamp: 2,
+    })
+    expect(msg).toEqual({
+      role: "tool",
+      parts: [{ type: "tool_call_response", id: "t1", name: "exec", response: "line 1\nline 2", is_error: true }],
+    })
+  })
+
+  it("unwraps the toolResult blocks the Codex harness nests inside a toolResult message", () => {
+    const msg = normalizeMessage({
+      role: "toolResult",
+      toolCallId: "exec-1",
+      toolName: "bash",
+      content: [
+        {
+          type: "toolResult",
+          id: "exec-1",
+          name: "bash",
+          toolCallId: "exec-1",
+          content: "AGENTS.md\nSOUL.md",
+          text: "AGENTS.md\nSOUL.md",
+        },
+      ],
+      isError: false,
+    })
+    expect(msg?.parts[0]?.response).toBe("AGENTS.md\nSOUL.md")
+  })
+
+  it("keeps image blocks in a toolResult as parts", () => {
+    const msg = normalizeMessage({
+      role: "toolResult",
+      toolCallId: "t1",
+      toolName: "browser",
+      content: [
+        { type: "text", text: "shot" },
+        { type: "image", data: "AAAA", mimeType: "image/png" },
+      ],
+      isError: false,
+    })
+    expect(msg?.parts[0]?.response).toEqual([
+      { type: "text", content: "shot" },
+      { type: "uri", modality: "image", uri: "data:image/png;base64,AAAA" },
+    ])
+  })
+
+  it("normalizes user messages carrying base64 images", () => {
+    const msg = normalizeMessage({
+      role: "user",
+      content: [
+        { type: "text", text: "what is this" },
+        { type: "image", data: "QUJD", mimeType: "image/jpeg" },
+      ],
+    })
+    expect(msg?.parts).toEqual([
+      { type: "text", content: "what is this" },
+      { type: "uri", modality: "image", uri: "data:image/jpeg;base64,QUJD" },
+    ])
+  })
+
+  it("renders redacted thinking as a placeholder and skips empty thinking", () => {
+    const msg = normalizeMessage({
+      role: "assistant",
+      content: [
+        { type: "thinking", thinking: "", redacted: true },
+        { type: "thinking", thinking: "" },
+        { type: "text", text: "hi" },
+      ],
+    })
+    expect(msg?.parts).toEqual([
+      { type: "reasoning", content: "[redacted]" },
+      { type: "text", content: "hi" },
+    ])
+  })
+
+  it("renders OpenClaw's injected runtime context as a system message", () => {
+    const byFlag = normalizeMessage({
+      role: "user",
+      content: "Conversation info: {...}",
+      runtimeContext: { kind: "turn" },
+    })
+    expect(byFlag?.role).toBe("system")
+    const byPrefix = normalizeMessage({
+      role: "user",
+      content: [
+        { type: "text", text: "[openclaw.runtime-context] <<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>\nConversation info" },
+      ],
+    })
+    expect(byPrefix?.role).toBe("system")
+    expect(normalizeMessage({ role: "user", content: "hello" })?.role).toBe("user")
+  })
+
+  it("turns custom runtime notes into a labelled user text part", () => {
+    const msg = normalizeMessage({ role: "custom", customType: "failed-media", content: "image failed", timestamp: 3 })
+    expect(msg).toEqual({ role: "user", parts: [{ type: "text", content: "[failed-media] image failed" }] })
+  })
+})

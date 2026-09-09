@@ -102,6 +102,19 @@ describe("normalizeInstallFlags", () => {
     expect(() => normalizeInstallFlags({ restart: true, "no-restart": true })).toThrow(/mutually exclusive/)
   })
 
+  it("captures --runtime-spec in both forms so a pre-release tarball can be installed", () => {
+    expect(normalizeInstallFlags(parseFlags(["install", "--runtime-spec=npm-pack:/tmp/p.tgz"]).flags).runtimeSpec).toBe(
+      "npm-pack:/tmp/p.tgz",
+    )
+    expect(
+      normalizeInstallFlags(parseFlags(["install", "--runtime-spec", "npm-pack:/tmp/p.tgz", "--yes"]).flags),
+    ).toMatchObject({
+      runtimeSpec: "npm-pack:/tmp/p.tgz",
+      yes: true,
+    })
+    expect(normalizeInstallFlags(parseFlags(["install"]).flags).runtimeSpec).toBeUndefined()
+  })
+
   it("captures --dry-run as a boolean", () => {
     expect(normalizeInstallFlags({ "dry-run": true }).dryRun).toBe(true)
     expect(normalizeInstallFlags({}).dryRun).toBeFalsy()
