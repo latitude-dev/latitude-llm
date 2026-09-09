@@ -1243,6 +1243,72 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(found?.traceId).toBe(traceId1)
   })
 
+  it("findPublishedSystemAnnotationByAnchor finds anchors outside the 200-row session scan window", async () => {
+    const organizationId = "anchoranchoranchoranchor"
+    const sessionId = "session-busy-anchor"
+    const anchorHash = "1".repeat(64)
+
+    const anchored = await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        sessionId,
+        value: 0,
+        passed: false,
+        feedback: "Original anchored finding",
+        metadata: {
+          rawFeedback: "Original anchored finding",
+          flaggerSlug: "frustration",
+          contentHash: anchorHash,
+        },
+        draftedAt: null,
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: new Date("2020-01-01T00:00:00.000Z") })
+      .where(eq(scoresTable.id, anchored.id as string))
+
+    await Effect.runPromise(
+      Effect.forEach(
+        Array.from({ length: 200 }, (_, index) => index),
+        (index) =>
+          writeScoreUseCase({
+            projectId: annotationProjectId,
+            sourceType: "annotation",
+            sourceId: "SYSTEM",
+            sessionId,
+            value: 0,
+            passed: false,
+            feedback: `Filler finding ${index}`,
+            metadata: {
+              rawFeedback: `Filler finding ${index}`,
+              flaggerSlug: "frustration",
+              contentHash: `${(index + 2).toString(16).padStart(64, "0")}`,
+            },
+            draftedAt: null,
+          }),
+      ).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const found = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.findPublishedSystemAnnotationByAnchor({
+          projectId: annotationProjectId,
+          sessionId: sessionId as SessionId,
+          flaggerSlug: "frustration",
+          contentHash: anchorHash,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(found).not.toBeNull()
+    expect(found?.id).toBe(anchored.id)
+  })
+
   it("findPublishedSystemVerdictByGeneration finds verdicts outside the 200-row session scan window", async () => {
     const organizationId = "v".repeat(24)
     const sessionId = "session-busy-verdict"

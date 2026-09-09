@@ -183,6 +183,12 @@ export interface ScoreRepositoryShape {
     readonly traceId: TraceId
     readonly feedback: string
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
+  findPublishedSystemAnnotationByAnchor(input: {
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+    readonly flaggerSlug: string
+    readonly contentHash: string
+  }): Effect.Effect<Score | null, RepositoryError, SqlClient>
   findPublishedSystemVerdictByGeneration(input: {
     readonly projectId: ProjectId
     readonly sessionId: SessionId
