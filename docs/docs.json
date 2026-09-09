@@ -1,8 +1,14 @@
 {
   "$schema": "https://mintlify.com/schema.json",
   "redirects": [
-    { "source": "/issues/:slug*", "destination": "/signals/:slug*" },
-    { "source": "/search/behaviours", "destination": "/behaviours/overview" },
+    {
+      "source": "/issues/:slug*",
+      "destination": "/signals/:slug*"
+    },
+    {
+      "source": "/search/behaviours",
+      "destination": "/behaviours/overview"
+    },
     {
       "source": "/observability/guides/build-a-dashboard",
       "destination": "/more/artifacts"
@@ -112,6 +118,16 @@
           "getting-started/migrate-from-v1",
           "telemetry/memory",
           {
+            "group": "Migrate from another platform",
+            "pages": [
+              "telemetry/imports/migrate",
+              "telemetry/imports/overview",
+              "telemetry/imports/langfuse",
+              "telemetry/imports/langsmith",
+              "telemetry/imports/braintrust"
+            ]
+          },
+          {
             "group": "SDKs",
             "pages": [
               "telemetry/typescript",
@@ -174,15 +190,6 @@
               "telemetry/pi-coding-agent",
               "telemetry/prime-intellect"
             ]
-          },
-          {
-            "group": "Platforms",
-            "pages": [
-              "telemetry/imports/overview",
-              "telemetry/imports/langfuse",
-              "telemetry/imports/langsmith",
-              "telemetry/imports/braintrust"
-            ]
           }
         ]
       },
@@ -194,6 +201,7 @@
           "observability/users",
           "observability/tools",
           "observability/memory",
+          "observability/cost",
           "observability/traces",
           "observability/spans",
           "observability/tool-calls",
@@ -340,6 +348,7 @@
           "getting-started/skills",
           "more/api-reference",
           "more/artifacts",
+          "more/notifications",
           "more/slack",
           "more/github",
           {

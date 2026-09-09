@@ -47,11 +47,24 @@ All of these produce [scores](../scores/overview): Latitude's common unit for ve
 When a score fails, Latitude compares its feedback and trace context against existing signals.
 
 - If it matches an existing signal, the score becomes a new occurrence of that signal.
-- If it does not match, Latitude can create a new signal with a generated name, description, and example traces.
+- If it does not match, Latitude creates a new signal candidate.
 
 You do not need to predefine every failure category. Latitude learns signal clusters from the failures that appear in your traffic.
 
-### 4. Signals become monitors
+### 4. Candidates are promoted once they have evidence
+
+A discovered candidate stays invisible until the same pattern has appeared in enough distinct sessions, so one-off failures never clutter your Signals page. The threshold scales with your project's traffic: at least 2 sessions in a quiet project, up to 15 in a high-volume one, counted over the last 30 days. At promotion Latitude generates the signal's real name and description from its recent occurrences, the signal appears on the Signals page, and the new-signal notification and any [agent dispatch](../agent-dispatch/overview) fire.
+
+Two things happen to candidates while they wait:
+
+- **Near-duplicates are merged.** When discovery splits one real problem into several near-identical candidates, Latitude combines them and counts their evidence together, so a problem can reach the threshold that none of its fragments would have reached alone. The promoted signal's name and description are generated from the merged evidence.
+- **Idle candidates are dropped.** A candidate that stops accumulating occurrences for 45 days is discarded, so a genuine one-off never lingers. If the pattern recurs later, it starts over as a new candidate.
+
+Both happen below the visibility line: nothing about a merge or a discard appears on the Signals page, in notifications, or in the API. The only visible effect is a signal arriving with enough evidence behind it.
+
+The gate only applies to discovered signals. A signal you [create yourself](./create), in the app or over the API, appears immediately.
+
+### 5. Signals become monitors
 
 Important signals can generate [evaluations](../evaluations/overview). These monitors watch live traffic for the same failure pattern, measure it over time, and detect regressions after you fix it.
 
@@ -100,7 +113,7 @@ A signal's status is shown as chips on the signal:
 
 | State | Meaning |
 | --- | --- |
-| New | Discovered or created within the last 7 days |
+| New | Appeared within the last 7 days; a discovered signal counts from its promotion |
 | Escalating | Occurrences are rising faster than the normal pattern for this time of week |
 | Ongoing | The steady state, once no other state applies |
 | Resolved | Marked as fixed; archived but still watching for recurrences |
@@ -128,7 +141,11 @@ Choose Generate an evaluation to attach an automated detector to the signal. It 
 
 ### Triage, resolve, and ignore
 
-Assign an owner and a priority so the right person picks it up. Resolve a signal once the underlying problem is fixed — Latitude reopens it and alerts you if it comes back. Ignore a signal that isn't worth acting on: it moves to Archived, monitoring stops, and notifications are muted. Mute a signal you want to keep watching without the pings. For a signal you created that you no longer need, delete it.
+Assign an owner and a priority so the right person picks it up. Priority uses the same **low, medium, high, urgent** scale as monitor alerts; raising a signal's priority can notify your team, and escalation notifications for the signal inherit the higher of the incident's severity and the signal's priority. Resolve a signal once the underlying problem is fixed; Latitude reopens it and alerts you if it comes back. Ignore a signal that isn't worth acting on: it moves to Archived, monitoring stops, and notifications are muted. Mute a signal you want to keep watching without the pings. For a signal you created that you no longer need, delete it.
+
+### Grade a flagger's signal
+
+Signals detected by a [flagger](../annotations/flaggers) show a thumbs up/down control in the page header asking whether the signal was a real problem. A thumbs-up can be saved as is; a thumbs-down asks what made it a false positive and offers **Save and ignore**, which archives the signal in the same step. The verdict is one-time and cannot be changed, and it is sent to Latitude to grade the flagger's own decision. It does not change how flaggers run on your project.
 
 ## Related pages
 
