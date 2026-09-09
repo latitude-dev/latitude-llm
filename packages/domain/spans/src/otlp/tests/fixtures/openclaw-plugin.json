@@ -1,0 +1,1158 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "openclaw"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "0.0.0-dev"
+            }
+          },
+          {
+            "key": "telemetry.sdk.name",
+            "value": {
+              "stringValue": "@latitude-data/openclaw-telemetry"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "@latitude-data/openclaw-telemetry",
+            "version": "0.0.0-dev"
+          },
+          "spans": [
+            {
+              "traceId": "4e65d3fbe8ad6535681b021b30785b12",
+              "spanId": "6f6f840f736fa5a5",
+              "parentSpanId": "",
+              "name": "interaction",
+              "kind": 1,
+              "startTimeUnixNano": "1757400000000000000",
+              "endTimeUnixNano": "1757400001545000000",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "invoke_agent"
+                  }
+                },
+                {
+                  "key": "openclaw.run.id",
+                  "value": {
+                    "stringValue": "run-1"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "gpt-5.6-sol"
+                  }
+                },
+                {
+                  "key": "openclaw.provider",
+                  "value": {
+                    "stringValue": "openai"
+                  }
+                },
+                {
+                  "key": "openclaw.images.count",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "openclaw.tool_count",
+                  "value": {
+                    "intValue": "2"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "gpt-5.6-sol"
+                  }
+                },
+                {
+                  "key": "openclaw.resolved.ref",
+                  "value": {
+                    "stringValue": "openai/gpt-5.6-sol"
+                  }
+                },
+                {
+                  "key": "user_prompt",
+                  "value": {
+                    "stringValue": "Run uname -a"
+                  }
+                },
+                {
+                  "key": "gen_ai.input.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"hi\"}]},{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"hello!\"}]},{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"Run uname -a\"}]}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.output.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"Kernel 6.8.0.\"}]}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.system_instructions",
+                  "value": {
+                    "stringValue": "[{\"type\":\"text\",\"content\":\"You are OpenClaw.\"}]"
+                  }
+                },
+                {
+                  "key": "openclaw.run.success",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "openclaw.duration_ms",
+                  "value": {
+                    "intValue": "1545"
+                  }
+                },
+                {
+                  "key": "openclaw.outcome",
+                  "value": {
+                    "stringValue": "completed"
+                  }
+                },
+                {
+                  "key": "openclaw.llm_calls",
+                  "value": {
+                    "intValue": "2"
+                  }
+                },
+                {
+                  "key": "openclaw.tool_calls",
+                  "value": {
+                    "intValue": "1"
+                  }
+                },
+                {
+                  "key": "interaction.kind",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "interaction.duration_ms",
+                  "value": {
+                    "intValue": "1545"
+                  }
+                },
+                {
+                  "key": "openclaw.history.source",
+                  "value": {
+                    "stringValue": "harness"
+                  }
+                },
+                {
+                  "key": "openclaw.history.messages",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "gen_ai.session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "openclaw.session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "openclaw.session.key",
+                  "value": {
+                    "stringValue": "agent:main:slack:channel:C1"
+                  }
+                },
+                {
+                  "key": "openclaw.agent.id",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                },
+                {
+                  "key": "gen_ai.agent.name",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                },
+                {
+                  "key": "openclaw.workspace.dir",
+                  "value": {
+                    "stringValue": "/tmp/oc-fixture/ws"
+                  }
+                },
+                {
+                  "key": "openclaw.channel",
+                  "value": {
+                    "stringValue": "slack"
+                  }
+                },
+                {
+                  "key": "openclaw.channel.id",
+                  "value": {
+                    "stringValue": "C1"
+                  }
+                },
+                {
+                  "key": "openclaw.message.provider",
+                  "value": {
+                    "stringValue": "slack"
+                  }
+                },
+                {
+                  "key": "openclaw.trigger",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "U0ALEX"
+                  }
+                },
+                {
+                  "key": "latitude.tags",
+                  "value": {
+                    "stringValue": "[\"openclaw\",\"slack\",\"main\"]"
+                  }
+                },
+                {
+                  "key": "latitude.metadata",
+                  "value": {
+                    "stringValue": "{\"openclaw.run.id\":\"run-1\",\"openclaw.session.id\":\"sess-1\",\"openclaw.session.key\":\"agent:main:slack:channel:C1\",\"openclaw.agent.id\":\"main\",\"openclaw.workspace.dir\":\"/tmp/oc-fixture/ws\",\"openclaw.channel\":\"slack\",\"openclaw.channel.id\":\"C1\",\"openclaw.message.provider\":\"slack\",\"openclaw.trigger\":\"user\",\"openclaw.sender.id\":\"U0ALEX\",\"openclaw.sender.name\":\"Alex\",\"openclaw.sender.username\":\"alex\",\"openclaw.trace.id\":\"0af7651916cd43dd8448eb211c80319c\",\"openclaw.plugin.version\":\"0.0.0-dev\"}"
+                  }
+                },
+                {
+                  "key": "latitude.captured.content",
+                  "value": {
+                    "boolValue": true
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              }
+            },
+            {
+              "traceId": "4e65d3fbe8ad6535681b021b30785b12",
+              "spanId": "1c6d77dff7ea91a7",
+              "parentSpanId": "6f6f840f736fa5a5",
+              "name": "llm_request",
+              "kind": 1,
+              "startTimeUnixNano": "1757400000010000000",
+              "endTimeUnixNano": "1757400000810000000",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "chat"
+                  }
+                },
+                {
+                  "key": "gen_ai.provider.name",
+                  "value": {
+                    "stringValue": "openai"
+                  }
+                },
+                {
+                  "key": "gen_ai.system",
+                  "value": {
+                    "stringValue": "openai"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "gpt-5.6-sol"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.stream",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "openclaw.call.id",
+                  "value": {
+                    "stringValue": "c1"
+                  }
+                },
+                {
+                  "key": "openclaw.api",
+                  "value": {
+                    "stringValue": "openai-responses"
+                  }
+                },
+                {
+                  "key": "llm_request.call_index",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "gen_ai.input.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"hi\"}]},{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"hello!\"}]},{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"Run uname -a\"}]}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.system_instructions",
+                  "value": {
+                    "stringValue": "[{\"type\":\"text\",\"content\":\"You are OpenClaw.\"}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.definitions",
+                  "value": {
+                    "stringValue": "[{\"type\":\"function\",\"name\":\"exec\",\"description\":\"Run a shell command\",\"parameters\":{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\"}},\"required\":[\"command\"]}},{\"type\":\"function\",\"name\":\"memory_search\",\"description\":\"Search memory\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"}}}}]"
+                  }
+                },
+                {
+                  "key": "openclaw.duration_ms",
+                  "value": {
+                    "intValue": "800"
+                  }
+                },
+                {
+                  "key": "openclaw.outcome",
+                  "value": {
+                    "stringValue": "completed"
+                  }
+                },
+                {
+                  "key": "openclaw.ttfb_ms",
+                  "value": {
+                    "intValue": "350"
+                  }
+                },
+                {
+                  "key": "gen_ai.server.time_to_first_token",
+                  "value": {
+                    "intValue": "350000000"
+                  }
+                },
+                {
+                  "key": "gen_ai.output.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"assistant\",\"parts\":[{\"type\":\"reasoning\",\"content\":\"need the exec tool\"},{\"type\":\"tool_call\",\"id\":\"call_1\",\"name\":\"exec\",\"arguments\":{\"command\":\"uname -a\"}}]}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "gpt-5.6-sol"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.id",
+                  "value": {
+                    "stringValue": "resp_1"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.finish_reasons",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "stringValue": "tool_calls"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "openclaw.stop_reason",
+                  "value": {
+                    "stringValue": "toolUse"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.input_tokens",
+                  "value": {
+                    "intValue": "1200"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.output_tokens",
+                  "value": {
+                    "intValue": "40"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.cache_read.input_tokens",
+                  "value": {
+                    "intValue": "800"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.cache_creation.input_tokens",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.reasoning_tokens",
+                  "value": {
+                    "intValue": "25"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.total_tokens",
+                  "value": {
+                    "intValue": "2040"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.cost",
+                  "value": {
+                    "doubleValue": 0.0018
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.input_cost",
+                  "value": {
+                    "doubleValue": 0.0014
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.output_cost",
+                  "value": {
+                    "doubleValue": 0.0004
+                  }
+                },
+                {
+                  "key": "openclaw.cost.origin",
+                  "value": {
+                    "stringValue": "catalog"
+                  }
+                },
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "gen_ai.session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "openclaw.session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "openclaw.session.key",
+                  "value": {
+                    "stringValue": "agent:main:slack:channel:C1"
+                  }
+                },
+                {
+                  "key": "openclaw.run.id",
+                  "value": {
+                    "stringValue": "run-1"
+                  }
+                },
+                {
+                  "key": "openclaw.agent.id",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                },
+                {
+                  "key": "gen_ai.agent.name",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                },
+                {
+                  "key": "openclaw.workspace.dir",
+                  "value": {
+                    "stringValue": "/tmp/oc-fixture/ws"
+                  }
+                },
+                {
+                  "key": "openclaw.channel",
+                  "value": {
+                    "stringValue": "slack"
+                  }
+                },
+                {
+                  "key": "openclaw.channel.id",
+                  "value": {
+                    "stringValue": "C1"
+                  }
+                },
+                {
+                  "key": "openclaw.message.provider",
+                  "value": {
+                    "stringValue": "slack"
+                  }
+                },
+                {
+                  "key": "openclaw.trigger",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "U0ALEX"
+                  }
+                },
+                {
+                  "key": "latitude.tags",
+                  "value": {
+                    "stringValue": "[\"openclaw\",\"slack\",\"main\"]"
+                  }
+                },
+                {
+                  "key": "latitude.metadata",
+                  "value": {
+                    "stringValue": "{\"openclaw.run.id\":\"run-1\",\"openclaw.session.id\":\"sess-1\",\"openclaw.session.key\":\"agent:main:slack:channel:C1\",\"openclaw.agent.id\":\"main\",\"openclaw.workspace.dir\":\"/tmp/oc-fixture/ws\",\"openclaw.channel\":\"slack\",\"openclaw.channel.id\":\"C1\",\"openclaw.message.provider\":\"slack\",\"openclaw.trigger\":\"user\",\"openclaw.sender.id\":\"U0ALEX\",\"openclaw.sender.name\":\"Alex\",\"openclaw.sender.username\":\"alex\",\"openclaw.trace.id\":\"0af7651916cd43dd8448eb211c80319c\",\"openclaw.plugin.version\":\"0.0.0-dev\"}"
+                  }
+                },
+                {
+                  "key": "latitude.captured.content",
+                  "value": {
+                    "boolValue": true
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              }
+            },
+            {
+              "traceId": "4e65d3fbe8ad6535681b021b30785b12",
+              "spanId": "29dc10c41e2cb5e1",
+              "parentSpanId": "6f6f840f736fa5a5",
+              "name": "llm_request",
+              "kind": 1,
+              "startTimeUnixNano": "1757400000940000000",
+              "endTimeUnixNano": "1757400001540000000",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "chat"
+                  }
+                },
+                {
+                  "key": "gen_ai.provider.name",
+                  "value": {
+                    "stringValue": "openai"
+                  }
+                },
+                {
+                  "key": "gen_ai.system",
+                  "value": {
+                    "stringValue": "openai"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "gpt-5.6-sol"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.stream",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "openclaw.call.id",
+                  "value": {
+                    "stringValue": "c2"
+                  }
+                },
+                {
+                  "key": "openclaw.api",
+                  "value": {
+                    "stringValue": "openai-responses"
+                  }
+                },
+                {
+                  "key": "llm_request.call_index",
+                  "value": {
+                    "intValue": "1"
+                  }
+                },
+                {
+                  "key": "gen_ai.input.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"hi\"}]},{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"hello!\"}]},{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"Run uname -a\"}]},{\"role\":\"assistant\",\"parts\":[{\"type\":\"reasoning\",\"content\":\"need the exec tool\"},{\"type\":\"tool_call\",\"id\":\"call_1\",\"name\":\"exec\",\"arguments\":{\"command\":\"uname -a\"}}]},{\"role\":\"tool\",\"parts\":[{\"type\":\"tool_call_response\",\"id\":\"call_1\",\"name\":\"exec\",\"response\":\"Linux openclaw-dummy 6.8.0\"}]}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.system_instructions",
+                  "value": {
+                    "stringValue": "[{\"type\":\"text\",\"content\":\"You are OpenClaw.\"}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.definitions",
+                  "value": {
+                    "stringValue": "[{\"type\":\"function\",\"name\":\"exec\",\"description\":\"Run a shell command\",\"parameters\":{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\"}},\"required\":[\"command\"]}},{\"type\":\"function\",\"name\":\"memory_search\",\"description\":\"Search memory\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"}}}}]"
+                  }
+                },
+                {
+                  "key": "openclaw.duration_ms",
+                  "value": {
+                    "intValue": "600"
+                  }
+                },
+                {
+                  "key": "openclaw.outcome",
+                  "value": {
+                    "stringValue": "completed"
+                  }
+                },
+                {
+                  "key": "openclaw.ttfb_ms",
+                  "value": {
+                    "intValue": "200"
+                  }
+                },
+                {
+                  "key": "gen_ai.server.time_to_first_token",
+                  "value": {
+                    "intValue": "200000000"
+                  }
+                },
+                {
+                  "key": "gen_ai.output.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"Kernel 6.8.0.\"}]}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "gpt-5.6-sol"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.id",
+                  "value": {
+                    "stringValue": "resp_2"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.finish_reasons",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "stringValue": "stop"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "openclaw.stop_reason",
+                  "value": {
+                    "stringValue": "stop"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.input_tokens",
+                  "value": {
+                    "intValue": "1300"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.output_tokens",
+                  "value": {
+                    "intValue": "12"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.cache_read.input_tokens",
+                  "value": {
+                    "intValue": "1200"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.cache_creation.input_tokens",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.reasoning_tokens",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.total_tokens",
+                  "value": {
+                    "intValue": "2512"
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.cost",
+                  "value": {
+                    "doubleValue": 0.0017
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.input_cost",
+                  "value": {
+                    "doubleValue": 0.0015999999999999999
+                  }
+                },
+                {
+                  "key": "gen_ai.usage.output_cost",
+                  "value": {
+                    "doubleValue": 0.0001
+                  }
+                },
+                {
+                  "key": "openclaw.cost.origin",
+                  "value": {
+                    "stringValue": "catalog"
+                  }
+                },
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "gen_ai.session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "openclaw.session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "openclaw.session.key",
+                  "value": {
+                    "stringValue": "agent:main:slack:channel:C1"
+                  }
+                },
+                {
+                  "key": "openclaw.run.id",
+                  "value": {
+                    "stringValue": "run-1"
+                  }
+                },
+                {
+                  "key": "openclaw.agent.id",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                },
+                {
+                  "key": "gen_ai.agent.name",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                },
+                {
+                  "key": "openclaw.workspace.dir",
+                  "value": {
+                    "stringValue": "/tmp/oc-fixture/ws"
+                  }
+                },
+                {
+                  "key": "openclaw.channel",
+                  "value": {
+                    "stringValue": "slack"
+                  }
+                },
+                {
+                  "key": "openclaw.channel.id",
+                  "value": {
+                    "stringValue": "C1"
+                  }
+                },
+                {
+                  "key": "openclaw.message.provider",
+                  "value": {
+                    "stringValue": "slack"
+                  }
+                },
+                {
+                  "key": "openclaw.trigger",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "U0ALEX"
+                  }
+                },
+                {
+                  "key": "latitude.tags",
+                  "value": {
+                    "stringValue": "[\"openclaw\",\"slack\",\"main\"]"
+                  }
+                },
+                {
+                  "key": "latitude.metadata",
+                  "value": {
+                    "stringValue": "{\"openclaw.run.id\":\"run-1\",\"openclaw.session.id\":\"sess-1\",\"openclaw.session.key\":\"agent:main:slack:channel:C1\",\"openclaw.agent.id\":\"main\",\"openclaw.workspace.dir\":\"/tmp/oc-fixture/ws\",\"openclaw.channel\":\"slack\",\"openclaw.channel.id\":\"C1\",\"openclaw.message.provider\":\"slack\",\"openclaw.trigger\":\"user\",\"openclaw.sender.id\":\"U0ALEX\",\"openclaw.sender.name\":\"Alex\",\"openclaw.sender.username\":\"alex\",\"openclaw.trace.id\":\"0af7651916cd43dd8448eb211c80319c\",\"openclaw.plugin.version\":\"0.0.0-dev\"}"
+                  }
+                },
+                {
+                  "key": "latitude.captured.content",
+                  "value": {
+                    "boolValue": true
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              }
+            },
+            {
+              "traceId": "4e65d3fbe8ad6535681b021b30785b12",
+              "spanId": "a9947093638f2c04",
+              "parentSpanId": "6f6f840f736fa5a5",
+              "name": "search_memory",
+              "kind": 3,
+              "startTimeUnixNano": "1757400000000000000",
+              "endTimeUnixNano": "1757400000000000000",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "search_memory"
+                  }
+                },
+                {
+                  "key": "gen_ai.provider.name",
+                  "value": {
+                    "stringValue": "openclaw"
+                  }
+                },
+                {
+                  "key": "gen_ai.memory.store.id",
+                  "value": {
+                    "stringValue": "openclaw/main"
+                  }
+                },
+                {
+                  "key": "gen_ai.memory.record.count",
+                  "value": {
+                    "intValue": "1"
+                  }
+                },
+                {
+                  "key": "gen_ai.memory.records",
+                  "value": {
+                    "stringValue": "[{\"id\":\"MEMORY.md\",\"content\":\"# Memory\\n- Alex likes teal\\n\"}]"
+                  }
+                },
+                {
+                  "key": "openclaw.memory.source",
+                  "value": {
+                    "stringValue": "session_snapshot"
+                  }
+                },
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "gen_ai.session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "openclaw.session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "openclaw.session.key",
+                  "value": {
+                    "stringValue": "agent:main:slack:channel:C1"
+                  }
+                },
+                {
+                  "key": "openclaw.run.id",
+                  "value": {
+                    "stringValue": "run-1"
+                  }
+                },
+                {
+                  "key": "openclaw.agent.id",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                },
+                {
+                  "key": "gen_ai.agent.name",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                },
+                {
+                  "key": "openclaw.workspace.dir",
+                  "value": {
+                    "stringValue": "/tmp/oc-fixture/ws"
+                  }
+                },
+                {
+                  "key": "openclaw.channel",
+                  "value": {
+                    "stringValue": "slack"
+                  }
+                },
+                {
+                  "key": "openclaw.channel.id",
+                  "value": {
+                    "stringValue": "C1"
+                  }
+                },
+                {
+                  "key": "openclaw.message.provider",
+                  "value": {
+                    "stringValue": "slack"
+                  }
+                },
+                {
+                  "key": "openclaw.trigger",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "U0ALEX"
+                  }
+                },
+                {
+                  "key": "latitude.tags",
+                  "value": {
+                    "stringValue": "[\"openclaw\",\"slack\",\"main\"]"
+                  }
+                },
+                {
+                  "key": "latitude.metadata",
+                  "value": {
+                    "stringValue": "{\"openclaw.run.id\":\"run-1\",\"openclaw.session.id\":\"sess-1\",\"openclaw.session.key\":\"agent:main:slack:channel:C1\",\"openclaw.agent.id\":\"main\",\"openclaw.workspace.dir\":\"/tmp/oc-fixture/ws\",\"openclaw.channel\":\"slack\",\"openclaw.channel.id\":\"C1\",\"openclaw.message.provider\":\"slack\",\"openclaw.trigger\":\"user\",\"openclaw.sender.id\":\"U0ALEX\",\"openclaw.sender.name\":\"Alex\",\"openclaw.sender.username\":\"alex\",\"openclaw.trace.id\":\"0af7651916cd43dd8448eb211c80319c\",\"openclaw.plugin.version\":\"0.0.0-dev\"}"
+                  }
+                },
+                {
+                  "key": "latitude.captured.content",
+                  "value": {
+                    "boolValue": true
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              }
+            },
+            {
+              "traceId": "4e65d3fbe8ad6535681b021b30785b12",
+              "spanId": "32eae48d847b89cb",
+              "parentSpanId": "6f6f840f736fa5a5",
+              "name": "tool_call:exec",
+              "kind": 3,
+              "startTimeUnixNano": "1757400000815000000",
+              "endTimeUnixNano": "1757400000935000000",
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "execute_tool"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.name",
+                  "value": {
+                    "stringValue": "exec"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.id",
+                  "value": {
+                    "stringValue": "call_1"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.arguments",
+                  "value": {
+                    "stringValue": "{\"command\":\"uname -a\"}"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.result",
+                  "value": {
+                    "stringValue": "{\"content\":[{\"type\":\"text\",\"text\":\"Linux openclaw-dummy 6.8.0\"}]}"
+                  }
+                },
+                {
+                  "key": "tool.is_error",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "openclaw.duration_ms",
+                  "value": {
+                    "intValue": "120"
+                  }
+                },
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "gen_ai.session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "openclaw.session.id",
+                  "value": {
+                    "stringValue": "sess-1"
+                  }
+                },
+                {
+                  "key": "openclaw.session.key",
+                  "value": {
+                    "stringValue": "agent:main:slack:channel:C1"
+                  }
+                },
+                {
+                  "key": "openclaw.run.id",
+                  "value": {
+                    "stringValue": "run-1"
+                  }
+                },
+                {
+                  "key": "openclaw.agent.id",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                },
+                {
+                  "key": "gen_ai.agent.name",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                },
+                {
+                  "key": "openclaw.workspace.dir",
+                  "value": {
+                    "stringValue": "/tmp/oc-fixture/ws"
+                  }
+                },
+                {
+                  "key": "openclaw.channel",
+                  "value": {
+                    "stringValue": "slack"
+                  }
+                },
+                {
+                  "key": "openclaw.channel.id",
+                  "value": {
+                    "stringValue": "C1"
+                  }
+                },
+                {
+                  "key": "openclaw.message.provider",
+                  "value": {
+                    "stringValue": "slack"
+                  }
+                },
+                {
+                  "key": "openclaw.trigger",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "U0ALEX"
+                  }
+                },
+                {
+                  "key": "latitude.tags",
+                  "value": {
+                    "stringValue": "[\"openclaw\",\"slack\",\"main\"]"
+                  }
+                },
+                {
+                  "key": "latitude.metadata",
+                  "value": {
+                    "stringValue": "{\"openclaw.run.id\":\"run-1\",\"openclaw.session.id\":\"sess-1\",\"openclaw.session.key\":\"agent:main:slack:channel:C1\",\"openclaw.agent.id\":\"main\",\"openclaw.workspace.dir\":\"/tmp/oc-fixture/ws\",\"openclaw.channel\":\"slack\",\"openclaw.channel.id\":\"C1\",\"openclaw.message.provider\":\"slack\",\"openclaw.trigger\":\"user\",\"openclaw.sender.id\":\"U0ALEX\",\"openclaw.sender.name\":\"Alex\",\"openclaw.sender.username\":\"alex\",\"openclaw.trace.id\":\"0af7651916cd43dd8448eb211c80319c\",\"openclaw.plugin.version\":\"0.0.0-dev\"}"
+                  }
+                },
+                {
+                  "key": "latitude.captured.content",
+                  "value": {
+                    "boolValue": true
+                  }
+                }
+              ],
+              "status": {
+                "code": 1
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

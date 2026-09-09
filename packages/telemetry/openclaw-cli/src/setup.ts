@@ -33,7 +33,7 @@ import { readCliVersion } from "./version.ts"
  * supply-chain audit warning automatically.
  */
 const RUNTIME_PACKAGE_NAME = "@latitude-data/openclaw-telemetry"
-const RUNTIME_VERSION = "0.0.9"
+const RUNTIME_VERSION = "0.1.0"
 
 const DOCS_URL = "https://docs.latitude.so/telemetry/openclaw"
 
@@ -87,6 +87,12 @@ interface InstallFlags {
   allowConversationAccess?: boolean | undefined
   /** When true, skip adding the plugin id to `plugins.allow`. */
   noTrust?: boolean
+  /**
+   * Install spec handed to `openclaw plugins install` instead of the pinned
+   * npm version, e.g. `npm-pack:/tmp/plugin.tgz` for a pre-release build.
+   * Skips the npm registry lockstep check.
+   */
+  runtimeSpec?: string | undefined
   /** Override for the OpenClaw config directory. */
   openclawDir?: string | undefined
   /** When true, render the diff and the install spec without making any changes. */
@@ -108,7 +114,7 @@ interface InstallFlags {
  * token as its value — operators expect `--no-content` next to `--yes`
  * to mean two booleans, not "no-content takes the value `--yes`".
  */
-const VALUE_FLAGS = new Set(["api-key", "project", "openclaw-dir"])
+const VALUE_FLAGS = new Set(["api-key", "project", "openclaw-dir", "runtime-spec"])
 
 export function parseFlags(argv: string[]): {
   subcommand: string | undefined
@@ -167,6 +173,7 @@ export function normalizeInstallFlags(flags: Record<string, string | boolean>): 
     environment,
     allowConversationAccess,
     noTrust: flags["no-trust"] === true,
+    runtimeSpec: typeof flags["runtime-spec"] === "string" ? flags["runtime-spec"] : undefined,
     openclawDir: typeof flags["openclaw-dir"] === "string" ? flags["openclaw-dir"] : undefined,
     dryRun: flags["dry-run"] === true,
     restart,
@@ -210,7 +217,7 @@ async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
   // Lockstep contract check. If the runtime version we're built against
   // isn't on npm yet (half-published release), abort with a clear upgrade
   // path before we waste any of the operator's time on prompts.
-  await ensureRuntimeOnNpm()
+  if (!flags.runtimeSpec) await ensureRuntimeOnNpm()
 
   // Render the upgrade UX before any spawn. Reads OpenClaw's own install
   // record so the version is what's *actually* running, not what was last
@@ -254,6 +261,7 @@ async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
     envConfig,
     allowConversationAccess: flags.allowConversationAccess,
     noTrust: flags.noTrust === true,
+    runtimeSpec: flags.runtimeSpec,
     paths,
     dryRun: flags.dryRun === true,
   })
@@ -276,7 +284,7 @@ async function runFlagDrivenInstall(flags: InstallFlags): Promise<void> {
   ensureOpenclawIsCompatible()
   const { resolved, paths } = resolvePaths(flags)
   process.stdout.write(`Using config dir: ${paths.configDir} (source: ${resolved.source})\n`)
-  await ensureRuntimeOnNpm()
+  if (!flags.runtimeSpec) await ensureRuntimeOnNpm()
 
   const apiKey = flags.apiKey
   const project = flags.project
@@ -290,6 +298,7 @@ async function runFlagDrivenInstall(flags: InstallFlags): Promise<void> {
     envConfig,
     allowConversationAccess: flags.allowConversationAccess,
     noTrust: flags.noTrust === true,
+    runtimeSpec: flags.runtimeSpec,
     paths,
     dryRun: flags.dryRun === true,
   })
@@ -336,6 +345,7 @@ interface ApplyParams {
   /** Tristate — see `InstallFlags.allowConversationAccess`. */
   allowConversationAccess: boolean | undefined
   noTrust: boolean
+  runtimeSpec?: string | undefined
   paths: SettingsPaths
   dryRun: boolean
 }
@@ -346,10 +356,12 @@ async function applyChanges({
   envConfig,
   allowConversationAccess,
   noTrust,
+  runtimeSpec,
   paths,
   dryRun,
 }: ApplyParams): Promise<void> {
-  const installSpec = `${RUNTIME_PACKAGE_NAME}@${RUNTIME_VERSION}`
+  const installSpec = runtimeSpec ?? `${RUNTIME_PACKAGE_NAME}@${RUNTIME_VERSION}`
+  const installArgs = ["plugins", "install", installSpec, "--force", "--accept-capabilities"]
 
   // Build the proposed post-install settings without writing them. The
   // dry-run path uses this directly; the real path writes the same value.
@@ -365,7 +377,7 @@ async function applyChanges({
   if (!noTrust) addToPluginsAllow(after)
 
   if (dryRun) {
-    log.info(`Would run: ${pc.dim(`openclaw plugins install ${installSpec} --force`)}`)
+    log.info(`Would run: ${pc.dim(`openclaw ${installArgs.join(" ")}`)}`)
     const diff = jsonDiff(before, after, { fromLabel: paths.settingsPath, toLabel: `${paths.settingsPath} (proposed)` })
     if (diff.length > 0) {
       process.stdout.write(`${diff}\n`)
@@ -389,10 +401,12 @@ async function applyChanges({
   //    record into <configDir>/plugins/installs.json, and creates a (disabled,
   //    configless) plugins.entries[id] in openclaw.json. We layer config +
   //    hooks + allow on top in step 3. --force lets us overwrite an existing
-  //    install (e.g. when re-running on top of a previous version).
+  //    install (e.g. when re-running on top of a previous version), and
+  //    --accept-capabilities records the operator's consent to the plugin's
+  //    declared surface, which OpenClaw requires for any non-bundled plugin.
   const installSpinner = spinner()
   installSpinner.start(`Installing plugin via openclaw plugins install ${installSpec}`)
-  const installResult = runOpenclaw(["plugins", "install", installSpec, "--force"], {
+  const installResult = runOpenclaw(installArgs, {
     timeoutMs: 60_000,
     env: envForSubprocess(paths),
   })
