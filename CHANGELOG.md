@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## v0.3.97 - 2026-09-09
+
+### Sessions
+
+- Added an on-demand session assessment: the session drawer and the public API now combine normalized telemetry, flagger findings, stored scores, signals and intelligence into paginated evidence with reliability, safety, outcome, cost and speed summaries. Exposed as `GET /v1/sessions/{sessionId}/assessment`, the `getSessionAssessment` MCP tool, `getAssessment` in the SDKs and `latitude sessions get-assessment` in the CLI. Reads are side-effect free; confidence, assessment filters and historical backfill are deferred (ref: #4604).
+
+### Flaggers
+
+- Deterministic flaggers keep structured finding provenance while still writing one canonical discovery score, and append-only screening decisions let the assessment tell examined, partially examined, skipped and not-applicable coverage apart. Two ClickHouse migrations (`00056`, `00057`) add the provenance and screening tables (ref: #4604).
+
+### Telemetry
+
+- Rewrote the OpenClaw plugin and its installer, published as `@latitude-data/openclaw-telemetry` and `@latitude-data/openclaw-telemetry-cli` 0.1.0. The 0.0.9 plugin emitted nothing on OpenClaw 2026.8.1 or newer after upstream removed its run-start hook. The rewrite exports one trace per run with per-call tokens, OpenClaw's own cost, time to first token, the system prompt, tool definitions, tool calls, memory reads and writes, subagents nested under the spawning tool call, cron and compaction runs, and the sending user, all grouped into one Latitude session per OpenClaw session. It supports both OpenClaw runtimes, including the Codex app-server harness that withholds history (rebuilt from OpenClaw's transcript store), and the installer passes the capability consent OpenClaw now requires. The public docs page recommends the plugin over OpenClaw's bundled exporter, the in-app onboarding snippet points at the installer, and a new ingest contract test pins the plugin's payload shape (ref: #4608).
+
 ## v0.3.96 - 2026-09-08
 
 ### Billing
