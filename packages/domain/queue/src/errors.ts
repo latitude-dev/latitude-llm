@@ -52,6 +52,23 @@ export class QueueClientError extends Data.TaggedError("QueueClientError")<{
 }
 
 /**
+ * Fails a task in a way that must skip retries — the operation has already
+ * proven it cannot succeed (e.g. reading an object that provably never
+ * existed at its key), so retrying would only repeat the identical failure
+ * for the full backoff window. Queue adapters translate this into their
+ * native "stop retrying now" mechanism (BullMQ's `UnrecoverableError`).
+ */
+export class NonRetryableTaskError extends Data.TaggedError("NonRetryableTaskError")<{
+  readonly reason: string
+  readonly cause?: unknown
+}> {
+  constructor(args: { readonly reason: string; readonly cause?: unknown }) {
+    super(args)
+    this.message = args.reason
+  }
+}
+
+/**
  * Surfaced by `WorkflowStarter.start` when a workflow with the same
  * `workflowId` is already running. Callers that use `workflowId` as an
  * idempotency key (e.g. retries against a record-creating server function)

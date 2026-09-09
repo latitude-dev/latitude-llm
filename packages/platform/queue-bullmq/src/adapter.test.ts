@@ -1,8 +1,9 @@
+import { NonRetryableTaskError } from "@domain/queue"
 import { base64urlEncode } from "@repo/utils"
-import type { Job } from "bullmq"
+import { type Job, UnrecoverableError } from "bullmq"
 import { Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
-import { buildBullMqJobOptions, resolveFinalFailureHook } from "./adapter.ts"
+import { buildBullMqJobOptions, resolveFinalFailureHook, toWorkerThrowable } from "./adapter.ts"
 
 const LABEL = "publish(monitors, checkSavedSearchMonitors)"
 
@@ -99,6 +100,23 @@ describe("buildBullMqJobOptions", () => {
     expect(() => buildBullMqJobOptions(LABEL, { throttleMs: 1 })).toThrow(/require a dedupeKey/)
     expect(() => buildBullMqJobOptions(LABEL, { latestThrottleMs: 1 })).toThrow(/require a dedupeKey/)
     expect(() => buildBullMqJobOptions(LABEL, { leadingThrottleMs: 1 })).toThrow(/require a dedupeKey/)
+  })
+})
+
+describe("toWorkerThrowable", () => {
+  it("turns a NonRetryableTaskError into an UnrecoverableError, skipping the remaining attempts", () => {
+    const error = new NonRetryableTaskError({ reason: "object never existed at this key" })
+    const recorded = new Error(error.message)
+    const thrown = toWorkerThrowable(error, recorded)
+    expect(thrown).toBeInstanceOf(UnrecoverableError)
+    expect(thrown.message).toBe("object never existed at this key")
+  })
+
+  it("passes through any other error unchanged, so BullMQ retries as configured", () => {
+    const error = new Error("timeout exceeded when trying to connect")
+    const thrown = toWorkerThrowable(error, error)
+    expect(thrown).toBe(error)
+    expect(thrown).not.toBeInstanceOf(UnrecoverableError)
   })
 })
 

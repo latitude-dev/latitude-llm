@@ -9,11 +9,18 @@ import type {
   TaskName,
   TaskPayload,
 } from "@domain/queue"
-import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError, TOPIC_NAMES } from "@domain/queue"
+import {
+  NonRetryableTaskError,
+  QueueClientError,
+  QueuePublishError,
+  QueuePublisher,
+  QueueSubscribeError,
+  TOPIC_NAMES,
+} from "@domain/queue"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { recordSpanExceptionForDatadog, serializeError } from "@repo/observability"
 import { base64urlEncode } from "@repo/utils"
-import { type Job, Queue, Worker } from "bullmq"
+import { type Job, Queue, UnrecoverableError, Worker } from "bullmq"
 import { Cause, Effect, Layer } from "effect"
 import { createBullMqRedisConnection } from "./connection.ts"
 import { BULLMQ_PREFIX } from "./constants.ts"
@@ -152,6 +159,16 @@ interface FinalFailureInvocation {
   readonly payload: unknown
   readonly context: { attemptsMade: number; attemptsConfigured: number }
 }
+
+/**
+ * Translates a queue-agnostic task failure into what the BullMQ processor must
+ * throw. A `NonRetryableTaskError` becomes an `UnrecoverableError` so BullMQ
+ * moves the job straight to failed instead of burning the rest of its
+ * configured attempts on a failure proven not to succeed on retry. Pure +
+ * exported so the mapping is unit-testable without a real OTel span.
+ */
+export const toWorkerThrowable = (error: unknown, recordedError: Error): Error =>
+  error instanceof NonRetryableTaskError ? new UnrecoverableError(recordedError.message) : recordedError
 
 /**
  * Decide whether a failed job should fire its terminal-failure hook, and with
@@ -365,7 +382,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                         code: SpanStatusCode.ERROR,
                         message: err.message,
                       })
-                      throw err
+                      throw toWorkerThrowable(error, err)
                     } finally {
                       span.end()
                     }
