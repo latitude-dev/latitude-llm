@@ -176,6 +176,8 @@ const GRACE_MS = 1500
 const RUN_TTL_MS = 2 * 60 * 60 * 1000
 const LINK_TTL_MS = 60 * 60 * 1000
 const LINK_MAX = 1000
+const SESSION_INDEX_MAX = 2000
+const STANDALONE_COMPACTION_MAX = 100
 const SPAWN_TOOL_PATTERN = /spawn/i
 const MAX_DELTAS = 256
 const MAX_THINKING_CHARS = 64 * 1024
@@ -195,7 +197,7 @@ export class SpanBuilder {
   private readonly sendersById = new Map<string, Sender>()
   private readonly cronStarted = new Map<string, CronJob>()
   private readonly sessionHistory: SessionHistoryStore
-  private standaloneCompaction: { span: SpanRecord; sessionKey: string | undefined } | undefined
+  private readonly standaloneCompactions = new Map<string, SpanRecord>()
   private readonly emit: (result: BuildResult) => void
   private readonly now: () => number
   private readonly schedule: (fn: () => void, ms: number) => () => void
@@ -261,8 +263,10 @@ export class SpanBuilder {
     run.prompt = evt.prompt
     run.systemPrompt = evt.systemPrompt
     if (run.ctx.sessionKey) {
-      this.modelBySession.set(run.ctx.sessionKey, { provider: evt.provider, model: evt.model })
-      if (run.ctx.workspaceDir) this.workspaceBySession.set(run.ctx.sessionKey, run.ctx.workspaceDir)
+      remember(this.modelBySession, run.ctx.sessionKey, { provider: evt.provider, model: evt.model }, SESSION_INDEX_MAX)
+      if (run.ctx.workspaceDir) {
+        remember(this.workspaceBySession, run.ctx.sessionKey, run.ctx.workspaceDir, SESSION_INDEX_MAX)
+      }
     }
     if (this.toolDefinitionsEnabled) run.toolDefinitions = toolDefinitionsFrom(evt.tools) ?? run.toolDefinitions
     Object.assign(run.root.attrs, {
@@ -491,12 +495,12 @@ export class SpanBuilder {
       run.openCompaction = span
       return
     }
-    this.standaloneCompaction = { span, sessionKey: ctx.sessionKey }
+    remember(this.standaloneCompactions, ctx.sessionKey ?? "", span, STANDALONE_COMPACTION_MAX)
   }
 
   onAfterCompaction(evt: OpenClawAfterCompactionEvent, ctx: OpenClawSessionScopedContext): void {
     const run = this.openRunForSession(ctx.sessionKey)
-    const span = run?.openCompaction ?? this.standaloneCompaction?.span
+    const span = run?.openCompaction ?? this.standaloneCompactions.get(ctx.sessionKey ?? "")
     if (!span) return
     const endMs = this.now()
     span.endMs = endMs
@@ -524,7 +528,7 @@ export class SpanBuilder {
       run.closed.push(span)
       return
     }
-    this.standaloneCompaction = undefined
+    this.standaloneCompactions.delete(ctx.sessionKey ?? "")
 
     const runCtx: OpenClawAgentContext = { agentId, sessionKey: ctx.sessionKey, sessionId, workspaceDir }
     const enrichment = deriveEnrichment(
@@ -588,7 +592,7 @@ export class SpanBuilder {
 
   onSessionStart(evt: OpenClawSessionStartEvent, _ctx: OpenClawSessionScopedContext): void {
     if (evt.sessionKey) {
-      this.sessionIds.set(evt.sessionKey, evt.sessionId)
+      remember(this.sessionIds, evt.sessionKey, evt.sessionId, SESSION_INDEX_MAX)
       this.memorySnapshotSessions.delete(evt.sessionKey)
     }
   }
@@ -838,7 +842,7 @@ export class SpanBuilder {
   private indexSession(run: RunState): void {
     const key = run.ctx.sessionKey
     if (!key) return
-    if (run.ctx.sessionId) this.sessionIds.set(key, run.ctx.sessionId)
+    if (run.ctx.sessionId) remember(this.sessionIds, key, run.ctx.sessionId, SESSION_INDEX_MAX)
     const list = this.runsBySession.get(key) ?? []
     if (!list.includes(run.runId)) {
       list.push(run.runId)
@@ -1363,6 +1367,16 @@ function abandon(span: SpanRecord, now: number): void {
   span.outcome = "error"
   span.attrs["openclaw.outcome"] = "abandoned"
   span.attrs["error.type"] = "abandoned"
+}
+
+/** Insertion-ordered cache: re-setting a key moves it to the back, and the oldest keys go once `max` is exceeded. */
+function remember<K, V>(map: Map<K, V>, key: K, value: V, max: number): void {
+  map.delete(key)
+  map.set(key, value)
+  for (const oldest of map.keys()) {
+    if (map.size <= max) break
+    map.delete(oldest)
+  }
 }
 
 function hashHex(input: string, length: number): string {

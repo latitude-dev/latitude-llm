@@ -76,13 +76,86 @@ function encodeAttr(key: string, value: AttrValue, maxChars: number | undefined)
     return { key, value: { arrayValue: { values: value.map((v) => ({ stringValue: String(v) })) } } }
   }
   // Arrays and objects ship as JSON strings; Latitude parses the gen_ai.* ones.
-  return str(key, budget(safeJson(value), maxChars))
+  return str(key, budgetJson(value, maxChars))
 }
 
 function budget(value: string, maxChars: number | undefined): string {
   if (!maxChars || value.length <= maxChars) return value
   const keep = Math.max(0, Math.floor((maxChars - TRUNCATION_MARKER.length) / 2))
-  return `${value.slice(0, keep)}${TRUNCATION_MARKER}${value.slice(value.length - keep)}`
+  let headEnd = keep
+  if (headEnd > 0 && isHighSurrogate(value.charCodeAt(headEnd - 1))) headEnd--
+  let tailStart = value.length - keep
+  if (tailStart < value.length && isLowSurrogate(value.charCodeAt(tailStart))) tailStart++
+  return `${value.slice(0, headEnd)}${TRUNCATION_MARKER}${value.slice(tailStart)}`
+}
+
+function isHighSurrogate(code: number): boolean {
+  return code >= 0xd800 && code <= 0xdbff
+}
+
+function isLowSurrogate(code: number): boolean {
+  return code >= 0xdc00 && code <= 0xdfff
+}
+
+/**
+ * A structured value must still parse after the budget, since Latitude reads
+ * messages, tool definitions and memory records as JSON: long strings inside
+ * it are truncated first, then whole items are shed from the middle of an
+ * array. Slicing the serialized text is the last resort, for a lone object.
+ */
+function budgetJson(value: unknown, maxChars: number | undefined): string {
+  const json = safeJson(value)
+  if (!maxChars || json.length <= maxChars) return json
+  const trimmed = budgetStrings(value, Math.max(1, Math.floor(maxChars / 4)))
+  const trimmedJson = safeJson(trimmed)
+  if (trimmedJson.length <= maxChars) return trimmedJson
+  if (Array.isArray(trimmed)) return safeJson(shedItems(trimmed, maxChars))
+  return budget(trimmedJson, maxChars)
+}
+
+function budgetStrings(value: unknown, maxChars: number): unknown {
+  if (typeof value === "string") return budget(value, maxChars)
+  if (Array.isArray(value)) return value.map((item) => budgetStrings(item, maxChars))
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, budgetStrings(v, maxChars)]))
+  }
+  return value
+}
+
+const OMISSION_RESERVE = 160
+
+/** Keeps the head and tail of an array within the budget; a message list gets a marker for what was dropped. */
+function shedItems(items: readonly unknown[], maxChars: number): unknown[] {
+  const sizes = items.map((item) => safeJson(item).length + 1)
+  const head: unknown[] = []
+  const tail: unknown[] = []
+  let budgetLeft = maxChars - OMISSION_RESERVE
+  let low = 0
+  let high = items.length - 1
+  while (low <= high) {
+    const fromHead = head.length <= tail.length
+    const size = (fromHead ? sizes[low] : sizes[high]) as number
+    if (budgetLeft - size < 0) break
+    budgetLeft -= size
+    if (fromHead) head.push(items[low++])
+    else tail.unshift(items[high--])
+  }
+  const omitted = items.length - head.length - tail.length
+  if (omitted <= 0) return [...items]
+  const marker = isMessageList(items) ? [omissionMessage(omitted)] : []
+  return [...head, ...marker, ...tail]
+}
+
+function isMessageList(items: readonly unknown[]): boolean {
+  const first = items[0]
+  return !!first && typeof first === "object" && typeof (first as { role?: unknown }).role === "string"
+}
+
+function omissionMessage(count: number): unknown {
+  return {
+    role: "system",
+    parts: [{ type: "text", content: `[… ${count} message(s) omitted by latitude-openclaw …]` }],
+  }
 }
 
 function resourceAttrs(serviceName: string): OtlpKeyValue[] {

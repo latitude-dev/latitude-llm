@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs"
+import { readFileSync, statSync } from "node:fs"
 import { createRequire } from "node:module"
 import { basename, dirname, join } from "node:path"
 import { type Message, normalizeMessages } from "./messages.ts"
@@ -23,8 +23,8 @@ export type TranscriptReader = (path: string) => string | undefined
 
 const defaultTranscriptReader: TranscriptReader = (path) => {
   try {
-    const content = readFileSync(path, "utf8")
-    return content.length > MAX_FILE_BYTES ? undefined : content
+    if (statSync(path).size > MAX_FILE_BYTES) return undefined
+    return readFileSync(path, "utf8")
   } catch {
     return undefined
   }

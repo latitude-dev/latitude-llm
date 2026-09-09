@@ -15,6 +15,7 @@ interface TransportOptions {
 const DEFAULT_TIMEOUT_MS = 10_000
 const DEFAULT_MAX_ATTEMPTS = 3
 const RETRY_BASE_MS = 500
+const RETRY_AFTER_MAX_MS = 30_000
 
 /**
  * Ships OTLP requests sequentially with bounded retries. Every span is sent
@@ -84,7 +85,9 @@ export class Transport {
           return
         }
         const retryAfter = Number(res.headers.get("retry-after"))
-        await wait(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoff(attempt))
+        const honoured =
+          Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, RETRY_AFTER_MAX_MS) : 0
+        await wait(honoured || backoff(attempt))
       } catch (err) {
         if (attempt === maxAttempts) {
           this.opts.logger.warn(`ingest unreachable after ${attempt} attempts: ${String(err)}`)

@@ -45,6 +45,19 @@ describe("Transport", () => {
     expect(sleep.mock.calls[0]?.[0]).toBe(1000)
   })
 
+  it("caps a Retry-After so one throttled export cannot stall the queue", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(response(429, { "retry-after": "3600" }))
+      .mockResolvedValueOnce(response(200))
+    const sleep = vi.fn(async (_ms: number) => {})
+    const t = new Transport({ baseUrl: "https://i", apiKey: "k", project: "p", logger, fetchImpl, sleep })
+    t.enqueue(payload)
+    await t.flush(1000)
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    expect(sleep.mock.calls[0]?.[0]).toBe(30_000)
+  })
+
   it("never retries a 4xx other than 429", async () => {
     const fetchImpl = vi.fn(async () => response(401))
     const t = new Transport({

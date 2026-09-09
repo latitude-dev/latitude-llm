@@ -138,6 +138,78 @@ describe("buildOtlpRequest", () => {
     expect(attr(s, "small")?.value.stringValue).toBe("ok")
   })
 
+  it("never splits a surrogate pair when truncating a string", () => {
+    const big = "😀".repeat(300)
+    const payload = buildOtlpRequest([result([span({ attrs: { "user_prompt:gated": big } })])], {
+      allowConversationAccess: true,
+      maxContentChars: 101,
+    })
+    const value = attr(onlySpan(payload), "user_prompt")?.value.stringValue ?? ""
+    expect(value.length).toBeLessThanOrEqual(101)
+    expect(value.includes("\ufffd")).toBe(false)
+    for (const piece of value.split("[truncated by latitude-openclaw]")) {
+      expect(() => new TextEncoder().encode(piece)).not.toThrow()
+      expect(Array.from(piece).every((ch) => ch === "😀" || ch === "\n" || ch === "…")).toBe(true)
+    }
+  })
+
+  it("sheds whole messages from the middle so an oversized conversation stays valid JSON", () => {
+    const messages = Array.from({ length: 40 }, (_, i) => ({
+      role: i % 2 === 0 ? "user" : "assistant",
+      parts: [{ type: "text", content: `message ${i} ${"x".repeat(200)}` }],
+    }))
+    const payload = buildOtlpRequest([result([span({ attrs: { "gen_ai.input.messages:gated": messages } })])], {
+      allowConversationAccess: true,
+      maxContentChars: 2_000,
+    })
+    const value = attr(onlySpan(payload), "gen_ai.input.messages")?.value.stringValue ?? ""
+    expect(value.length).toBeLessThanOrEqual(2_000)
+    const parsed = JSON.parse(value) as Array<{ role: string; parts: Array<{ content: string }> }>
+    expect(parsed[0]?.parts[0]?.content).toContain("message 0 ")
+    expect(parsed[parsed.length - 1]?.parts[0]?.content).toContain("message 39 ")
+    const marker = parsed.find((m) => m.parts[0]?.content.includes("omitted by latitude-openclaw"))
+    expect(marker?.role).toBe("system")
+    expect(marker?.parts[0]?.content).toMatch(/\d+ message\(s\) omitted/)
+  })
+
+  it("truncates a huge string inside a structured value before shedding items", () => {
+    const messages = [
+      { role: "user", parts: [{ type: "text", content: "short" }] },
+      { role: "tool", parts: [{ type: "tool_call_response", result: "y".repeat(5_000) }] },
+      { role: "assistant", parts: [{ type: "text", content: "done" }] },
+    ]
+    const payload = buildOtlpRequest([result([span({ attrs: { "gen_ai.input.messages:gated": messages } })])], {
+      allowConversationAccess: true,
+      maxContentChars: 2_000,
+    })
+    const value = attr(onlySpan(payload), "gen_ai.input.messages")?.value.stringValue ?? ""
+    expect(value.length).toBeLessThanOrEqual(2_000)
+    const parsed = JSON.parse(value) as Array<{ role: string; parts: Array<{ result?: string }> }>
+    expect(parsed.map((m) => m.role)).toEqual(["user", "tool", "assistant"])
+    expect(parsed[1]?.parts[0]?.result).toContain("[truncated by latitude-openclaw]")
+  })
+
+  it("drops tool definitions from the middle without inventing a tool", () => {
+    const tools = Array.from({ length: 30 }, (_, i) => ({
+      type: "function",
+      name: `tool_${i}`,
+      description: "d".repeat(100),
+      parameters: { type: "object" },
+    }))
+    const payload = buildOtlpRequest([result([span({ attrs: { "gen_ai.tool.definitions:gated": tools } })])], {
+      allowConversationAccess: true,
+      maxContentChars: 1_500,
+    })
+    const value = attr(onlySpan(payload), "gen_ai.tool.definitions")?.value.stringValue ?? ""
+    expect(value.length).toBeLessThanOrEqual(1_500)
+    const parsed = JSON.parse(value) as Array<{ name: string }>
+    expect(parsed.length).toBeGreaterThan(1)
+    expect(parsed.length).toBeLessThan(30)
+    expect(parsed[0]?.name).toBe("tool_0")
+    expect(parsed[parsed.length - 1]?.name).toBe("tool_29")
+    expect(parsed.every((t) => t.name.startsWith("tool_"))).toBe(true)
+  })
+
   it("applies attribute redaction after gating", () => {
     const payload = buildOtlpRequest(
       [result([span({ attrs: { "gen_ai.input.messages:gated": [{ role: "user" }], "openclaw.run.id": "r" } })])],

@@ -112,7 +112,7 @@ Everything lives under `plugins.entries["@latitude-data/openclaw-telemetry"].con
 | `memory` | `true` | Emit memory spans |
 | `memoryContent` | `true` | Include memory bodies and queries |
 | `toolDefinitions` | `true` | Attach the offered tool definitions to each model call |
-| `maxContentChars` | `262144` | Per-attribute content budget; larger values are truncated from the middle |
+| `maxContentChars` | `262144` | Per-attribute content budget. Strings are truncated from the middle; message lists drop messages from the middle, with a marker, so the conversation still parses |
 | `redact` | — | `{ "attributes": ["key or /regex/"], "mask": "******" }` to mask attribute values before export |
 | `enabled` | `true` | Set to `false` to pause without uninstalling |
 | `debug` | `false` | Log diagnostics to the gateway log |

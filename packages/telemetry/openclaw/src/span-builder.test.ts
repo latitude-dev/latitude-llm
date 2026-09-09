@@ -330,6 +330,29 @@ describe("llm_request spans", () => {
     expect(root(result).attrs["openclaw.tool_calls"]).toBe(1)
   })
 
+  it("ignores a previous run's response that sits inside the start slack", () => {
+    const h = harness()
+    h.clock.now = 1_000_000
+    h.builder.onLlmInput(llmInput(), ctx())
+    h.clock.now = 1_000_100
+    h.builder.onModelCallStarted(modelStart({ callId: "call-A" }), { runId: "run-1" })
+    h.clock.now = 1_000_200
+    h.builder.onModelCallEnded(modelEnd({ callId: "call-A" }), { runId: "run-1" })
+    h.builder.onLlmOutput(llmOutput(), ctx())
+    const transcript = [
+      { role: "user", content: "earlier", timestamp: 990_000 },
+      assistant("previous answer", 998_000, { responseId: "resp-prev" }),
+      { role: "user", content: "hello", timestamp: 1_000_050 },
+      assistant("this answer", 1_000_150, { responseId: "resp-A" }),
+    ]
+    h.builder.onAgentEnd(agentEnd({ messages: transcript, durationMs: 200 }), ctx())
+    const result = h.emitted[0] as BuildResult
+    const calls = byName(result, "llm_request")
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.attrs["gen_ai.response.id"]).toBe("resp-A")
+    expect(root(result).attrs["openclaw.llm_calls"]).toBe(1)
+  })
+
   it("falls back to the attempt aggregate on the last call when no transcript message matches", () => {
     const h = harness()
     h.builder.onLlmInput(llmInput(), ctx())
@@ -822,6 +845,25 @@ describe("compaction", () => {
     expect(span.attrs["gen_ai.output.messages:gated"]).toEqual([
       { role: "assistant", parts: [{ type: "text", content: "We discussed teal and coffee." }] },
     ])
+  })
+
+  it("keeps concurrent standalone compactions of different sessions apart", () => {
+    const h = harness()
+    const keyB = "agent:main:slack:channel:C2"
+    h.builder.onSessionStart({ sessionId: "sess-1", sessionKey: key }, { agentId: "main" })
+    h.builder.onSessionStart({ sessionId: "sess-2", sessionKey: keyB }, { agentId: "main" })
+    h.builder.onBeforeCompaction({ messageCount: 40, messages: [{ role: "user", content: "a" }] }, { sessionKey: key })
+    h.builder.onBeforeCompaction({ messageCount: 20, messages: [{ role: "user", content: "b" }] }, { sessionKey: keyB })
+    h.builder.onAfterCompaction({ messageCount: 8, compactedCount: 32 }, { sessionKey: key })
+    h.builder.onAfterCompaction({ messageCount: 4, compactedCount: 16 }, { sessionKey: keyB })
+    expect(h.emitted).toHaveLength(2)
+    const [a, b] = h.emitted.map((r) => r.spans[1] as SpanRecord)
+    expect(a?.attrs["session.id"]).toBe("sess-1")
+    expect(a?.attrs["openclaw.compaction.message_count.before"]).toBe(40)
+    expect(a?.attrs["openclaw.compaction.compacted_count"]).toBe(32)
+    expect(b?.attrs["session.id"]).toBe("sess-2")
+    expect(b?.attrs["openclaw.compaction.message_count.before"]).toBe(20)
+    expect(b?.attrs["openclaw.compaction.compacted_count"]).toBe(16)
   })
 
   it("still ships a standalone compaction when the summary cannot be read", () => {
