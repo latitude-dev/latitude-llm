@@ -14,6 +14,7 @@ import {
   type UnknownStripePlanError,
 } from "@domain/billing"
 import { OutboxEventWriter } from "@domain/events"
+import { hashOptimizationCandidateText } from "@domain/optimizations"
 import { type QueuePublishError, QueuePublisher } from "@domain/queue"
 import {
   DETECTOR_HEALTH_WINDOW_SECONDS,
@@ -239,6 +240,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
 
     const liveEvaluationEligibility = getLiveEvaluationEligibility(evaluation)
     const script = resolveEvaluationScript(evaluation)
+    const scriptHash = yield* Effect.promise(() => hashOptimizationCandidateText(script))
     const scriptCapabilities = detectScriptCapabilities(script)
 
     if (!liveEvaluationEligibility.eligible) {
@@ -518,7 +520,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         passed: execution.kind === "completed" ? execution.result.passed : false,
         feedback: execution.kind === "completed" ? execution.result.feedback : execution.error,
         metadata: {
-          evaluationHash: evaluation.scriptHash ?? evaluation.alignment?.evaluationHash ?? "",
+          evaluationHash: scriptHash,
         },
         error: execution.kind === "errored" ? execution.error : null,
         duration: execution.duration,

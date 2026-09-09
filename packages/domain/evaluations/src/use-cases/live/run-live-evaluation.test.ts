@@ -16,6 +16,7 @@ import {
   seedBillingUsagePeriod,
 } from "@domain/billing/testing"
 import { OutboxEventWriter, type OutboxEventWriterShape } from "@domain/events"
+import { hashOptimizationCandidateText } from "@domain/optimizations"
 import { QueuePublisher, type QueuePublisherShape } from "@domain/queue"
 import { type DetectorHealthTracker, type ScriptRuntime, ScriptRuntimeError } from "@domain/sandbox"
 import { createFakeDetectorHealthTracker, createFakeScriptRuntime } from "@domain/sandbox/testing"
@@ -54,7 +55,7 @@ import {
   createFakeTraceSearchRepository,
 } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   EVALUATION_CONVERSATION_PLACEHOLDER,
   wrapPromptAsEvaluationScript,
@@ -436,6 +437,12 @@ function expectImmutableAnalyticsSyncOrder(operations: readonly string[]) {
 }
 
 describe("runLiveEvaluationUseCase", () => {
+  let VALID_SCRIPT_HASH: string
+
+  beforeAll(async () => {
+    VALID_SCRIPT_HASH = await hashOptimizationCandidateText(VALID_SCRIPT)
+  })
+
   beforeEach(() => {
     vi.stubEnv("LAT_BILLING_ENABLED", "true")
   })
@@ -1470,7 +1477,7 @@ describe("runLiveEvaluationUseCase", () => {
         passed: true,
         feedback: "The conversation does not exhibit the linked issue.",
         metadata: {
-          evaluationHash: evaluation.alignment?.evaluationHash,
+          evaluationHash: VALID_SCRIPT_HASH,
         },
         error: null,
         errored: false,
@@ -1687,7 +1694,7 @@ describe("runLiveEvaluationUseCase", () => {
       passed: false,
       feedback: "The conversation exhibits the linked issue.",
       metadata: {
-        evaluationHash: evaluation.alignment?.evaluationHash,
+        evaluationHash: VALID_SCRIPT_HASH,
       },
       error: null,
       errored: false,
@@ -1788,7 +1795,7 @@ describe("runLiveEvaluationUseCase", () => {
       passed: false,
       feedback: "evaluation script failed: upstream timeout",
       metadata: {
-        evaluationHash: evaluation.alignment?.evaluationHash,
+        evaluationHash: VALID_SCRIPT_HASH,
       },
       error: "evaluation script failed: upstream timeout",
       errored: true,

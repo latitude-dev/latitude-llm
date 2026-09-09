@@ -240,13 +240,7 @@ export const applySignalIgnoreToEvaluation = (input: {
   )
 }
 
-/**
- * The script to execute for an evaluation. `settings` is the declarative source of truth when
- * present, so it is recompiled rather than trusting the stored `script` snapshot, which stays
- * frozen at whatever a past compiler version produced and otherwise drifts silently out of sync
- * with the current codegen (e.g. a template/placeholder change). A `null` settings means a raw
- * or detached script, used as-is.
- */
+// `settings`, when present, is the source of truth — recompiling guards against a stored `script` gone stale.
 export const resolveEvaluationScript = (evaluation: Pick<Evaluation, "script" | "settings">): string =>
   evaluation.settings ? compileSettingsToScript(evaluation.settings) : evaluation.script
 
