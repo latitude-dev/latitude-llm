@@ -161,4 +161,26 @@ describe("upsertFlaggerAnnotationScore anchor dedup", () => {
     expect(reworded.status).toBe("written")
     expect(scores.size).toBe(2)
   })
+
+  it("dedups an anchor beyond the historical 200-row scan window", async () => {
+    const { upsert, scores } = makeHarness()
+
+    const first = await upsert({ feedback: "Original finding.", contentHash: ANCHOR_A })
+    const anchorScore = scores.get(first.scoreId)
+    if (!anchorScore) throw new Error("missing anchor score")
+    scores.set(first.scoreId, { ...anchorScore, createdAt: new Date("2020-01-01T00:00:00.000Z") })
+
+    for (let index = 0; index < 200; index++) {
+      await upsert({
+        feedback: `Filler finding ${index}.`,
+        contentHash: `${(index + 1).toString(16).padStart(64, "0")}`,
+      })
+    }
+
+    expect(scores.size).toBe(201)
+
+    const rerun = await upsert({ feedback: "Re-worded duplicate.", contentHash: ANCHOR_A })
+    expect(rerun).toEqual({ status: "existing", scoreId: first.scoreId })
+    expect(scores.size).toBe(201)
+  })
 })

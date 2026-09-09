@@ -41,17 +41,12 @@ export const findFlaggerAnnotationByAnchor = (input: {
 }) =>
   Effect.gen(function* () {
     const scoreRepository = yield* ScoreRepository
-    const published = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
+    return yield* scoreRepository.findPublishedSystemAnnotationByAnchor({
       projectId: input.projectId,
       sessionId: input.sessionId as SessionId,
+      flaggerSlug: input.flaggerSlug,
+      contentHash: input.contentHash,
     })
-
-    return (
-      published.find((score) => {
-        const metadata = score.metadata as { flaggerSlug?: string; contentHash?: string } | null
-        return metadata?.flaggerSlug === input.flaggerSlug && metadata?.contentHash === input.contentHash
-      }) ?? null
-    )
   })
 
 /**
