@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.98 - 2026-09-09
+
+### Sessions
+
+- Session outlier badges and analytical flagger hints now calculate duration, time-to-first-token, token and cost percentiles from LLM-active sessions only. Synthetic HTTP sessions no longer distort project cohort thresholds, and existing cached baselines are bypassed (ref: #4611).
+
 ## v0.3.97 - 2026-09-09
 
 ### Sessions
