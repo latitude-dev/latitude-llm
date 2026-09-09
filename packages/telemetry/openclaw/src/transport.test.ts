@@ -15,7 +15,7 @@ describe("Transport", () => {
   it("posts to /v1/traces with the project header and bearer token", async () => {
     const fetchImpl = vi.fn(async () => response(200))
     const t = new Transport({
-      baseUrl: "https://ingest.example/",
+      baseUrl: "https://ingest.example///",
       apiKey: "k",
       project: "p",
       logger,

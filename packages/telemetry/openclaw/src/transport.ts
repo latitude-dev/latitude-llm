@@ -30,7 +30,7 @@ export class Transport {
 
   constructor(opts: TransportOptions) {
     this.opts = opts
-    this.url = `${opts.baseUrl.replace(/\/+$/, "")}/v1/traces`
+    this.url = `${withoutTrailingSlashes(opts.baseUrl)}/v1/traces`
   }
 
   enqueue(payload: OtlpExportRequest): void {
@@ -100,6 +100,12 @@ export class Transport {
 
 function backoff(attempt: number): number {
   return RETRY_BASE_MS * 2 ** (attempt - 1) + Math.random() * RETRY_BASE_MS
+}
+
+function withoutTrailingSlashes(url: string): string {
+  let end = url.length
+  while (end > 0 && url[end - 1] === "/") end--
+  return url.slice(0, end)
 }
 
 function sleep(ms: number): Promise<void> {
