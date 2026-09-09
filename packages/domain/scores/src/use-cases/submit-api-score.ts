@@ -1,9 +1,28 @@
-import { BadRequestError, OrganizationId, type ProjectId } from "@domain/shared"
+import { BadRequestError, OrganizationId, type ProjectId, type RepositoryError } from "@domain/shared"
 import { resolveScoreTraceContext, resolveTraceIdFromRef, traceRefSchema } from "@domain/spans"
-import { Effect } from "effect"
+import { Cause, Effect, Exit } from "effect"
 import { z } from "zod"
+import type { Score } from "../entities/score.ts"
 import { customScoreSchema, evaluationScoreSchema } from "../entities/score.ts"
+import { ScoreRepository } from "../ports/score-repository.ts"
 import { baseWriteScoreInputSchema, type WriteScoreInput, writeScoreUseCase } from "./write-score.ts"
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+
+const isRepositoryError = (error: unknown): error is RepositoryError =>
+  isRecord(error) && error._tag === "RepositoryError" && "cause" in error
+
+/**
+ * `scores_canonical_evaluation_trace_idx` enforces one non-draft evaluation score per
+ * (project, evaluation, trace). A retried or concurrent submission for the same trace loses
+ * this race in Postgres, not in application code, so the violation can be nested under
+ * whatever the driver wraps it in.
+ */
+const isCanonicalEvaluationConflict = (cause: unknown): boolean => {
+  if (!isRecord(cause)) return false
+  if (cause.code === "23505" && cause.constraint === "scores_canonical_evaluation_trace_idx") return true
+  return "cause" in cause && isCanonicalEvaluationConflict(cause.cause)
+}
 
 const formatValidationError = (error: z.ZodError): string => error.issues.map((issue) => issue.message).join(", ")
 
@@ -120,5 +139,32 @@ export const submitApiScoreUseCase = Effect.fn("scores.submitApiScore")(function
       ? { ...sharedWriteInput, sourceType: "evaluation", sourceId: parsed.sourceId, metadata: parsed.metadata }
       : { ...sharedWriteInput, sourceType: "custom", sourceId: parsed.sourceId, metadata: parsed.metadata }
 
-  return yield* writeScoreUseCase(writeInput)
+  const writeExit = yield* Effect.exit(writeScoreUseCase(writeInput))
+  if (Exit.isSuccess(writeExit)) {
+    return writeExit.value
+  }
+
+  // A duplicate evaluation-score submission (an SDK retry, or two concurrent calls for the
+  // same trace) loses the canonical-row race in Postgres. Treat it like the internal live-evaluation
+  // path does: the request is idempotently satisfied by whichever score won, so return that score
+  // instead of surfacing a 500 for something that already succeeded.
+  const errorOption = Cause.findErrorOption(writeExit.cause)
+  const isDuplicateEvaluationScore =
+    parsed.source === "evaluation" &&
+    errorOption._tag === "Some" &&
+    isRepositoryError(errorOption.value) &&
+    isCanonicalEvaluationConflict(errorOption.value.cause)
+
+  if (!isDuplicateEvaluationScore) {
+    return yield* writeExit
+  }
+
+  const scoreRepository = yield* ScoreRepository
+  const existingScore: Score | null = yield* scoreRepository.findByEvaluationIdAndTraceId({
+    projectId: input.projectId,
+    evaluationId: parsed.sourceId,
+    traceId,
+  })
+
+  return existingScore ?? (yield* writeExit)
 })
