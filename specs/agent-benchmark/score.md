@@ -137,20 +137,19 @@ The score and every dimension carry a 95% interval. The daily job bootstraps com
 than individual events, preserving correlation between metrics and signals on the same session.
 
 The bootstrap repeats the entire dimension estimator, including inverse-probability weights,
-counterfactual prediction, and the reference-run transform. Model calibration uncertainty is sampled
-from its stored validation distribution.
+resource counterfactuals, and reference-run transforms.
 
-Empirical resampling is not the sole uncertainty method for binary endpoint dimensions. Reliability
-first computes a boundary-aware interval for the terminal-failure probability. Safety does the same
-for confirmed-harm probability. Uniformly examined populations use an exact binomial interval;
-non-uniform populations use a stratified profile-likelihood interval that preserves known selection
-probabilities. A propensity pattern that cannot support that interval leaves the dimension
-unmeasured.
+Empirical resampling is not the sole uncertainty method for binary endpoint dimensions. Outcome,
+Reliability, and Safety compute boundary-aware intervals for their success or failure probabilities.
+Uniformly examined populations use an exact binomial interval; non-uniform populations use a
+stratified profile-likelihood interval that preserves known selection probabilities. A propensity
+pattern that cannot support that interval leaves the dimension unmeasured.
 
-The endpoint interval remains non-degenerate when the window contains zero observed failures or zero
-observed harms. Its bounds pass through the monotone `p^20` or `(1 - q)^1000` transform in the
-opposite order where required. Composite bootstrap replicates draw the native endpoint probability
-from the fitted boundary-aware model instead of repeatedly resampling an all-zero outcome vector.
+The endpoint interval remains non-degenerate when the window contains only successes, zero observed
+failures, or zero observed harms. Reliability and Safety bounds pass through the monotone `p^20` or
+`(1 - q)^1000` transform in the opposite order where required. Composite bootstrap replicates draw
+the native endpoint probability from the fitted boundary-aware model instead of repeatedly
+resampling a constant outcome vector.
 
 The page also reports coverage facts that the interval cannot explain by itself:
 
@@ -175,7 +174,7 @@ A dimension is unmeasured when any required base is below its configured floor o
 share is too small to describe the eligible population. Reader-specific floors live with the reader
 and are frozen in the scoring version.
 
-Outcome requires enough sampled Task Success verdicts and feature coverage. Cost requires enough
+Outcome requires enough compatible sampled Task Success verdicts and examined-population coverage. Cost requires enough
 eligible and readable units in every required Cost family. A missing optional metric lowers its
 reader coverage, while an unreadable required family withholds Cost. Speed requires enough sessions
 with a complete, classifiable critical path. Safety requires a propensity-correctable population
@@ -190,7 +189,7 @@ The dimension formula computes the number before causes receive any credit. Attr
 step used for ranking and explanation. It is resolved dynamically from the current selected window
 and is not stored in daily snapshots.
 
-For each cause the engine computes two quantities:
+Where the dimension has a defensible counterfactual, the engine computes two quantities:
 
 1. **Attributed deficit**: the cause's Shapley share of the dimension's distance from its healthy
    counterfactual. These shares add to the current attributed deficit. A deterministic residual row
@@ -201,14 +200,18 @@ For each cause the engine computes two quantities:
 Cost attributes each cause in its family's native units before translating the result into Cost
 score points. Money remains available where the evidence supports it, but a context, tool, memory,
 or recovery cause does not need a defensible price to appear. Speed attributes in time before
-applying its ratio. Outcome, Reliability, and Safety run the same counterfactual through their
-probability estimator and transform.
+applying its ratio. Reliability can attribute terminal endpoints directly.
+
+The initial Outcome and Safety sections use a smaller issue contract. Outcome reports issue reach,
+examined overlap, and failed overlap. Safety reports exposure and confirmed-harm sessions. These rows
+do not receive Shapley shares or estimated fix gains. The dimension scores come from Task Success and
+the confirmed-harm union, not from adding issue penalties.
 
 Near-duplicate signals and observations of the same underlying event are grouped before attribution.
-Exact Shapley attribution is used for 12 or fewer grouped causes. Larger sets use deterministic,
-seeded permutation samples until the error target or computation ceiling is reached. The interface
-shows the most meaningful rows and a residual; explanation limits never remove evidence from the
-dimension estimator.
+When attribution applies, exact Shapley attribution is used for 12 or fewer grouped causes. Larger
+sets use deterministic, seeded permutation samples until the error target or computation ceiling is
+reached. The interface shows the most meaningful rows and a residual; explanation limits never
+remove evidence from the dimension estimator.
 
 The cause list never claims causality where the estimator only established association. A signal
 row says "associated effect" unless the observation itself identifies avoidable work or a terminal
@@ -239,9 +242,9 @@ The scoring version changes when any of these changes:
 
 - a dimension formula or reference-run horizon;
 - composite weights or policy cap;
-- the Outcome calibration model or its feature contract;
 - the Task Success prompt or supported judge configuration;
-- the signal-effect estimator or pooled priors;
+- the Outcome sampling policy, eligibility contract, or coverage floors;
+- the Cost or Speed signal-effect estimator;
 - the Cost family weights, metric curves, overlap rules, residual-signal cap, or coverage floors;
 - frozen fleet references;
 - terminal failure or confirmed harm taxonomy;
@@ -259,8 +262,8 @@ not a gradual blend of old and new verdicts.
 The trend chart marks a version boundary. Snapshots on opposite sides remain visible but are not
 presented as a continuous measurement.
 
-Hosted and self-hosted deployments load the same formulas, prompts, reference bundles, and
-calibration artifacts. A self-hoster that substitutes an unsupported Task Success or Safety judge
+Hosted and self-hosted deployments load the same formulas, prompts, reference bundles, and scoring
+artifacts. A self-hoster that substitutes an unsupported Task Success or Safety judge
 model receives a distinct local scoring version, and its score is not presented as directly
 comparable with the bundled version. A deployment without a supported judge configuration cannot
 pass the Outcome or Safety publication gate.
@@ -271,54 +274,54 @@ pass the Outcome or Safety publication gate.
 
 #### Estimand
 
-Outcome estimates the probability that a session accomplished what the user asked. A session
+Outcome estimates the share of judgeable sessions that accomplished what the user asked. A session
 succeeds when the agent resolves all material user goals that remain active at the end:
 
 ```text
-Outcome = 100 * sum(sessionWeight[j] * P(success[j] | evidence[j])) / sum(sessionWeight[j])
+sessionWeight[j] = 1 / inclusionProbability[j]
+Outcome = 100 * sum(sessionWeight[j] * success[j]) / sum(sessionWeight[j])
 ```
 
-The sampled `task-success` flagger supplies direct holistic reference verdicts. It uses the same
-project-configured, hint-aware sampling infrastructure as other flaggers. Stored inclusion
-probabilities correct that selection. Conversation moments, final-output validity, and promoted
-signals are jointly fitted features, not independent point deductions.
+The sampled `task-success` flagger supplies the holistic verdicts. It uses the project-configured,
+hint-aware sampling infrastructure and stores the inclusion probability before judging the session.
+The ratio estimator corrects that selection. It does not infer a probability for each unexamined
+session.
 
 Task Success can return success, failure, indeterminate, or not applicable. Success and failure are
-passed and failed scores. The other verdicts lower coverage. The model estimates unexamined sessions
-from the reference verdicts and all eligible evidence, with cross-fitting so a session is never
-predicted by parameters trained on its own verdict.
+passed and failed scores. The other verdicts lower coverage and do not enter the numerator or
+denominator. Compatible deterministic Task Success endpoints use inclusion probability one.
 
 #### Evidence
 
 | Evidence | Role |
 | --- | --- |
 | `sessions.task_success` | direct holistic success or failure reference verdict |
-| `moments.strong_failure` | strong direct evidence that the user did not get the requested result |
-| `moments.failed_self_service` | direct evidence that self-service failed before handoff |
-| `moments.weak_failure` | probabilistic evidence of a stalled or hesitant result |
-| `sessions.no_output` | terminal evidence of no delivered result |
-| `spans.finish_failure` on the final generation | terminal evidence of a broken result |
-| Outcome signals | signal-specific evidence whose effect is pooled and calibrated |
+| `moments.strong_failure` | session context and a project issue candidate |
+| `moments.failed_self_service` | session context and a project issue candidate |
+| `moments.weak_failure` | session context |
+| `sessions.no_output` | deterministic Task Success failure when task applicability is readable |
+| `spans.finish_failure` on the final generation | deterministic Task Success failure when task applicability is readable |
+| Outcome signals | recurring project issues linked to examined Task Success results where possible |
 
-No output and demonstrably broken final output anchor the session probability at zero. A Task Success
-verdict is the reference endpoint. Other features estimate unexamined traffic and attribute the
-result. A new signal borrows a regularized prior from signals with the same evidence role until it has
-enough independent verdicts to estimate its own effect.
+No output and demonstrably broken final output can establish a deterministic failure when the
+session contains a readable user task. Other findings explain failed sessions but do not apply
+another deduction. Issue rows report their reach and overlap with examined failures without claiming
+that removing the issue would recover a fixed number of Outcome points.
 
 #### Denominator and coverage
 
-The denominator contains eligible sessions whose tasks can be judged. Outcome is unmeasured until
-Task Success verdicts, readable features, and corrected sampling cover enough of the eligible base to
-pass the versioned floor. A disabled Task Success flagger or unknown inclusion probability prevents
-publication when the remaining direct endpoints are insufficient.
+The denominator contains examined sessions whose tasks can be judged, corrected by their stored
+inclusion probabilities. Outcome is unmeasured until compatible Task Success verdicts cover enough of
+the eligible base to pass the versioned floor. A disabled Task Success flagger or unknown inclusion
+probability prevents publication when the remaining direct endpoints are insufficient.
 
 The first version judges the whole session. Task and goal episodes may become first-class Outcome
 units in a future scoring version; existing episode extraction remains internal evidence until then.
 
 #### Destination
 
-Behaviors shows the conversation patterns carrying unsuccessful outcomes. Signals shows recurring
-defects and example sessions.
+Session Scores shows direct judgments and supporting evidence. Signals owns recurring Outcome issues
+and their example sessions. Behavior-level Outcome analytics are a later extension.
 
 ### Reliability
 

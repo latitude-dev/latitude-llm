@@ -59,7 +59,8 @@ Each dimension section contains:
 - score, interval, and one-sentence meaning when the publication gate passes;
 - the formula definition and current native inputs when they are readable;
 - coverage and important missing evidence;
-- causes ranked by expected fix gain;
+- causes ranked by expected fix gain where measured, otherwise issues ranked by failed or harmed
+  session overlap;
 - contextual observations that do not lower this dimension;
 - destinations for investigation.
 
@@ -87,8 +88,8 @@ contains only scores, intervals, version, window, and eligible-session count.
 | Evidence | endpoint, probability feature, money, time, or confirmed harm |
 | Reach | affected and readable sessions |
 | Native effect | probability change, Cost-family units, avoidable spend, avoidable time, or harmed sessions |
-| Attributed deficit | Shapley share of the displayed dimension deficit |
-| Fix gain | estimated score recovered if this cause alone disappeared |
+| Attributed deficit | Shapley share of the displayed dimension deficit, when measured |
+| Fix gain | estimated score recovered if this cause alone disappeared, when measured |
 | Confidence | interval, independent observation count, and measured or associated label |
 | Destination | Sessions, Tools, Memory, Cost, Signals, Behaviors, or Settings |
 
@@ -166,18 +167,17 @@ expanded view.
 ### Outcome example
 
 ```text
-78   Outcome           mean calibrated P(success) = 0.78
-     890 analyzed sessions, covering 72% of eligible traffic
+78   Outcome           selection-corrected success rate = 0.78
+     890 examined sessions, covering 72% of eligible traffic
 
-Cause                                      Reach          Attributed   Fix gain
-Users corrected or abandoned               204 sessions      -9 pts      +7
-Refund-flow loop signal                     190 sessions      -7 pts      +5
-No usable final output                       36 sessions      -4 pts      +4
-Other calibrated evidence                                  -2 pts       -
+Issue                                      Reach       Examined overlap   Failed overlap
+Users corrected or abandoned               204 sessions      150 sessions       72 sessions
+Refund-flow loop signal                     190 sessions      141 sessions       65 sessions
+No usable final output                       36 sessions       36 sessions       36 sessions
 ```
 
-The cause rows explain the model's estimate. They do not claim that every session with a weak signal
-failed.
+The score comes from Task Success judgments. Issue rows explain where failures concentrate without
+claiming that every affected session failed or that removing one issue guarantees a fixed point gain.
 
 ### Safety example
 
@@ -186,7 +186,7 @@ failed.
      interval 56 to 99
 
 Confirmed harm
-Assistant disclosed personal data            1 session      -10 pts
+Assistant disclosed personal data            1 harmed session
 
 Exposure only
 Injection attempts received                 340 sessions
@@ -205,8 +205,8 @@ formula.
 | Memory | repeated searches, no-op writes, and reverted writes |
 | Cost | family health, cache opportunity, context use, pricing coverage, and recoverable spend |
 | Signals | recurring defects, examples, patterns, and associated effects |
-| Behaviors | Outcome evidence grouped by conversation topic |
-| Settings | flagger coverage, safety screening, and policy controls |
+| Behaviors | later Outcome grouping by conversation topic |
+| Settings | later flagger coverage and safety screening details |
 
 A signal row links to its signal page. That page already owns examples, lifecycle, dispatch, and
 resolution. The benchmark page ranks the consequence and does not duplicate the workflow.

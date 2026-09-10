@@ -558,23 +558,22 @@ remain visible and unreadable for this metric.
 
 # Moments
 
-Conversation intelligence produces probabilistic Outcome evidence. It does not assign a fixed score
+Conversation intelligence produces Outcome issue evidence. It does not assign a fixed score
 deduction.
 
 ## `moments.strong_failure`
 
 - Dimension: Outcome.
-- Evidence role: strong negative task-success feature.
+- Evidence role: strong negative Outcome issue evidence.
 - Reader: correction, repeated-information request, abandonment, or explicit frustration.
 
-These moments quote the user's next turn as evidence. The Outcome model learns their conditional
-failure probability from sampled Task Success verdicts. Multiple strong moments on one session
-remain one feature set rather than repeated deductions.
+These moments quote the user's next turn as evidence. The initial Outcome estimator does not assign
+them independent points. Multiple strong moments on one session collapse into one issue input.
 
 ## `moments.failed_self_service`
 
 - Dimension: Outcome.
-- Evidence role: paired negative task-success feature.
+- Evidence role: paired negative Outcome issue evidence.
 - Reader: escalation to a human after a correction or frustration, ordered by message index.
 
 An intended handoff is not failure. The earlier negative moment establishes that self-service failed
@@ -583,12 +582,12 @@ before the handoff.
 ## `moments.weak_failure`
 
 - Dimensions: Outcome, Speed.
-- Evidence role: probabilistic task-success feature and residual time attribution.
+- Evidence role: Outcome issue evidence and residual time attribution.
 - Reader: stalled or hesitant behavior.
 
-For Outcome, the calibrated model determines how much this changes task-success probability. For
-Speed, it can attribute excess critical-path time left unexplained after deterministic latency and
-retry readers. It never invents a fixed duration.
+For Outcome, the first version reports the issue's reach and overlap with examined Task Success
+failures. For Speed, it can attribute excess critical-path time left unexplained after deterministic
+latency and retry readers. It never invents a fixed duration.
 
 # Safety
 
@@ -643,10 +642,10 @@ behavior. Annotation volume is not itself a metric. Scores assigned to ignored s
 explicit exclusion defined in [`signals.md`](signals.md); independent telemetry readers remain
 unchanged.
 
-## Positive evidence without Task Success calibration
+## Positive evidence beyond Task Success
 
-Resolution and satisfaction moments may be Outcome features once sampled Task Success verdicts show
-how they relate to success. Their absence is not failure.
+Resolution and satisfaction moments can become Outcome estimator inputs in a later scoring version.
+Their absence is not failure.
 
 ## Synthetic traffic
 

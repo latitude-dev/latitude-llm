@@ -22,12 +22,12 @@ data definitions live in the other benchmark specifications:
 | 1. Dimension-aware signals | signal classification becomes visible and reusable | none |
 | 2. Session assessment | one session gets a dimension-aware evidence story | 1 |
 | 3. Cost and Speed efficiency | versioned Cost-family evidence and avoidable critical-path time reach existing product pages and shadow scoring | 1, 2 |
-| 4. Outcome intelligence | calibrated task-success evidence reaches Sessions, Signals, and Behaviors | 1, 2 |
-| 5. Safety assurance | exposure, defense, and confirmed harm become measurable | 1, 2 |
+| 4. Outcome intelligence | Outcome evidence reaches session Scores and supports a project Outcome score and issue list | 1, 2, 3 |
+| 5. Safety assurance | Safety evidence reaches session Scores and supports a project Safety score and issue list | 1, 2, 3 |
 | 6. Agent Score benchmark | the five proven estimators become snapshots and a project benchmark | 1 through 5 |
 
-PRs 3, 4, and 5 can run in parallel after PR 2. PRs 4 and 5 may be combined if review capacity favors
-five pull requests, but their tasks and exit gates remain separate sections in the combined PR.
+PRs 4 and 5 can run in parallel after PR 3. They share a small additive structured-flagger-result
+contract, so the second branch to merge must rebase before regenerating shared API artifacts.
 
 PRs 1 through 5 each ship a user-facing feature without requiring the benchmark page. PR 6 does not
 introduce new evidence semantics. It composes the behavior already exercised by those features.
@@ -99,8 +99,9 @@ does not display per-session dimension scores.
   finding was selected for signal discovery.
 - The assessment has no dimension, direction, source, or measured-state filters. Its items are one
   chronological cursor-paginated feed.
-- PR 2 defines no generic evidence-confidence field. PRs 3, 4, and 5 add uncertainty beside the
-  concrete estimates they introduce; PR 6 owns project-level score intervals.
+- PR 2 defines no generic evidence-confidence field. PR 3 adds ranges beside its native estimates,
+  PRs 4 and 5 add reader-specific examination coverage, and PR 6 owns project-level score
+  intervals.
 - ClickHouse changes are forward-only. Historical score rows are not backfilled, and absent
   structured fields remain unknown rather than false or healthy.
 
@@ -562,70 +563,80 @@ performance validation; PR 6 publishes the benchmark and snapshots.
 
 ## PR 4: Outcome intelligence
 
-**Product result**: Sessions, Signals, and Behaviors show calibrated evidence about whether the agent
-accomplished the requested task.
+**Product result**: the session Scores panel shows successful Task Success judgments under positive
+evidence and failed judgments under needs attention. PR 4 also provides the window estimator and
+issue inputs that PR 6 needs for a project Outcome score.
+
+### Scope boundary
+
+The first Outcome score is the selection-corrected success rate among examined, judgeable sessions.
+It does not infer a probability for each unexamined session. PR 4 does not train an Outcome model,
+add hierarchical signal effects, or change Behaviors. Outcome signals remain project issues and
+session evidence, but they do not apply a second deduction on top of Task Success failures.
 
 ### Task Success flagger
 
 - [ ] **P4-1** Add the configurable `task-success` LLM-as-judge flagger and holistic verdict contract
   from [`flaggers.md`](flaggers.md#task-success).
 - [ ] **P4-2** Extend the flagger workflow to persist passed scores for success, failed scores for
-  failure, and coverage-only decisions for indeterminate and not-applicable results. Stamp every
-  decision and score with its scoring-artifact version.
+  failure, and coverage-only decisions for indeterminate and not-applicable results. Store the
+  judgment version and inclusion probability used for each decision.
 - [ ] **P4-3** Publish failed Task Success scores to normal signal discovery while preventing passed
   scores from creating signals.
 - [ ] **P4-4** Store selection probabilities before classification and preserve hinted, sampled,
   skipped, rate-limited, and errored outcomes.
 
-### Outcome model
+### Session and project evidence
 
-- [ ] **P4-5** Train and calibrate the Outcome model with cross-fitting and the endpoint anchors
-  specified in [`score.md`](score.md#outcome).
-- [ ] **P4-6** Implement hierarchical effects for newly promoted Outcome signals.
-- [ ] **P4-7** Validate calibration overall and across organization size, behavior cluster, model,
-  and interaction shape.
-- [ ] **P4-8** Freeze the model artifact, feature contract, and validation distribution under a
-  scoring-version identifier. Pin supported judge configurations and support the same artifact in
-  self-hosted deployments. Define compatible evidence-artifact versions and re-evaluation or
-  withholding behavior at boundaries. Verify that the artifact contains no tenant content or
-  tenant-identifying coefficients.
-
-### Product surfaces
-
-- [ ] **P4-9** Add Outcome evidence and calibrated effects to session assessment, defining
-  probability uncertainty beside the concrete probability or probability-change estimate.
-- [ ] **P4-10** Add success estimates and evidence coverage to Behaviors by topic cluster.
-- [ ] **P4-11** Add measured Outcome association, independent observation count, and confidence to
-  eligible signal details.
-- [ ] **P4-12** Mark signals whose Outcome effect is not yet measurable without hiding their session
-  occurrences.
+- [ ] **P4-5** Add Task Success judgments to the shared session-assessment sources and resolver.
+  Render success under positive evidence and failure under needs attention with the judgment's
+  feedback and evidence anchor. Omit indeterminate and not-applicable decisions from both lists and
+  expose them through coverage.
+- [ ] **P4-6** Add the selection-corrected project Outcome estimator from
+  [`score.md`](score.md#outcome). Return the 0 through 100 success rate, interval, examined count,
+  eligible count, and coverage state without publishing an Agent Score snapshot.
+- [ ] **P4-7** Produce bounded project issue inputs from failed Task Success scores, deterministic
+  Outcome findings, and eligible Outcome signal occurrences. Deduplicate shared source evidence and
+  report affected sessions and overlap with examined failures. Issue counts explain the score but
+  do not create extra points.
+- [ ] **P4-8** Extend the session-assessment operation, generated contracts, and Scores UI only as
+  needed for the new Outcome items and coverage. Defer Behaviors and standalone Signal-detail
+  analytics until after the initial Agent Score launch.
 
 ### Exit gate
 
-- [ ] **P4-13** Tests cover Task Success verdict persistence, positive-score discovery exclusion,
-  feature extraction, endpoint anchors, selection correction, cross-fit exclusion, signal
-  shrinkage, duplicate evidence, and model-version loading.
-- [ ] **P4-14** Calibration meets the acceptance thresholds recorded with the frozen model artifact.
-- [ ] **P4-15** Session, Signal, and Behavior views reconcile against the same inspected fixtures.
+- [ ] **P4-9** Tests cover every Task Success verdict, positive-score discovery exclusion, stable
+  selection, version compatibility, selection correction, zero examined sessions, coverage floors,
+  duplicate issue evidence, and single-session versus bulk parity.
+- [ ] **P4-10** Inspected fixtures reconcile the Task Success score row, session assessment item,
+  project estimator input, and issue input without assigning a score to the session itself.
 - [ ] `pnpm typecheck` and `pnpm test` pass.
 
 ## PR 5: Safety assurance
 
-**Product result**: Sessions, Signals, and Settings distinguish hostile input, successful defense,
-and confirmed agent-caused harm, with measurable examination coverage.
+**Product result**: the session Scores panel shows confirmed agent-caused harm and hostile exposure
+under needs attention, and successful defense under positive evidence. PR 5 also provides the window
+estimator and issue inputs that PR 6 needs for a project Safety score.
+
+### Scope boundary
+
+The launch suite contains Jailbreaking and PII Leakage. NSFW remains contextual unless a later
+contract identifies assistant-caused harm. PR 5 does not redesign Flagger Settings or build
+standalone Safety analytics on Signal detail.
 
 ### Safety findings
 
 - [ ] **P5-1** Separate injection attempt from assistant compliance as specified in
   [`flaggers.md`](flaggers.md#injection-attempt-and-compliance).
 - [ ] **P5-2** Separate user-authored PII exposure from assistant disclosure.
-- [ ] **P5-3** Persist exposure, defense, and confirmed-harm fields through score metadata and
-  ClickHouse readers.
+- [ ] **P5-3** Persist a bounded structured finding kind, judgment version, evidence anchor, and
+  selection provenance through score metadata and the ClickHouse projection. Historical rows remain
+  unknown. Passed defense findings must not enter signal discovery.
 
 ### Examination and estimation
 
 - [ ] **P5-4** Add suite-level Safety selection on the screening infrastructure from PR 2. Selected
-  sessions run every launch Safety detector with a shared inclusion probability.
+  sessions run Jailbreaking and PII Leakage with one stored inclusion probability.
 - [ ] **P5-5** Implement the examined population, confirmed-harm union, selection correction, and
   coverage gates defined in [`score.md`](score.md#safety).
 - [ ] **P5-6** Implement Safety interval and reference-run estimation as a reusable domain result.
@@ -633,20 +644,26 @@ and confirmed agent-caused harm, with measurable examination coverage.
   positive session evidence. Treat the structured jailbreaking verdict as confirmation when it
   includes the assistant action that complied.
 
-### Product surfaces
+### Session and project evidence
 
-- [ ] **P5-8** Add exposure, defense, confirmed harm, and examination coverage to session assessment.
-- [ ] **P5-9** Add the same distinction and measurable rates to Safety signal detail.
-- [ ] **P5-10** Add uniform, sampled, hinted, skipped, and rate-limited Safety coverage to Flagger
-  Settings.
+- [ ] **P5-8** Add Safety findings and examination coverage to session assessment. Render confirmed
+  harm and exposure under needs attention, successful defense under positive evidence, and never
+  treat an examined session with no finding as positive evidence.
+- [ ] **P5-9** Produce bounded project issue inputs from confirmed-harm findings and eligible Safety
+  signal occurrences. Union harm once per session, deduplicate shared source evidence, and report
+  exposure separately. Issue counts explain the score but do not create extra points.
+- [ ] **P5-10** Extend the session-assessment operation, generated contracts, and Scores UI only as
+  needed for the new Safety items and coverage. Defer Flagger Settings and standalone Signal-detail
+  analytics until after the initial Agent Score launch.
 
 ### Exit gate
 
 - [ ] **P5-11** Tests prove that exposure never enters confirmed harm and unexamined sessions never
-  become clean observations.
+  become clean observations. Passed defense findings do not enter signal discovery.
 - [ ] **P5-12** Fixtures cover refused and complied-with injections, user and assistant PII, multiple
   detectors on one harmed session, and incomplete coverage.
-- [ ] **P5-13** Session, Signal, and Settings views agree on the examined population and findings.
+- [ ] **P5-13** Inspected fixtures reconcile the structured finding, session assessment item,
+  project estimator input, and issue input without assigning a score to the session itself.
 - [ ] `pnpm typecheck` and `pnpm test` pass.
 
 ## Requirements before PR 6
@@ -657,11 +674,12 @@ PR 6 starts only when all of these gates pass:
 - [ ] Session assessment resolves the same source facts in single-session and bulk mode.
 - [ ] Structured findings distinguish recovery, terminal failure, exposure, defense, and harm.
 - [ ] Sampled evidence has a known examined population or remains unmeasured.
-- [ ] Cost family metrics, curves, weights, caps, coverage floors, and residual-signal policy are
-  frozen in a versioned artifact after thousand-session shadow calibration.
+- [ ] Cost family metrics, curves, weights, caps, coverage floors, and residual-signal policy have a
+  versioned initial artifact. Production recalibration and cross-surface expansion are deferred
+  follow-ups.
 - [ ] Cost native impacts and Speed counterfactuals are bounded and visible on existing pages.
-- [ ] Outcome uses sampled Task Success verdicts, known inclusion probabilities, and a frozen,
-  calibrated model.
+- [ ] Outcome uses compatible sampled Task Success verdicts with known inclusion probabilities and
+  passes its examined-population coverage floor.
 - [ ] Safety uses a full-window examined population and confirmed-harm definition.
 - [ ] Duplicate detectors and split signals pass invariance tests.
 - [ ] Every reader exposes coverage and missing-evidence reasons.
@@ -684,8 +702,10 @@ already exercised elsewhere in the product.
 - [ ] **P6-3** Implement complete-session bootstrap intervals, boundary-aware endpoint intervals,
   the all-five-dimensions publication gate, the fixed composite, optional policy cap, and
   scoring-version boundaries from [`score.md`](score.md).
-- [ ] **P6-4** Implement dynamic attributed deficit, fix gain, residual, grouped causes, and bounded
-  Shapley approximation from [`score.md`](score.md#dynamic-attribution-after-scoring).
+- [ ] **P6-4** Implement dynamic cause rows from
+  [`score.md`](score.md#dynamic-attribution-after-scoring). Use attributed deficit, fix gain,
+  residual, and bounded Shapley approximation where a counterfactual supports them. Outcome and
+  Safety use their smaller issue-overlap contracts.
 
 ### Persistence and jobs
 
