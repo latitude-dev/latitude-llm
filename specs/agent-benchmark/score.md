@@ -68,7 +68,7 @@ telemetry. It is the bulk query boundary where the normalized facts defined in
 
 The session panel and daily job share the pure assessment resolver, evidence roles, deduplication,
 and coverage semantics. Platform adapters provide single-session and bulk reads so the daily job does
-not call the interactive use-case once per session. The window adds calibrated estimates and
+not call the interactive use-case once per session. The window adds population estimates and
 counterfactual quantities where one session alone cannot determine them.
 
 All overlap is resolved at session level. Window aggregation never adds independent generic losses
@@ -77,13 +77,13 @@ from metrics.
 ### Value and event evidence
 
 Value evidence enters the session row in its native unit. Examples include spend, input tokens,
-tool calls, memory operations, eligible sessions, critical-path duration, calibrated task-success
-probability, cache opportunity, TTFT, and token throughput.
+tool calls, memory operations, eligible sessions, critical-path duration, direct Task Success
+verdicts, cache opportunity, TTFT, and token throughput.
 
 Event evidence does one of four jobs:
 
-- establishes a terminal outcome;
-- updates a task-success or safety probability;
+- establishes a Task Success, terminal-failure, or confirmed-harm endpoint;
+- provides issue context for a direct endpoint;
 - identifies a resource-consuming action as avoidable;
 - attributes an already measured deficit to a named cause.
 

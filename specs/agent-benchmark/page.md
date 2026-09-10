@@ -85,9 +85,9 @@ contains only scores, intervals, version, window, and eligible-session count.
 | Field | Meaning |
 | --- | --- |
 | Cause | metric, signal, or residual explanation |
-| Evidence | endpoint, probability feature, money, time, or confirmed harm |
+| Evidence | endpoint, issue context, money, time, or confirmed harm |
 | Reach | estimated affected sessions, corrected with stored inclusion probabilities when sampled |
-| Native effect | probability change, Cost-family units, avoidable spend, avoidable time, or harmed sessions |
+| Native effect | endpoint reach, Cost-family units, avoidable spend, avoidable time, or harmed sessions |
 | Attributed deficit | Shapley share of the displayed dimension deficit, when measured |
 | Fix gain | estimated score recovered if this cause alone disappeared, when measured |
 | Confidence | interval, raw examined count, independent observation count, and measured or associated label |

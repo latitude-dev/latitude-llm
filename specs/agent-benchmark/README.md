@@ -65,19 +65,20 @@ the agent produced or disclosed something it should not have.
 
 ## How evidence reaches a dimension
 
-Every scored observation belongs to one of four forms:
+Every benchmark observation belongs to one of four forms:
 
 | Form | What it contributes | Examples |
 | --- | --- | --- |
-| Outcome evidence | A probability that the session accomplished its goal | Task Success verdicts, corrections, abandonment, no output, Outcome signals |
+| Outcome evidence | A direct Task Success endpoint or issue context | Task Success verdicts, corrections, abandonment, no output, Outcome signals |
 | Terminal failure evidence | Whether the session ended in an operational failure | unrecovered provider or tool errors, broken final output |
 | Resource evidence | Spend, context tokens, operations, session burden, or critical-path time | cache gap, redundant context, retries, repeated calls, slow generation |
 | Safety evidence | Whether the agent caused confirmed harm | PII disclosure, injection compliance |
 
 Value observations enter in their natural unit. Cost families use money, input tokens, tool calls,
-memory operations, and eligible sessions. Speed uses critical-path time, and calibrated evaluations
-use probabilities. Event observations establish an endpoint, update a probability, or identify
-inefficient resource use. Both forms meet at the session before the dimension aggregates the window.
+memory operations, and eligible sessions. Speed uses critical-path time. Event observations
+establish a Task Success, terminal-failure, or confirmed-harm endpoint; provide issue context; or
+identify inefficient resource use. Both forms meet at the session before the dimension aggregates
+the window.
 
 Signals use the same path. A signal carries a scoring role for each dimension it informs. Its impact
 comes from observed prevalence and consequence, not from the number of signals or a fixed allocation

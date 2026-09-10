@@ -4,8 +4,8 @@
 > [`session-assessment.md`](session-assessment.md) for how observations tell one session's story.
 > This catalogue defines the observations used by both.
 
-A metric does not own an independent point budget. It returns evidence in a native form: an endpoint,
-probability feature, amount of spend, token count, operation count, session rate, duration on the
+A metric does not own an independent point budget. It returns evidence in a native form: a direct
+endpoint, issue context, amount of spend, token count, operation count, session rate, duration on the
 critical path, or confirmed safety failure. Cost metrics also declare how that evidence enters one
 of the fixed Cost families.
 
@@ -18,7 +18,7 @@ Every metric definition specifies:
 | ID | stable identifier used in evidence, deduplication, and cause rows |
 | dimensions | estimands the observation can inform |
 | Cost family | spend, context, tools, memory, or recovery when the metric informs Cost |
-| evidence role | endpoint, outcome feature, resource evidence, or confirmed harm |
+| evidence role | direct endpoint, issue context, resource evidence, or confirmed harm |
 | reader | telemetry and grouping used to produce the observation |
 | evaluation | raw value, aggregation mode, monotone curve, eligible units, and penalized units |
 | counterfactual | what the same session would look like without the defect, where needed |
