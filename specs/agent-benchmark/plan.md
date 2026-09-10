@@ -494,56 +494,59 @@ performance validation; PR 6 publishes the benchmark and snapshots.
   evaluators. The single-session operation already uses the bulk path; preserve bit-for-bit
   single/bulk parity and bounded pagination. Replace unbounded per-session resolver concurrency with
   a measured limit and fold project sufficient statistics as batches complete.
-- [ ] **P3-34** Update the Zod-first session-assessment operation in `@repo/operations`, its mapper,
+- [x] **P3-34** Update the Zod-first session-assessment operation in `@repo/operations`, its mapper,
   descriptions, operation manifest, OpenAPI and MCP schemas, TypeScript and Python SDKs, CLI, and
   in-process tools. Follow the repository's generated-artifact and package-version conventions.
 - [x] **P3-35** Extend the session Scores panel with raw Cost metric values and coverage. Place a
   measured adverse amount under attention and a measured zero under positive evidence only when
   coverage is complete. Omit unmeasured and not-applicable metrics from findings; do not add a
   session score, calibrated health labels, or a second dashboard language.
-- [ ] **P3-36** Extend existing Cost, Tools, Memory, Sessions, and Signals surfaces with their owned
+- [ ] **P3-36 (deferred after PR 6)** Extend existing Cost, Tools, Memory, Sessions, and Signals surfaces with their owned
   evidence. Cost shows family health, cache/context evidence, pricing/content coverage, and
   recoverable spend. Tools and Memory show operation evidence. Sessions shows critical paths and
-  concrete atoms. Signals uses measured or associated language and links to examples.
+  concrete atoms. Signals uses measured or associated language and links to examples. This does not
+  block PR 3 or the initial Agent Score launch because session Scores already expose the evidence.
 
 ### Step 8: calibrate at project scale and freeze launch artifacts
 
-- [x] **P3-37** Add a read-only shadow runner that applies the PR 6 window selection rules to at
-  least one representative thousand-session population without writing score snapshots. Process it
-  in deterministic bounded batches and record query count, rows and bytes read, peak memory,
-  resolver time, family coverage, score distribution, and rerun determinism.
-- [ ] **P3-38** Review every candidate metric for prevalence, discrimination, correlation,
+- [x] **P3-37** Add a read-only shadow runner that can apply the PR 6 window selection rules to a
+  representative thousand-session population without writing score snapshots. Process it in
+  deterministic bounded batches and record query count, rows and bytes read, peak memory, resolver
+  time, family coverage, score distribution, and rerun determinism.
+- [ ] **P3-38 (deferred after PR 6)** Review every candidate metric for prevalence, discrimination, correlation,
   applicability, missingness by provider and integration, and sensitivity to workload mix. Remove
   or keep display-only any metric whose direction is not defensible, especially raw context
   utilization, generic zero-hit rate, and unproven repeated polling.
-- [ ] **P3-39** Calibrate and freeze the project benchmark's family weights, piecewise curves, caps,
+- [ ] **P3-39 (deferred after PR 6)** Recalibrate the project benchmark's family weights, piecewise curves, caps,
   coverage floors, tokenizer bounds, and residual-signal policy. Publish the calibration report and
-  artifact version. Any later change to these values requires a scoring-version boundary; session
-  findings continue to show raw measurements without those calibrated labels.
-- [ ] **P3-40** Reconcile inspected fixtures across session assessment and Cost, Tools, Memory,
+  a new artifact version. PR 6 may launch with the versioned initial artifact; any later change to
+  these values requires a scoring-version boundary. Session findings continue to show raw
+  measurements without calibrated labels.
+- [ ] **P3-40 (deferred after PR 6)** Reconcile inspected fixtures across session assessment and Cost, Tools, Memory,
   Sessions, and Signals pages. Confirm that money totals, family units, source atoms, and coverage
   reasons agree even when a dimension is unavailable.
 
 ### Exit gate
 
-- [ ] Domain tests cover curve boundaries and monotonicity, source-atom arbitration, family caps,
+- [x] Domain tests cover curve boundaries and monotonicity, source-atom arbitration, family caps,
   fixed weights, not-applicable versus unreadable behavior, range semantics, terminal versus
   recovered incidents, and Cost signal residual caps.
-- [ ] Critical-path tests cover sequential traces, nested spans, concurrent siblings, foreground,
+- [x] Critical-path tests cover sequential traces, nested spans, concurrent siblings, foreground,
   subagent, background and auxiliary interactions, missing parents, unfinished spans, and exact
   marginal segment attribution.
-- [ ] Reader tests cover missing content, normalized-message token bounds, tool-result attribution,
+- [x] Reader tests cover missing content, normalized-message token bounds, tool-result attribution,
   cache prefix mismatch, polling, empty tool and memory fields, expected HTTP statuses, dead-surface
   observation periods, unpriced models, and known free or local models.
-- [ ] ClickHouse integration tests prove organization/project scope, cutoff behavior, bounded bulk
+- [x] ClickHouse integration tests prove organization/project scope, cutoff behavior, bounded bulk
   reads, memory-event projection, no N-plus-one path, and parity between one-session and batch reads.
-- [ ] Invariance tests prove duplicate detectors, repeated/thrashing overlap, linked signals, and
+- [x] Invariance tests prove duplicate detectors, repeated/thrashing overlap, linked signals, and
   split signal clusters cannot multiply a family or Speed deficit.
-- [ ] Shadow runs handle thousands of sessions within agreed resource targets and reproduce the same
-  result from the same inputs and artifact.
-- [ ] No score snapshot or public Agent Score number ships in PR 3. Existing pages and session
+- [ ] **Deferred after PR 6:** shadow runs on representative production traffic handle thousands of
+  sessions within agreed resource targets and reproduce the same result from the same inputs and
+  artifact.
+- [x] No score snapshot or public Agent Score number ships in PR 3. Existing pages and session
   assessment expose the evidence; PR 6 owns publication.
-- [ ] `pnpm typecheck` and `pnpm test` pass. Generated contracts and schemas are current.
+- [x] `pnpm typecheck` and `pnpm test` pass. Generated contracts and schemas are current.
 
 ### Calibration questions that remain open until shadow data
 
