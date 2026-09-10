@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostMetricCatalog } from "../entities/cost-metric-catalog.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
+import type { LatencyReferenceArtifact } from "../entities/latency-reference-artifact.ts"
 import type { NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
 import { readSessionAssessmentInputBatch } from "../readers/read-session-assessment-batch.ts"
 import { type CostFamilyDenominators, EMPTY_COST_FAMILY_DENOMINATORS } from "../scoring/aggregate-session-cost.ts"
@@ -52,6 +53,7 @@ export interface CostSpeedShadowInput {
   readonly sessionIds: readonly SessionId[]
   readonly cutoff: Date
   readonly artifact: CostScoringArtifact
+  readonly latencyArtifact: LatencyReferenceArtifact
   readonly catalog: CostMetricCatalog
   readonly batchSize?: number
   readonly bootstrapReplicates?: number
@@ -216,7 +218,11 @@ export const runCostSpeedShadow = Effect.fn("agentScore.runCostSpeedShadow")(fun
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
   yield* Effect.annotateCurrentSpan("shadow.sessionCount", input.sessionIds.length)
 
-  const batches = batched(input.sessionIds, input.batchSize ?? SHADOW_BATCH_SIZE)
+  const batchSize = input.batchSize ?? SHADOW_BATCH_SIZE
+  if (!Number.isInteger(batchSize) || batchSize <= 0) {
+    return yield* Effect.die(new RangeError("batchSize must be a positive integer"))
+  }
+  const batches = batched(input.sessionIds, batchSize)
   const coverage = emptyCoverageTally()
   const samples: ShadowResourceSample[] = input.probe ? [input.probe.sample()] : []
   let fold: WindowFold = EMPTY_WINDOW_FOLD
@@ -231,6 +237,7 @@ export const runCostSpeedShadow = Effect.fn("agentScore.runCostSpeedShadow")(fun
       projectId: input.projectId,
       sessionIds,
       cutoff: input.cutoff,
+      latencyArtifact: input.latencyArtifact,
     })
     readSessionCount += sessions.length
     tallyCoverage(coverage, sessions)

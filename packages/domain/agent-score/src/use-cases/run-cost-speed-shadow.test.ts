@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest"
 import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import { PROVISIONAL_COST_METRIC_CATALOG } from "../entities/cost-metric-catalog.ts"
 import type { CostMetricCurve, CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
+import type { LatencyReferenceArtifact } from "../entities/latency-reference-artifact.ts"
 import {
   SessionAssessmentBulkJudgmentSource,
   SessionAssessmentBulkTelemetrySource,
@@ -39,6 +40,15 @@ const artifact: CostScoringArtifact = {
   overlapPolicies: [],
   residualSignalCap: 0.1,
   tokenizerPolicy: { preferProviderTokenizer: true, fallbackEncoding: "o200k_base", fallbackRelativeBound: 0.1 },
+}
+
+const latencyArtifact: LatencyReferenceArtifact = {
+  artifactVersion: "latency-artifact-shadow-test",
+  calibration: "provisional",
+  minimumSampleCount: 1,
+  minimumOrganizationCount: 1,
+  ttft: [],
+  throughput: [],
 }
 
 const makeSession = (index: number): SessionDetail =>
@@ -103,6 +113,7 @@ const runShadow = ({
       sessionIds: sessions.map(({ sessionId }) => sessionId),
       cutoff: new Date("2026-01-02T00:00:00.000Z"),
       artifact,
+      latencyArtifact,
       catalog,
       batchSize,
       bootstrapReplicates: 40,
@@ -135,6 +146,12 @@ describe("runCostSpeedShadow", () => {
     expect(report.batchCount).toBe(3)
     expect(report.requestedSessionCount).toBe(7)
     expect(report.readSessionCount).toBe(7)
+  })
+
+  it("rejects an invalid batch size before reading the window", async () => {
+    for (const batchSize of [0, -1, 1.5]) {
+      await expect(runShadow({ sessionCount: 1, batchSize })).rejects.toThrow("batchSize must be a positive integer")
+    }
   })
 
   it("reports a window score without producing a snapshot or a per-session score", async () => {

@@ -16,7 +16,9 @@ import type { Score } from "@domain/scores"
 import type { ScoreDimension } from "@domain/shared"
 import type { SignalWithLifecycle } from "@domain/signals"
 import {
+  classifySpanEndpoint,
   hasUsableAssistantCompletion,
+  isLlmCompletionOperation,
   resolveSessionSpanEndpoints,
   type SessionDetail,
   type SessionGenerationFact,
@@ -24,6 +26,7 @@ import {
   type Span,
 } from "@domain/spans"
 import { Effect } from "effect"
+import type { LatencyReferenceArtifact } from "../entities/latency-reference-artifact.ts"
 import type { SessionEvidenceAnchor, SessionEvidenceDestination } from "../entities/session-assessment.ts"
 import type {
   AssessmentFinding,
@@ -159,6 +162,29 @@ const findingBase = (finding: FlaggerFinding, traceId: string) => {
   }
 }
 
+const toolCallReferences = (
+  finding: Extract<FlaggerFinding, { readonly flaggerSlug: "tool-call-errors" }>,
+  traceId: string,
+  base: ReturnType<typeof findingBase>,
+) => {
+  if (!("toolCallId" in finding) || !finding.toolCallId) {
+    return { anchors: base.anchors, destinations: base.destinations }
+  }
+  return {
+    anchors: [
+      ...base.anchors,
+      {
+        kind: "toolCall" as const,
+        traceId,
+        toolCallId: finding.toolCallId,
+        ...("toolName" in finding && finding.toolName ? { toolName: finding.toolName } : {}),
+        messageIndex: finding.messageIndex,
+      },
+    ],
+    destinations: [...base.destinations, { kind: "toolCall" as const, traceId, toolCallId: finding.toolCallId }],
+  }
+}
+
 const normalizeFlaggerFinding = (
   finding: FlaggerFinding,
   traceId: string,
@@ -177,22 +203,8 @@ const normalizeFlaggerFinding = (
         generationPosition: finding.generationPosition,
       }
     case "tool-call-errors": {
+      const references = toolCallReferences(finding, traceId, base)
       if (finding.findingKind === "error") {
-        const anchors = finding.toolCallId
-          ? [
-              ...base.anchors,
-              {
-                kind: "toolCall" as const,
-                traceId,
-                toolCallId: finding.toolCallId,
-                toolName: finding.toolName,
-                messageIndex: finding.messageIndex,
-              },
-            ]
-          : base.anchors
-        const destinations = finding.toolCallId
-          ? [...base.destinations, { kind: "toolCall" as const, traceId, toolCallId: finding.toolCallId }]
-          : base.destinations
         return {
           ...base,
           metricId: "tools.call_failed",
@@ -200,8 +212,7 @@ const normalizeFlaggerFinding = (
           recovered: finding.recovered ?? hasCompletion,
           ...(finding.sameSubjectRecovered !== undefined ? { sameSubjectRecovered: finding.sameSubjectRecovered } : {}),
           terminal: finding.terminal ?? !hasCompletion,
-          anchors,
-          destinations,
+          ...references,
         }
       }
       return {
@@ -210,6 +221,7 @@ const normalizeFlaggerFinding = (
         kind: "toolStructuralDefect",
         findingKind: finding.findingKind,
         terminal: !hasCompletion,
+        ...references,
       }
     }
     case "trashing":
@@ -299,6 +311,9 @@ const readSpanFindings = (
 
   for (const finding of resolution.providerErrorFindings) {
     const span = spansById.get(`${finding.traceId}:${finding.spanId}`)
+    const successful = resolution.generationEndpoints.find(
+      (endpoint) => endpoint.spanIndex === finding.successfulSpanIndex,
+    )
     findings.push({
       evidenceKey: `span:${finding.spanId}:provider-error:${finding.error.kind}`,
       label: `Provider ${finding.error.kind}`,
@@ -317,6 +332,7 @@ const readSpanFindings = (
       recovered: finding.recovered,
       sameSubjectRecovered: finding.sameSubjectRecovered,
       terminal: finding.terminal,
+      ...(successful ? { successfulSpanId: successful.spanId } : {}),
       observedMicrocents: finding.costTotalMicrocents,
       observedNs: finding.observedDurationNs,
     })
@@ -488,49 +504,128 @@ const readMomentFindings = (facts: SessionMomentFacts): AssessmentFinding[] => {
   })
 }
 
+const isSuccessfulGeneration = (generation: SessionGenerationFact): boolean => {
+  const endpoint = classifySpanEndpoint(generation)
+  return (
+    generation.statusCode !== "error" &&
+    endpoint.providerError === null &&
+    endpoint.finishReasons.every((reason) => reason.classification === "clean")
+  )
+}
+
+const retrySpanIdsThrough = ({
+  generations,
+  traceId,
+  after,
+  successfulSpanId,
+}: {
+  readonly generations: readonly SessionGenerationFact[]
+  readonly traceId: string
+  readonly after: Date
+  readonly successfulSpanId?: string
+}): string[] => {
+  const candidates = generations
+    .filter(
+      (generation) =>
+        generation.traceId === traceId &&
+        isLlmCompletionOperation(generation.operation) &&
+        generation.startTime.getTime() >= after.getTime(),
+    )
+    .sort(
+      (left, right) =>
+        left.startTime.getTime() - right.startTime.getTime() ||
+        left.endTime.getTime() - right.endTime.getTime() ||
+        left.spanId.localeCompare(right.spanId),
+    )
+  const successfulIndex = successfulSpanId
+    ? candidates.findIndex((generation) => generation.spanId === successfulSpanId)
+    : candidates.findIndex(isSuccessfulGeneration)
+  return successfulIndex < 0
+    ? []
+    : candidates.slice(0, successfulIndex + 1).map((generation) => generation.spanId as string)
+}
+
+const recoveredProviderIncident = (
+  finding: Extract<AssessmentFinding, { readonly kind: "providerError" }>,
+  generations: readonly SessionGenerationFact[],
+): RecoveredIncident[] => {
+  if (!finding.recovered || finding.terminal || !finding.successfulSpanId) return []
+  const anchor = finding.anchors.find((candidate) => candidate.kind === "span")
+  if (anchor?.kind !== "span") return []
+  const failed = generations.find(
+    (generation) => generation.traceId === anchor.traceId && generation.spanId === anchor.spanId,
+  )
+  if (!failed) return []
+  const retrySpanIds = retrySpanIdsThrough({
+    generations,
+    traceId: anchor.traceId,
+    after: failed.endTime,
+    successfulSpanId: finding.successfulSpanId,
+  })
+  return retrySpanIds.length === 0
+    ? []
+    : [{ traceId: anchor.traceId, spanId: anchor.spanId, kind: finding.findingKind, retrySpanIds }]
+}
+
+const recoveredToolIncident = (
+  finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
+  generations: readonly SessionGenerationFact[],
+  toolCalls: readonly SessionToolCallFact[],
+): RecoveredIncident[] => {
+  if (!finding.recovered || finding.terminal) return []
+  const anchor = finding.anchors.find((candidate) => candidate.kind === "toolCall")
+  if (anchor?.kind !== "toolCall") return []
+  const failed = toolCalls.find(
+    (toolCall) => toolCall.traceId === anchor.traceId && toolCall.toolCallId === anchor.toolCallId,
+  )
+  if (!failed) return []
+  const retrySpanIds = retrySpanIdsThrough({
+    generations,
+    traceId: anchor.traceId,
+    after: failed.endTime,
+  })
+  return retrySpanIds.length === 0
+    ? []
+    : [
+        {
+          traceId: anchor.traceId,
+          spanId: failed.spanId,
+          kind: "toolFailure",
+          retrySpanIds,
+        },
+      ]
+}
+
 /**
  * The recovered incidents Cost and Speed may charge, with the retries that got past them.
  *
- * The retry set is the generations that ran after the failed one inside the same trace: those are
- * the work the incident forced, and the only spans a counterfactual can remove. The failed span
- * itself is deliberately absent — its cost belongs to Reliability.
+ * The retry set ends at the successful generation and contains only LLM completion spans. The
+ * failed span itself is deliberately absent because its cost belongs to Reliability.
  */
 const recoveredIncidentsFrom = (
   findings: readonly AssessmentFinding[],
   generations: readonly SessionGenerationFact[],
+  toolCalls: readonly SessionToolCallFact[],
 ): RecoveredIncident[] =>
-  findings.flatMap((finding) => {
-    if (finding.kind !== "providerError" || !finding.recovered || finding.terminal) return []
-    const anchor = finding.anchors.find((candidate) => candidate.kind === "span")
-    if (anchor?.kind !== "span") return []
-    const failed = generations.find(
-      (generation) => generation.traceId === anchor.traceId && generation.spanId === anchor.spanId,
-    )
-    if (!failed) return []
-    return [
-      {
-        traceId: anchor.traceId,
-        spanId: anchor.spanId,
-        kind: finding.findingKind,
-        retrySpanIds: generations
-          .filter(
-            (generation) =>
-              generation.traceId === anchor.traceId &&
-              generation.startTime.getTime() >= failed.endTime.getTime() &&
-              generation.spanId !== failed.spanId,
-          )
-          .map((generation) => generation.spanId as string),
-      },
-    ]
+  findings.flatMap((finding): RecoveredIncident[] => {
+    if (finding.kind === "providerError") return recoveredProviderIncident(finding, generations)
+    if (finding.kind === "toolFailure") return recoveredToolIncident(finding, generations, toolCalls)
+    return []
   })
 
-const recoveredDefectsFrom = (findings: readonly AssessmentFinding[]): RecoveredStructuralDefect[] =>
+const recoveredDefectsFrom = (
+  findings: readonly AssessmentFinding[],
+  toolCalls: readonly SessionToolCallFact[],
+): RecoveredStructuralDefect[] =>
   findings.flatMap((finding) => {
     if (finding.kind !== "toolStructuralDefect" || finding.terminal) return []
     const anchor = finding.anchors.find((candidate) => candidate.kind === "toolCall")
-    return anchor?.kind === "toolCall"
-      ? [{ traceId: anchor.traceId, spanId: anchor.toolCallId, findingKind: finding.findingKind }]
-      : []
+    if (anchor?.kind !== "toolCall") return []
+    const toolCall = toolCalls
+      .filter((candidate) => candidate.traceId === anchor.traceId && candidate.toolCallId === anchor.toolCallId)
+      .sort((left, right) => left.startTime.getTime() - right.startTime.getTime())
+      .at(-1)
+    return toolCall ? [{ traceId: toolCall.traceId, spanId: toolCall.spanId, findingKind: finding.findingKind }] : []
   })
 
 /**
@@ -585,6 +680,7 @@ export interface ReadSessionAssessmentSourcesInput {
   readonly signals: readonly SignalWithLifecycle[]
   readonly moments: SessionMomentFacts
   readonly screeningDecisions: NormalizedSessionAssessmentInput["screeningDecisions"]
+  readonly latencyArtifact?: LatencyReferenceArtifact
 }
 
 export const readSessionAssessmentSources = (input: ReadSessionAssessmentSourcesInput) =>
@@ -623,11 +719,12 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       memoryEvents: input.memoryEvents,
       countTokens,
       completed: hasUsableAssistantCompletion(input.session.outputMessages),
-      recoveredIncidents: recoveredIncidentsFrom(findings, input.generations),
-      recoveredStructuralDefects: recoveredDefectsFrom(findings),
+      recoveredIncidents: recoveredIncidentsFrom(findings, input.generations, input.toolCalls),
+      recoveredStructuralDefects: recoveredDefectsFrom(findings, input.toolCalls),
       toolDefinitions: surfaces.definitions,
       unmatchedToolCallNames: surfaces.unmatchedCallNames,
       cacheEvidence: buildSessionCacheEvidence(input.generations),
+      ...(input.latencyArtifact ? { latencyArtifact: input.latencyArtifact } : {}),
     })
 
     return {

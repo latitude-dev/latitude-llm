@@ -673,7 +673,12 @@ describe("recovery readers", () => {
   })
 
   it("claims the retry generations and never the failed call's own spend", () => {
-    expect(recoverySpendClaims([incident])).toEqual([{ spanId: "retry", cause: "recovered:rateLimit" }])
+    expect(
+      recoverySpendClaims({
+        recovered: [incident],
+        generations: [generation({ spanId: SpanId("retry"), costTotalMicrocents: 375 })],
+      }),
+    ).toEqual([{ spanId: "retry", cause: "recovered:rateLimit", exactMicrocents: 375 }])
   })
 
   it("takes only the marginal path time the retries actually held", () => {

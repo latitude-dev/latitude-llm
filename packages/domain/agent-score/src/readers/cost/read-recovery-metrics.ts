@@ -1,4 +1,4 @@
-import { marginalCriticalPathNs, type TraceCriticalPath } from "@domain/spans"
+import { marginalCriticalPathNs, type SessionGenerationFact, type TraceCriticalPath } from "@domain/spans"
 import type { CostMetricReading, CostReadingBase } from "../../entities/cost-metric-reading.ts"
 import { notApplicableReading, unreadableReading } from "../../entities/cost-metric-reading.ts"
 import type { AttributableSpendClaim } from "./read-recoverable-spend.ts"
@@ -72,10 +72,23 @@ export const readRecoveredIncidentRate = ({
  * incident to two dimensions, and the session did not spend that money *avoidably* — it spent it
  * failing, which is what Reliability already measures.
  */
-export const recoverySpendClaims = (recovered: readonly RecoveredIncident[]): AttributableSpendClaim[] =>
-  recovered.flatMap((incident) =>
-    incident.retrySpanIds.map((spanId) => ({ spanId, cause: `recovered:${incident.kind}` })),
+export const recoverySpendClaims = ({
+  recovered,
+  generations,
+}: {
+  readonly recovered: readonly RecoveredIncident[]
+  readonly generations: readonly SessionGenerationFact[]
+}): AttributableSpendClaim[] => {
+  const billedBySpanId = new Map(
+    generations.map((generation) => [generation.spanId as string, generation.costTotalMicrocents]),
   )
+  return recovered.flatMap((incident) =>
+    incident.retrySpanIds.flatMap((spanId) => {
+      const exactMicrocents = billedBySpanId.get(spanId)
+      return exactMicrocents === undefined ? [] : [{ spanId, cause: `recovered:${incident.kind}`, exactMicrocents }]
+    }),
+  )
+}
 
 /**
  * The critical-path time a recovery cost, capped by what the retries actually held on the path.

@@ -228,6 +228,7 @@ export {
   THRASHING_MINIMUM_RUN,
 } from "./readers/cost/read-tool-metrics.ts"
 export {
+  type ReadSessionAssessmentInputBatchInput,
   readSessionAssessmentBatch,
   readSessionAssessmentInputBatch,
 } from "./readers/read-session-assessment-batch.ts"

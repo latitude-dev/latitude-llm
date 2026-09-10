@@ -67,6 +67,7 @@ export type AssessmentFinding = AssessmentFindingReference &
         readonly recovered: boolean
         readonly sameSubjectRecovered: boolean
         readonly terminal: boolean
+        readonly successfulSpanId?: string
         readonly observedMicrocents: number
         readonly observedNs: number
       }

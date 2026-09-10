@@ -4,6 +4,10 @@ import {
   buildSessionCriticalPath,
   CACHE_MIN_CACHEABLE_INPUT_TOKENS,
   cacheCeilingRate,
+  isLlmCompletionOperation,
+  latencyInputTokens,
+  latencyOutputTokens,
+  marginalCriticalPathNs,
   modelRegistryPricing,
   type SessionCriticalPath,
   type SessionGenerationFact,
@@ -11,20 +15,26 @@ import {
   USAGE_OPERATIONS,
 } from "@domain/spans"
 import type { CostMetricReading } from "../entities/cost-metric-reading.ts"
+import {
+  excessGenerationNs,
+  excessTtftNs,
+  type LatencyReferenceArtifact,
+  lookupThroughputExpectationTps,
+  lookupTtftExpectationNs,
+} from "../entities/latency-reference-artifact.ts"
 import type { AssessmentReaderFact } from "../entities/session-assessment-input.ts"
 import type { CostFamilyDenominators } from "../scoring/aggregate-session-cost.ts"
-import { composeSpeedCounterfactual, type SpeedCounterfactual } from "../scoring/compose-speed-counterfactual.ts"
+import {
+  composeSpeedCounterfactual,
+  type SpeedAvoidableClaim,
+  type SpeedCounterfactual,
+} from "../scoring/compose-speed-counterfactual.ts"
 import { buildSessionContentLedger, type SessionContentLedger, type TokenCounter } from "./cost/content-atom-ledger.ts"
 import { readCacheGap, type SessionCacheEvidence } from "./cost/read-cache-gap.ts"
 import { type RedundantAtomClaim, readAvoidablePressure, readRedundantInputShare } from "./cost/read-context-metrics.ts"
 import { readNoopRewrites, readRepeatedZeroHits, readRevertedWrites } from "./cost/read-memory-metrics.ts"
 import { type AttributableSpendClaim, readRecoverableSpend } from "./cost/read-recoverable-spend.ts"
-import {
-  type RecoveredIncident,
-  readRecoveredIncidentRate,
-  recoveryAvoidableNs,
-  recoverySpendClaims,
-} from "./cost/read-recovery-metrics.ts"
+import { type RecoveredIncident, readRecoveredIncidentRate, recoverySpendClaims } from "./cost/read-recovery-metrics.ts"
 import { readSessionSpendCoverage, type SessionSpendCoverage } from "./cost/read-spend-coverage.ts"
 import {
   type RecoveredStructuralDefect,
@@ -46,6 +56,7 @@ export interface SessionCostEvidenceInput {
   readonly toolDefinitions: readonly ToolDefinitionSurface[]
   readonly unmatchedToolCallNames: readonly string[]
   readonly cacheEvidence: SessionCacheEvidence | null
+  readonly latencyArtifact?: LatencyReferenceArtifact
 }
 
 export interface SessionCostEvidence {
@@ -108,6 +119,78 @@ const redundantAtomClaims = ({
 export const SESSION_CACHE_LIFETIME_SECONDS = 300
 
 const usageOperations: ReadonlySet<string> = new Set(USAGE_OPERATIONS)
+
+const latencyClaims = ({
+  generations,
+  artifact,
+}: {
+  readonly generations: readonly SessionGenerationFact[]
+  readonly artifact: LatencyReferenceArtifact | undefined
+}): SpeedAvoidableClaim[] => {
+  if (!artifact) return []
+
+  return generations.flatMap((generation) => {
+    if (!isLlmCompletionOperation(generation.operation)) return []
+    const inputTokens = latencyInputTokens(generation.tokens)
+    const outputTokens = latencyOutputTokens(generation.tokens)
+    const ttftNs = excessTtftNs({
+      observedTtftNs: generation.timeToFirstTokenNs,
+      expectation: lookupTtftExpectationNs({
+        artifact,
+        provider: generation.provider,
+        model: generation.model,
+        inputTokens,
+        isStreaming: generation.isStreaming,
+      }),
+    })
+    const generationNs = excessGenerationNs({
+      observedGenerationNs: Math.max(0, generation.durationNs - generation.timeToFirstTokenNs),
+      outputTokens,
+      expectation: lookupThroughputExpectationTps({
+        artifact,
+        provider: generation.provider,
+        model: generation.model,
+        inputTokens,
+        outputTokens,
+        isStreaming: generation.isStreaming,
+      }),
+    })
+    const removedNs = ttftNs + generationNs
+    if (removedNs <= 0) return []
+    const cause =
+      ttftNs > 0 && generationNs > 0 ? "latency:ttft+throughput" : ttftNs > 0 ? "latency:ttft" : "latency:throughput"
+    return [
+      {
+        traceId: generation.traceId,
+        spanId: generation.spanId,
+        cause,
+        removedNs,
+        evidence: "modeled" as const,
+      },
+    ]
+  })
+}
+
+const recoverySpeedClaims = ({
+  incidents,
+  criticalPath,
+}: {
+  readonly incidents: readonly RecoveredIncident[]
+  readonly criticalPath: SessionCriticalPath
+}): SpeedAvoidableClaim[] => {
+  const pathsByTrace = new Map(criticalPath.traces.map((path) => [path.traceId, path]))
+  return incidents.flatMap((incident) => {
+    const path = pathsByTrace.get(incident.traceId)
+    if (!path || path.completeness === "notApplicable") return []
+    return incident.retrySpanIds.map((spanId) => ({
+      traceId: incident.traceId,
+      spanId,
+      cause: `recovered:${incident.kind}`,
+      removedNs: marginalCriticalPathNs({ path, spanId }),
+      evidence: "confirmed" as const,
+    }))
+  })
+}
 
 /**
  * The session's own cache cadence, as an upper bound.
@@ -210,7 +293,10 @@ export const readSessionCostEvidence = (input: SessionCostEvidenceInput): Sessio
   })
   const redundantClaims = redundantAtomClaims({ toolCalls: input.toolCalls, repeatedCalls, ledger })
 
-  const spendClaims: AttributableSpendClaim[] = recoverySpendClaims(input.recoveredIncidents)
+  const spendClaims: AttributableSpendClaim[] = recoverySpendClaims({
+    recovered: input.recoveredIncidents,
+    generations: input.generations,
+  })
   const readings: CostMetricReading[] = [
     readRecoverableSpend({ generations: input.generations, coverage: spendCoverage, claims: spendClaims }),
     readCacheGap({ generations: input.generations, evidence: input.cacheEvidence }),
@@ -232,21 +318,15 @@ export const readSessionCostEvidence = (input: SessionCostEvidenceInput): Sessio
 
   const speed = composeSpeedCounterfactual({
     criticalPath,
-    claims: input.recoveredIncidents.flatMap((incident) =>
-      incident.retrySpanIds.map((spanId) => ({
-        traceId: incident.traceId,
-        spanId,
-        cause: `recovered:${incident.kind}`,
-        removedNs: recoveryAvoidableNs({ recovered: [incident], paths: criticalPath.traces }),
-        evidence: "confirmed" as const,
-      })),
-    ),
+    claims: [
+      ...recoverySpeedClaims({ incidents: input.recoveredIncidents, criticalPath }),
+      ...latencyClaims({ generations: input.generations, artifact: input.latencyArtifact }),
+    ],
   })
 
   const contentLimitation = ledger.unreadableGenerationCount > 0 ? ("missingContent" as const) : undefined
-  const unknownContextCount = input.generations.filter(
-    (generation) => generation.modelContextLimitTokens === null,
-  ).length
+  const llmGenerations = input.generations.filter((generation) => isLlmCompletionOperation(generation.operation))
+  const unknownContextCount = llmGenerations.filter((generation) => generation.modelContextLimitTokens === null).length
 
   return {
     readings,
@@ -285,9 +365,9 @@ export const readSessionCostEvidence = (input: SessionCostEvidenceInput): Sessio
         readerId: "context.model_limits",
         label: "Known model context limits",
         scoreDimensions: COST_DIMENSIONS,
-        applicable: input.generations.length > 0,
-        readableCount: input.generations.length - unknownContextCount,
-        totalCount: input.generations.length,
+        applicable: llmGenerations.length > 0,
+        readableCount: llmGenerations.length - unknownContextCount,
+        totalCount: llmGenerations.length,
         ...(unknownContextCount > 0 ? { limitation: "unknownModelContext" as const } : {}),
       }),
       coverageFact({

@@ -2,7 +2,7 @@ import type { FlaggerScreeningDecision } from "@domain/flaggers"
 import type { Score } from "@domain/scores"
 import { OrganizationId, ProjectId, ScoreId, SessionId, SignalId, SpanId, TraceId } from "@domain/shared"
 import type { SignalWithLifecycle } from "@domain/signals"
-import type { SessionDetail, Span } from "@domain/spans"
+import type { SessionDetail, SessionGenerationFact, SessionToolCallFact, Span } from "@domain/spans"
 import { stubListSpan } from "@domain/spans/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
@@ -51,6 +51,83 @@ const span = (id: string, startMs: number, endMs: number, overrides: Partial<Spa
   ...overrides,
 })
 
+const generation = (
+  id: string,
+  startMs: number,
+  endMs: number,
+  overrides: Partial<SessionGenerationFact> = {},
+): SessionGenerationFact =>
+  ({
+    traceId,
+    spanId: SpanId(id.repeat(16)),
+    parentSpanId: "",
+    operation: "chat",
+    provider: "openai",
+    model: "gpt-4o",
+    responseModel: "",
+    startTime: new Date(startMs),
+    endTime: new Date(endMs),
+    durationNs: Math.max(0, endMs - startMs) * 1_000_000,
+    name: "chat",
+    toolName: "",
+    agentName: "",
+    tokens: {
+      tokensInput: 100,
+      tokensOutput: 20,
+      tokensCacheRead: 0,
+      tokensCacheCreate: 0,
+      tokensReasoning: 0,
+    },
+    costInputMicrocents: 100,
+    costOutputMicrocents: 100,
+    costTotalMicrocents: 200,
+    costSource: "estimated",
+    costPricedProvider: "openai",
+    costPricedModel: "gpt-4o",
+    isStreaming: true,
+    timeToFirstTokenNs: 1_000_000,
+    finishReasons: ["stop"],
+    statusCode: "ok",
+    statusMessage: "",
+    errorType: "",
+    capturedBytes: { inputMessages: 0, outputMessages: 0, toolDefinitions: 0 },
+    content: null,
+    inputContentState: "absent",
+    outputContentState: "absent",
+    toolDefinitionContentState: "absent",
+    pricingState: "registryEstimated",
+    modelContextState: "known",
+    modelContextLimitTokens: 128_000,
+    ...overrides,
+  }) as SessionGenerationFact
+
+const toolCall = (
+  id: string,
+  toolCallId: string,
+  startMs: number,
+  endMs: number,
+  overrides: Partial<SessionToolCallFact> = {},
+): SessionToolCallFact =>
+  ({
+    traceId,
+    spanId: SpanId(id.repeat(16)),
+    parentSpanId: "",
+    toolCallId,
+    toolName: "search",
+    normalizedToolName: "search",
+    inputHash: `input-${id}`,
+    outputHash: `output-${id}`,
+    inputBytes: 10,
+    outputBytes: 10,
+    startTime: new Date(startMs),
+    endTime: new Date(endMs),
+    durationNs: Math.max(0, endMs - startMs) * 1_000_000,
+    statusCode: "ok",
+    statusMessage: "",
+    errorType: "",
+    ...overrides,
+  }) as SessionToolCallFact
+
 const read = (
   value: SessionDetail,
   spans: readonly Span[] = [],
@@ -58,14 +135,16 @@ const read = (
     readonly scores?: readonly Score[]
     readonly signals?: readonly SignalWithLifecycle[]
     readonly screeningDecisions?: readonly FlaggerScreeningDecision[]
+    readonly generations?: readonly SessionGenerationFact[]
+    readonly toolCalls?: readonly SessionToolCallFact[]
   } = {},
 ) =>
   Effect.runPromise(
     readSessionAssessmentSources({
       session: value,
       spans,
-      generations: [],
-      toolCalls: [],
+      generations: judgments.generations ?? [],
+      toolCalls: judgments.toolCalls ?? [],
       memoryEvents: [],
       scores: judgments.scores ?? [],
       signals: judgments.signals ?? [],
@@ -177,6 +256,42 @@ describe("readSessionAssessmentSources", () => {
     expect(second.findings.find((candidate) => candidate.kind === "providerError")?.evidenceKey).toBe(
       finding?.evidenceKey,
     )
+  })
+
+  it("attributes provider recovery only through the successful retry", async () => {
+    const failed = span("e", 0, 10, {
+      errorType: "RateLimitError",
+      finishReasons: [],
+      statusCode: "error",
+    })
+    const successful = span("f", 11, 20)
+    const later = span("g", 21, 30)
+    const result = await read(
+      session([{ role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] }]),
+      [failed, successful, later],
+      {
+        generations: [
+          generation("e", 0, 10, {
+            errorType: "RateLimitError",
+            finishReasons: [],
+            statusCode: "error",
+            costTotalMicrocents: 100,
+          }),
+          generation("f", 11, 20, { costTotalMicrocents: 250 }),
+          generation("g", 21, 30, { costTotalMicrocents: 600 }),
+        ],
+      },
+    )
+
+    expect(result.findings.find((finding) => finding.kind === "providerError")).toMatchObject({
+      successfulSpanId: successful.spanId,
+    })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
+    ).toMatchObject({
+      adverseUnits: 250,
+      observations: [expect.objectContaining({ atomId: `generation:${successful.spanId}` })],
+    })
   })
 
   it("pairs a length finish reason only with final output damage", async () => {
@@ -304,6 +419,62 @@ describe("readSessionAssessmentSources", () => {
     expect(resolved.coverage.readers.find((reader) => reader.readerId === "flagger:refusal")).toMatchObject({
       status: "notExamined",
       limitation: "notSelected",
+    })
+  })
+
+  it("attributes a recovered tool failure to the generation that completed the session", async () => {
+    const failedCall = toolCall("h", "call-recovered", 0, 10, { statusCode: "error" })
+    const retry = generation("i", 11, 20, { costTotalMicrocents: 325 })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-recovered", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-recovered", response: { error: "timeout" } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] },
+      ]),
+      [],
+      { generations: [retry], toolCalls: [failedCall] },
+    )
+
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "recovery.recovered_incident_rate"),
+    ).toMatchObject({ adverseUnits: 1 })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
+    ).toMatchObject({ adverseUnits: 325 })
+  })
+
+  it("resolves a recovered structural defect to the matching tool span", async () => {
+    const original = toolCall("j", "call-duplicate", 0, 10)
+    const duplicate = toolCall("k", "call-duplicate", 11, 20)
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-duplicate", name: "search", arguments: { q: "first" } }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-duplicate", name: "search", arguments: { q: "second" } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "Completed" }] },
+      ]),
+      [],
+      { toolCalls: [original, duplicate] },
+    )
+
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "tools.structural_defect"),
+    ).toMatchObject({
+      adverseUnits: 1,
+      observations: expect.arrayContaining([
+        expect.objectContaining({ atomId: `toolCall:${traceId}:${duplicate.spanId}`, adverseUnits: 1 }),
+      ]),
     })
   })
 
