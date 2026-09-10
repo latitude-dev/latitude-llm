@@ -1,12 +1,10 @@
-/**
- * Replace any unpaired UTF-16 surrogate with U+FFFD (`�`). ClickHouse rejects
- * lone surrogates when applying `LIKE`, so the lexical indexer canonicalises
- * them on the way in; the highlight endpoint uses the same canonicalisation
- * so matched substring offsets line up with what the index actually saw.
- */
-export function stripLoneSurrogates(text: string): string {
-  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "�")
-}
+import { stripLoneSurrogates } from "@repo/utils"
+
+// Re-exported for existing consumers: ClickHouse rejects lone surrogates when
+// applying `LIKE`, so the lexical indexer canonicalises them on the way in;
+// the highlight endpoint uses the same canonicalisation so matched substring
+// offsets line up with what the index actually saw.
+export { stripLoneSurrogates }
 
 /**
  * Canonical normaliser for double-quoted literal phrases. Trim, collapse runs

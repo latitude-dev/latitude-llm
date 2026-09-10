@@ -301,10 +301,7 @@ describe("nameClusterUseCase", () => {
   })
 
   it("does not leave a lone surrogate when truncation splits a surrogate pair", async () => {
-    // Each "😀" is a surrogate pair (😀 — two UTF-16 code units). Repeating
-    // it past the cap forces the middle-truncate head/tail cuts to land mid-pair,
-    // which previously reached the model as an invalid `messages` payload
-    // ("lone leading surrogate in hex escape") and failed the taxonomy naming call.
+    // "😀" is a surrogate pair; repeating it past the cap forces the truncation cuts to land mid-pair.
     const oversized = "😀".repeat(TAXONOMY_NAMING_SAMPLE_CHAR_CAP)
     const prompts: string[] = []
     const { effect } = runNameCluster({
@@ -331,8 +328,7 @@ describe("nameClusterUseCase", () => {
   })
 
   it("replaces a lone surrogate already present in a summary shorter than the cap", async () => {
-    // No truncation needed here — the malformed character comes from upstream data
-    // (e.g. a mis-encoded customer transcript), not from slicing.
+    // Malformed upstream (e.g. a mis-encoded transcript), not introduced by slicing.
     const summary = "User asks: before \uD83D middle \uDE00 after"
     const prompts: string[] = []
     const { effect } = runNameCluster({

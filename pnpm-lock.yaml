@@ -2161,9 +2161,6 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
-      '@domain/spans':
-        specifier: workspace:*
-        version: link:../spans
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils

@@ -15,7 +15,7 @@ import {
   type ProjectId,
   type RepositoryError,
 } from "@domain/shared"
-import { stripLoneSurrogates } from "@domain/spans"
+import { stripLoneSurrogates } from "@repo/utils"
 import { Effect, Option } from "effect"
 import { z } from "zod"
 import {
