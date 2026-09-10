@@ -103,9 +103,9 @@ force unrelated evidence to become less important.
 
 Evidence that overlaps on one session is resolved once on that session. Cost evidence is deduplicated
 within its family and capped by the family's eligible units. Time is capped by the critical path the
-  session actually consumed. Outcome uses one Task Success verdict per session, and Safety uses one
-  confirmed-harm union. Duplicate detectors and split signal clusters cannot multiply the underlying
-  result.
+session actually consumed. Outcome uses one Task Success verdict per session, and Safety uses one
+confirmed-harm union. Duplicate detectors and split signal clusters cannot multiply the underlying
+result.
 
 ### 4. Normalize only after measuring the native quantity
 
