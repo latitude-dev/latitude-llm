@@ -96,11 +96,11 @@ maximum, union, or a named combined cap.
 
 ### Cost launch catalog
 
-This is the required first-version catalog. Curve points remain provisional until the PR 3 shadow
-calibration freezes them. Every negative metric starts at zero penalty when its adverse-event or
-avoidable-resource share is zero; the artifact defines the end of the healthy range, the watch
-range, and the saturation point. A healthy label therefore means the raw value is inside a measured
-safe range, not merely that no detector emitted a finding.
+This is the required first-version catalog. Curve points remain provisional until the pre-launch
+shadow audit and calibration freezes them. Every negative metric starts at zero penalty when its
+adverse-event or avoidable-resource share is zero; the artifact defines the end of the healthy
+range, the watch range, and the saturation point. A healthy label therefore means the raw value is
+inside a measured safe range, not merely that no detector emitted a finding.
 
 | Metric | Family | Aggregation | Raw value | Applicability |
 | --- | --- | --- | --- | --- |

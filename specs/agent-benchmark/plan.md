@@ -508,21 +508,22 @@ performance validation; PR 6 publishes the benchmark and snapshots.
   concrete atoms. Signals uses measured or associated language and links to examples. This does not
   block PR 3 or the initial Agent Score launch because session Scores already expose the evidence.
 
-### Step 8: calibrate at project scale and freeze launch artifacts
+### Step 8: validate and freeze launch artifacts
 
 - [x] **P3-37** Add a read-only shadow runner that can apply the PR 6 window selection rules to a
   representative thousand-session population without writing score snapshots. Process it in
   deterministic bounded batches and record query count, rows and bytes read, peak memory, resolver
   time, family coverage, score distribution, and rerun determinism.
-- [ ] **P3-38 (deferred after PR 6)** Review every candidate metric for prevalence, discrimination, correlation,
-  applicability, missingness by provider and integration, and sensitivity to workload mix. Remove
-  or keep display-only any metric whose direction is not defensible, especially raw context
-  utilization, generic zero-hit rate, and unproven repeated polling.
-- [ ] **P3-39 (deferred after PR 6)** Recalibrate the project benchmark's family weights, piecewise curves, caps,
-  coverage floors, tokenizer bounds, and residual-signal policy. Publish the calibration report and
-  a new artifact version. PR 6 may launch with the versioned initial artifact; any later change to
-  these values requires a scoring-version boundary. Session findings continue to show raw
-  measurements without calibrated labels.
+- [ ] **P3-38 (required before PR 6)** Review every candidate metric against representative shadow
+  data for prevalence, discrimination, correlation, applicability, missingness by provider and
+  integration, and sensitivity to workload mix. Remove or keep display-only any metric whose
+  direction is not defensible, especially raw context utilization, generic zero-hit rate, and
+  unproven repeated polling. Record the acceptance decision for every launch metric.
+- [ ] **P3-39 (required before PR 6)** Calibrate and freeze the initial project benchmark's family
+  weights, piecewise curves, caps, coverage floors, tokenizer bounds, and residual-signal policy.
+  Publish the calibration report and artifact version. Later production recalibration requires a
+  new scoring version. Session findings continue to show raw measurements without calibrated
+  labels.
 - [ ] **P3-40 (deferred after PR 6)** Reconcile inspected fixtures across session assessment and Cost, Tools, Memory,
   Sessions, and Signals pages. Confirm that money totals, family units, source atoms, and coverage
   reasons agree even when a dimension is unavailable.
@@ -542,14 +543,14 @@ performance validation; PR 6 publishes the benchmark and snapshots.
   reads, memory-event projection, no N-plus-one path, and parity between one-session and batch reads.
 - [x] Invariance tests prove duplicate detectors, repeated/thrashing overlap, linked signals, and
   split signal clusters cannot multiply a family or Speed deficit.
-- [ ] **Deferred after PR 6:** shadow runs on representative production traffic handle thousands of
-  sessions within agreed resource targets and reproduce the same result from the same inputs and
-  artifact.
+- [ ] **Required before PR 6:** shadow runs on representative traffic handle thousands of sessions
+  within agreed resource targets, reproduce the same result from the same inputs and artifact, and
+  satisfy the recorded metric and calibration acceptance criteria.
 - [x] No score snapshot or public Agent Score number ships in PR 3. Existing pages and session
   assessment expose the evidence; PR 6 owns publication.
 - [x] `pnpm typecheck` and `pnpm test` pass. Generated contracts and schemas are current.
 
-### Calibration questions that remain open until shadow data
+### Calibration questions to close before the launch artifact is frozen
 
 - What family weights and family caps best preserve sensitivity without letting common tool traffic
   dominate low-tool agents?
@@ -674,9 +675,9 @@ PR 6 starts only when all of these gates pass:
 - [ ] Session assessment resolves the same source facts in single-session and bulk mode.
 - [ ] Structured findings distinguish recovery, terminal failure, exposure, defense, and harm.
 - [ ] Sampled evidence has a known examined population or remains unmeasured.
-- [ ] Cost family metrics, curves, weights, caps, coverage floors, and residual-signal policy have a
-  versioned initial artifact. Production recalibration and cross-surface expansion are deferred
-  follow-ups.
+- [ ] Cost family metrics, curves, weights, caps, coverage floors, and residual-signal policy have an
+  audited, calibrated, and frozen initial artifact backed by representative shadow data. Production
+  recalibration and cross-surface expansion are later follow-ups.
 - [ ] Cost native impacts and Speed counterfactuals are bounded and visible on existing pages.
 - [ ] Outcome uses compatible sampled Task Success verdicts with known inclusion probabilities and
   passes its examined-population coverage floor.

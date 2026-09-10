@@ -219,8 +219,9 @@ The structure is fixed. Launch requires these versioned artifacts and acceptance
 1. The Task Success prompt, supported judge configuration, result schema, sampling policy, and
    Outcome coverage floors.
 2. The initial Cost scoring artifact: family weights, metric curves, applicability rules, caps,
-   overlap groups, coverage floors, and residual-signal cap. Production recalibration follows the
-   initial Agent Score launch.
+   overlap groups, coverage floors, and residual-signal cap. Launch requires an audit, shadow
+   calibration, acceptance report, and frozen artifact version. Later production recalibration uses
+   a new scoring version.
 3. Frozen TTFT and throughput reference distributions for every supported cohort.
 4. The matching features and overlap diagnostics used by signal-level Cost and Speed estimators.
 5. Reader-specific coverage and confidence floors with deterministic acceptance fixtures.
