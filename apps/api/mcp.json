@@ -32,8 +32,7 @@
         },
         "required": [
           "name"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -239,8 +238,7 @@
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "properties": {}
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -484,8 +482,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -746,8 +743,7 @@
                         "description": "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
                         "type": "boolean"
                       }
-                    },
-                    "additionalProperties": false
+                    }
                   },
                   "identities": {
                     "description": "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
@@ -757,8 +753,7 @@
                       "pseudonymize"
                     ]
                   }
-                },
-                "additionalProperties": false
+                }
               },
               "notifications": {
                 "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
@@ -784,8 +779,7 @@
                         "description": "Send a notification when an escalating monitor opens an incident. Defaults to `true` when omitted.",
                         "type": "boolean"
                       }
-                    },
-                    "additionalProperties": false
+                    }
                   },
                   "destinations": {
                     "description": "Project-level opt-out for data-destination notifications.",
@@ -795,11 +789,9 @@
                         "description": "Notify org members when a data destination is quarantined after repeated sync failures. Defaults to `true` when omitted.",
                         "type": "boolean"
                       }
-                    },
-                    "additionalProperties": false
+                    }
                   }
-                },
-                "additionalProperties": false
+                }
               },
               "escalation": {
                 "description": "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",
@@ -811,11 +803,9 @@
                     "minimum": 1,
                     "maximum": 6
                   }
-                },
-                "additionalProperties": false
+                }
               }
-            },
-            "additionalProperties": false
+            }
           },
           "flaggers": {
             "description": "Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.",
@@ -846,8 +836,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1061,8 +1050,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1168,8 +1156,7 @@
                         "required": [
                           "by",
                           "id"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -1237,8 +1224,7 @@
                                 "required": [
                                   "op",
                                   "value"
-                                ],
-                                "additionalProperties": false
+                                ]
                               }
                             }
                           }
@@ -1246,8 +1232,7 @@
                         "required": [
                           "by",
                           "filters"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ],
                     "description": "Target trace. Either an explicit id or a filter set matching exactly one trace."
@@ -1275,20 +1260,12 @@
                   }
                 },
                 "required": [
-                  "simulationId",
                   "value",
                   "passed",
                   "feedback",
-                  "error",
-                  "duration",
-                  "tokens",
-                  "cost",
                   "trace",
-                  "sourceId",
-                  "metadata",
-                  "_evaluation"
-                ],
-                "additionalProperties": false
+                  "sourceId"
+                ]
               },
               {
                 "type": "object",
@@ -1375,8 +1352,7 @@
                         "required": [
                           "by",
                           "id"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -1444,8 +1420,7 @@
                                 "required": [
                                   "op",
                                   "value"
-                                ],
-                                "additionalProperties": false
+                                ]
                               }
                             }
                           }
@@ -1453,8 +1428,7 @@
                         "required": [
                           "by",
                           "filters"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ],
                     "description": "Target trace. Either an explicit id or a filter set matching exactly one trace."
@@ -1481,25 +1455,18 @@
                     "required": [
                       "evaluationHash"
                     ],
-                    "additionalProperties": false,
                     "description": "Evaluation-specific metadata."
                   }
                 },
                 "required": [
-                  "simulationId",
                   "value",
                   "passed",
                   "feedback",
-                  "error",
-                  "duration",
-                  "tokens",
-                  "cost",
                   "trace",
                   "_evaluation",
                   "sourceId",
                   "metadata"
-                ],
-                "additionalProperties": false
+                ]
               }
             ]
           }
@@ -1507,8 +1474,7 @@
         "required": [
           "projectSlug",
           "body"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1605,8 +1571,7 @@
                   "pretty-json"
                 ]
               }
-            },
-            "additionalProperties": false
+            }
           },
           "trace": {
             "oneOf": [
@@ -1628,8 +1593,7 @@
                 "required": [
                   "by",
                   "id"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -1697,8 +1661,7 @@
                         "required": [
                           "op",
                           "value"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     }
                   }
@@ -1706,8 +1669,7 @@
                 "required": [
                   "by",
                   "filters"
-                ],
-                "additionalProperties": false
+                ]
               }
             ],
             "description": "Target trace. Either an explicit id or a filter set matching exactly one trace."
@@ -1715,14 +1677,11 @@
         },
         "required": [
           "projectSlug",
-          "simulationId",
-          "signalId",
           "value",
           "passed",
           "feedback",
           "trace"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -2109,19 +2068,14 @@
                 "required": [
                   "op",
                   "value"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
         },
         "required": [
-          "projectSlug",
-          "limit",
-          "sortBy",
-          "sortDirection"
-        ],
-        "additionalProperties": false
+          "projectSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -2394,8 +2348,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -2655,8 +2608,7 @@
         "required": [
           "projectSlug",
           "traceId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -2918,8 +2870,7 @@
         "required": [
           "projectSlug",
           "traceId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -3272,8 +3223,7 @@
           "projectSlug",
           "traceId",
           "spanId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -3777,10 +3727,8 @@
         },
         "required": [
           "projectSlug",
-          "traceId",
-          "limit"
-        ],
-        "additionalProperties": false
+          "traceId"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -4117,8 +4065,7 @@
           "projectSlug",
           "traceId",
           "annotationId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -4418,8 +4365,7 @@
         "required": [
           "projectSlug",
           "traceId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -4539,8 +4485,7 @@
         "required": [
           "projectSlug",
           "traceId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -4681,8 +4626,7 @@
                 "required": [
                   "by",
                   "ids"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -4750,8 +4694,7 @@
                         "required": [
                           "op",
                           "value"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     }
                   }
@@ -4759,8 +4702,7 @@
                 "required": [
                   "by",
                   "filters"
-                ],
-                "additionalProperties": false
+                ]
               }
             ],
             "description": "Which traces to include in the export — either explicit ids or a filter set."
@@ -4776,8 +4718,7 @@
           "projectSlug",
           "traces",
           "recipient"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -4832,8 +4773,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -5117,8 +5057,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -5225,8 +5164,7 @@
         "required": [
           "projectSlug",
           "toolName"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -5351,8 +5289,7 @@
           "projectSlug",
           "toolName",
           "dimension"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -5448,8 +5385,7 @@
         "required": [
           "projectSlug",
           "toolName"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -5530,8 +5466,7 @@
         "required": [
           "projectSlug",
           "toolName"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -5634,10 +5569,8 @@
         },
         "required": [
           "projectSlug",
-          "toolName",
-          "limit"
-        ],
-        "additionalProperties": false
+          "toolName"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -5795,8 +5728,7 @@
         "required": [
           "projectSlug",
           "toolName"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -6127,8 +6059,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -6298,8 +6229,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -6462,8 +6392,7 @@
         "required": [
           "projectSlug",
           "userId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -6574,8 +6503,7 @@
           "projectSlug",
           "userId",
           "dimension"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -6644,8 +6572,7 @@
         "required": [
           "projectSlug",
           "userId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -6761,8 +6688,7 @@
         "required": [
           "projectSlug",
           "userId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -6845,8 +6771,7 @@
         "required": [
           "projectSlug",
           "userId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -6915,8 +6840,7 @@
         "required": [
           "projectSlug",
           "userId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -7026,8 +6950,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -7223,8 +7146,7 @@
         "required": [
           "projectSlug",
           "searchSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -7461,19 +7383,15 @@
                 "required": [
                   "op",
                   "value"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
         },
         "required": [
           "projectSlug",
-          "name",
-          "query",
-          "filters"
-        ],
-        "additionalProperties": false
+          "name"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -7712,8 +7630,7 @@
                 "required": [
                   "op",
                   "value"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -7721,8 +7638,7 @@
         "required": [
           "projectSlug",
           "searchSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -7888,8 +7804,7 @@
         "required": [
           "projectSlug",
           "searchSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -7948,12 +7863,8 @@
         },
         "required": [
           "projectSlug",
-          "searchSlug",
-          "limit",
-          "sortBy",
-          "sortDirection"
-        ],
-        "additionalProperties": false
+          "searchSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -8269,12 +8180,8 @@
           }
         },
         "required": [
-          "projectSlug",
-          "limit",
-          "sortBy",
-          "sortDirection"
-        ],
-        "additionalProperties": false
+          "projectSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -8713,8 +8620,7 @@
                     "required": [
                       "op",
                       "value"
-                    ],
-                    "additionalProperties": false
+                    ]
                   }
                 }
               },
@@ -8745,8 +8651,7 @@
                         "required": [
                           "kind",
                           "criteria"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -8807,12 +8712,9 @@
                                   },
                                   "required": [
                                     "type",
-                                    "scope",
                                     "operator",
-                                    "value",
-                                    "caseSensitive"
-                                  ],
-                                  "additionalProperties": false
+                                    "value"
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -8824,8 +8726,7 @@
                                   },
                                   "required": [
                                     "type"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -8859,11 +8760,9 @@
                                   },
                                   "required": [
                                     "type",
-                                    "unit",
                                     "operator",
                                     "value"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -8883,8 +8782,7 @@
                                   "required": [
                                     "type",
                                     "expectation"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -8932,11 +8830,9 @@
                                   "required": [
                                     "type",
                                     "field",
-                                    "aggregation",
                                     "operator",
                                     "value"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -8953,8 +8849,7 @@
                                   "required": [
                                     "type",
                                     "toolName"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -8970,8 +8865,7 @@
                                   },
                                   "required": [
                                     "type"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -8999,8 +8893,7 @@
                                     "type",
                                     "operator",
                                     "value"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -9012,8 +8905,7 @@
                                   },
                                   "required": [
                                     "type"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -9030,8 +8922,7 @@
                                   "required": [
                                     "type",
                                     "value"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -9063,10 +8954,8 @@
                                   "required": [
                                     "type",
                                     "query",
-                                    "operator",
                                     "threshold"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -9078,8 +8967,7 @@
                                   },
                                   "required": [
                                     "type"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 }
                               ]
                             }
@@ -9087,10 +8975,8 @@
                         },
                         "required": [
                           "kind",
-                          "match",
                           "conditions"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ],
                     "description": "Declarative detector config. `judge` compiles to an LLM script; `rule` compiles to a deterministic script over the session."
@@ -9098,8 +8984,7 @@
                 },
                 "required": [
                   "settings"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -9112,8 +8997,7 @@
                 },
                 "required": [
                   "script"
-                ],
-                "additionalProperties": false
+                ]
               }
             ],
             "description": "The signal's membership detector. Provide exactly one of `settings` or `script`."
@@ -9124,8 +9008,7 @@
           "name",
           "description",
           "evaluation"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -9248,8 +9131,7 @@
                     "required": [
                       "op",
                       "value"
-                    ],
-                    "additionalProperties": false
+                    ]
                   }
                 }
               },
@@ -9262,8 +9144,7 @@
         "required": [
           "projectSlug",
           "signalSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -9316,8 +9197,7 @@
         "required": [
           "projectSlug",
           "signalSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -9351,8 +9231,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -9509,8 +9388,7 @@
         "required": [
           "projectSlug",
           "signalSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -10153,8 +10031,7 @@
         "required": [
           "projectSlug",
           "signalSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -10225,10 +10102,8 @@
         },
         "required": [
           "projectSlug",
-          "signalSlug",
-          "limit"
-        ],
-        "additionalProperties": false
+          "signalSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -10504,8 +10379,7 @@
         "required": [
           "projectSlug",
           "signalIds"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -10625,8 +10499,7 @@
         "required": [
           "projectSlug",
           "signalIds"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -10746,8 +10619,7 @@
         "required": [
           "projectSlug",
           "signalIds"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -10867,8 +10739,7 @@
         "required": [
           "projectSlug",
           "signalIds"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -10988,8 +10859,7 @@
         "required": [
           "projectSlug",
           "signalIds"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -11109,8 +10979,7 @@
         "required": [
           "projectSlug",
           "signalIds"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -11224,8 +11093,7 @@
         "required": [
           "projectSlug",
           "signalSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -11282,8 +11150,7 @@
         "required": [
           "projectSlug",
           "signalSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -11330,8 +11197,7 @@
           "projectSlug",
           "signalSlug",
           "passed"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -11408,8 +11274,7 @@
         "required": [
           "projectSlug",
           "recipient"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -11485,8 +11350,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -12324,8 +12188,7 @@
         "required": [
           "projectSlug",
           "incidentId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -13171,12 +13034,8 @@
           }
         },
         "required": [
-          "projectSlug",
-          "limit",
-          "sortBy",
-          "sortDirection"
-        ],
-        "additionalProperties": false
+          "projectSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -13381,8 +13240,7 @@
         "required": [
           "projectSlug",
           "datasetSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -13562,8 +13420,7 @@
         "required": [
           "projectSlug",
           "name"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -13754,8 +13611,7 @@
         "required": [
           "projectSlug",
           "datasetSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -13930,8 +13786,7 @@
         "required": [
           "projectSlug",
           "datasetSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -13983,11 +13838,8 @@
         },
         "required": [
           "projectSlug",
-          "datasetSlug",
-          "limit",
-          "sortDirection"
-        ],
-        "additionalProperties": false
+          "datasetSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -14367,8 +14219,7 @@
               },
               "required": [
                 "input"
-              ],
-              "additionalProperties": false
+              ]
             },
             "description": "Rows to insert."
           }
@@ -14377,8 +14228,7 @@
           "projectSlug",
           "datasetSlug",
           "rows"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -14586,8 +14436,7 @@
           "projectSlug",
           "datasetSlug",
           "rowId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -14651,8 +14500,7 @@
                 "required": [
                   "mode",
                   "rowIds"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -14664,8 +14512,7 @@
                 },
                 "required": [
                   "mode"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -14684,8 +14531,7 @@
                 "required": [
                   "mode",
                   "rowIds"
-                ],
-                "additionalProperties": false
+                ]
               }
             ],
             "description": "Rows to delete."
@@ -14695,8 +14541,7 @@
           "projectSlug",
           "datasetSlug",
           "selection"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -14778,8 +14623,7 @@
                 "required": [
                   "by",
                   "ids"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -14847,8 +14691,7 @@
                         "required": [
                           "op",
                           "value"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     }
                   }
@@ -14856,8 +14699,7 @@
                 "required": [
                   "by",
                   "filters"
-                ],
-                "additionalProperties": false
+                ]
               }
             ],
             "description": "Which traces to import as rows — either explicit ids or a filter set."
@@ -14867,8 +14709,7 @@
           "projectSlug",
           "datasetSlug",
           "traces"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -14941,8 +14782,7 @@
                 "required": [
                   "mode",
                   "rowIds"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -14954,8 +14794,7 @@
                 },
                 "required": [
                   "mode"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -14974,8 +14813,7 @@
                 "required": [
                   "mode",
                   "rowIds"
-                ],
-                "additionalProperties": false
+                ]
               }
             ]
           },
@@ -14989,8 +14827,7 @@
         "required": [
           "projectSlug",
           "datasetSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -15084,8 +14921,7 @@
         "required": [
           "projectSlug",
           "datasetSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -15199,8 +15035,7 @@
           "projectSlug",
           "datasetSlug",
           "name"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -15307,8 +15142,7 @@
           "datasetSlug",
           "identifier",
           "name"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -15409,8 +15243,7 @@
           "projectSlug",
           "datasetSlug",
           "identifier"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -15447,8 +15280,7 @@
           "projectSlug",
           "datasetSlug",
           "order"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -15562,8 +15394,7 @@
           "projectSlug",
           "datasetSlug",
           "identifier"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -15654,8 +15485,7 @@
         },
         "required": [
           "name"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -15732,8 +15562,7 @@
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "properties": {}
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -15831,8 +15660,7 @@
         },
         "required": [
           "apiKeyId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -15924,8 +15752,7 @@
         "required": [
           "apiKeyId",
           "name"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -16011,8 +15838,7 @@
         },
         "required": [
           "apiKeyId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -16026,8 +15852,7 @@
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "properties": {}
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -16149,8 +15974,7 @@
         },
         "required": [
           "oauthKeyId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -16260,8 +16084,7 @@
         },
         "required": [
           "oauthKeyId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -16275,8 +16098,7 @@
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "properties": {}
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -16392,8 +16214,7 @@
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "properties": {}
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -16592,8 +16413,7 @@
         },
         "required": [
           "email"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -16693,8 +16513,7 @@
         },
         "required": [
           "memberId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -16800,8 +16619,7 @@
         "required": [
           "memberId",
           "role"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -16898,8 +16716,7 @@
         },
         "required": [
           "memberId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -16935,10 +16752,8 @@
           }
         },
         "required": [
-          "projectSlug",
-          "limit"
-        ],
-        "additionalProperties": false
+          "projectSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -18474,8 +18289,7 @@
                             "required": [
                               "op",
                               "value"
-                            ],
-                            "additionalProperties": false
+                            ]
                           }
                         }
                       },
@@ -18536,8 +18350,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -18550,8 +18363,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -18564,8 +18376,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -18588,8 +18399,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -18612,8 +18422,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -18636,8 +18445,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -18660,8 +18468,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -18684,8 +18491,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           }
                         ]
                       }
@@ -18694,7 +18500,6 @@
                       "type",
                       "id"
                     ],
-                    "additionalProperties": false,
                     "description": "Entity or filter set watched by the monitor."
                   },
                   "severity": {
@@ -18726,8 +18531,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -18740,8 +18544,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -18754,8 +18557,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -18778,8 +18580,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -18802,8 +18603,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -18826,8 +18626,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -18850,8 +18649,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -18874,8 +18672,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ]
                   }
@@ -18988,8 +18785,7 @@
                             "required": [
                               "op",
                               "value"
-                            ],
-                            "additionalProperties": false
+                            ]
                           }
                         }
                       },
@@ -19050,8 +18846,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19064,8 +18859,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19078,8 +18872,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19102,8 +18895,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19126,8 +18918,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19150,8 +18941,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19174,8 +18964,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19198,8 +18987,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           }
                         ]
                       }
@@ -19208,7 +18996,6 @@
                       "type",
                       "id"
                     ],
-                    "additionalProperties": false,
                     "description": "Entity or filter set watched by the monitor."
                   },
                   "severity": {
@@ -19240,8 +19027,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -19254,8 +19040,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -19268,8 +19053,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -19292,8 +19076,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -19316,8 +19099,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -19340,8 +19122,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -19364,8 +19145,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -19388,8 +19168,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ]
                   },
@@ -19414,8 +19193,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19428,8 +19206,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19442,8 +19219,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19466,8 +19242,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19490,8 +19265,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19514,8 +19288,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19538,8 +19311,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19562,8 +19334,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           }
                         ],
                         "description": "Metric measured over the monitor target."
@@ -19587,8 +19358,7 @@
                             "required": [
                               "mode",
                               "value"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19633,8 +19403,7 @@
                                         "required": [
                                           "unit",
                                           "minutes"
-                                        ],
-                                        "additionalProperties": false
+                                        ]
                                       },
                                       {
                                         "type": "object",
@@ -19653,8 +19422,7 @@
                                         "required": [
                                           "unit",
                                           "hours"
-                                        ],
-                                        "additionalProperties": false
+                                        ]
                                       },
                                       {
                                         "type": "object",
@@ -19673,8 +19441,7 @@
                                         "required": [
                                           "unit",
                                           "days"
-                                        ],
-                                        "additionalProperties": false
+                                        ]
                                       }
                                     ],
                                     "description": "Length of the window used to compute the baseline rate."
@@ -19684,7 +19451,6 @@
                                   "kind",
                                   "lookback"
                                 ],
-                                "additionalProperties": false,
                                 "description": "Fixed-window baseline the current rate is compared against."
                               }
                             },
@@ -19692,8 +19458,7 @@
                               "mode",
                               "factor",
                               "baseline"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19712,8 +19477,7 @@
                             },
                             "required": [
                               "mode"
-                            ],
-                            "additionalProperties": false
+                            ]
                           }
                         ],
                         "description": "How the metric is compared."
@@ -19732,7 +19496,6 @@
                       "metric",
                       "threshold"
                     ],
-                    "additionalProperties": false,
                     "description": "Threshold condition that opens point incidents."
                   }
                 },
@@ -19742,8 +19505,7 @@
                   "severity",
                   "trigger",
                   "condition"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -19845,8 +19607,7 @@
                             "required": [
                               "op",
                               "value"
-                            ],
-                            "additionalProperties": false
+                            ]
                           }
                         }
                       },
@@ -19907,8 +19668,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19921,8 +19681,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19935,8 +19694,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19959,8 +19717,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -19983,8 +19740,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20007,8 +19763,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20031,8 +19786,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20055,8 +19809,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           }
                         ]
                       }
@@ -20065,7 +19818,6 @@
                       "type",
                       "id"
                     ],
-                    "additionalProperties": false,
                     "description": "Entity or filter set watched by the monitor."
                   },
                   "severity": {
@@ -20097,8 +19849,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -20111,8 +19862,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -20125,8 +19875,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -20149,8 +19898,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -20173,8 +19921,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -20197,8 +19944,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -20221,8 +19967,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -20245,8 +19990,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ]
                   },
@@ -20271,8 +20015,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20285,8 +20028,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20299,8 +20041,7 @@
                             },
                             "required": [
                               "kind"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20323,8 +20064,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20347,8 +20087,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20371,8 +20110,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20395,8 +20133,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20419,8 +20156,7 @@
                             "required": [
                               "kind",
                               "field"
-                            ],
-                            "additionalProperties": false
+                            ]
                           }
                         ],
                         "description": "Metric measured over the monitor target."
@@ -20445,8 +20181,7 @@
                             "required": [
                               "mode",
                               "value"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20491,8 +20226,7 @@
                                         "required": [
                                           "unit",
                                           "minutes"
-                                        ],
-                                        "additionalProperties": false
+                                        ]
                                       },
                                       {
                                         "type": "object",
@@ -20511,8 +20245,7 @@
                                         "required": [
                                           "unit",
                                           "hours"
-                                        ],
-                                        "additionalProperties": false
+                                        ]
                                       },
                                       {
                                         "type": "object",
@@ -20531,8 +20264,7 @@
                                         "required": [
                                           "unit",
                                           "days"
-                                        ],
-                                        "additionalProperties": false
+                                        ]
                                       }
                                     ],
                                     "description": "Length of the window used to compute the baseline rate."
@@ -20542,7 +20274,6 @@
                                   "kind",
                                   "lookback"
                                 ],
-                                "additionalProperties": false,
                                 "description": "Fixed-window baseline the current rate is compared against."
                               }
                             },
@@ -20550,8 +20281,7 @@
                               "mode",
                               "factor",
                               "baseline"
-                            ],
-                            "additionalProperties": false
+                            ]
                           },
                           {
                             "type": "object",
@@ -20570,8 +20300,7 @@
                             },
                             "required": [
                               "mode"
-                            ],
-                            "additionalProperties": false
+                            ]
                           }
                         ]
                       },
@@ -20602,7 +20331,6 @@
                         "required": [
                           "minutes"
                         ],
-                        "additionalProperties": false,
                         "description": "Sustained-condition window."
                       }
                     },
@@ -20611,7 +20339,6 @@
                       "metric",
                       "window"
                     ],
-                    "additionalProperties": false,
                     "description": "Escalating condition that opens sustained incidents."
                   }
                 },
@@ -20621,8 +20348,7 @@
                   "severity",
                   "trigger",
                   "condition"
-                ],
-                "additionalProperties": false
+                ]
               }
             ]
           }
@@ -20630,8 +20356,7 @@
         "required": [
           "projectSlug",
           "body"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -22104,8 +21829,7 @@
                 "required": [
                   "op",
                   "value"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "description": "Filter subset to match against monitor targets. For one user use `userId`; for one tool use `operation = execute_tool` and `toolName`."
@@ -22114,8 +21838,7 @@
         "required": [
           "projectSlug",
           "filterSetContains"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -23540,8 +23263,7 @@
         "required": [
           "projectSlug",
           "monitorSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -24974,8 +24696,7 @@
         "required": [
           "projectSlug",
           "monitorSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -26387,8 +26108,7 @@
         "required": [
           "projectSlug",
           "monitorSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -26425,10 +26145,8 @@
         },
         "required": [
           "projectSlug",
-          "monitorSlug",
-          "limit"
-        ],
-        "additionalProperties": false
+          "monitorSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -27286,8 +27004,7 @@
         "required": [
           "projectSlug",
           "monitorSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -28699,8 +28416,7 @@
         "required": [
           "projectSlug",
           "monitorSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -30145,8 +29861,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30158,8 +29873,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30171,8 +29885,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30193,8 +29906,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30215,8 +29927,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30237,8 +29948,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30259,8 +29969,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30281,8 +29990,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30309,8 +30017,7 @@
                           "kind",
                           "field",
                           "p"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ],
                     "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
@@ -30337,10 +30044,8 @@
                       }
                     },
                     "required": [
-                      "unit",
-                      "size"
-                    ],
-                    "additionalProperties": false
+                      "unit"
+                    ]
                   },
                   "range": {
                     "type": "object",
@@ -30362,7 +30067,6 @@
                       "fromIso",
                       "toIso"
                     ],
-                    "additionalProperties": false,
                     "description": "The time window."
                   },
                   "orderBy": {
@@ -30389,12 +30093,7 @@
                           "desc"
                         ]
                       }
-                    },
-                    "required": [
-                      "by",
-                      "direction"
-                    ],
-                    "additionalProperties": false
+                    }
                   },
                   "limit": {
                     "default": 50,
@@ -30462,8 +30161,7 @@
                         "required": [
                           "op",
                           "value"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     }
                   }
@@ -30471,9 +30169,7 @@
                 "required": [
                   "stream",
                   "metric",
-                  "range",
-                  "orderBy",
-                  "limit"
+                  "range"
                 ],
                 "additionalProperties": false
               },
@@ -30515,8 +30211,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30528,8 +30223,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30541,8 +30235,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30563,8 +30256,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30585,8 +30277,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30607,8 +30298,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30629,8 +30319,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30651,8 +30340,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30679,8 +30367,7 @@
                           "kind",
                           "field",
                           "p"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ],
                     "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
@@ -30707,10 +30394,8 @@
                       }
                     },
                     "required": [
-                      "unit",
-                      "size"
-                    ],
-                    "additionalProperties": false
+                      "unit"
+                    ]
                   },
                   "range": {
                     "type": "object",
@@ -30732,7 +30417,6 @@
                       "fromIso",
                       "toIso"
                     ],
-                    "additionalProperties": false,
                     "description": "The time window."
                   },
                   "orderBy": {
@@ -30759,12 +30443,7 @@
                           "desc"
                         ]
                       }
-                    },
-                    "required": [
-                      "by",
-                      "direction"
-                    ],
-                    "additionalProperties": false
+                    }
                   },
                   "limit": {
                     "default": 50,
@@ -30832,8 +30511,7 @@
                         "required": [
                           "op",
                           "value"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     }
                   }
@@ -30841,9 +30519,7 @@
                 "required": [
                   "stream",
                   "metric",
-                  "range",
-                  "orderBy",
-                  "limit"
+                  "range"
                 ],
                 "additionalProperties": false
               },
@@ -30879,8 +30555,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30892,8 +30567,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30905,8 +30579,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30927,8 +30600,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30949,8 +30621,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30971,8 +30642,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -30993,8 +30663,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31015,8 +30684,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31043,8 +30711,7 @@
                           "kind",
                           "field",
                           "p"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ],
                     "description": "The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`)."
@@ -31071,10 +30738,8 @@
                       }
                     },
                     "required": [
-                      "unit",
-                      "size"
-                    ],
-                    "additionalProperties": false
+                      "unit"
+                    ]
                   },
                   "range": {
                     "type": "object",
@@ -31096,7 +30761,6 @@
                       "fromIso",
                       "toIso"
                     ],
-                    "additionalProperties": false,
                     "description": "The time window."
                   },
                   "orderBy": {
@@ -31123,12 +30787,7 @@
                           "desc"
                         ]
                       }
-                    },
-                    "required": [
-                      "by",
-                      "direction"
-                    ],
-                    "additionalProperties": false
+                    }
                   },
                   "limit": {
                     "default": 50,
@@ -31196,8 +30855,7 @@
                         "required": [
                           "op",
                           "value"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     }
                   }
@@ -31205,9 +30863,7 @@
                 "required": [
                   "stream",
                   "metric",
-                  "range",
-                  "orderBy",
-                  "limit"
+                  "range"
                 ],
                 "additionalProperties": false
               },
@@ -31244,8 +30900,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31257,8 +30912,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31270,8 +30924,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31288,8 +30941,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31306,8 +30958,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31324,8 +30975,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31342,8 +30992,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ],
                     "description": "The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`."
@@ -31370,10 +31019,8 @@
                       }
                     },
                     "required": [
-                      "unit",
-                      "size"
-                    ],
-                    "additionalProperties": false
+                      "unit"
+                    ]
                   },
                   "range": {
                     "type": "object",
@@ -31395,7 +31042,6 @@
                       "fromIso",
                       "toIso"
                     ],
-                    "additionalProperties": false,
                     "description": "The time window."
                   },
                   "orderBy": {
@@ -31422,12 +31068,7 @@
                           "desc"
                         ]
                       }
-                    },
-                    "required": [
-                      "by",
-                      "direction"
-                    ],
-                    "additionalProperties": false
+                    }
                   },
                   "limit": {
                     "default": 50,
@@ -31495,8 +31136,7 @@
                         "required": [
                           "op",
                           "value"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     }
                   }
@@ -31504,9 +31144,7 @@
                 "required": [
                   "stream",
                   "metric",
-                  "range",
-                  "orderBy",
-                  "limit"
+                  "range"
                 ],
                 "additionalProperties": false
               },
@@ -31539,8 +31177,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31557,8 +31194,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31575,8 +31211,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31593,8 +31228,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31611,8 +31245,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ],
                     "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`."
@@ -31639,10 +31272,8 @@
                       }
                     },
                     "required": [
-                      "unit",
-                      "size"
-                    ],
-                    "additionalProperties": false
+                      "unit"
+                    ]
                   },
                   "range": {
                     "type": "object",
@@ -31664,7 +31295,6 @@
                       "fromIso",
                       "toIso"
                     ],
-                    "additionalProperties": false,
                     "description": "The time window."
                   },
                   "orderBy": {
@@ -31691,12 +31321,7 @@
                           "desc"
                         ]
                       }
-                    },
-                    "required": [
-                      "by",
-                      "direction"
-                    ],
-                    "additionalProperties": false
+                    }
                   },
                   "limit": {
                     "default": 50,
@@ -31764,8 +31389,7 @@
                         "required": [
                           "op",
                           "value"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     }
                   }
@@ -31773,9 +31397,7 @@
                 "required": [
                   "stream",
                   "metric",
-                  "range",
-                  "orderBy",
-                  "limit"
+                  "range"
                 ],
                 "additionalProperties": false
               },
@@ -31808,8 +31430,7 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31829,8 +31450,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31850,8 +31470,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31871,8 +31490,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       {
                         "type": "object",
@@ -31892,8 +31510,7 @@
                         "required": [
                           "kind",
                           "field"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     ],
                     "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`."
@@ -31920,10 +31537,8 @@
                       }
                     },
                     "required": [
-                      "unit",
-                      "size"
-                    ],
-                    "additionalProperties": false
+                      "unit"
+                    ]
                   },
                   "range": {
                     "type": "object",
@@ -31945,7 +31560,6 @@
                       "fromIso",
                       "toIso"
                     ],
-                    "additionalProperties": false,
                     "description": "The time window."
                   },
                   "orderBy": {
@@ -31972,12 +31586,7 @@
                           "desc"
                         ]
                       }
-                    },
-                    "required": [
-                      "by",
-                      "direction"
-                    ],
-                    "additionalProperties": false
+                    }
                   },
                   "limit": {
                     "default": 50,
@@ -32045,8 +31654,7 @@
                         "required": [
                           "op",
                           "value"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     }
                   }
@@ -32054,9 +31662,7 @@
                 "required": [
                   "stream",
                   "metric",
-                  "range",
-                  "orderBy",
-                  "limit"
+                  "range"
                 ],
                 "additionalProperties": false
               }
@@ -32066,8 +31672,7 @@
         "required": [
           "projectSlug",
           "body"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -32184,8 +31789,7 @@
                 "required": [
                   "op",
                   "value"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           },
@@ -32212,12 +31816,7 @@
                   "desc"
                 ]
               }
-            },
-            "required": [
-              "field",
-              "direction"
-            ],
-            "additionalProperties": false
+            }
           },
           "range": {
             "description": "Restrict to spans whose `startTime` falls in this window.",
@@ -32239,8 +31838,7 @@
             "required": [
               "fromIso",
               "toIso"
-            ],
-            "additionalProperties": false
+            ]
           },
           "cursor": {
             "description": "Opaque cursor from a previous response's `nextCursor`. Omit on the first page.",
@@ -32255,10 +31853,8 @@
           }
         },
         "required": [
-          "projectSlug",
-          "limit"
-        ],
-        "additionalProperties": false
+          "projectSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -32628,10 +32224,8 @@
           }
         },
         "required": [
-          "projectSlug",
-          "limit"
-        ],
-        "additionalProperties": false
+          "projectSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -33011,8 +32605,7 @@
                       "required": [
                         "op",
                         "value"
-                      ],
-                      "additionalProperties": false
+                      ]
                     }
                   },
                   "description": "Session filters selecting this variant's population."
@@ -33050,8 +32643,7 @@
                           "required": [
                             "type",
                             "seconds"
-                          ],
-                          "additionalProperties": false
+                          ]
                         },
                         {
                           "type": "object",
@@ -33073,8 +32665,7 @@
                             "type",
                             "fromIso",
                             "toIso"
-                          ],
-                          "additionalProperties": false
+                          ]
                         }
                       ],
                       "description": "Relative (last N seconds) or absolute window."
@@ -33092,16 +32683,14 @@
                 "filterSet",
                 "query",
                 "timeRange"
-              ],
-              "additionalProperties": false
+              ]
             }
           }
         },
         "required": [
           "projectSlug",
           "name"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -33348,8 +32937,7 @@
         "required": [
           "projectSlug",
           "experimentSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -35444,8 +35032,7 @@
                       "required": [
                         "op",
                         "value"
-                      ],
-                      "additionalProperties": false
+                      ]
                     }
                   },
                   "description": "Session filters selecting this variant's population."
@@ -35483,8 +35070,7 @@
                           "required": [
                             "type",
                             "seconds"
-                          ],
-                          "additionalProperties": false
+                          ]
                         },
                         {
                           "type": "object",
@@ -35506,8 +35092,7 @@
                             "type",
                             "fromIso",
                             "toIso"
-                          ],
-                          "additionalProperties": false
+                          ]
                         }
                       ],
                       "description": "Relative (last N seconds) or absolute window."
@@ -35525,16 +35110,14 @@
                 "filterSet",
                 "query",
                 "timeRange"
-              ],
-              "additionalProperties": false
+              ]
             }
           }
         },
         "required": [
           "projectSlug",
           "experimentSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -35781,8 +35364,7 @@
         "required": [
           "projectSlug",
           "experimentSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -35899,19 +35481,14 @@
                 "required": [
                   "op",
                   "value"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
         },
         "required": [
-          "projectSlug",
-          "limit",
-          "sortBy",
-          "sortDirection"
-        ],
-        "additionalProperties": false
+          "projectSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -36217,8 +35794,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -36514,8 +36090,7 @@
         "required": [
           "projectSlug",
           "sessionId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -36814,8 +36389,7 @@
         "required": [
           "projectSlug",
           "sessionId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -40045,12 +39619,8 @@
         },
         "required": [
           "projectSlug",
-          "sessionId",
-          "limit",
-          "sortBy",
-          "sortDirection"
-        ],
-        "additionalProperties": false
+          "sessionId"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -40317,8 +39887,7 @@
         "required": [
           "projectSlug",
           "sessionId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -40633,8 +40202,7 @@
           "projectSlug",
           "sessionId",
           "signalSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -40937,8 +40505,7 @@
         "required": [
           "projectSlug",
           "sessionId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -41063,8 +40630,7 @@
         "required": [
           "projectSlug",
           "sessionId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -41215,12 +40781,8 @@
           }
         },
         "required": [
-          "projectSlug",
-          "limit",
-          "sort",
-          "direction"
-        ],
-        "additionalProperties": false
+          "projectSlug"
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -41342,8 +40904,7 @@
         "required": [
           "projectSlug",
           "storeId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -41421,8 +40982,7 @@
         "required": [
           "projectSlug",
           "storeId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -41555,8 +41115,7 @@
         "required": [
           "projectSlug",
           "storeId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -41620,8 +41179,7 @@
           "projectSlug",
           "storeId",
           "recordId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -41760,8 +41318,7 @@
           "storeId",
           "recordId",
           "spanId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -41850,8 +41407,7 @@
           "projectSlug",
           "storeId",
           "recordId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -41942,8 +41498,7 @@
           "projectSlug",
           "storeId",
           "recordId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -42011,8 +41566,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -42291,8 +41845,7 @@
                   "region",
                   "publicKey",
                   "secretKey"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -42326,8 +41879,7 @@
                   "kind",
                   "region",
                   "apiKey"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -42355,8 +41907,7 @@
                   "kind",
                   "region",
                   "apiKey"
-                ],
-                "additionalProperties": false
+                ]
               }
             ],
             "description": "Credentials for the platform to import from; `kind` names the platform. Not stored after the import ends."
@@ -42398,8 +41949,7 @@
           "projectSlug",
           "credentials",
           "sourceProjectId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -42637,8 +42187,7 @@
         "required": [
           "projectSlug",
           "importId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -42965,8 +42514,7 @@
         "required": [
           "projectSlug",
           "importId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -43236,8 +42784,7 @@
                   "region",
                   "publicKey",
                   "secretKey"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -43271,8 +42818,7 @@
                   "kind",
                   "region",
                   "apiKey"
-                ],
-                "additionalProperties": false
+                ]
               },
               {
                 "type": "object",
@@ -43300,8 +42846,7 @@
                   "kind",
                   "region",
                   "apiKey"
-                ],
-                "additionalProperties": false
+                ]
               }
             ],
             "description": "Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import."
@@ -43311,8 +42856,7 @@
           "projectSlug",
           "importId",
           "credentials"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -43537,8 +43081,7 @@
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "properties": {}
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -43767,8 +43310,7 @@
         },
         "required": [
           "projectSlug"
-        ],
-        "additionalProperties": false
+        ]
       },
       "outputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
