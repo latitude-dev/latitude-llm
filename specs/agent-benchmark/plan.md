@@ -598,8 +598,9 @@ session evidence, but they do not apply a second deduction on top of Task Succes
   eligible count, and coverage state without publishing an Agent Score snapshot.
 - [ ] **P4-7** Produce bounded project issue inputs from failed Task Success scores, deterministic
   Outcome findings, and eligible Outcome signal occurrences. Deduplicate shared source evidence and
-  report affected sessions and overlap with examined failures. Issue counts explain the score but
-  do not create extra points.
+  report selection-corrected issue reach and failed reach, plus raw examined overlap for coverage.
+  Rank by corrected failed reach and leave rows unranked when a required joint inclusion probability
+  is unknown. Issue counts explain the score but do not create extra points.
 - [ ] **P4-8** Extend the session-assessment operation, generated contracts, and Scores UI only as
   needed for the new Outcome items and coverage. Defer Behaviors and standalone Signal-detail
   analytics until after the initial Agent Score launch.
@@ -608,7 +609,8 @@ session evidence, but they do not apply a second deduction on top of Task Succes
 
 - [ ] **P4-9** Tests cover every Task Success verdict, positive-score discovery exclusion, stable
   selection, version compatibility, selection correction, zero examined sessions, coverage floors,
-  duplicate issue evidence, and single-session versus bulk parity.
+  issue-ranking correction, unknown joint inclusion probabilities, duplicate issue evidence, and
+  single-session versus bulk parity.
 - [ ] **P4-10** Inspected fixtures reconcile the Task Success score row, session assessment item,
   project estimator input, and issue input without assigning a score to the session itself.
 - [ ] `pnpm typecheck` and `pnpm test` pass.
@@ -652,7 +654,9 @@ standalone Safety analytics on Signal detail.
   treat an examined session with no finding as positive evidence.
 - [ ] **P5-9** Produce bounded project issue inputs from confirmed-harm findings and eligible Safety
   signal occurrences. Union harm once per session, deduplicate shared source evidence, and report
-  exposure separately. Issue counts explain the score but do not create extra points.
+  selection-corrected exposure and harm reach with raw examined counts for coverage. Rank by
+  corrected harmed reach and leave rows unranked when a required joint inclusion probability is
+  unknown. Issue counts explain the score but do not create extra points.
 - [ ] **P5-10** Extend the session-assessment operation, generated contracts, and Scores UI only as
   needed for the new Safety items and coverage. Defer Flagger Settings and standalone Signal-detail
   analytics until after the initial Agent Score launch.
@@ -660,7 +664,8 @@ standalone Safety analytics on Signal detail.
 ### Exit gate
 
 - [ ] **P5-11** Tests prove that exposure never enters confirmed harm and unexamined sessions never
-  become clean observations. Passed defense findings do not enter signal discovery.
+  become clean observations. Passed defense findings do not enter signal discovery. Sampled issue
+  rows rank by corrected harm reach rather than raw overlap.
 - [ ] **P5-12** Fixtures cover refused and complied-with injections, user and assistant PII, multiple
   detectors on one harmed session, and incomplete coverage.
 - [ ] **P5-13** Inspected fixtures reconcile the structured finding, session assessment item,
@@ -706,7 +711,7 @@ already exercised elsewhere in the product.
 - [ ] **P6-4** Implement dynamic cause rows from
   [`score.md`](score.md#dynamic-attribution-after-scoring). Use attributed deficit, fix gain,
   residual, and bounded Shapley approximation where a counterfactual supports them. Outcome and
-  Safety use their smaller issue-overlap contracts.
+  Safety use their smaller selection-corrected issue-overlap contracts.
 
 ### Persistence and jobs
 

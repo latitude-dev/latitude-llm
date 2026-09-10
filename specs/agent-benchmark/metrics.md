@@ -585,9 +585,9 @@ before the handoff.
 - Evidence role: Outcome issue evidence and residual time attribution.
 - Reader: stalled or hesitant behavior.
 
-For Outcome, the first version reports the issue's reach and overlap with examined Task Success
-failures. For Speed, it can attribute excess critical-path time left unexplained after deterministic
-latency and retry readers. It never invents a fixed duration.
+For Outcome, the first version reports selection-corrected issue reach and failed reach, plus raw
+examined overlap as coverage context. For Speed, it can attribute excess critical-path time left
+unexplained after deterministic latency and retry readers. It never invents a fixed duration.
 
 # Safety
 

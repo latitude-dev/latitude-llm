@@ -202,10 +202,14 @@ score points. Money remains available where the evidence supports it, but a cont
 or recovery cause does not need a defensible price to appear. Speed attributes in time before
 applying its ratio. Reliability can attribute terminal endpoints directly.
 
-The initial Outcome and Safety sections use a smaller issue contract. Outcome reports issue reach,
-examined overlap, and failed overlap. Safety reports exposure and confirmed-harm sessions. These rows
-do not receive Shapley shares or estimated fix gains. The dimension scores come from Task Success and
-the confirmed-harm union, not from adding issue penalties.
+The initial Outcome and Safety sections use a smaller issue contract. Outcome reports
+selection-corrected issue reach and failed reach, with raw examined overlap as coverage context.
+Safety reports selection-corrected exposure and confirmed-harm reach, with raw examined counts as
+coverage context. Issues rank by corrected failed or harmed reach, never by raw sampled overlap.
+Each corrected value uses the stored inclusion probability for its observation path. If an overlap
+depends on two sampled readers and their joint inclusion probability is unknown, the row remains
+visible but unranked. These rows do not receive Shapley shares or estimated fix gains. The dimension
+scores come from Task Success and the confirmed-harm union, not from adding issue penalties.
 
 Near-duplicate signals and observations of the same underlying event are grouped before attribution.
 When attribution applies, exact Shapley attribution is used for 12 or fewer grouped causes. Larger

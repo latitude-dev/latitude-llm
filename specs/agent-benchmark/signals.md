@@ -217,7 +217,8 @@ Every logical screening decision stores:
 Task Success uses the same configurable sampling and hint path as other flaggers. Outcome corrects
 its verdicts with stored inclusion probabilities. Safety selects a complete detector suite per
 session. Other sampled observations use inverse-probability weights. A decision without a known
-inclusion probability is usable for an example or cause count, but not for a score.
+inclusion probability is usable for an example or raw coverage count, but not for a score or ranked
+issue estimate.
 
 Readers use only the latest analysis generation at the calculation cutoff and collapse its
 append-only decision revisions by stable id. Superseded generations do not multiply occurrence or
