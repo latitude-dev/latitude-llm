@@ -13,9 +13,26 @@ type ConversationMessagesOnly = Pick<FlaggerConversation, "allMessages">
 type ToolErrorConversation = Pick<FlaggerConversation, "allMessages" | "definedTools" | "outputMessages">
 
 const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
-const EXPECTED_TOOL_HTTP_STATUS_MIN = 400
-const EXPECTED_TOOL_HTTP_STATUS_MAX = 499
 const ERROR_SNIPPET_MAX_LENGTH = 160
+
+/**
+ * HTTP statuses a caller declared as normal control flow for a tool.
+ *
+ * Without a declaration a 4xx is a failed call. The range used to exempt itself, which silently
+ * excused every 404 from a search tool and every 409 from a writer — a tool answering "not found"
+ * is only expected if whoever wired it up says so, and no range can know that.
+ */
+export interface ToolExpectedStatusContract {
+  /** Keyed by the tool name as declared, exact match. */
+  readonly byToolName: ReadonlyMap<string, ReadonlySet<number>>
+  /** Statuses expected whatever the tool. */
+  readonly anyTool: ReadonlySet<number>
+}
+
+export const EMPTY_TOOL_EXPECTED_STATUS_CONTRACT: ToolExpectedStatusContract = {
+  byToolName: new Map(),
+  anyTool: new Set(),
+}
 
 // Below this fraction of input tokens served from cache, caching is essentially
 // not working: a healthy multi-turn agent re-reads the great majority of its
@@ -155,7 +172,10 @@ const conversationHasAnyToolCall = (conversation: ConversationMessagesOnly): boo
 
 // Every tool-call defect in encounter order; the deterministic flagger
 // annotates the first, the `tool:error` hint gatherer surfaces them all.
-export function collectToolCallErrorFindings(conversation: ToolErrorConversation): readonly ToolCallErrorFinding[] {
+export function collectToolCallErrorFindings(
+  conversation: ToolErrorConversation,
+  expectedStatuses: ToolExpectedStatusContract = EMPTY_TOOL_EXPECTED_STATUS_CONTRACT,
+): readonly ToolCallErrorFinding[] {
   const findings: ToolCallErrorFinding[] = []
   const callById = new Map<string, { name: string; messageIndex: number; partIndex: number }>()
   const successfulCallIds = new Set<string>()
@@ -241,7 +261,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
         continue
       }
 
-      if (toolResponseIndicatesFailure(part.response)) {
+      if (toolResponseIndicatesFailure(part.response, { contract: expectedStatuses, toolName: call.name })) {
         const snippet = extractToolErrorSnippet(part.response)
         findings.push({
           kind: "error",
@@ -325,29 +345,39 @@ function toHttpStatus(value: unknown): number | null {
   return match?.[1] ? Number(match[1]) : null
 }
 
-function isExpectedToolHttpStatus(value: unknown): boolean {
-  const status = toHttpStatus(value)
-  return status !== null && status >= EXPECTED_TOOL_HTTP_STATUS_MIN && status <= EXPECTED_TOOL_HTTP_STATUS_MAX
+interface ExpectedStatusScope {
+  readonly contract: ToolExpectedStatusContract
+  readonly toolName?: string | undefined
 }
 
-function responseIndicatesExpectedToolError(response: unknown): boolean {
+function isDeclaredExpectedStatus(value: unknown, scope: ExpectedStatusScope): boolean {
+  const status = toHttpStatus(value)
+  if (status === null) return false
+  if (scope.contract.anyTool.has(status)) return true
+  const declared = scope.toolName === undefined ? undefined : scope.contract.byToolName.get(scope.toolName)
+  return declared?.has(status) === true
+}
+
+function responseIndicatesExpectedToolError(response: unknown, scope: ExpectedStatusScope): boolean {
   if (typeof response === "string") {
     const trimmed = response.trim()
     if (trimmed === "") return false
     try {
-      return responseIndicatesExpectedToolError(JSON.parse(trimmed))
+      return responseIndicatesExpectedToolError(JSON.parse(trimmed), scope)
     } catch {
-      return isExpectedToolHttpStatus(trimmed)
+      return isDeclaredExpectedStatus(trimmed, scope)
     }
   }
 
-  if (Array.isArray(response)) return response.length > 0 && response.every(responseIndicatesExpectedToolError)
+  if (Array.isArray(response)) {
+    return response.length > 0 && response.every((entry) => responseIndicatesExpectedToolError(entry, scope))
+  }
   if (!isRecord(response)) return false
 
   if (
-    isExpectedToolHttpStatus(response.status) ||
-    isExpectedToolHttpStatus(response.statusCode) ||
-    isExpectedToolHttpStatus(response.code)
+    isDeclaredExpectedStatus(response.status, scope) ||
+    isDeclaredExpectedStatus(response.statusCode, scope) ||
+    isDeclaredExpectedStatus(response.code, scope)
   ) {
     return true
   }
@@ -355,14 +385,14 @@ function responseIndicatesExpectedToolError(response: unknown): boolean {
   const error = response.error
   if (isRecord(error)) {
     return (
-      isExpectedToolHttpStatus(error.status) ||
-      isExpectedToolHttpStatus(error.statusCode) ||
-      isExpectedToolHttpStatus(error.code) ||
-      isExpectedToolHttpStatus(error.message)
+      isDeclaredExpectedStatus(error.status, scope) ||
+      isDeclaredExpectedStatus(error.statusCode, scope) ||
+      isDeclaredExpectedStatus(error.code, scope) ||
+      isDeclaredExpectedStatus(error.message, scope)
     )
   }
 
-  return isExpectedToolHttpStatus(error) || isExpectedToolHttpStatus(response.message)
+  return isDeclaredExpectedStatus(error, scope) || isDeclaredExpectedStatus(response.message, scope)
 }
 
 function truncate(s: string | null): string | null {
@@ -394,18 +424,21 @@ export function extractToolErrorSnippet(response: unknown): string | null {
   return truncate(toNonEmptyString(response.message) ?? toNonEmptyString(response.status))
 }
 
-export function toolResponseIndicatesFailure(response: unknown): boolean {
-  if (responseIndicatesExpectedToolError(response)) return false
+export function toolResponseIndicatesFailure(
+  response: unknown,
+  scope: ExpectedStatusScope = { contract: EMPTY_TOOL_EXPECTED_STATUS_CONTRACT },
+): boolean {
+  if (responseIndicatesExpectedToolError(response, scope)) return false
   if (typeof response === "string") {
     const trimmed = response.trim()
     if (trimmed === "") return false
     try {
-      return toolResponseIndicatesFailure(JSON.parse(trimmed))
+      return toolResponseIndicatesFailure(JSON.parse(trimmed), scope)
     } catch {
       return false
     }
   }
-  if (Array.isArray(response)) return response.some(toolResponseIndicatesFailure)
+  if (Array.isArray(response)) return response.some((entry) => toolResponseIndicatesFailure(entry, scope))
   if (!isRecord(response)) return false
   if (response.isError === true || response.ok === false || response.success === false) return true
 

@@ -48,7 +48,17 @@ describe("getSessionAssessment", () => {
           sessionIds: [sessionId],
           cutoff: expect.any(Date),
         })
-        return Effect.succeed([{ session, spans: [], moments: { moments: [], labels: [] }, screeningDecisions: [] }])
+        return Effect.succeed([
+          {
+            session,
+            spans: [],
+            generations: [],
+            toolCalls: [],
+            memoryEvents: [],
+            moments: { moments: [], labels: [] },
+            screeningDecisions: [],
+          },
+        ])
       },
     })
     const judgmentLayer = Layer.succeed(SessionAssessmentBulkJudgmentSource, {
@@ -129,6 +139,9 @@ describe("getSessionAssessment", () => {
               outputMessages: [{ role: "assistant", parts: [{ type: "text", content: output }] }],
             } as SessionDetail,
             spans: Object.freeze([]),
+            generations: Object.freeze([]),
+            toolCalls: Object.freeze([]),
+            memoryEvents: Object.freeze([]),
             moments: { moments: Object.freeze([]), labels: Object.freeze([]) },
             screeningDecisions: persisted.screeningDecisions,
           },

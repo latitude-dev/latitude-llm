@@ -21,7 +21,7 @@ data definitions live in the other benchmark specifications:
 | --- | --- | --- |
 | 1. Dimension-aware signals | signal classification becomes visible and reusable | none |
 | 2. Session assessment | one session gets a dimension-aware evidence story | 1 |
-| 3. Cost and Speed efficiency | avoidable money and critical-path time reach existing product pages | 1, 2 |
+| 3. Cost and Speed efficiency | versioned Cost-family evidence and avoidable critical-path time reach existing product pages and shadow scoring | 1, 2 |
 | 4. Outcome intelligence | calibrated task-success evidence reaches Sessions, Signals, and Behaviors | 1, 2 |
 | 5. Safety assurance | exposure, defense, and confirmed harm become measurable | 1, 2 |
 | 6. Agent Score benchmark | the five proven estimators become snapshots and a project benchmark | 1 through 5 |
@@ -278,59 +278,284 @@ does not display per-session dimension scores.
 
 ## PR 3: Cost and Speed efficiency
 
-**Product result**: Cost, Tools, Memory, Sessions, Signals, and session assessment show measured
-avoidable money and critical-path time.
+**Product result**: Cost, Tools, Memory, Sessions, Signals, and session assessment show the same
+versioned Cost-family evidence and measured or estimated native impact. Speed shows avoidable
+critical-path time. PR 3 calculates project Cost and Speed over shadow windows for calibration and
+performance validation; PR 6 publishes the benchmark and snapshots.
 
-### Resource foundations
+### Decisions fixed for this PR
 
-- [ ] **P3-1** Add per-session pricing coverage that distinguishes known zero-priced activity from
-  missing pricing.
-- [ ] **P3-2** Add critical-path reconstruction with correct handling of concurrent spans and
-  background work. Enforce complete Cost and Speed resource bases while retaining exact observations
-  from incomplete sessions as unscored session evidence.
-- [ ] **P3-3** Build and freeze the fleet latency references defined in
-  [`metrics.md`](metrics.md#frozen-latency-references). Inspect the aggregation output for tenant
-  leakage before freezing it.
-- [ ] **P3-4** Add cohort-aware TTFT and throughput comparisons to existing session and trace views.
+- Cost is a 0 through 100 cost-efficiency score. It is not limited to avoidable dollars and does not
+  claim that its number is the percentage of spend that was necessary.
+- Cost has five stable families: spend, context, tools, memory, and recovery. Metrics have versioned
+  response curves inside a family; they do not own independent point budgets.
+- Estimated recoverable money remains a first-class metric and display value. A Cost observation can
+  still score in tokens, operation equivalents, or sessions, or another family-native denominator
+  when a dollar estimate is not defensible.
+- Tool and memory spans have no inherent billable cost. Their spend or context effect must be
+  attributed to a paid model generation or later model input.
+- Raw context-window utilization is explanatory only. Cost penalizes context pressure only when
+  redundant content atoms can be identified or bounded.
+- Signals linked to deterministic source atoms explain existing family penalties. Unlinked signals
+  can enter only a grouped, corrected, and capped residual estimator.
+- Speed keeps its necessary-critical-path-time interpretation. Per-trace critical paths are summed
+  because traces within a session are sequential. Background and auxiliary work does not lower
+  Speed unless it delays a foreground interaction.
+- Session assessment shows raw values, measurement state, native impact, and coverage. Raw adverse
+  units become attention findings; a measured zero becomes positive evidence only with complete
+  visibility. It does not show calibrated health labels or a session-level Cost or Speed score.
+- Prefer new projections over data migrations. Existing spans contain usage, costs, content columns,
+  tool definitions, timestamps, parents, and semantic attributes; existing memory events contain the
+  hashes, operations, token counts, and session linkage needed for the launch readers.
 
-### Waste readers
+### Current implementation gaps to remove
 
-- [ ] **P3-5** Implement the tool repetition, thrashing, dead-surface, failed-call, and structural
-  readers in [`metrics.md`](metrics.md#tools), including every telemetry guard, redundancy proof,
-  and polling-safe modeled fallback for repeated calls.
-- [ ] **P3-6** Implement the memory waste readers in [`metrics.md`](metrics.md#memory).
-- [ ] **P3-7** Implement cache opportunity in [`metrics.md`](metrics.md#cost).
-- [ ] **P3-8** Carry recovered provider and tool retry resources into session evidence.
+- `NormalizedSessionAssessmentInput` carries only total session cost and `Session.durationNs`.
+  `durationNs` is active root-span duration, not reconstructed critical-path time.
+- The bulk ClickHouse source returns lean spans with empty attribute maps and no full generation
+  inputs, tool definitions, tool payloads, or memory events. The current latest conversation window
+  cannot attribute content across every generation in a multi-trace session.
+- `resolve-assessment-findings.ts` currently gives every provider error its full span cost and time,
+  even when terminal. `build-dimension-summaries.ts` then sums known impacts without source-atom
+  overlap or family caps.
+- Deterministic thrashing compares tool name and argument preview, not name, normalized input, and
+  output hash. Tool error classification treats every HTTP 400 through 499 response as expected
+  without caller-declared evidence.
+- Cache economics already models TTL, cadence, prices, and achievable volume, but its cadence-only
+  ceiling does not prove that request prefixes match.
+- The model registry has context limits and the repository has an `o200k_base` tokenizer. Normalized
+  `GenAIMessage` content still differs from provider wire serialization, so content attribution is
+  estimated and must be bounded.
+- Memory events are retained and session-scoped, but the assessment bulk source has no bounded
+  multi-session memory projection.
+- Persisted Cost signal roles use `spendEfficiency`. PR 3 must interpret that as the general Cost
+  channel at read time so existing signal JSON needs no migration.
 
-### Counterfactual and signal effects
+### Ownership boundaries
 
-- [ ] **P3-9** Implement the bounded Cost and Speed session counterfactuals specified in
-  [`score.md`](score.md#cost) and [`score.md`](score.md#speed).
-- [ ] **P3-10** Give exact readers precedence over modeled signal effects and prevent concurrent or
-  overlapping work from being counted twice.
-- [ ] **P3-11** Implement matched residual Cost and Speed signal effects with sampling correction,
-  shrinkage, and effect-not-measured results as specified in [`signals.md`](signals.md#cost-and-speed).
-- [ ] **P3-12** Add exact and estimated resource effects to the session-assessment resolver. Define
-  Cost and Speed uncertainty beside the concrete microcent or nanosecond estimate in this PR rather
-  than introducing a target-based generic confidence field.
+- `@domain/agent-score` owns Cost families, metric definitions, curves, source-atom arbitration,
+  critical-path counterfactual composition, uncertainty, session summaries, and window sufficient
+  statistics.
+- Source domains own normalized telemetry facts and reusable helpers. `@domain/spans` keeps pricing,
+  model-call, cache, tool, and trace semantics; `@domain/memories` keeps memory-event semantics.
+- `@platform/db-clickhouse` reads scoped compact facts and performs safe source-side aggregation. It
+  does not decide healthy ranges, family weights, avoidability, or score policy.
+- `@repo/operations` describes and exposes the domain contract. The web app composes domain use cases
+  with platform layers and renders the result without reimplementing evaluation rules.
+- PR 3 shadow tooling reads and reports. PR 6 owns snapshot persistence, scheduling, historical score
+  APIs, and the Agent Score route.
 
-### Product surfaces
+### Step 1: define the versioned evidence and scoring contracts
 
-- [ ] **P3-13** Show recoverable spend and pricing coverage on Cost.
-- [ ] **P3-14** Show repeated calls, thrashing, dead definitions, and their native impact on Tools.
-- [ ] **P3-15** Show repeated searches, no-op writes, and reverted writes on Memory.
-- [ ] **P3-16** Show avoidable critical-path time and cohort comparisons on Sessions.
-- [ ] **P3-17** Show measured or associated Cost and Speed effects on signal detail.
+- [x] **P3-1** Add `CostFamily`, aggregation mode, metric status, applicability, readability,
+  same-unit estimate range, and source-atom identity contracts under `@domain/agent-score`. Keep the
+  Zod schemas as the source of truth for domain, public, and browser types.
+- [x] **P3-2** Define a metric catalog whose entries include id, family, reader, raw unit,
+  aggregation mode, monotone curve id, overlap group, applicability rule, coverage floor, and
+  product destinations. Reject duplicate ids, invalid curves, negative units, and family/unit
+  mismatches at artifact load.
+- [x] **P3-3** Define a `CostScoringArtifact` containing family weights, metric curve points, metric
+  and family caps, required-family coverage floors, the residual-signal cap, tokenizer policy, and
+  artifact version. Validate that family weights sum to one and all caps and floors are bounded.
+  Keep initial numeric values provisional until shadow calibration; never bury launch constants in
+  readers or UI code.
+- [x] **P3-4** Preserve the persisted `ScoreEvidenceContract` value `cost/spendEfficiency` as a
+  compatibility channel. Resolve Cost family from deterministic linkage or the residual estimator
+  without a Postgres backfill.
+- [x] **P3-5** Extend session assessment impacts and dimension summaries with Cost family, aggregate
+  raw value and unit, measurement state, eligible and adverse units, native point estimate,
+  optional same-unit range, and range interpretation. Do not add calibrated health labels or a
+  per-session 0 through 100 value.
+
+### Step 2: build compact bulk source facts
+
+- [x] **P3-6** Extend `SessionAssessmentBulkSource` with compact generation facts keyed by session,
+  trace, and span. Include operation, provider/model, parent and timestamps, foreground interaction
+  attributes, token classes, cost sides and source, finish/error fields, capture flags, input
+  messages, output messages, and tool definitions. Select only the columns used by PR 3.
+- [x] **P3-7** Add compact tool-call facts with stable call/result ids, normalized name, canonical
+  input hash, output hash, error/status evidence, timestamps, and trace/span linkage. Reuse the
+  existing message-to-span mapping for navigation, but do not treat it as exact later-prompt token
+  attribution.
+- [x] **P3-8** Add an organization and project scoped, multi-session memory-event read to the memory
+  repository and the bulk source. Return operation, change kind, record/store ids, content hash,
+  token count, query text, result count, timestamps, and span/trace/session linkage.
+- [x] **P3-9** Implement the ClickHouse reads in
+  `packages/platform/db-clickhouse/src/repositories/session-assessment-bulk-source.ts` as bounded
+  batched queries for the selected session ids and cutoff. Do not load `SpanDetail` per session or
+  issue one query per session. Preserve the current one bulk telemetry read plus one judgment read
+  shape per batch. Page content by a fixed session and byte budget so large prompts cannot make a
+  thousand-session window resident in memory at once.
+- [x] **P3-10** Add explicit content and model coverage facts: captured, absent, truncated, unknown
+  provider/model, unknown context limit, unpriced, known local/free, and legacy unknown cost. Start
+  without a migration. If retained columns cannot distinguish a required state, stop and propose the
+  smallest migration with backfill and rollout impact before generating it.
+
+### Step 3: reconstruct Speed's resource base
+
+- [x] **P3-11** Add a pure critical-path builder under `@domain/agent-score` or `@domain/spans` that
+  groups spans by trace, uses parent/child and tool-call dependencies, preserves concurrency, and
+  returns ordered path segments, marginal contribution ids, provenance, and completeness reasons.
+  Reuse the structural ownership rules in `build-agent-graph.ts` where applicable. A complete
+  foreground root supplies the trace's observed elapsed interval; descendants explain that interval
+  and are never added on top of their parent envelope.
+- [x] **P3-12** Classify foreground roots from `span.type=interaction` and `interaction.kind`.
+  Include user-visible foreground interactions; exclude subagent, background, and auxiliary work
+  unless a dependency proves that it delayed the foreground result. Unknown semantic attributes
+  lower classification coverage instead of being guessed.
+- [x] **P3-13** Sum complete per-trace critical paths for the session. Do not use session wall clock,
+  sum all span durations, or union all intervals. Return exact observed segments from incomplete
+  traces for the session UI, but exclude incomplete sessions from the Speed project denominator.
+  Compute an observation's marginal avoidable time by rerunning completion over the dependency graph
+  with that segment removed or replaced by its cohort expectation.
+- [x] **P3-14** Build and freeze TTFT and throughput reference distributions by provider, model,
+  input bucket, output bucket where applicable, and streaming mode. Inspect fleet aggregation for
+  tenant leakage and pin the artifact version and fallback behavior.
+
+### Step 4: implement Cost readers in native units
+
+- [x] **P3-15** Reuse `classify-unpriced-cost.ts` and span cost-source parsing to build session
+  pricing coverage. Keep provider-reported and registry-estimated spend distinct. Only explicit
+  local-runtime and free-tier cases are known zero; missing provider/model and catalog-declined
+  pricing remain unknown. The estimator must remain fully usable when every priced value came from
+  the registry rather than a provider report.
+- [x] **P3-16** Add `cost.recoverable_spend_share` as the deduplicated union of attributable paid
+  generation atoms. Provider-reported totals can be observed spend while component savings remain
+  registry-estimated. Return identification bounds when a total cannot be split exactly by token
+  class.
+- [x] **P3-17** Extend the existing cache-economics helpers for session and window evidence. Compare
+  readable prompt prefixes where possible; otherwise expose the cadence-only ceiling as an upper
+  identification bound. Keep the existing 20-call, 1,024-average-input-token, and 10-point material
+  gap guards as calibration candidates rather than silently using them as the score curve.
+- [x] **P3-18** Build a reusable content-atom ledger for each generation input. Attribute retained
+  tool calls/results, memory-derived content, prior generations, and tool definitions to later model
+  inputs using stable hashes and chronology. Reconcile atom estimates to reported input tokens and
+  keep unassigned framing or hidden provider content as an explicit residual.
+- [x] **P3-19** Implement `context.redundant_input_share` and `context.avoidable_pressure`. Use
+  provider-aware tokenization when available, otherwise the existing `o200k_base` approximation.
+  Penalize only atoms another reader establishes as redundant; raw prompt size and context-window
+  use remain display-only.
+- [x] **P3-20** Implement `tools.repeated_call` and `tools.thrashing` from name, canonical input hash,
+  and output hash. Guard empty content and polling or time-dependent reads. Deduplicate the loop and
+  repeated-call views through shared call source atoms.
+- [x] **P3-21** Correct tool failure classification so HTTP status is evaluated against an explicit
+  caller-declared expected-status contract. Count recovered failed calls in Recovery and recovered
+  structural defects in Tools so the same incident has one primary Cost family. Attach spend,
+  context, or Speed impact only through proven downstream generations or critical-path segments.
+- [x] **P3-22** Implement `tools.dead_surface` from definitions repeatedly present in model inputs
+  but unused since first observation. Score its estimated serialized tokens in Context, not an
+  invented tool execution cost. Treat name mismatches and missing definitions as coverage warnings.
+- [x] **P3-23** Implement guarded memory readers for repeated non-empty zero-hit queries, non-empty
+  no-op writes, and same-session reverted writes. Emit memory-operation equivalents. Attribute later
+  prompt tokens or paid retry generations separately when a content link is readable.
+- [x] **P3-24** Change recovered provider and finish-failure resolution so Cost and Speed receive
+  only the retry generation atoms and marginal path segments needed for successful recovery.
+  Terminal incidents remain Reliability or Outcome endpoints and do not automatically classify the
+  failed span's full cost or duration as avoidable.
+
+### Step 5: evaluate, deduplicate, and aggregate
+
+- [x] **P3-25** Implement smooth monotone piecewise evaluation with named healthy, watch, and poor
+  ranges. Return raw value, status, penalty in 0 through 1, eligible units, and penalized units. Add
+  boundary and monotonicity property tests for every provisional curve.
+- [x] **P3-26** Add session-level source-atom arbitration. Exact evidence wins over estimated
+  evidence, the same atom can contribute once per family, overlapping metric groups share a cap,
+  cross-family derived effects such as cache tokens and modeled savings share a combined cap, and no
+  family can exceed its eligible units. One event can still inform different dimensions or distinct
+  Cost resources when the units are genuinely different.
+- [x] **P3-27** Aggregate each metric by its declared `resourceRatio`, `eventRate`, or `sessionMean`,
+  union each family's canonical eligible atoms once, then aggregate the five fixed families with
+  weights that never redistribute. Not-applicable units add no penalty; applicable but unreadable
+  units lower coverage and can withhold Cost.
+- [x] **P3-28** Implement Speed's session counterfactual from marginal critical-path segments. Exact
+  segments take precedence over modeled signal effects, concurrent work cannot be counted twice,
+  and avoidable time cannot exceed observed critical-path time.
+- [x] **P3-29** Represent session estimates with same-unit identification bounds. For project shadow
+  results, bootstrap complete sessions and rerun content attribution, deduplication, family
+  aggregation, signal correction, and Speed counterfactual per replicate. Never sum item-level lower
+  and upper bounds.
+
+### Step 6: integrate signal effects without inflation
+
+- [x] **P3-30** Link signal occurrences to deterministic finding keys and source atoms before fitting
+  effects. Linked signals become attribution for an existing family or Speed deficit and add no
+  second penalty.
+- [x] **P3-31** For unlinked Cost signals, fit family outcomes jointly against corrected clean
+  sessions, group near duplicates, use stored inclusion probabilities, cross-fit promotion traffic,
+  shrink weak comparisons toward zero, and apply the artifact's total residual cap. Return effect not
+  measured when overlap or sample support fails.
+- [x] **P3-32** Apply the analogous matched residual estimator to critical-path time for Speed. Keep
+  Cost family units and Speed nanoseconds separate throughout estimation and presentation.
+
+### Step 7: update shared use-cases, contracts, and product surfaces
+
+- [x] **P3-33** Extend `read-session-assessment-sources.ts`, `resolve-assessment-findings.ts`,
+  `build-dimension-summaries.ts`, and the batch resolver to consume the new facts and shared pure
+  evaluators. The single-session operation already uses the bulk path; preserve bit-for-bit
+  single/bulk parity and bounded pagination. Replace unbounded per-session resolver concurrency with
+  a measured limit and fold project sufficient statistics as batches complete.
+- [ ] **P3-34** Update the Zod-first session-assessment operation in `@repo/operations`, its mapper,
+  descriptions, operation manifest, OpenAPI and MCP schemas, TypeScript and Python SDKs, CLI, and
+  in-process tools. Follow the repository's generated-artifact and package-version conventions.
+- [x] **P3-35** Extend the session Scores panel with raw Cost metric values and coverage. Place a
+  measured adverse amount under attention and a measured zero under positive evidence only when
+  coverage is complete. Omit unmeasured and not-applicable metrics from findings; do not add a
+  session score, calibrated health labels, or a second dashboard language.
+- [ ] **P3-36** Extend existing Cost, Tools, Memory, Sessions, and Signals surfaces with their owned
+  evidence. Cost shows family health, cache/context evidence, pricing/content coverage, and
+  recoverable spend. Tools and Memory show operation evidence. Sessions shows critical paths and
+  concrete atoms. Signals uses measured or associated language and links to examples.
+
+### Step 8: calibrate at project scale and freeze launch artifacts
+
+- [x] **P3-37** Add a read-only shadow runner that applies the PR 6 window selection rules to at
+  least one representative thousand-session population without writing score snapshots. Process it
+  in deterministic bounded batches and record query count, rows and bytes read, peak memory,
+  resolver time, family coverage, score distribution, and rerun determinism.
+- [ ] **P3-38** Review every candidate metric for prevalence, discrimination, correlation,
+  applicability, missingness by provider and integration, and sensitivity to workload mix. Remove
+  or keep display-only any metric whose direction is not defensible, especially raw context
+  utilization, generic zero-hit rate, and unproven repeated polling.
+- [ ] **P3-39** Calibrate and freeze the project benchmark's family weights, piecewise curves, caps,
+  coverage floors, tokenizer bounds, and residual-signal policy. Publish the calibration report and
+  artifact version. Any later change to these values requires a scoring-version boundary; session
+  findings continue to show raw measurements without those calibrated labels.
+- [ ] **P3-40** Reconcile inspected fixtures across session assessment and Cost, Tools, Memory,
+  Sessions, and Signals pages. Confirm that money totals, family units, source atoms, and coverage
+  reasons agree even when a dimension is unavailable.
 
 ### Exit gate
 
-- [ ] **P3-18** Tests prove that avoidable spend does not exceed actual spend and avoidable time does
-  not exceed observed critical-path time.
-- [ ] **P3-19** Tests cover polling, empty telemetry, concurrent spans, reader overlap, unmatched
-  pricing, cohort fallback, and split-signal invariance.
-- [ ] **P3-20** Inspected fixtures reconcile session-assessment amounts with the existing product
-  pages.
-- [ ] `pnpm typecheck` and `pnpm test` pass.
+- [ ] Domain tests cover curve boundaries and monotonicity, source-atom arbitration, family caps,
+  fixed weights, not-applicable versus unreadable behavior, range semantics, terminal versus
+  recovered incidents, and Cost signal residual caps.
+- [ ] Critical-path tests cover sequential traces, nested spans, concurrent siblings, foreground,
+  subagent, background and auxiliary interactions, missing parents, unfinished spans, and exact
+  marginal segment attribution.
+- [ ] Reader tests cover missing content, normalized-message token bounds, tool-result attribution,
+  cache prefix mismatch, polling, empty tool and memory fields, expected HTTP statuses, dead-surface
+  observation periods, unpriced models, and known free or local models.
+- [ ] ClickHouse integration tests prove organization/project scope, cutoff behavior, bounded bulk
+  reads, memory-event projection, no N-plus-one path, and parity between one-session and batch reads.
+- [ ] Invariance tests prove duplicate detectors, repeated/thrashing overlap, linked signals, and
+  split signal clusters cannot multiply a family or Speed deficit.
+- [ ] Shadow runs handle thousands of sessions within agreed resource targets and reproduce the same
+  result from the same inputs and artifact.
+- [ ] No score snapshot or public Agent Score number ships in PR 3. Existing pages and session
+  assessment expose the evidence; PR 6 owns publication.
+- [ ] `pnpm typecheck` and `pnpm test` pass. Generated contracts and schemas are current.
+
+### Calibration questions that remain open until shadow data
+
+- What family weights and family caps best preserve sensitivity without letting common tool traffic
+  dominate low-tool agents?
+- Which healthy/watch/poor curve points are stable across provider, model, agent type, and workload?
+- What minimum readable share is required for each family, and which families must be required at
+  launch?
+- How wide should fallback tokenizer and cadence-only cache identification bounds be after
+  reconciliation against provider token totals?
+- What maximum Cost penalty can unlinked signals contribute, and how much independent traffic is
+  enough to leave effect-not-measured state?
 
 ## PR 4: Outcome intelligence
 
@@ -429,7 +654,9 @@ PR 6 starts only when all of these gates pass:
 - [ ] Session assessment resolves the same source facts in single-session and bulk mode.
 - [ ] Structured findings distinguish recovery, terminal failure, exposure, defense, and harm.
 - [ ] Sampled evidence has a known examined population or remains unmeasured.
-- [ ] Cost and Speed counterfactuals are bounded and visible on existing pages.
+- [ ] Cost family metrics, curves, weights, caps, coverage floors, and residual-signal policy are
+  frozen in a versioned artifact after thousand-session shadow calibration.
+- [ ] Cost native impacts and Speed counterfactuals are bounded and visible on existing pages.
 - [ ] Outcome uses sampled Task Success verdicts, known inclusion probabilities, and a frozen,
   calibrated model.
 - [ ] Safety uses a full-window examined population and confirmed-harm definition.
@@ -448,8 +675,9 @@ already exercised elsewhere in the product.
 
 - [ ] **P6-1** Add window selection, session eligibility, and applicability gates from
   [`score.md`](score.md#eligible-sessions) and [`score.md`](score.md#the-window).
-- [ ] **P6-2** Implement all five window estimators by composing bulk session evidence. Do not add
-  metric-specific scoring arithmetic.
+- [ ] **P6-2** Implement all five window estimators by composing bulk session evidence and the frozen
+  Cost scoring artifact. Do not add metric-specific arithmetic outside the PR 3 catalog and
+  evaluators.
 - [ ] **P6-3** Implement complete-session bootstrap intervals, boundary-aware endpoint intervals,
   the all-five-dimensions publication gate, the fixed composite, optional policy cap, and
   scoring-version boundaries from [`score.md`](score.md).

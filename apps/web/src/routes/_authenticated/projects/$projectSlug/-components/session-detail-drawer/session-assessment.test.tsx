@@ -24,7 +24,19 @@ const assessment: SessionAssessment = {
       recoveredIncidentCount: 1,
       unrecoveredIncidentCount: 0,
     },
-    { scoreDimension: "cost", ...counts, observedMicrocents: 1_000_000, measuredAvoidableMicrocents: 250_000 },
+    {
+      scoreDimension: "cost",
+      ...counts,
+      observedMicrocents: 1_000_000,
+      measuredAvoidableMicrocents: 250_000,
+      families: [
+        { family: "spend", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+        { family: "context", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+        { family: "tools", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+        { family: "memory", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+        { family: "recovery", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+      ],
+    },
     { scoreDimension: "speed", ...counts, observedCriticalPathNs: 2_000_000_000, measuredAvoidableNs: 500_000_000 },
     { scoreDimension: "safety", ...counts, exposureCount: 0, successfulDefenseCount: 1, confirmedHarmCount: 0 },
   ],
@@ -126,6 +138,28 @@ describe("SessionAssessmentContent", () => {
     expect(screen.queryByText(/Coverage:/)).toBeNull()
   })
 
+  it("reads an avoidable amount against the spend and critical path it came out of", () => {
+    render(<SessionAssessmentContent assessment={assessment} />)
+
+    expect(screen.getByText("$0.0025 of $0.01").className).not.toContain("font-bold")
+    expect(screen.getByText("500.0ms of 2.00s").className).not.toContain("font-bold")
+  })
+
+  it("states an avoidable amount alone when the session reported no denominator", () => {
+    const withoutDenominators = {
+      ...assessment,
+      dimensions: assessment.dimensions.map((summary) => {
+        if (summary.scoreDimension === "cost") return { ...summary, observedMicrocents: undefined }
+        if (summary.scoreDimension === "speed") return { ...summary, observedCriticalPathNs: undefined }
+        return summary
+      }),
+    }
+    render(<SessionAssessmentContent assessment={withoutDenominators} />)
+
+    expect(screen.getByText("$0.0025")).toBeTruthy()
+    expect(screen.getByText("500.0ms")).toBeTruthy()
+  })
+
   it("opens grouped issue evidence and links directly to a signal", () => {
     const onOpenDestination = vi.fn()
     render(<SessionAssessmentContent assessment={assessment} onOpenDestination={onOpenDestination} />)
@@ -159,6 +193,107 @@ describe("SessionAssessmentContent", () => {
     expect(onLoadMore).toHaveBeenCalledOnce()
   })
 
+  it("does not turn unmeasured Cost families into findings", () => {
+    const unmeasured: SessionAssessment = {
+      ...assessment,
+      items: [],
+      dimensions: assessment.dimensions.map((summary) => {
+        if (summary.scoreDimension === "outcome") return { ...summary, taskOutcome: undefined }
+        if (summary.scoreDimension === "reliability") return { ...summary, completion: "undetermined" as const }
+        if (summary.scoreDimension === "safety") return { ...summary, successfulDefenseCount: 0 }
+        return summary.scoreDimension === "cost"
+          ? {
+              ...summary,
+              measuredAvoidableMicrocents: undefined,
+              estimatedAvoidableMicrocents: undefined,
+              families: summary.families.map((family) => ({
+                ...family,
+                measurementState: family.family === "context" ? ("unmeasured" as const) : ("notApplicable" as const),
+              })),
+            }
+          : summary
+      }),
+    }
+
+    render(<SessionAssessmentContent assessment={unmeasured} />)
+
+    expect(screen.queryByText("Context cost")).toBeNull()
+    expect(screen.queryByText("not measured")).toBeNull()
+  })
+
+  it("shows raw adverse Cost readings as attention and complete zeroes as positive evidence", () => {
+    const withCostEvidence: SessionAssessment = {
+      ...assessment,
+      items: [],
+      dimensions: assessment.dimensions.map((summary) => {
+        if (summary.scoreDimension === "outcome") return { ...summary, taskOutcome: undefined }
+        if (summary.scoreDimension === "reliability") return { ...summary, completion: "undetermined" as const }
+        if (summary.scoreDimension === "safety") return { ...summary, successfulDefenseCount: 0 }
+        return summary.scoreDimension === "cost"
+          ? {
+              ...summary,
+              measuredAvoidableMicrocents: undefined,
+              families: summary.families.map((family) =>
+                family.family === "tools"
+                  ? {
+                      ...family,
+                      measurementState: "measured",
+                      metrics: [
+                        {
+                          metricId: "tools.repeated_call",
+                          family: "tools",
+                          aggregation: "eventRate",
+                          measurementState: "measured",
+                          rawUnit: "toolCalls",
+                          rawValue: 2 / 7,
+                          eligibleUnits: 7,
+                          adverseUnits: 2,
+                          evidence: "confirmed",
+                          limitations: [],
+                        },
+                        {
+                          metricId: "tools.thrashing",
+                          family: "tools",
+                          aggregation: "eventRate",
+                          measurementState: "measured",
+                          rawUnit: "toolCalls",
+                          rawValue: 0,
+                          eligibleUnits: 7,
+                          adverseUnits: 0,
+                          evidence: "confirmed",
+                          limitations: [],
+                        },
+                        {
+                          metricId: "tools.structural_defect",
+                          family: "tools",
+                          aggregation: "eventRate",
+                          measurementState: "measured",
+                          rawUnit: "toolCalls",
+                          rawValue: 0,
+                          eligibleUnits: 7,
+                          adverseUnits: 0,
+                          evidence: "confirmed",
+                          limitations: ["missingContent"],
+                        },
+                      ],
+                    }
+                  : family,
+              ),
+            }
+          : summary
+      }),
+    }
+
+    render(<SessionAssessmentContent assessment={withCostEvidence} />)
+
+    expect(screen.getByText("Repeated tool calls")).toBeTruthy()
+    expect(screen.getByText("2 of 7 tool calls")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Positive evidence" }))
+    expect(screen.getByText("Tool-call loops")).toBeTruthy()
+    expect(screen.getByText("0 of 7 tool calls")).toBeTruthy()
+    expect(screen.queryByText("Recovered tool-call defects")).toBeNull()
+  })
+
   it("does not imply a positive result when nothing meaningful was evaluated", () => {
     const notEvaluated: SessionAssessment = {
       ...assessment,
@@ -167,7 +302,15 @@ describe("SessionAssessmentContent", () => {
         if (summary.scoreDimension === "outcome") return { ...summary, taskOutcome: undefined }
         if (summary.scoreDimension === "reliability") return { ...summary, completion: "undetermined" as const }
         if (summary.scoreDimension === "cost") {
-          return { ...summary, measuredAvoidableMicrocents: undefined, estimatedAvoidableMicrocents: undefined }
+          return {
+            ...summary,
+            measuredAvoidableMicrocents: undefined,
+            estimatedAvoidableMicrocents: undefined,
+            families: summary.families.map((family) => ({
+              ...family,
+              measurementState: "notApplicable" as const,
+            })),
+          }
         }
         if (summary.scoreDimension === "speed") {
           return { ...summary, measuredAvoidableNs: undefined, estimatedAvoidableNs: undefined }

@@ -1,5 +1,6 @@
 import { TraceId } from "@domain/shared"
 import { Effect } from "effect"
+import { SESSION_ASSESSMENT_RESOLVER_CONCURRENCY } from "../constants.ts"
 import {
   SessionAssessmentBulkJudgmentSource,
   type SessionAssessmentBulkScope,
@@ -36,7 +37,7 @@ export const readSessionAssessmentInputBatch = (input: SessionAssessmentBulkScop
           signals: judgment?.signals ?? [],
         })
       },
-      { concurrency: "unbounded" },
+      { concurrency: SESSION_ASSESSMENT_RESOLVER_CONCURRENCY },
     )
   })
 

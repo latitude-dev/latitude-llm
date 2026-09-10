@@ -29,6 +29,8 @@ export const createFakeSpanRepository = (overrides?: Partial<SpanRepositoryShape
       return Effect.succeed(inserted.flat().filter((span) => wanted.has(span.traceId)))
     },
     listBySessionId: () => Effect.succeed([]),
+    listGenerationFactsByTraceIds: () => Effect.succeed([]),
+    listToolCallFactsByTraceIds: () => Effect.succeed([]),
     listToolSpansBySessionId: () => Effect.succeed([]),
     listMemoryOperationSpansByTraceId: () => Effect.succeed([]),
     listByProjectId: () => Effect.succeed({ items: [], nextCursor: null }),

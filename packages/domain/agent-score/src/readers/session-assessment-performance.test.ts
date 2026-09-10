@@ -88,6 +88,9 @@ describe("session assessment representative load", () => {
             sessions.map((session) => ({
               session,
               spans: [],
+              generations: [],
+              toolCalls: [],
+              memoryEvents: [],
               moments: { moments: [], labels: [] },
               screeningDecisions: [],
             })),

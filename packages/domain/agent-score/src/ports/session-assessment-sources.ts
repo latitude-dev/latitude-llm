@@ -1,5 +1,6 @@
 import type { SessionMomentLabel, SessionSemanticMoment } from "@domain/conversation-intelligence"
 import type { FlaggerScreeningDecision } from "@domain/flaggers"
+import type { MemoryEvent } from "@domain/memories"
 import type { Score } from "@domain/scores"
 import type {
   ChSqlClient,
@@ -12,7 +13,7 @@ import type {
   TraceId,
 } from "@domain/shared"
 import type { SignalWithLifecycle } from "@domain/signals"
-import type { SessionDetail, Span } from "@domain/spans"
+import type { SessionDetail, SessionGenerationFact, SessionToolCallFact, Span } from "@domain/spans"
 import { Context, type Effect } from "effect"
 
 export interface SessionAssessmentSourceScope {
@@ -50,6 +51,9 @@ export interface SessionAssessmentBulkJudgmentScope extends SessionAssessmentBul
 export interface SessionAssessmentBulkTelemetry {
   readonly session: SessionDetail
   readonly spans: readonly Span[]
+  readonly generations: readonly SessionGenerationFact[]
+  readonly toolCalls: readonly SessionToolCallFact[]
+  readonly memoryEvents: readonly MemoryEvent[]
   readonly moments: SessionMomentFacts
   readonly screeningDecisions: readonly FlaggerScreeningDecision[]
 }

@@ -15,8 +15,9 @@ findings and a record of which sessions each flagger could have examined.
 | return structured deterministic findings from telemetry readers | distinguish terminal failure, recovery, exposure, and harm without turning every fact into a score |
 | link a discovery score to its source finding | merge the score and signal back into one assessment item without duplicating finding data |
 | persist non-reproducible model verdicts and their provenance | preserve the exact result that was produced without rerunning a judge on page load |
-| retain recovered findings in the dynamic read model without publishing discovery events automatically | measure retry cost and time without signal-volume inflation |
-| record tool signatures and avoidability proof separately | distinguish observed repetition from confirmed waste |
+| retain recovered findings in the dynamic read model without publishing discovery events automatically | measure recovery burden and marginal retry resources without signal-volume inflation |
+| record tool name, input hash, output hash, and avoidability proof separately | distinguish observed repetition from confirmed waste; the current deterministic reader compares only name and argument preview |
+| replace the blanket HTTP 400 through 499 exception with a caller-declared expected-status contract | avoid treating ordinary client errors as successful tool responses |
 | guard empty grouping fields | prevent missing telemetry from manufacturing matches |
 | require usability evidence for repeated-character output | avoid classifying valid compact answers as terminal failures |
 | pair truncation with output damage | distinguish configured length stops from broken output |
@@ -137,7 +138,9 @@ user should fix. A failed `search_docs` followed by a successful `grep_files` ca
 session level without proving that `search_docs` recovered.
 
 Recovered findings remain available to Cost and Speed because the telemetry reader returns them.
-They do not create additional scores or publish the `ScoreCreated` event used by signal discovery,
+Cost records the incident in its recovery family and only adds spend, context, tool, or memory units
+that a separate reader can attribute. A tool or memory span has no inherent billable cost. They do
+not create additional scores or publish the `ScoreCreated` event used by signal discovery,
 clustering, naming, monitor evaluation, and notifications. Signal discovery continues to receive the
 one primary terminal finding, structural defect, or other finding selected by its evidence policy.
 
@@ -182,9 +185,10 @@ counterfactual deduplicates the two metrics.
 Signature equality alone cannot mark a call avoidable. Polling, time-dependent reads, and legitimate
 revisits can return the same value before later progress. `redundancy: "confirmed"` requires tool
 contract or captured state-version evidence that the prior result was still valid and the repeated
-call could not advance external work. Confirmed repeats contribute exact spend and time. Other
-repetitions are modeled evidence or context, and their effect is estimated against comparable clean
-sessions rather than assigned as certain waste.
+call could not advance external work. Confirmed repeats contribute exact tool-call equivalents and
+marginal critical-path time. Their downstream input tokens or paid retry generation can contribute
+context or spend only when separately attributed. Other repetitions are modeled evidence or context,
+and their effect is estimated against comparable clean sessions rather than assigned as certain waste.
 
 ## Memory readers guard empty values
 
@@ -220,7 +224,8 @@ They have no equivalent healthy configured cause.
 
 The structured finding records `generationPosition: "final" | "intermediate"`. A final broken generation
 is terminal Outcome and Reliability evidence. An earlier broken generation that the session replaced
-is measured as avoidable Cost and Speed where resource telemetry exists.
+can contribute recovery-family Cost evidence, attributable retry-generation resources, and marginal
+critical-path time where telemetry supports them.
 
 ## Injection attempt and compliance
 

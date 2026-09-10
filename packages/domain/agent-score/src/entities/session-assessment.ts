@@ -1,5 +1,13 @@
 import { scoreDimensionSchema, scoreEvidenceContractSchema, sessionIdSchema } from "@domain/shared"
 import { z } from "zod"
+import {
+  COST_FAMILIES,
+  costFamilyMeasurementStateSchema,
+  costFamilySchema,
+  estimateRangeSchema,
+  sessionCostMetricEvaluationSchema,
+} from "./cost-evidence.ts"
+import { sessionCostMetricEvidenceSchema } from "./cost-metric-reading.ts"
 
 export const SESSION_ASSESSMENT_PAGE_SIZE = 100
 
@@ -121,15 +129,26 @@ export const sessionEvidenceImpactSchema = z.discriminatedUnion("kind", [
 ])
 export type SessionEvidenceImpact = z.infer<typeof sessionEvidenceImpactSchema>
 
-export const sessionDimensionEffectSchema = z.intersection(
-  scoreEvidenceContractSchema,
-  z.object({
-    direction: z.enum(["positive", "negative", "context"]),
-    measurement: z.enum(["observed", "estimated", "notMeasured"]),
-    benchmarkUse: z.enum(["direct", "modeled", "attributionOnly", "contextOnly"]),
-    impact: sessionEvidenceImpactSchema.optional(),
-  }),
-)
+export const sessionDimensionEffectSchema = z
+  .intersection(
+    scoreEvidenceContractSchema,
+    z.object({
+      direction: z.enum(["positive", "negative", "context"]),
+      measurement: z.enum(["observed", "estimated", "notMeasured"]),
+      benchmarkUse: z.enum(["direct", "modeled", "attributionOnly", "contextOnly"]),
+      impact: sessionEvidenceImpactSchema.optional(),
+      costEvaluation: sessionCostMetricEvaluationSchema.optional(),
+    }),
+  )
+  .superRefine((effect, ctx) => {
+    if (effect.costEvaluation && effect.scoreDimension !== "cost") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["costEvaluation"],
+        message: "only Cost evidence carries a Cost family evaluation",
+      })
+    }
+  })
 export type SessionDimensionEffect = z.infer<typeof sessionDimensionEffectSchema>
 
 export const sessionAssessmentItemSchema = z.object({
@@ -151,6 +170,35 @@ export const sessionAssessmentItemSchema = z.object({
   destinations: z.array(sessionEvidenceDestinationSchema),
 })
 export type SessionAssessmentItem = z.infer<typeof sessionAssessmentItemSchema>
+
+export const sessionCostFamilySummarySchema = z
+  .object({
+    family: costFamilySchema,
+    measurementState: costFamilyMeasurementStateSchema,
+    observedItemCount: z.number().int().nonnegative(),
+    metrics: z.array(sessionCostMetricEvidenceSchema),
+    nativeImpact: estimateRangeSchema.optional(),
+  })
+  .superRefine((summary, ctx) => {
+    const metricIds = new Set(summary.metrics.map((metric) => metric.metricId))
+    if (metricIds.size !== summary.metrics.length) {
+      ctx.addIssue({ code: "custom", path: ["metrics"], message: "each Cost metric is summarized once per family" })
+    }
+    if (summary.metrics.some((metric) => metric.family !== summary.family)) {
+      ctx.addIssue({ code: "custom", path: ["metrics"], message: "Cost metrics must match their summary family" })
+    }
+  })
+export type SessionCostFamilySummary = z.infer<typeof sessionCostFamilySummarySchema>
+
+const sessionCostFamilySummariesSchema = z.array(sessionCostFamilySummarySchema).superRefine((families, ctx) => {
+  const summarized = new Set(families.map((summary) => summary.family))
+  if (summarized.size !== families.length) {
+    ctx.addIssue({ code: "custom", message: "each Cost family is summarized once" })
+  }
+  if (COST_FAMILIES.some((family) => !summarized.has(family))) {
+    ctx.addIssue({ code: "custom", message: "every Cost family must be summarized" })
+  }
+})
 
 const sessionDimensionSummaryBaseSchema = z.object({
   scoreDimension: scoreDimensionSchema,
@@ -188,6 +236,7 @@ export const sessionDimensionSummarySchema = z.discriminatedUnion("scoreDimensio
     observedMicrocents: z.number().nonnegative().optional(),
     measuredAvoidableMicrocents: z.number().nonnegative().optional(),
     estimatedAvoidableMicrocents: z.number().nonnegative().optional(),
+    families: sessionCostFamilySummariesSchema,
   }),
   sessionDimensionSummaryBaseSchema.extend({
     scoreDimension: z.literal("speed"),
@@ -219,6 +268,9 @@ export const sessionCoverageLimitationSchema = z.enum([
   "missingTelemetry",
   "unmappedTelemetry",
   "missingPricing",
+  "missingContent",
+  "truncatedContent",
+  "unknownModelContext",
   "criticalPathUnavailable",
 ])
 export type SessionCoverageLimitation = z.infer<typeof sessionCoverageLimitationSchema>

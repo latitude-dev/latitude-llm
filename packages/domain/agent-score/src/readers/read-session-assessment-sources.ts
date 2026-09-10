@@ -10,10 +10,19 @@ import {
   toolCallErrorsStrategy,
   trashingStrategy,
 } from "@domain/flaggers"
+import type { MemoryEvent } from "@domain/memories"
+import { countTokens } from "@domain/memories"
 import type { Score } from "@domain/scores"
 import type { ScoreDimension } from "@domain/shared"
 import type { SignalWithLifecycle } from "@domain/signals"
-import { hasUsableAssistantCompletion, resolveSessionSpanEndpoints, type SessionDetail, type Span } from "@domain/spans"
+import {
+  hasUsableAssistantCompletion,
+  resolveSessionSpanEndpoints,
+  type SessionDetail,
+  type SessionGenerationFact,
+  type SessionToolCallFact,
+  type Span,
+} from "@domain/spans"
 import { Effect } from "effect"
 import type { SessionEvidenceAnchor, SessionEvidenceDestination } from "../entities/session-assessment.ts"
 import type {
@@ -22,6 +31,9 @@ import type {
   NormalizedSessionAssessmentInput,
 } from "../entities/session-assessment-input.ts"
 import type { SessionMomentFacts } from "../ports/session-assessment-sources.ts"
+import type { RecoveredIncident } from "./cost/read-recovery-metrics.ts"
+import type { RecoveredStructuralDefect, ToolDefinitionSurface } from "./cost/read-tool-metrics.ts"
+import { buildSessionCacheEvidence, readSessionCostEvidence } from "./read-session-cost-evidence.ts"
 
 const DETERMINISTIC_READERS = [
   {
@@ -476,9 +488,99 @@ const readMomentFindings = (facts: SessionMomentFacts): AssessmentFinding[] => {
   })
 }
 
+/**
+ * The recovered incidents Cost and Speed may charge, with the retries that got past them.
+ *
+ * The retry set is the generations that ran after the failed one inside the same trace: those are
+ * the work the incident forced, and the only spans a counterfactual can remove. The failed span
+ * itself is deliberately absent — its cost belongs to Reliability.
+ */
+const recoveredIncidentsFrom = (
+  findings: readonly AssessmentFinding[],
+  generations: readonly SessionGenerationFact[],
+): RecoveredIncident[] =>
+  findings.flatMap((finding) => {
+    if (finding.kind !== "providerError" || !finding.recovered || finding.terminal) return []
+    const anchor = finding.anchors.find((candidate) => candidate.kind === "span")
+    if (anchor?.kind !== "span") return []
+    const failed = generations.find(
+      (generation) => generation.traceId === anchor.traceId && generation.spanId === anchor.spanId,
+    )
+    if (!failed) return []
+    return [
+      {
+        traceId: anchor.traceId,
+        spanId: anchor.spanId,
+        kind: finding.findingKind,
+        retrySpanIds: generations
+          .filter(
+            (generation) =>
+              generation.traceId === anchor.traceId &&
+              generation.startTime.getTime() >= failed.endTime.getTime() &&
+              generation.spanId !== failed.spanId,
+          )
+          .map((generation) => generation.spanId as string),
+      },
+    ]
+  })
+
+const recoveredDefectsFrom = (findings: readonly AssessmentFinding[]): RecoveredStructuralDefect[] =>
+  findings.flatMap((finding) => {
+    if (finding.kind !== "toolStructuralDefect" || finding.terminal) return []
+    const anchor = finding.anchors.find((candidate) => candidate.kind === "toolCall")
+    return anchor?.kind === "toolCall"
+      ? [{ traceId: anchor.traceId, spanId: anchor.toolCallId, findingKind: finding.findingKind }]
+      : []
+  })
+
+/**
+ * Tool definitions the session offered, with how many readable requests carried each.
+ *
+ * A definition present in every captured request has a complete observation period *for this
+ * session*; whether it is dead across the window is a question only the window can answer, which is
+ * why the reader treats an incomplete period as not applicable rather than as unused.
+ */
+const toolDefinitionSurfaces = ({
+  generations,
+  toolCalls,
+}: {
+  readonly generations: readonly SessionGenerationFact[]
+  readonly toolCalls: readonly SessionToolCallFact[]
+}): { readonly definitions: ToolDefinitionSurface[]; readonly unmatchedCallNames: string[] } => {
+  const captured = generations.filter((generation) => generation.content !== null)
+  const requestsByName = new Map<string, number>()
+  const tokensByName = new Map<string, number>()
+  for (const generation of captured) {
+    for (const definition of generation.content?.toolDefinitions ?? []) {
+      requestsByName.set(definition.name, (requestsByName.get(definition.name) ?? 0) + 1)
+      if (!tokensByName.has(definition.name)) {
+        tokensByName.set(definition.name, countTokens(JSON.stringify(definition)))
+      }
+    }
+  }
+  const calledNames = new Set(toolCalls.map((call) => call.normalizedToolName))
+
+  return {
+    definitions: [...requestsByName.entries()].map(([name, requestCount]) => ({
+      name,
+      estimatedSerializedTokens: tokensByName.get(name) ?? 0,
+      requestCount,
+      calledAtLeastOnce: calledNames.has(name.toLowerCase()),
+      observationPeriodComplete: requestCount === captured.length && captured.length > 0,
+    })),
+    unmatchedCallNames: [...calledNames].filter(
+      (name) => ![...requestsByName.keys()].some((declared) => declared.toLowerCase() === name),
+    ),
+  }
+}
+
 export interface ReadSessionAssessmentSourcesInput {
   readonly session: SessionDetail
   readonly spans: readonly Span[]
+  /** Compact Cost and Speed source facts; the readers that consume them land with their metrics. */
+  readonly generations: readonly SessionGenerationFact[]
+  readonly toolCalls: readonly SessionToolCallFact[]
+  readonly memoryEvents: readonly MemoryEvent[]
   readonly scores: readonly Score[]
   readonly signals: readonly SignalWithLifecycle[]
   readonly moments: SessionMomentFacts
@@ -514,12 +616,36 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       ...readMomentFindings(input.moments),
     ]
 
+    const surfaces = toolDefinitionSurfaces({ generations: input.generations, toolCalls: input.toolCalls })
+    const costEvidence = readSessionCostEvidence({
+      generations: input.generations,
+      toolCalls: input.toolCalls,
+      memoryEvents: input.memoryEvents,
+      countTokens,
+      completed: hasUsableAssistantCompletion(input.session.outputMessages),
+      recoveredIncidents: recoveredIncidentsFrom(findings, input.generations),
+      recoveredStructuralDefects: recoveredDefectsFrom(findings),
+      toolDefinitions: surfaces.definitions,
+      unmatchedToolCallNames: surfaces.unmatchedCallNames,
+      cacheEvidence: buildSessionCacheEvidence(input.generations),
+    })
+
     return {
       sessionId: input.session.sessionId,
       observedMicrocents: input.session.costTotalMicrocents,
       observedDurationNs: input.session.durationNs,
       findings,
-      readers: [...deterministic.readers, ...spanFindings.readers],
+      readers: [...deterministic.readers, ...spanFindings.readers, ...costEvidence.readers],
       screeningDecisions: input.screeningDecisions,
+      costEvidence: {
+        readings: costEvidence.readings,
+        denominators: costEvidence.denominators,
+        observedCriticalPathNs: costEvidence.criticalPath.observedNs,
+        criticalPathComplete: costEvidence.criticalPath.completeness === "complete",
+        measuredAvoidableNs: costEvidence.speed.measuredAvoidableNs,
+        estimatedAvoidableNs: costEvidence.speed.estimatedAvoidableNs,
+        measuredAvoidableMicrocents: 0,
+        estimatedAvoidableMicrocents: 0,
+      },
     } satisfies NormalizedSessionAssessmentInput
   })

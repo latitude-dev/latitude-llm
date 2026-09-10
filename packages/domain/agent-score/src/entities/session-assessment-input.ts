@@ -1,6 +1,8 @@
 import type { FlaggerScreeningDecision } from "@domain/flaggers"
 import type { ScoreSourceType } from "@domain/scores"
 import type { ScoreEvidenceContract, SessionId, SignalOrigin } from "@domain/shared"
+import type { CostFamilyDenominators } from "../scoring/aggregate-session-cost.ts"
+import type { CostMetricReading } from "./cost-metric-reading.ts"
 import type {
   SessionAssessmentSource,
   SessionEvidenceAnchor,
@@ -97,7 +99,33 @@ export interface AssessmentReaderFact {
   readonly findingCount: number
   readonly readableCount: number
   readonly totalCount: number
-  readonly limitation?: "missingTelemetry" | "unmappedTelemetry" | "missingPricing" | "criticalPathUnavailable"
+  readonly limitation?:
+    | "missingTelemetry"
+    | "unmappedTelemetry"
+    | "missingPricing"
+    | "missingContent"
+    | "truncatedContent"
+    | "unknownModelContext"
+    | "criticalPathUnavailable"
+}
+
+/**
+ * The session's Cost and Speed evidence, already read and composed.
+ *
+ * Present only once the Cost readers have run. `observedCriticalPathNs` is the reconstructed
+ * foreground path, which is a different quantity from the session's active execution time — an
+ * incomplete reconstruction reports zero here and says so through `criticalPathComplete`, rather
+ * than falling back to a duration that would read as necessary time.
+ */
+export interface NormalizedSessionCostEvidence {
+  readonly readings: readonly CostMetricReading[]
+  readonly denominators: CostFamilyDenominators
+  readonly observedCriticalPathNs: number
+  readonly criticalPathComplete: boolean
+  readonly measuredAvoidableNs: number
+  readonly estimatedAvoidableNs: number
+  readonly measuredAvoidableMicrocents: number
+  readonly estimatedAvoidableMicrocents: number
 }
 
 export interface NormalizedSessionAssessmentInput {
@@ -107,4 +135,5 @@ export interface NormalizedSessionAssessmentInput {
   readonly findings: readonly AssessmentFinding[]
   readonly readers: readonly AssessmentReaderFact[]
   readonly screeningDecisions: readonly FlaggerScreeningDecision[]
+  readonly costEvidence?: NormalizedSessionCostEvidence
 }

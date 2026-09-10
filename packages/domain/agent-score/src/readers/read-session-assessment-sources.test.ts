@@ -64,6 +64,9 @@ const read = (
     readSessionAssessmentSources({
       session: value,
       spans,
+      generations: [],
+      toolCalls: [],
+      memoryEvents: [],
       scores: judgments.scores ?? [],
       signals: judgments.signals ?? [],
       moments: { moments: [], labels: [] },

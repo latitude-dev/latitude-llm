@@ -3,6 +3,7 @@ import type {
   SessionAssessmentImpactLevel,
   SessionAssessmentItem,
   SessionAssessmentPolarity,
+  SessionCostMetricEvidence,
   SessionDimensionSummary,
   SessionEvidenceDestination,
 } from "@domain/agent-score"
@@ -175,6 +176,102 @@ const groupAssessmentItems = (
     )
 }
 
+const COST_METRIC_LABELS: Readonly<Record<string, string>> = {
+  "cost.recoverable_spend_share": "Recoverable spend",
+  "cost.cache_gap": "Missed cache opportunity",
+  "context.redundant_input_share": "Redundant model input",
+  "context.avoidable_pressure": "Avoidable context pressure",
+  "tools.dead_surface": "Unused tool definitions",
+  "tools.repeated_call": "Repeated tool calls",
+  "tools.thrashing": "Tool-call loops",
+  "tools.structural_defect": "Recovered tool-call defects",
+  "memory.repeated_zero_hit": "Repeated empty memory searches",
+  "memory.noop_rewrite": "No-op memory writes",
+  "memory.reverted_write": "Reverted memory writes",
+  "recovery.recovered_incident_rate": "Recovered incidents",
+}
+
+const COVERAGE_LIMITATION_LABELS: Readonly<Record<string, string>> = {
+  missingPricing: "some spend could not be priced",
+  missingContent: "some model input was not captured",
+  truncatedContent: "some model input was too large to read",
+  unknownModelContext: "some model context limits are unknown",
+  criticalPathUnavailable: "the critical path could not be reconstructed",
+  missingTelemetry: "some telemetry is missing",
+  unmappedTelemetry: "some telemetry values are unrecognized",
+}
+
+const formatCompactCount = (value: number): string =>
+  value >= 1_000 ? `${(value / 1_000).toFixed(1)}k` : String(Math.round(value))
+
+const COST_UNIT_LABELS = {
+  inputTokens: "tokens",
+  cacheTokens: "tokens",
+  contextLimitTokens: "tokens",
+  toolCalls: "tool calls",
+  memoryOperations: "memory operations",
+  memoryReads: "memory reads",
+  memoryWrites: "memory writes",
+  completedSessions: "completed sessions",
+} as const
+
+const costMetricValue = (metric: SessionCostMetricEvidence): string => {
+  if (metric.aggregation === "sessionMean" && metric.rawValue !== undefined) {
+    return `${(metric.rawValue * 100).toFixed(1)}% average`
+  }
+  if (metric.adverseUnits === undefined || metric.eligibleUnits === undefined) return ""
+  if (metric.rawUnit === "microcents") {
+    return `${formatMicrocents(metric.adverseUnits)} of ${formatMicrocents(metric.eligibleUnits)}`
+  }
+  const suffix = COST_UNIT_LABELS[metric.rawUnit]
+  return `${formatCompactCount(metric.adverseUnits)} of ${formatCompactCount(metric.eligibleUnits)} ${suffix}`
+}
+
+const costMetricPolarity = (metric: SessionCostMetricEvidence): "negative" | "positive" | undefined => {
+  if (
+    metric.measurementState !== "measured" ||
+    metric.eligibleUnits === undefined ||
+    metric.eligibleUnits <= 0 ||
+    metric.adverseUnits === undefined
+  ) {
+    return undefined
+  }
+  if (metric.adverseUnits > 0) return "negative"
+  if (metric.limitations.length > 0 || (metric.nativeImpact?.upper ?? 0) > 0) return undefined
+  return "positive"
+}
+
+const costMetrics = (
+  cost: Extract<SessionDimensionSummary, { scoreDimension: "cost" }> | undefined,
+  polarity: "negative" | "positive",
+): FindingMetric[] =>
+  (cost?.families ?? [])
+    .flatMap((family) => family.metrics)
+    .filter((metric) => costMetricPolarity(metric) === polarity)
+    .map((metric) => ({
+      key: `cost-metric-${metric.metricId}`,
+      label: COST_METRIC_LABELS[metric.metricId] ?? metric.metricId,
+      value: costMetricValue(metric),
+    }))
+
+/**
+ * An avoidable amount against what it was avoidable out of.
+ *
+ * A bare "$0.16 avoidable" is unreadable without the spend it came out of, and the same four
+ * seconds mean different things on a five-second and a five-minute critical path. The denominator
+ * is dropped rather than guessed when the session could not report one.
+ */
+const withDenominator = (avoidable: string, observed: string | undefined): string =>
+  observed === undefined ? avoidable : `${avoidable} of ${observed}`
+
+const avoidableDenominators = (
+  cost: Extract<SessionDimensionSummary, { scoreDimension: "cost" }> | undefined,
+  speed: Extract<SessionDimensionSummary, { scoreDimension: "speed" }> | undefined,
+) => ({
+  pricedSpend: cost?.observedMicrocents ? formatMicrocents(cost.observedMicrocents) : undefined,
+  criticalPath: speed?.observedCriticalPathNs ? formatDuration(speed.observedCriticalPathNs) : undefined,
+})
+
 const dimension = <Dimension extends SessionDimensionSummary["scoreDimension"]>(
   assessment: SessionAssessment,
   scoreDimension: Dimension,
@@ -215,30 +312,32 @@ const metricsByPolarity = (
       value: String(reliability.unrecoveredIncidentCount),
     })
   }
+  negative.push(...costMetrics(cost, "negative"))
+  const { pricedSpend, criticalPath } = avoidableDenominators(cost, speed)
   if (cost?.measuredAvoidableMicrocents) {
     negative.push({
       key: "avoidable-cost",
       label: "Avoidable cost",
-      value: formatMicrocents(cost.measuredAvoidableMicrocents),
+      value: withDenominator(formatMicrocents(cost.measuredAvoidableMicrocents), pricedSpend),
     })
   } else if (cost?.estimatedAvoidableMicrocents) {
     negative.push({
       key: "estimated-avoidable-cost",
       label: "Estimated avoidable cost",
-      value: formatMicrocents(cost.estimatedAvoidableMicrocents),
+      value: withDenominator(formatMicrocents(cost.estimatedAvoidableMicrocents), pricedSpend),
     })
   }
   if (speed?.measuredAvoidableNs) {
     negative.push({
       key: "avoidable-time",
       label: "Avoidable time",
-      value: formatDuration(speed.measuredAvoidableNs),
+      value: withDenominator(formatDuration(speed.measuredAvoidableNs), criticalPath),
     })
   } else if (speed?.estimatedAvoidableNs) {
     negative.push({
       key: "estimated-avoidable-time",
       label: "Estimated avoidable time",
-      value: formatDuration(speed.estimatedAvoidableNs),
+      value: withDenominator(formatDuration(speed.estimatedAvoidableNs), criticalPath),
     })
   }
 
@@ -255,8 +354,13 @@ const metricsByPolarity = (
       value: String(safety.successfulDefenseCount),
     })
   }
+  positive.push(...costMetrics(cost, "positive"))
 
-  return { negative: negative.slice(0, 3), unknown: [], positive: positive.slice(0, 3) }
+  return {
+    negative: negative.slice(0, 3),
+    unknown: [],
+    positive: positive.slice(0, 3),
+  }
 }
 
 const isSummaryOnlyGroup = (group: FindingGroup): boolean =>
@@ -384,9 +488,9 @@ function FindingMetricRow({
       label={metric.label}
       leading={<Icon icon={polarityIcon(polarity)} size="xs" color={polarityIconColor(polarity)} />}
       trailing={
-        <Text.H6B className={cn("shrink-0", polarityTextClass(polarity))} noWrap>
+        <Text.H6 className={cn("shrink-0", polarityTextClass(polarity))} noWrap>
           {metric.value}
-        </Text.H6B>
+        </Text.H6>
       }
     />
   )
@@ -652,7 +756,7 @@ function FindingGroupRow({
           <span className="tabular-nums">{group.scoreIds.length}</span>
         </span>
       ) : null}
-      <span className={cn("shrink-0 font-medium", trailingValueClass)}>{trailingValue}</span>
+      <span className={cn("shrink-0 font-normal", trailingValueClass)}>{trailingValue}</span>
     </>
   )
 
@@ -794,9 +898,17 @@ export function SessionAssessmentContent({
   const signalsById = new Map(signals.map((signal) => [signal.id, signal]))
   const groups = groupAssessmentItems(assessment.items, scores).filter((group) => !isSummaryOnlyGroup(group))
   const metrics = metricsByPolarity(assessment)
-  const incompleteReaderCount = assessment.coverage.readers.filter(
+  const incompleteReaders = assessment.coverage.readers.filter(
     (reader) => reader.status === "partiallyExamined" || reader.status === "notExamined",
-  ).length
+  )
+  const incompleteReaderCount = incompleteReaders.length
+  const coverageReasons = [
+    ...new Set(
+      incompleteReaders.flatMap((reader) =>
+        "limitation" in reader ? [COVERAGE_LIMITATION_LABELS[reader.limitation] ?? []].flat() : [],
+      ),
+    ),
+  ]
   const sections = [
     { polarity: "negative" as const, label: "Needs attention", defaultExpanded: true },
     { polarity: "unknown" as const, label: "Needs interpretation", defaultExpanded: true },
@@ -833,8 +945,9 @@ export function SessionAssessmentContent({
       {incompleteReaderCount > 0 ? (
         <Text.H7 color="foregroundMuted">
           {incompleteReaderCount === 1
-            ? "One automated check could not fully examine this session."
-            : `${incompleteReaderCount} automated checks could not fully examine this session.`}
+            ? "One automated check could not fully examine this session"
+            : `${incompleteReaderCount} automated checks could not fully examine this session`}
+          {coverageReasons.length > 0 ? `: ${coverageReasons.join(", ")}.` : "."}
         </Text.H7>
       ) : null}
       {hasMore && onLoadMore ? (

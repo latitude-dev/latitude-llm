@@ -21,6 +21,7 @@ export { DatasetRowRepositoryLive } from "./repositories/dataset-row-repository.
 export { FacetProjectionRepositoryLive } from "./repositories/facet-projection-repository.ts"
 export { FlaggerCoverageRepositoryLive } from "./repositories/flagger-coverage-repository.ts"
 export { FlaggerScreeningDecisionRepositoryLive } from "./repositories/flagger-screening-decision-repository.ts"
+export { FleetLatencyReferenceRepositoryLive } from "./repositories/fleet-latency-reference-repository.ts"
 export { MemoryAnalyticsRepositoryLive } from "./repositories/memory-analytics-repository.ts"
 export { MemoryRepositoryLive } from "./repositories/memory-repository.ts"
 export { MessageEmbeddingRepositoryLive } from "./repositories/message-embedding-repository.ts"
