@@ -243,6 +243,20 @@ never enters the Safety numerator.
 PII findings follow the same authorship rule. User-authored PII is exposure. Assistant disclosure can
 be confirmed harm.
 
+```ts
+type SafetyFindingKind =
+  | "injectionAttempt"
+  | "injectionDefense"
+  | "injectionCompliance"
+  | "piiExposure"
+  | "piiDisclosure"
+```
+
+`injectionDefense` requires a confirmed attempt and an assistant response that resisted it. Merely
+failing to find compliance is not a defense. Compliance and PII disclosure are confirmed harm;
+attempt and PII exposure are context. The finding kind and its evidence anchor are persisted so the
+session and project readers do not reinterpret feedback text.
+
 ## Screening decisions
 
 Screening produces one logical decision per eligible flagger, session, and analysis generation:
@@ -301,6 +315,9 @@ For Task Success, hinted sessions form a deterministically selected stratum and 
 the configured probability. Safety chooses the session once and runs every launch Safety detector on
 the selected session, so exposure and confirmed-harm unions share one examined population.
 
+The initial Safety suite contains Jailbreaking and PII Leakage. NSFW remains contextual unless a
+later structured result contract can identify assistant-caused harm.
+
 This table supports:
 
 - inverse-probability correction for signal and flagger evidence;
@@ -319,8 +336,9 @@ PR 2 adds only bounded provenance and linkage that belongs to a persisted flagge
 - `flagger_path`, either deterministic or sampled.
 
 Recovery, terminal status, and other telemetry-derived fields remain outputs of the shared readers
-and are not copied into Score. Task Success and Safety add their score-native structured result
-columns in their owning PRs. Postgres score metadata remains the source for detailed feedback.
+and are not copied into Score. Task Success uses the existing passed value plus its flagger identity.
+Safety adds one bounded structured finding kind for exposure, defense, or confirmed harm. Postgres
+score metadata remains the source for detailed feedback and evidence anchors.
 
 The migration is forward-only. Existing ClickHouse rows are not backfilled. New columns must
 represent missing historical values as null or unknown rather than false, clean, or unrecovered.

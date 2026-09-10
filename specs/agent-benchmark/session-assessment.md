@@ -9,7 +9,7 @@ A project benchmark explains the agent across many sessions. A session assessmen
 happened in one session.
 
 One session does not have a dimension score. Reliability and Safety describe risk across repeated
-traffic. Outcome can require calibrated evidence from comparable sessions. Cost combines family
+traffic. Outcome uses project-level examined Task Success judgments. Cost combines family
 rates across a selected population, and Speed compares observed critical-path time with a
 counterfactual. Compressing those different claims into five session numbers would imply precision
 the evidence does not have.
@@ -393,9 +393,10 @@ the raw score feed unless their public contract gains benchmark semantics.
 
 ### Moments
 
-Conversation moments provide positive or negative Outcome evidence. Corrections, abandonment, and
-frustration are negative. Explicit resolution or satisfaction can be positive once the Outcome model
-has calibrated that evidence. A handoff is context unless earlier evidence shows failed self-service.
+Conversation moments provide Outcome context. Corrections, abandonment, and frustration can appear
+under needs attention. Explicit resolution or satisfaction remains contextual until a later scoring
+version defines how it enters the project estimator. A handoff is context unless earlier evidence
+shows failed self-service.
 
 ### Safety
 

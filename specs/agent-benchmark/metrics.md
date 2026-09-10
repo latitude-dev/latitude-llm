@@ -4,8 +4,8 @@
 > [`session-assessment.md`](session-assessment.md) for how observations tell one session's story.
 > This catalogue defines the observations used by both.
 
-A metric does not own an independent point budget. It returns evidence in a native form: an endpoint,
-probability feature, amount of spend, token count, operation count, session rate, duration on the
+A metric does not own an independent point budget. It returns evidence in a native form: a direct
+endpoint, issue context, amount of spend, token count, operation count, session rate, duration on the
 critical path, or confirmed safety failure. Cost metrics also declare how that evidence enters one
 of the fixed Cost families.
 
@@ -18,7 +18,7 @@ Every metric definition specifies:
 | ID | stable identifier used in evidence, deduplication, and cause rows |
 | dimensions | estimands the observation can inform |
 | Cost family | spend, context, tools, memory, or recovery when the metric informs Cost |
-| evidence role | endpoint, outcome feature, resource evidence, or confirmed harm |
+| evidence role | direct endpoint, issue context, resource evidence, or confirmed harm |
 | reader | telemetry and grouping used to produce the observation |
 | evaluation | raw value, aggregation mode, monotone curve, eligible units, and penalized units |
 | counterfactual | what the same session would look like without the defect, where needed |
@@ -96,11 +96,11 @@ maximum, union, or a named combined cap.
 
 ### Cost launch catalog
 
-This is the required first-version catalog. Curve points remain provisional until the PR 3 shadow
-calibration freezes them. Every negative metric starts at zero penalty when its adverse-event or
-avoidable-resource share is zero; the artifact defines the end of the healthy range, the watch
-range, and the saturation point. A healthy label therefore means the raw value is inside a measured
-safe range, not merely that no detector emitted a finding.
+This is the required first-version catalog. Curve points remain provisional until the pre-launch
+shadow audit and calibration freezes them. Every negative metric starts at zero penalty when its
+adverse-event or avoidable-resource share is zero; the artifact defines the end of the healthy
+range, the watch range, and the saturation point. A healthy label therefore means the raw value is
+inside a measured safe range, not merely that no detector emitted a finding.
 
 | Metric | Family | Aggregation | Raw value | Applicability |
 | --- | --- | --- | --- | --- |
@@ -558,23 +558,22 @@ remain visible and unreadable for this metric.
 
 # Moments
 
-Conversation intelligence produces probabilistic Outcome evidence. It does not assign a fixed score
+Conversation intelligence produces Outcome issue evidence. It does not assign a fixed score
 deduction.
 
 ## `moments.strong_failure`
 
 - Dimension: Outcome.
-- Evidence role: strong negative task-success feature.
+- Evidence role: strong negative Outcome issue evidence.
 - Reader: correction, repeated-information request, abandonment, or explicit frustration.
 
-These moments quote the user's next turn as evidence. The Outcome model learns their conditional
-failure probability from sampled Task Success verdicts. Multiple strong moments on one session
-remain one feature set rather than repeated deductions.
+These moments quote the user's next turn as evidence. The initial Outcome estimator does not assign
+them independent points. Multiple strong moments on one session collapse into one issue input.
 
 ## `moments.failed_self_service`
 
 - Dimension: Outcome.
-- Evidence role: paired negative task-success feature.
+- Evidence role: paired negative Outcome issue evidence.
 - Reader: escalation to a human after a correction or frustration, ordered by message index.
 
 An intended handoff is not failure. The earlier negative moment establishes that self-service failed
@@ -583,12 +582,12 @@ before the handoff.
 ## `moments.weak_failure`
 
 - Dimensions: Outcome, Speed.
-- Evidence role: probabilistic task-success feature and residual time attribution.
+- Evidence role: Outcome issue evidence and residual time attribution.
 - Reader: stalled or hesitant behavior.
 
-For Outcome, the calibrated model determines how much this changes task-success probability. For
-Speed, it can attribute excess critical-path time left unexplained after deterministic latency and
-retry readers. It never invents a fixed duration.
+For Outcome, the first version reports selection-corrected issue reach and failed reach, plus raw
+examined overlap as coverage context. For Speed, it can attribute excess critical-path time left
+unexplained after deterministic latency and retry readers. It never invents a fixed duration.
 
 # Safety
 
@@ -643,10 +642,10 @@ behavior. Annotation volume is not itself a metric. Scores assigned to ignored s
 explicit exclusion defined in [`signals.md`](signals.md); independent telemetry readers remain
 unchanged.
 
-## Positive evidence without Task Success calibration
+## Positive evidence beyond Task Success
 
-Resolution and satisfaction moments may be Outcome features once sampled Task Success verdicts show
-how they relate to success. Their absence is not failure.
+Resolution and satisfaction moments can become Outcome estimator inputs in a later scoring version.
+Their absence is not failure.
 
 ## Synthetic traffic
 
