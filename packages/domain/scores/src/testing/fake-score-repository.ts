@@ -131,6 +131,23 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
             score.draftedAt === null,
         ) ?? null,
       ),
+    findPublishedSystemAnnotationByAnchor: ({ projectId, sessionId, flaggerSlug, contentHash }) =>
+      Effect.succeed(
+        [...scores.values()].find((score) => {
+          if (
+            score.projectId !== projectId ||
+            score.sourceType !== "annotation" ||
+            score.sourceId !== "SYSTEM" ||
+            score.sessionId !== sessionId ||
+            score.draftedAt !== null
+          ) {
+            return false
+          }
+
+          const metadata = score.metadata as { flaggerSlug?: string; contentHash?: string } | null
+          return metadata?.flaggerSlug === flaggerSlug && metadata?.contentHash === contentHash
+        }) ?? null,
+      ),
     listPublishedSystemAnnotationsBySession: ({ projectId, sessionId, limit = 200 }) =>
       Effect.succeed(
         [...scores.values()]
