@@ -1,23 +1,19 @@
-import { BadRequestError, OrganizationId, type ProjectId, type RepositoryError } from "@domain/shared"
+import {
+  BadRequestError,
+  findPostgresUniqueViolationConstraint,
+  OrganizationId,
+  type ProjectId,
+  type RepositoryError,
+} from "@domain/shared"
 import { resolveScoreTraceContext, resolveTraceIdFromRef, traceRefSchema } from "@domain/spans"
 import { Cause, Effect, Exit } from "effect"
 import { z } from "zod"
-import type { Score } from "../entities/score.ts"
 import { customScoreSchema, evaluationScoreSchema } from "../entities/score.ts"
 import { ScoreRepository } from "../ports/score-repository.ts"
 import { baseWriteScoreInputSchema, type WriteScoreInput, writeScoreUseCase } from "./write-score.ts"
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
-
 const isRepositoryError = (error: unknown): error is RepositoryError =>
-  isRecord(error) && error._tag === "RepositoryError" && "cause" in error
-
-// scores_canonical_evaluation_trace_idx; recurses because the driver may nest the raw pg error.
-const isCanonicalEvaluationConflict = (cause: unknown): boolean => {
-  if (!isRecord(cause)) return false
-  if (cause.code === "23505" && cause.constraint === "scores_canonical_evaluation_trace_idx") return true
-  return "cause" in cause && isCanonicalEvaluationConflict(cause.cause)
-}
+  typeof error === "object" && error !== null && (error as { _tag?: unknown })._tag === "RepositoryError"
 
 const formatValidationError = (error: z.ZodError): string => error.issues.map((issue) => issue.message).join(", ")
 
@@ -145,14 +141,14 @@ export const submitApiScoreUseCase = Effect.fn("scores.submitApiScore")(function
     parsed.source === "evaluation" &&
     errorOption._tag === "Some" &&
     isRepositoryError(errorOption.value) &&
-    isCanonicalEvaluationConflict(errorOption.value.cause)
+    findPostgresUniqueViolationConstraint(errorOption.value.cause) === "scores_canonical_evaluation_trace_idx"
 
   if (!isDuplicateEvaluationScore) {
     return yield* writeExit
   }
 
   const scoreRepository = yield* ScoreRepository
-  const existingScore: Score | null = yield* scoreRepository.findByEvaluationIdAndTraceId({
+  const existingScore = yield* scoreRepository.findByEvaluationIdAndTraceId({
     projectId: input.projectId,
     evaluationId: parsed.sourceId,
     traceId,
