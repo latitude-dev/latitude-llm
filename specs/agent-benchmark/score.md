@@ -298,7 +298,7 @@ denominator. Compatible deterministic Task Success endpoints use inclusion proba
 | `sessions.task_success` | direct holistic success or failure reference verdict |
 | `moments.strong_failure` | session context and a project issue candidate |
 | `moments.failed_self_service` | session context and a project issue candidate |
-| `moments.weak_failure` | session context |
+| `moments.weak_failure` | session context and a project issue candidate |
 | `sessions.no_output` | deterministic Task Success failure when task applicability is readable |
 | `spans.finish_failure` on the final generation | deterministic Task Success failure when task applicability is readable |
 | Outcome signals | recurring project issues linked to examined Task Success results where possible |
