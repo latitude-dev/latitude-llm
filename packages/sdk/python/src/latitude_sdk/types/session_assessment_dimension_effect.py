@@ -8,6 +8,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .session_assessment_cost_evaluation import SessionAssessmentCostEvaluation
 from .session_assessment_dimension_effect_cost_benchmark_use import SessionAssessmentDimensionEffectCostBenchmarkUse
 from .session_assessment_dimension_effect_cost_direction import SessionAssessmentDimensionEffectCostDirection
 from .session_assessment_dimension_effect_cost_measurement import SessionAssessmentDimensionEffectCostMeasurement
@@ -54,6 +55,11 @@ class SessionAssessmentDimensionEffect_Outcome(UniversalBaseModel):
         pydantic.Field(alias="benchmarkUse"),
     ]
     impact: typing.Optional[SessionAssessmentEvidenceImpact] = None
+    cost_evaluation: typing_extensions.Annotated[
+        typing.Optional[SessionAssessmentCostEvaluation],
+        FieldMetadata(alias="costEvaluation"),
+        pydantic.Field(alias="costEvaluation", default=None),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -73,6 +79,11 @@ class SessionAssessmentDimensionEffect_Reliability(UniversalBaseModel):
         pydantic.Field(alias="benchmarkUse"),
     ]
     impact: typing.Optional[SessionAssessmentEvidenceImpact] = None
+    cost_evaluation: typing_extensions.Annotated[
+        typing.Optional[SessionAssessmentCostEvaluation],
+        FieldMetadata(alias="costEvaluation"),
+        pydantic.Field(alias="costEvaluation", default=None),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -92,6 +103,11 @@ class SessionAssessmentDimensionEffect_Cost(UniversalBaseModel):
         pydantic.Field(alias="benchmarkUse"),
     ]
     impact: typing.Optional[SessionAssessmentEvidenceImpact] = None
+    cost_evaluation: typing_extensions.Annotated[
+        typing.Optional[SessionAssessmentCostEvaluation],
+        FieldMetadata(alias="costEvaluation"),
+        pydantic.Field(alias="costEvaluation", default=None),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -111,6 +127,11 @@ class SessionAssessmentDimensionEffect_Speed(UniversalBaseModel):
         pydantic.Field(alias="benchmarkUse"),
     ]
     impact: typing.Optional[SessionAssessmentEvidenceImpact] = None
+    cost_evaluation: typing_extensions.Annotated[
+        typing.Optional[SessionAssessmentCostEvaluation],
+        FieldMetadata(alias="costEvaluation"),
+        pydantic.Field(alias="costEvaluation", default=None),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -130,6 +151,11 @@ class SessionAssessmentDimensionEffect_Safety(UniversalBaseModel):
         pydantic.Field(alias="benchmarkUse"),
     ]
     impact: typing.Optional[SessionAssessmentEvidenceImpact] = None
+    cost_evaluation: typing_extensions.Annotated[
+        typing.Optional[SessionAssessmentCostEvaluation],
+        FieldMetadata(alias="costEvaluation"),
+        pydantic.Field(alias="costEvaluation", default=None),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 

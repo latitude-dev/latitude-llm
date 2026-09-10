@@ -111,6 +111,7 @@ export {
   type WorkSignals,
 } from "./flagger-strategies/index.ts"
 export { FLAGGER_STRATEGY_SLUGS } from "./flagger-strategies/types.ts"
+export type { ToolExpectedStatusContract } from "./helpers.ts"
 export {
   buildFlaggerFinding,
   collectOutputSchemaDamageFindings,
@@ -120,6 +121,7 @@ export {
   detectLowCacheHitRateFlagger,
   detectOutputSchemaValidationFlagger,
   detectToolCallErrorsFlagger,
+  EMPTY_TOOL_EXPECTED_STATUS_CONTRACT,
   type OutputSchemaDamageFinding,
   type OutputSchemaDamageKind,
   type ToolCallErrorFinding,

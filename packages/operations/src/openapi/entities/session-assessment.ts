@@ -124,6 +124,107 @@ const EvidenceImpactSchema = z
   ])
   .openapi("SessionAssessmentEvidenceImpact")
 
+const CostFamilySchema = z
+  .enum(["spend", "context", "tools", "memory", "recovery"])
+  .describe("Cost family this evidence belongs to: spend, context, tools, memory, or recovery.")
+
+const CostRawUnitSchema = z
+  .enum([
+    "microcents",
+    "inputTokens",
+    "cacheTokens",
+    "contextLimitTokens",
+    "toolCalls",
+    "memoryOperations",
+    "memoryReads",
+    "memoryWrites",
+    "completedSessions",
+  ])
+  .describe("Native unit used by the Cost metric.")
+
+const EstimateRangeSchema = z
+  .object({
+    unit: z.string().describe("Unit both the point estimate and its bounds are expressed in."),
+    point: z.number().describe("Point estimate in `unit`."),
+    lower: z.number().optional().describe("Lower bound in `unit`, when the estimate is bounded."),
+    upper: z.number().optional().describe("Upper bound in `unit`, when the estimate is bounded."),
+    interpretation: z
+      .enum(["identificationBound", "confidenceInterval"])
+      .optional()
+      .describe(
+        "What the bounds mean. `identificationBound` is the range the evidence cannot narrow further; `confidenceInterval` is sampling uncertainty. Present whenever a bound is.",
+      ),
+  })
+  .openapi("SessionAssessmentEstimateRange")
+
+const CostEvaluationSchema = z
+  .object({
+    family: CostFamilySchema,
+    rawValue: z.number().optional().describe("The metric's raw reading in `rawUnit`, when measured."),
+    rawUnit: CostRawUnitSchema.optional().describe("Native unit of `rawValue`."),
+    measurementState: z
+      .enum(["measured", "unmeasured", "notApplicable"])
+      .describe(
+        "Whether this evidence was measured, could not be measured, or did not apply. This is not a health label.",
+      ),
+    nativeImpact: EstimateRangeSchema.optional().describe(
+      "Impact in the family's own unit. Never a score: sessions do not receive Cost numbers.",
+    ),
+  })
+  .openapi("SessionAssessmentCostEvaluation")
+
+const CostMetricEvidenceSchema = z
+  .object({
+    metricId: z.string().describe("Stable identifier of the Cost metric."),
+    family: CostFamilySchema,
+    aggregation: z
+      .enum(["resourceRatio", "eventRate", "sessionMean"])
+      .describe("How the aggregate reading was calculated for this session."),
+    measurementState: z
+      .enum(["measured", "unmeasured", "notApplicable"])
+      .describe("Whether the metric produced a raw session reading. This is not a health label."),
+    rawUnit: CostRawUnitSchema,
+    rawValue: z.number().optional().describe("Aggregate raw metric value when measured."),
+    eligibleUnits: z.number().nonnegative().optional().describe("Total session units eligible for this metric."),
+    adverseUnits: z
+      .number()
+      .nonnegative()
+      .optional()
+      .describe("Observed adverse units within `eligibleUnits`; never a calibrated penalty."),
+    evidence: z
+      .enum(["confirmed", "modeled"])
+      .optional()
+      .describe("Whether the reported native impact is directly confirmed or modeled."),
+    nativeImpact: EstimateRangeSchema.optional().describe("Impact in the metric's native unit, when available."),
+    limitations: z
+      .array(
+        z.enum([
+          "missingContent",
+          "truncatedContent",
+          "missingPricing",
+          "unknownModelContext",
+          "unknownToolContract",
+          "criticalPathUnavailable",
+          "insufficientComparableCalls",
+          "definitionPeriodIncomplete",
+        ]),
+      )
+      .describe("Known limits on how completely the metric could examine the session."),
+  })
+  .openapi("SessionAssessmentCostMetricEvidence")
+
+const CostFamilySummarySchema = z
+  .object({
+    family: CostFamilySchema,
+    measurementState: z
+      .enum(["measured", "partial", "unmeasured", "notApplicable"])
+      .describe("Aggregate measurement state across this family's metrics. This is not a health label."),
+    observedItemCount: z.number().int().nonnegative().describe("Evidence items carrying this family."),
+    metrics: z.array(CostMetricEvidenceSchema).describe("Aggregate session-safe readings for this family's metrics."),
+    nativeImpact: EstimateRangeSchema.optional().describe("Family impact in its own unit, when aggregated."),
+  })
+  .openapi("SessionAssessmentCostFamilySummary")
+
 const effectFields = {
   direction: z.enum(["positive", "negative", "context"]).describe("How the evidence affects this dimension."),
   measurement: z
@@ -133,6 +234,9 @@ const effectFields = {
     .enum(["direct", "modeled", "attributionOnly", "contextOnly"])
     .describe("How this evidence may be used in benchmark calculations."),
   impact: EvidenceImpactSchema.optional().describe("Native structured impact carried by this evidence."),
+  costEvaluation: CostEvaluationSchema.optional().describe(
+    "Cost family evaluation for this evidence. Only Cost evidence carries one.",
+  ),
 } as const
 
 const DimensionEffectSchema = z
@@ -242,6 +346,9 @@ const DimensionSummarySchema = z
       observedMicrocents: z.number().nonnegative().optional().describe("Total observed session spend in microcents."),
       measuredAvoidableMicrocents: z.number().nonnegative().optional().describe("Directly measured avoidable spend."),
       estimatedAvoidableMicrocents: z.number().nonnegative().optional().describe("Estimated avoidable spend."),
+      families: z
+        .array(CostFamilySummarySchema)
+        .describe("All five Cost families, always present, with raw metric readings and their measurement state."),
     }),
     z.object({
       scoreDimension: z.literal("speed").describe("Speed dimension."),
@@ -279,6 +386,9 @@ const limitation = z
     "missingTelemetry",
     "unmappedTelemetry",
     "missingPricing",
+    "missingContent",
+    "truncatedContent",
+    "unknownModelContext",
     "criticalPathUnavailable",
   ])
   .describe("Reason the reader could not completely examine the session.")
@@ -434,6 +544,7 @@ const toEffectResponse = (effect: SessionDimensionEffect): SessionDimensionEffec
     measurement: effect.measurement,
     benchmarkUse: effect.benchmarkUse,
     ...(effect.impact ? { impact: toImpactResponse(effect.impact) } : {}),
+    ...(effect.costEvaluation ? { costEvaluation: effect.costEvaluation } : {}),
   }) as SessionDimensionEffect
 
 const toItemResponse = (item: SessionAssessmentItem): SessionAssessmentResponse["items"][number] => ({

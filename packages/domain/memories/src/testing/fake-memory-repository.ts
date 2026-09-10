@@ -113,6 +113,20 @@ export const createFakeMemoryRepository = (overrides?: Partial<MemoryRepositoryS
           (a, b) => a.endTime.getTime() - b.endTime.getTime() || a.startTime.getTime() - b.startTime.getTime(),
         )
       }),
+    readMemoryEventsBySessionIds: ({ organizationId, projectId, sessionIds, endTimeTo }) =>
+      Effect.sync(() => {
+        const wanted = new Set<string>(sessionIds)
+        const deduped = new Map<string, MemoryEvent>()
+        for (const event of events) {
+          if (event.organizationId !== organizationId || event.projectId !== projectId) continue
+          if (!wanted.has(event.sessionId)) continue
+          if (endTimeTo !== undefined && event.endTime > endTimeTo) continue
+          deduped.set(`${event.traceId}\u0000${event.spanId}\u0000${event.storeId}\u0000${event.recordId}`, event)
+        }
+        return [...deduped.values()].sort(
+          (a, b) => a.endTime.getTime() - b.endTime.getTime() || a.startTime.getTime() - b.startTime.getTime(),
+        )
+      }),
     readRecordVersions: ({ organizationId, projectId, records, at }) =>
       Effect.sync(() => {
         const wanted = new Set(records.map((record) => `${record.storeId}\u0000${record.recordId}`))

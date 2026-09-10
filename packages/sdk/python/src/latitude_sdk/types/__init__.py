@@ -742,6 +742,34 @@ if typing.TYPE_CHECKING:
     from .session_analytics_tokens import SessionAnalyticsTokens
     from .session_analytics_traces import SessionAnalyticsTraces
     from .session_assessment import SessionAssessment
+    from .session_assessment_cost_evaluation import SessionAssessmentCostEvaluation
+    from .session_assessment_cost_evaluation_family import SessionAssessmentCostEvaluationFamily
+    from .session_assessment_cost_evaluation_measurement_state import SessionAssessmentCostEvaluationMeasurementState
+    from .session_assessment_cost_evaluation_raw_unit import SessionAssessmentCostEvaluationRawUnit
+    from .session_assessment_cost_family_summary import SessionAssessmentCostFamilySummary
+    from .session_assessment_cost_family_summary_family import SessionAssessmentCostFamilySummaryFamily
+    from .session_assessment_cost_family_summary_measurement_state import (
+        SessionAssessmentCostFamilySummaryMeasurementState,
+    )
+    from .session_assessment_cost_family_summary_native_impact import SessionAssessmentCostFamilySummaryNativeImpact
+    from .session_assessment_cost_family_summary_native_impact_interpretation import (
+        SessionAssessmentCostFamilySummaryNativeImpactInterpretation,
+    )
+    from .session_assessment_cost_metric_evidence import SessionAssessmentCostMetricEvidence
+    from .session_assessment_cost_metric_evidence_aggregation import SessionAssessmentCostMetricEvidenceAggregation
+    from .session_assessment_cost_metric_evidence_evidence import SessionAssessmentCostMetricEvidenceEvidence
+    from .session_assessment_cost_metric_evidence_family import SessionAssessmentCostMetricEvidenceFamily
+    from .session_assessment_cost_metric_evidence_limitations_item import (
+        SessionAssessmentCostMetricEvidenceLimitationsItem,
+    )
+    from .session_assessment_cost_metric_evidence_measurement_state import (
+        SessionAssessmentCostMetricEvidenceMeasurementState,
+    )
+    from .session_assessment_cost_metric_evidence_native_impact import SessionAssessmentCostMetricEvidenceNativeImpact
+    from .session_assessment_cost_metric_evidence_native_impact_interpretation import (
+        SessionAssessmentCostMetricEvidenceNativeImpactInterpretation,
+    )
+    from .session_assessment_cost_metric_evidence_raw_unit import SessionAssessmentCostMetricEvidenceRawUnit
     from .session_assessment_coverage import SessionAssessmentCoverage
     from .session_assessment_dimension_effect import (
         SessionAssessmentDimensionEffect,
@@ -851,6 +879,8 @@ if typing.TYPE_CHECKING:
     from .session_assessment_dimension_summary_speed_measurement_counts import (
         SessionAssessmentDimensionSummarySpeedMeasurementCounts,
     )
+    from .session_assessment_estimate_range import SessionAssessmentEstimateRange
+    from .session_assessment_estimate_range_interpretation import SessionAssessmentEstimateRangeInterpretation
     from .session_assessment_evidence_anchor import (
         SessionAssessmentEvidenceAnchor,
         SessionAssessmentEvidenceAnchor_MemoryEvent,
@@ -1786,6 +1816,24 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SessionAnalyticsTokens": ".session_analytics_tokens",
     "SessionAnalyticsTraces": ".session_analytics_traces",
     "SessionAssessment": ".session_assessment",
+    "SessionAssessmentCostEvaluation": ".session_assessment_cost_evaluation",
+    "SessionAssessmentCostEvaluationFamily": ".session_assessment_cost_evaluation_family",
+    "SessionAssessmentCostEvaluationMeasurementState": ".session_assessment_cost_evaluation_measurement_state",
+    "SessionAssessmentCostEvaluationRawUnit": ".session_assessment_cost_evaluation_raw_unit",
+    "SessionAssessmentCostFamilySummary": ".session_assessment_cost_family_summary",
+    "SessionAssessmentCostFamilySummaryFamily": ".session_assessment_cost_family_summary_family",
+    "SessionAssessmentCostFamilySummaryMeasurementState": ".session_assessment_cost_family_summary_measurement_state",
+    "SessionAssessmentCostFamilySummaryNativeImpact": ".session_assessment_cost_family_summary_native_impact",
+    "SessionAssessmentCostFamilySummaryNativeImpactInterpretation": ".session_assessment_cost_family_summary_native_impact_interpretation",
+    "SessionAssessmentCostMetricEvidence": ".session_assessment_cost_metric_evidence",
+    "SessionAssessmentCostMetricEvidenceAggregation": ".session_assessment_cost_metric_evidence_aggregation",
+    "SessionAssessmentCostMetricEvidenceEvidence": ".session_assessment_cost_metric_evidence_evidence",
+    "SessionAssessmentCostMetricEvidenceFamily": ".session_assessment_cost_metric_evidence_family",
+    "SessionAssessmentCostMetricEvidenceLimitationsItem": ".session_assessment_cost_metric_evidence_limitations_item",
+    "SessionAssessmentCostMetricEvidenceMeasurementState": ".session_assessment_cost_metric_evidence_measurement_state",
+    "SessionAssessmentCostMetricEvidenceNativeImpact": ".session_assessment_cost_metric_evidence_native_impact",
+    "SessionAssessmentCostMetricEvidenceNativeImpactInterpretation": ".session_assessment_cost_metric_evidence_native_impact_interpretation",
+    "SessionAssessmentCostMetricEvidenceRawUnit": ".session_assessment_cost_metric_evidence_raw_unit",
     "SessionAssessmentCoverage": ".session_assessment_coverage",
     "SessionAssessmentDimensionEffect": ".session_assessment_dimension_effect",
     "SessionAssessmentDimensionEffectCost": ".session_assessment_dimension_effect_cost",
@@ -1847,6 +1895,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SessionAssessmentDimensionSummary_Reliability": ".session_assessment_dimension_summary",
     "SessionAssessmentDimensionSummary_Safety": ".session_assessment_dimension_summary",
     "SessionAssessmentDimensionSummary_Speed": ".session_assessment_dimension_summary",
+    "SessionAssessmentEstimateRange": ".session_assessment_estimate_range",
+    "SessionAssessmentEstimateRangeInterpretation": ".session_assessment_estimate_range_interpretation",
     "SessionAssessmentEvidenceAnchor": ".session_assessment_evidence_anchor",
     "SessionAssessmentEvidenceAnchorMemoryEvent": ".session_assessment_evidence_anchor_memory_event",
     "SessionAssessmentEvidenceAnchorMessage": ".session_assessment_evidence_anchor_message",
@@ -2770,6 +2820,24 @@ __all__ = [
     "SessionAnalyticsTokens",
     "SessionAnalyticsTraces",
     "SessionAssessment",
+    "SessionAssessmentCostEvaluation",
+    "SessionAssessmentCostEvaluationFamily",
+    "SessionAssessmentCostEvaluationMeasurementState",
+    "SessionAssessmentCostEvaluationRawUnit",
+    "SessionAssessmentCostFamilySummary",
+    "SessionAssessmentCostFamilySummaryFamily",
+    "SessionAssessmentCostFamilySummaryMeasurementState",
+    "SessionAssessmentCostFamilySummaryNativeImpact",
+    "SessionAssessmentCostFamilySummaryNativeImpactInterpretation",
+    "SessionAssessmentCostMetricEvidence",
+    "SessionAssessmentCostMetricEvidenceAggregation",
+    "SessionAssessmentCostMetricEvidenceEvidence",
+    "SessionAssessmentCostMetricEvidenceFamily",
+    "SessionAssessmentCostMetricEvidenceLimitationsItem",
+    "SessionAssessmentCostMetricEvidenceMeasurementState",
+    "SessionAssessmentCostMetricEvidenceNativeImpact",
+    "SessionAssessmentCostMetricEvidenceNativeImpactInterpretation",
+    "SessionAssessmentCostMetricEvidenceRawUnit",
     "SessionAssessmentCoverage",
     "SessionAssessmentDimensionEffect",
     "SessionAssessmentDimensionEffectCost",
@@ -2831,6 +2899,8 @@ __all__ = [
     "SessionAssessmentDimensionSummary_Reliability",
     "SessionAssessmentDimensionSummary_Safety",
     "SessionAssessmentDimensionSummary_Speed",
+    "SessionAssessmentEstimateRange",
+    "SessionAssessmentEstimateRangeInterpretation",
     "SessionAssessmentEvidenceAnchor",
     "SessionAssessmentEvidenceAnchorMemoryEvent",
     "SessionAssessmentEvidenceAnchorMessage",

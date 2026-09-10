@@ -37150,6 +37150,91 @@
                                 "additionalProperties": false
                               }
                             ]
+                          },
+                          "costEvaluation": {
+                            "description": "Cost family evaluation for this evidence. Only Cost evidence carries one.",
+                            "type": "object",
+                            "properties": {
+                              "family": {
+                                "type": "string",
+                                "enum": [
+                                  "spend",
+                                  "context",
+                                  "tools",
+                                  "memory",
+                                  "recovery"
+                                ],
+                                "description": "Cost family this evidence belongs to: spend, context, tools, memory, or recovery."
+                              },
+                              "rawValue": {
+                                "description": "The metric's raw reading in `rawUnit`, when measured.",
+                                "type": "number"
+                              },
+                              "rawUnit": {
+                                "description": "Native unit of `rawValue`.",
+                                "type": "string",
+                                "enum": [
+                                  "microcents",
+                                  "inputTokens",
+                                  "cacheTokens",
+                                  "contextLimitTokens",
+                                  "toolCalls",
+                                  "memoryOperations",
+                                  "memoryReads",
+                                  "memoryWrites",
+                                  "completedSessions"
+                                ]
+                              },
+                              "measurementState": {
+                                "type": "string",
+                                "enum": [
+                                  "measured",
+                                  "unmeasured",
+                                  "notApplicable"
+                                ],
+                                "description": "Whether this evidence was measured, could not be measured, or did not apply. This is not a health label."
+                              },
+                              "nativeImpact": {
+                                "description": "Impact in the family's own unit. Never a score: sessions do not receive Cost numbers.",
+                                "type": "object",
+                                "properties": {
+                                  "unit": {
+                                    "type": "string",
+                                    "description": "Unit both the point estimate and its bounds are expressed in."
+                                  },
+                                  "point": {
+                                    "type": "number",
+                                    "description": "Point estimate in `unit`."
+                                  },
+                                  "lower": {
+                                    "description": "Lower bound in `unit`, when the estimate is bounded.",
+                                    "type": "number"
+                                  },
+                                  "upper": {
+                                    "description": "Upper bound in `unit`, when the estimate is bounded.",
+                                    "type": "number"
+                                  },
+                                  "interpretation": {
+                                    "description": "What the bounds mean. `identificationBound` is the range the evidence cannot narrow further; `confidenceInterval` is sampling uncertainty. Present whenever a bound is.",
+                                    "type": "string",
+                                    "enum": [
+                                      "identificationBound",
+                                      "confidenceInterval"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "unit",
+                                  "point"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "family",
+                              "measurementState"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
@@ -37401,6 +37486,91 @@
                                 "additionalProperties": false
                               }
                             ]
+                          },
+                          "costEvaluation": {
+                            "description": "Cost family evaluation for this evidence. Only Cost evidence carries one.",
+                            "type": "object",
+                            "properties": {
+                              "family": {
+                                "type": "string",
+                                "enum": [
+                                  "spend",
+                                  "context",
+                                  "tools",
+                                  "memory",
+                                  "recovery"
+                                ],
+                                "description": "Cost family this evidence belongs to: spend, context, tools, memory, or recovery."
+                              },
+                              "rawValue": {
+                                "description": "The metric's raw reading in `rawUnit`, when measured.",
+                                "type": "number"
+                              },
+                              "rawUnit": {
+                                "description": "Native unit of `rawValue`.",
+                                "type": "string",
+                                "enum": [
+                                  "microcents",
+                                  "inputTokens",
+                                  "cacheTokens",
+                                  "contextLimitTokens",
+                                  "toolCalls",
+                                  "memoryOperations",
+                                  "memoryReads",
+                                  "memoryWrites",
+                                  "completedSessions"
+                                ]
+                              },
+                              "measurementState": {
+                                "type": "string",
+                                "enum": [
+                                  "measured",
+                                  "unmeasured",
+                                  "notApplicable"
+                                ],
+                                "description": "Whether this evidence was measured, could not be measured, or did not apply. This is not a health label."
+                              },
+                              "nativeImpact": {
+                                "description": "Impact in the family's own unit. Never a score: sessions do not receive Cost numbers.",
+                                "type": "object",
+                                "properties": {
+                                  "unit": {
+                                    "type": "string",
+                                    "description": "Unit both the point estimate and its bounds are expressed in."
+                                  },
+                                  "point": {
+                                    "type": "number",
+                                    "description": "Point estimate in `unit`."
+                                  },
+                                  "lower": {
+                                    "description": "Lower bound in `unit`, when the estimate is bounded.",
+                                    "type": "number"
+                                  },
+                                  "upper": {
+                                    "description": "Upper bound in `unit`, when the estimate is bounded.",
+                                    "type": "number"
+                                  },
+                                  "interpretation": {
+                                    "description": "What the bounds mean. `identificationBound` is the range the evidence cannot narrow further; `confidenceInterval` is sampling uncertainty. Present whenever a bound is.",
+                                    "type": "string",
+                                    "enum": [
+                                      "identificationBound",
+                                      "confidenceInterval"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "unit",
+                                  "point"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "family",
+                              "measurementState"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
@@ -37649,6 +37819,91 @@
                                 "additionalProperties": false
                               }
                             ]
+                          },
+                          "costEvaluation": {
+                            "description": "Cost family evaluation for this evidence. Only Cost evidence carries one.",
+                            "type": "object",
+                            "properties": {
+                              "family": {
+                                "type": "string",
+                                "enum": [
+                                  "spend",
+                                  "context",
+                                  "tools",
+                                  "memory",
+                                  "recovery"
+                                ],
+                                "description": "Cost family this evidence belongs to: spend, context, tools, memory, or recovery."
+                              },
+                              "rawValue": {
+                                "description": "The metric's raw reading in `rawUnit`, when measured.",
+                                "type": "number"
+                              },
+                              "rawUnit": {
+                                "description": "Native unit of `rawValue`.",
+                                "type": "string",
+                                "enum": [
+                                  "microcents",
+                                  "inputTokens",
+                                  "cacheTokens",
+                                  "contextLimitTokens",
+                                  "toolCalls",
+                                  "memoryOperations",
+                                  "memoryReads",
+                                  "memoryWrites",
+                                  "completedSessions"
+                                ]
+                              },
+                              "measurementState": {
+                                "type": "string",
+                                "enum": [
+                                  "measured",
+                                  "unmeasured",
+                                  "notApplicable"
+                                ],
+                                "description": "Whether this evidence was measured, could not be measured, or did not apply. This is not a health label."
+                              },
+                              "nativeImpact": {
+                                "description": "Impact in the family's own unit. Never a score: sessions do not receive Cost numbers.",
+                                "type": "object",
+                                "properties": {
+                                  "unit": {
+                                    "type": "string",
+                                    "description": "Unit both the point estimate and its bounds are expressed in."
+                                  },
+                                  "point": {
+                                    "type": "number",
+                                    "description": "Point estimate in `unit`."
+                                  },
+                                  "lower": {
+                                    "description": "Lower bound in `unit`, when the estimate is bounded.",
+                                    "type": "number"
+                                  },
+                                  "upper": {
+                                    "description": "Upper bound in `unit`, when the estimate is bounded.",
+                                    "type": "number"
+                                  },
+                                  "interpretation": {
+                                    "description": "What the bounds mean. `identificationBound` is the range the evidence cannot narrow further; `confidenceInterval` is sampling uncertainty. Present whenever a bound is.",
+                                    "type": "string",
+                                    "enum": [
+                                      "identificationBound",
+                                      "confidenceInterval"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "unit",
+                                  "point"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "family",
+                              "measurementState"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
@@ -37897,6 +38152,91 @@
                                 "additionalProperties": false
                               }
                             ]
+                          },
+                          "costEvaluation": {
+                            "description": "Cost family evaluation for this evidence. Only Cost evidence carries one.",
+                            "type": "object",
+                            "properties": {
+                              "family": {
+                                "type": "string",
+                                "enum": [
+                                  "spend",
+                                  "context",
+                                  "tools",
+                                  "memory",
+                                  "recovery"
+                                ],
+                                "description": "Cost family this evidence belongs to: spend, context, tools, memory, or recovery."
+                              },
+                              "rawValue": {
+                                "description": "The metric's raw reading in `rawUnit`, when measured.",
+                                "type": "number"
+                              },
+                              "rawUnit": {
+                                "description": "Native unit of `rawValue`.",
+                                "type": "string",
+                                "enum": [
+                                  "microcents",
+                                  "inputTokens",
+                                  "cacheTokens",
+                                  "contextLimitTokens",
+                                  "toolCalls",
+                                  "memoryOperations",
+                                  "memoryReads",
+                                  "memoryWrites",
+                                  "completedSessions"
+                                ]
+                              },
+                              "measurementState": {
+                                "type": "string",
+                                "enum": [
+                                  "measured",
+                                  "unmeasured",
+                                  "notApplicable"
+                                ],
+                                "description": "Whether this evidence was measured, could not be measured, or did not apply. This is not a health label."
+                              },
+                              "nativeImpact": {
+                                "description": "Impact in the family's own unit. Never a score: sessions do not receive Cost numbers.",
+                                "type": "object",
+                                "properties": {
+                                  "unit": {
+                                    "type": "string",
+                                    "description": "Unit both the point estimate and its bounds are expressed in."
+                                  },
+                                  "point": {
+                                    "type": "number",
+                                    "description": "Point estimate in `unit`."
+                                  },
+                                  "lower": {
+                                    "description": "Lower bound in `unit`, when the estimate is bounded.",
+                                    "type": "number"
+                                  },
+                                  "upper": {
+                                    "description": "Upper bound in `unit`, when the estimate is bounded.",
+                                    "type": "number"
+                                  },
+                                  "interpretation": {
+                                    "description": "What the bounds mean. `identificationBound` is the range the evidence cannot narrow further; `confidenceInterval` is sampling uncertainty. Present whenever a bound is.",
+                                    "type": "string",
+                                    "enum": [
+                                      "identificationBound",
+                                      "confidenceInterval"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "unit",
+                                  "point"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "family",
+                              "measurementState"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
@@ -38149,6 +38489,91 @@
                                 "additionalProperties": false
                               }
                             ]
+                          },
+                          "costEvaluation": {
+                            "description": "Cost family evaluation for this evidence. Only Cost evidence carries one.",
+                            "type": "object",
+                            "properties": {
+                              "family": {
+                                "type": "string",
+                                "enum": [
+                                  "spend",
+                                  "context",
+                                  "tools",
+                                  "memory",
+                                  "recovery"
+                                ],
+                                "description": "Cost family this evidence belongs to: spend, context, tools, memory, or recovery."
+                              },
+                              "rawValue": {
+                                "description": "The metric's raw reading in `rawUnit`, when measured.",
+                                "type": "number"
+                              },
+                              "rawUnit": {
+                                "description": "Native unit of `rawValue`.",
+                                "type": "string",
+                                "enum": [
+                                  "microcents",
+                                  "inputTokens",
+                                  "cacheTokens",
+                                  "contextLimitTokens",
+                                  "toolCalls",
+                                  "memoryOperations",
+                                  "memoryReads",
+                                  "memoryWrites",
+                                  "completedSessions"
+                                ]
+                              },
+                              "measurementState": {
+                                "type": "string",
+                                "enum": [
+                                  "measured",
+                                  "unmeasured",
+                                  "notApplicable"
+                                ],
+                                "description": "Whether this evidence was measured, could not be measured, or did not apply. This is not a health label."
+                              },
+                              "nativeImpact": {
+                                "description": "Impact in the family's own unit. Never a score: sessions do not receive Cost numbers.",
+                                "type": "object",
+                                "properties": {
+                                  "unit": {
+                                    "type": "string",
+                                    "description": "Unit both the point estimate and its bounds are expressed in."
+                                  },
+                                  "point": {
+                                    "type": "number",
+                                    "description": "Point estimate in `unit`."
+                                  },
+                                  "lower": {
+                                    "description": "Lower bound in `unit`, when the estimate is bounded.",
+                                    "type": "number"
+                                  },
+                                  "upper": {
+                                    "description": "Upper bound in `unit`, when the estimate is bounded.",
+                                    "type": "number"
+                                  },
+                                  "interpretation": {
+                                    "description": "What the bounds mean. `identificationBound` is the range the evidence cannot narrow further; `confidenceInterval` is sampling uncertainty. Present whenever a bound is.",
+                                    "type": "string",
+                                    "enum": [
+                                      "identificationBound",
+                                      "confidenceInterval"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "unit",
+                                  "point"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "family",
+                              "measurementState"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
@@ -38792,13 +39217,232 @@
                       "description": "Estimated avoidable spend.",
                       "type": "number",
                       "minimum": 0
+                    },
+                    "families": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "family": {
+                            "type": "string",
+                            "enum": [
+                              "spend",
+                              "context",
+                              "tools",
+                              "memory",
+                              "recovery"
+                            ],
+                            "description": "Cost family this evidence belongs to: spend, context, tools, memory, or recovery."
+                          },
+                          "measurementState": {
+                            "type": "string",
+                            "enum": [
+                              "measured",
+                              "partial",
+                              "unmeasured",
+                              "notApplicable"
+                            ],
+                            "description": "Aggregate measurement state across this family's metrics. This is not a health label."
+                          },
+                          "observedItemCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "Evidence items carrying this family."
+                          },
+                          "metrics": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "metricId": {
+                                  "type": "string",
+                                  "description": "Stable identifier of the Cost metric."
+                                },
+                                "family": {
+                                  "type": "string",
+                                  "enum": [
+                                    "spend",
+                                    "context",
+                                    "tools",
+                                    "memory",
+                                    "recovery"
+                                  ],
+                                  "description": "Cost family this evidence belongs to: spend, context, tools, memory, or recovery."
+                                },
+                                "aggregation": {
+                                  "type": "string",
+                                  "enum": [
+                                    "resourceRatio",
+                                    "eventRate",
+                                    "sessionMean"
+                                  ],
+                                  "description": "How the aggregate reading was calculated for this session."
+                                },
+                                "measurementState": {
+                                  "type": "string",
+                                  "enum": [
+                                    "measured",
+                                    "unmeasured",
+                                    "notApplicable"
+                                  ],
+                                  "description": "Whether the metric produced a raw session reading. This is not a health label."
+                                },
+                                "rawUnit": {
+                                  "type": "string",
+                                  "enum": [
+                                    "microcents",
+                                    "inputTokens",
+                                    "cacheTokens",
+                                    "contextLimitTokens",
+                                    "toolCalls",
+                                    "memoryOperations",
+                                    "memoryReads",
+                                    "memoryWrites",
+                                    "completedSessions"
+                                  ],
+                                  "description": "Native unit used by the Cost metric."
+                                },
+                                "rawValue": {
+                                  "description": "Aggregate raw metric value when measured.",
+                                  "type": "number"
+                                },
+                                "eligibleUnits": {
+                                  "description": "Total session units eligible for this metric.",
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "adverseUnits": {
+                                  "description": "Observed adverse units within `eligibleUnits`; never a calibrated penalty.",
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "evidence": {
+                                  "description": "Whether the reported native impact is directly confirmed or modeled.",
+                                  "type": "string",
+                                  "enum": [
+                                    "confirmed",
+                                    "modeled"
+                                  ]
+                                },
+                                "nativeImpact": {
+                                  "description": "Impact in the metric's native unit, when available.",
+                                  "type": "object",
+                                  "properties": {
+                                    "unit": {
+                                      "type": "string",
+                                      "description": "Unit both the point estimate and its bounds are expressed in."
+                                    },
+                                    "point": {
+                                      "type": "number",
+                                      "description": "Point estimate in `unit`."
+                                    },
+                                    "lower": {
+                                      "description": "Lower bound in `unit`, when the estimate is bounded.",
+                                      "type": "number"
+                                    },
+                                    "upper": {
+                                      "description": "Upper bound in `unit`, when the estimate is bounded.",
+                                      "type": "number"
+                                    },
+                                    "interpretation": {
+                                      "description": "What the bounds mean. `identificationBound` is the range the evidence cannot narrow further; `confidenceInterval` is sampling uncertainty. Present whenever a bound is.",
+                                      "type": "string",
+                                      "enum": [
+                                        "identificationBound",
+                                        "confidenceInterval"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "unit",
+                                    "point"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "limitations": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "missingContent",
+                                      "truncatedContent",
+                                      "missingPricing",
+                                      "unknownModelContext",
+                                      "unknownToolContract",
+                                      "criticalPathUnavailable",
+                                      "insufficientComparableCalls",
+                                      "definitionPeriodIncomplete"
+                                    ]
+                                  },
+                                  "description": "Known limits on how completely the metric could examine the session."
+                                }
+                              },
+                              "required": [
+                                "metricId",
+                                "family",
+                                "aggregation",
+                                "measurementState",
+                                "rawUnit",
+                                "limitations"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Aggregate session-safe readings for this family's metrics."
+                          },
+                          "nativeImpact": {
+                            "description": "Family impact in its own unit, when aggregated.",
+                            "type": "object",
+                            "properties": {
+                              "unit": {
+                                "type": "string",
+                                "description": "Unit both the point estimate and its bounds are expressed in."
+                              },
+                              "point": {
+                                "type": "number",
+                                "description": "Point estimate in `unit`."
+                              },
+                              "lower": {
+                                "description": "Lower bound in `unit`, when the estimate is bounded.",
+                                "type": "number"
+                              },
+                              "upper": {
+                                "description": "Upper bound in `unit`, when the estimate is bounded.",
+                                "type": "number"
+                              },
+                              "interpretation": {
+                                "description": "What the bounds mean. `identificationBound` is the range the evidence cannot narrow further; `confidenceInterval` is sampling uncertainty. Present whenever a bound is.",
+                                "type": "string",
+                                "enum": [
+                                  "identificationBound",
+                                  "confidenceInterval"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "unit",
+                              "point"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "family",
+                          "measurementState",
+                          "observedItemCount",
+                          "metrics"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "All five Cost families, always present, with raw metric readings and their measurement state."
                     }
                   },
                   "required": [
                     "scoreDimension",
                     "evidenceCounts",
                     "measurementCounts",
-                    "coverage"
+                    "coverage",
+                    "families"
                   ],
                   "additionalProperties": false
                 },
@@ -39153,6 +39797,9 @@
                             "missingTelemetry",
                             "unmappedTelemetry",
                             "missingPricing",
+                            "missingContent",
+                            "truncatedContent",
+                            "unknownModelContext",
                             "criticalPathUnavailable"
                           ],
                           "description": "Reason the reader could not completely examine the session."
@@ -39238,6 +39885,9 @@
                             "missingTelemetry",
                             "unmappedTelemetry",
                             "missingPricing",
+                            "missingContent",
+                            "truncatedContent",
+                            "unknownModelContext",
                             "criticalPathUnavailable"
                           ],
                           "description": "Reason the reader could not completely examine the session."

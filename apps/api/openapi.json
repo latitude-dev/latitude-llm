@@ -13030,6 +13030,9 @@
               },
               "impact": {
                 "$ref": "#/components/schemas/SessionAssessmentEvidenceImpact"
+              },
+              "costEvaluation": {
+                "$ref": "#/components/schemas/SessionAssessmentCostEvaluation"
               }
             },
             "required": [
@@ -13088,6 +13091,9 @@
               },
               "impact": {
                 "$ref": "#/components/schemas/SessionAssessmentEvidenceImpact"
+              },
+              "costEvaluation": {
+                "$ref": "#/components/schemas/SessionAssessmentCostEvaluation"
               }
             },
             "required": [
@@ -13145,6 +13151,9 @@
               },
               "impact": {
                 "$ref": "#/components/schemas/SessionAssessmentEvidenceImpact"
+              },
+              "costEvaluation": {
+                "$ref": "#/components/schemas/SessionAssessmentCostEvaluation"
               }
             },
             "required": [
@@ -13202,6 +13211,9 @@
               },
               "impact": {
                 "$ref": "#/components/schemas/SessionAssessmentEvidenceImpact"
+              },
+              "costEvaluation": {
+                "$ref": "#/components/schemas/SessionAssessmentCostEvaluation"
               }
             },
             "required": [
@@ -13261,6 +13273,9 @@
               },
               "impact": {
                 "$ref": "#/components/schemas/SessionAssessmentEvidenceImpact"
+              },
+              "costEvaluation": {
+                "$ref": "#/components/schemas/SessionAssessmentCostEvaluation"
               }
             },
             "required": [
@@ -13477,6 +13492,92 @@
           }
         ],
         "description": "Native structured impact carried by this evidence."
+      },
+      "SessionAssessmentCostEvaluation": {
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": "string",
+            "enum": [
+              "spend",
+              "context",
+              "tools",
+              "memory",
+              "recovery"
+            ],
+            "description": "Cost family this evidence belongs to: spend, context, tools, memory, or recovery."
+          },
+          "rawValue": {
+            "type": "number",
+            "description": "The metric's raw reading in `rawUnit`, when measured."
+          },
+          "rawUnit": {
+            "type": "string",
+            "enum": [
+              "microcents",
+              "inputTokens",
+              "cacheTokens",
+              "contextLimitTokens",
+              "toolCalls",
+              "memoryOperations",
+              "memoryReads",
+              "memoryWrites",
+              "completedSessions"
+            ],
+            "description": "Native unit of `rawValue`."
+          },
+          "measurementState": {
+            "type": "string",
+            "enum": [
+              "measured",
+              "unmeasured",
+              "notApplicable"
+            ],
+            "description": "Whether this evidence was measured, could not be measured, or did not apply. This is not a health label."
+          },
+          "nativeImpact": {
+            "$ref": "#/components/schemas/SessionAssessmentEstimateRange"
+          }
+        },
+        "required": [
+          "family",
+          "measurementState"
+        ],
+        "description": "Cost family evaluation for this evidence. Only Cost evidence carries one."
+      },
+      "SessionAssessmentEstimateRange": {
+        "type": "object",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "description": "Unit both the point estimate and its bounds are expressed in."
+          },
+          "point": {
+            "type": "number",
+            "description": "Point estimate in `unit`."
+          },
+          "lower": {
+            "type": "number",
+            "description": "Lower bound in `unit`, when the estimate is bounded."
+          },
+          "upper": {
+            "type": "number",
+            "description": "Upper bound in `unit`, when the estimate is bounded."
+          },
+          "interpretation": {
+            "type": "string",
+            "enum": [
+              "identificationBound",
+              "confidenceInterval"
+            ],
+            "description": "What the bounds mean. `identificationBound` is the range the evidence cannot narrow further; `confidenceInterval` is sampling uncertainty. Present whenever a bound is."
+          }
+        },
+        "required": [
+          "unit",
+          "point"
+        ],
+        "description": "Impact in the family's own unit. Never a score: sessions do not receive Cost numbers."
       },
       "SessionAssessmentEvidenceAnchor": {
         "oneOf": [
@@ -14056,13 +14157,21 @@
                 "type": "number",
                 "minimum": 0,
                 "description": "Estimated avoidable spend."
+              },
+              "families": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SessionAssessmentCostFamilySummary"
+                },
+                "description": "All five Cost families, always present, with raw metric readings and their measurement state."
               }
             },
             "required": [
               "scoreDimension",
               "evidenceCounts",
               "measurementCounts",
-              "coverage"
+              "coverage",
+              "families"
             ]
           },
           {
@@ -14258,6 +14367,170 @@
           }
         ]
       },
+      "SessionAssessmentCostFamilySummary": {
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": "string",
+            "enum": [
+              "spend",
+              "context",
+              "tools",
+              "memory",
+              "recovery"
+            ],
+            "description": "Cost family this evidence belongs to: spend, context, tools, memory, or recovery."
+          },
+          "measurementState": {
+            "type": "string",
+            "enum": [
+              "measured",
+              "partial",
+              "unmeasured",
+              "notApplicable"
+            ],
+            "description": "Aggregate measurement state across this family's metrics. This is not a health label."
+          },
+          "observedItemCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Evidence items carrying this family."
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAssessmentCostMetricEvidence"
+            },
+            "description": "Aggregate session-safe readings for this family's metrics."
+          },
+          "nativeImpact": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionAssessmentEstimateRange"
+              },
+              {
+                "description": "Family impact in its own unit, when aggregated."
+              }
+            ]
+          }
+        },
+        "required": [
+          "family",
+          "measurementState",
+          "observedItemCount",
+          "metrics"
+        ]
+      },
+      "SessionAssessmentCostMetricEvidence": {
+        "type": "object",
+        "properties": {
+          "metricId": {
+            "type": "string",
+            "description": "Stable identifier of the Cost metric."
+          },
+          "family": {
+            "type": "string",
+            "enum": [
+              "spend",
+              "context",
+              "tools",
+              "memory",
+              "recovery"
+            ],
+            "description": "Cost family this evidence belongs to: spend, context, tools, memory, or recovery."
+          },
+          "aggregation": {
+            "type": "string",
+            "enum": [
+              "resourceRatio",
+              "eventRate",
+              "sessionMean"
+            ],
+            "description": "How the aggregate reading was calculated for this session."
+          },
+          "measurementState": {
+            "type": "string",
+            "enum": [
+              "measured",
+              "unmeasured",
+              "notApplicable"
+            ],
+            "description": "Whether the metric produced a raw session reading. This is not a health label."
+          },
+          "rawUnit": {
+            "type": "string",
+            "enum": [
+              "microcents",
+              "inputTokens",
+              "cacheTokens",
+              "contextLimitTokens",
+              "toolCalls",
+              "memoryOperations",
+              "memoryReads",
+              "memoryWrites",
+              "completedSessions"
+            ],
+            "description": "Native unit used by the Cost metric."
+          },
+          "rawValue": {
+            "type": "number",
+            "description": "Aggregate raw metric value when measured."
+          },
+          "eligibleUnits": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Total session units eligible for this metric."
+          },
+          "adverseUnits": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Observed adverse units within `eligibleUnits`; never a calibrated penalty."
+          },
+          "evidence": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "modeled"
+            ],
+            "description": "Whether the reported native impact is directly confirmed or modeled."
+          },
+          "nativeImpact": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionAssessmentEstimateRange"
+              },
+              {
+                "description": "Impact in the metric's native unit, when available."
+              }
+            ]
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "missingContent",
+                "truncatedContent",
+                "missingPricing",
+                "unknownModelContext",
+                "unknownToolContract",
+                "criticalPathUnavailable",
+                "insufficientComparableCalls",
+                "definitionPeriodIncomplete"
+              ]
+            },
+            "description": "Known limits on how completely the metric could examine the session."
+          }
+        },
+        "required": [
+          "metricId",
+          "family",
+          "aggregation",
+          "measurementState",
+          "rawUnit",
+          "limitations"
+        ]
+      },
       "SessionAssessmentReaderCoverage": {
         "oneOf": [
           {
@@ -14390,6 +14663,9 @@
                   "missingTelemetry",
                   "unmappedTelemetry",
                   "missingPricing",
+                  "missingContent",
+                  "truncatedContent",
+                  "unknownModelContext",
                   "criticalPathUnavailable"
                 ],
                 "description": "Reason the reader could not completely examine the session."
@@ -14475,6 +14751,9 @@
                   "missingTelemetry",
                   "unmappedTelemetry",
                   "missingPricing",
+                  "missingContent",
+                  "truncatedContent",
+                  "unknownModelContext",
                   "criticalPathUnavailable"
                 ],
                 "description": "Reason the reader could not completely examine the session."

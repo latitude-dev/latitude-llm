@@ -25,12 +25,14 @@ has its own arithmetic because each measures a different property.
 
 The same evidence powers a session assessment. A session does not receive five miniature scores. It
 gets a chronological account of what went well, what went wrong, what the agent recovered from,
-which resources were avoidable, and which evidence could not be measured. Latitude must be able to
-explain one session before it summarizes a project.
+which resources appear inefficient or recoverable, and which evidence could not be measured.
+Latitude must be able to explain one session before it summarizes a project.
 
-Metrics and signals do not receive point budgets. They provide evidence about a dimension's
-underlying quantity. The score first estimates that quantity, then maps it to 0 through 100. The
-cause list attributes the result after it has been computed.
+Metrics and signals do not receive independent point budgets. They provide evidence about a
+dimension's underlying quantity. Outcome, Reliability, Speed, and Safety each retain one native
+estimand. Cost is the deliberate exception: it combines a fixed set of cost-efficiency families,
+each evaluated in its own native denominator, into one 0 through 100 health score. The cause list
+attributes the result after it has been computed.
 
 Latitude publishes numeric values only when all five dimensions have enough traffic, coverage, and
 confidence. If one dimension is not ready, neither the composite nor any dimension score is shown.
@@ -42,7 +44,7 @@ The page still lists the metrics and signal occurrences observed so far under th
 | --- | --- | --- |
 | Outcome | Did the agent do what it was asked to do? | About 80% of comparable sessions are expected to succeed |
 | Reliability | Can the agent keep succeeding without an operational failure? | An 80% chance that the reference run completes without a terminal operational failure |
-| Cost | How much money did the agent avoid wasting? | About 80% of observed spend was necessary |
+| Cost | How efficiently did the agent use paid and token-bearing resources? | The versioned mix of spend, context, tool, memory, and recovery efficiency is 80% healthy |
 | Speed | How much user-visible time did the agent avoid wasting? | About 80% of observed critical-path time was necessary |
 | Safety | How likely is the agent to avoid confirmed harmful output? | An 80% chance that the safety reference run contains no confirmed failure |
 
@@ -50,9 +52,12 @@ Outcome measures task success. Reliability measures operational completion. An a
 the wrong task reliably, or accomplish the task despite unreliable infrastructure, so the two must
 remain separate.
 
-Cost and Speed measure efficiency rather than raw spend or latency. A ten-minute coding session can
-score better than a ten-second chatbot session if the coding session needed its ten minutes and the
-chatbot spent half its time retrying avoidable work.
+Cost and Speed measure efficiency rather than raw spend or latency. Cost is broader than money: it
+also captures context misuse, inefficient tool and memory behavior, and recovery overhead even when
+their exact dollar effect cannot be isolated. Speed remains the share of user-visible critical-path
+time that was necessary. A ten-minute coding session can score better than a ten-second chatbot
+session if the coding session needed its ten minutes and the chatbot spent half its time retrying
+avoidable work.
 
 Safety measures agent-caused harm. Receiving personal data, an injection attempt, or unsafe user
 content is exposure, not failure. Exposure appears on the page but does not lower the score unless
@@ -66,13 +71,13 @@ Every scored observation belongs to one of four forms:
 | --- | --- | --- |
 | Outcome evidence | A probability that the session accomplished its goal | Task Success verdicts, corrections, abandonment, no output, Outcome signals |
 | Terminal failure evidence | Whether the session ended in an operational failure | unrecovered provider or tool errors, broken final output |
-| Resource evidence | Actual and avoidable money or critical-path time | cache gap, retries, repeated calls, slow generation |
+| Resource evidence | Spend, context tokens, operations, session burden, or critical-path time | cache gap, redundant context, retries, repeated calls, slow generation |
 | Safety evidence | Whether the agent caused confirmed harm | PII disclosure, injection compliance |
 
-Value observations enter in their natural unit. Cost is measured in money, Speed in critical-path
-time, and calibrated evaluations as probabilities. Event observations establish an endpoint, update
-a probability, or identify avoidable resource use. Both forms meet at the session before the
-dimension aggregates the window.
+Value observations enter in their natural unit. Cost families use money, input tokens, tool calls,
+memory operations, and eligible sessions. Speed uses critical-path time, and calibrated evaluations
+use probabilities. Event observations establish an endpoint, update a probability, or identify
+inefficient resource use. Both forms meet at the session before the dimension aggregates the window.
 
 Signals use the same path. A signal carries a scoring role for each dimension it informs. Its impact
 comes from observed prevalence and consequence, not from the number of signals or a fixed allocation
@@ -83,25 +88,30 @@ of points. Correlated signals are evaluated together.
 ### 1. Define the quantity before the formula
 
 Every dimension has a user-facing interpretation independent of its current metric catalog. Adding
-a detector can improve the estimate, but it cannot change what the dimension means.
+a detector can improve the estimate, but it cannot change what the dimension means. Cost defines
+five stable evidence families so new metrics can improve coverage without silently redefining its
+balance.
 
 ### 2. No metric or signal owns points
 
-A metric does not have a weight, budget, or severity. Its influence comes from the measured outcome,
-failure probability, money, time, or safety risk it reveals. Adding a new signal cannot force every
-existing signal to become less important.
+A metric does not have an independent weight, budget, or severity. Its influence comes from the
+measured outcome, failure probability, family-native Cost penalty, time, or safety risk it reveals.
+Cost family weights are fixed in a versioned scoring artifact. Adding a new metric or signal cannot
+force unrelated evidence to become less important.
 
 ### 3. Aggregate at session level before aggregating the window
 
-Evidence that overlaps on one session is resolved once on that session. Cost and time are capped by
-the resources the session actually consumed. Outcome and risk evidence enter one joint estimate.
-Duplicate detectors and split signal clusters cannot multiply the underlying harm.
+Evidence that overlaps on one session is resolved once on that session. Cost evidence is deduplicated
+within its family and capped by the family's eligible units. Time is capped by the critical path the
+session actually consumed. Outcome and risk evidence enter one joint estimate. Duplicate detectors
+and split signal clusters cannot multiply the underlying harm.
 
 ### 4. Normalize only after measuring the native quantity
 
-Raw cost and duration never enter the composite directly. Cost and Speed divide avoidable resources
-by observed resources. Reliability and Safety use a fixed reference-run horizon. Outcome is already
-a probability. Every dimension therefore reaches 0 through 100 with a stated meaning.
+Raw cost and duration never enter the composite directly. Cost normalizes each evidence family
+before combining the fixed family weights. Speed divides avoidable critical-path time by observed
+critical-path time. Reliability and Safety use a fixed reference-run horizon. Outcome is already a
+probability. Every dimension therefore reaches 0 through 100 with a stated meaning.
 
 ### 5. Constants must carry semantics
 
@@ -146,6 +156,8 @@ ignored signal are excluded from future calculations. Existing daily snapshots a
 | window | the period covered by a snapshot |
 | snapshot | the immutable daily score record |
 | scoring version | the version of formulas, models, and frozen reference data |
+| Cost family | one stable component of Cost: spend, context, tools, memory, or recovery |
+| source atom | the smallest resource fact that can be claimed once during Cost or Speed deduplication |
 
 The existing session **Scores** surface contains evaluation, annotation, and custom score records.
 **Agent Score** refers only to the project benchmark. Shared contracts use `scoreDimension` so they
@@ -176,7 +188,9 @@ Read them in this order:
 | Discovery scores can link to their deterministic source finding | Scores and signals join the session story without duplicating the full finding |
 | Recovered findings remain observable without opening signals automatically | Dynamic readers expose retry waste without flooding signal discovery |
 | Provider errors and finish reasons receive shared classifiers | Raw provider strings cannot define terminal failure consistently |
-| Cost and duration readers expose session-level resource use | Waste must be capped and deduplicated before window aggregation |
+| Cost readers expose family-native eligible and penalized units | Cost must combine money and non-money evidence without pretending every effect is priced |
+| Content readers expose bounded generation inputs and tool definitions | Context and downstream tool or memory footprint cannot be inferred from the latest conversation window |
+| Duration readers expose trace structure and foreground classification | Speed waste must be capped and deduplicated before window aggregation |
 | A sampled Task Success flagger persists passed and failed scores | Outcome needs a direct holistic reference verdict, not a union of defect counts |
 
 ## Fixed score settings
@@ -189,6 +203,7 @@ Read them in this order:
 | Reliability reference run | 20 sessions |
 | Safety reference run | 1,000 sessions |
 | Composite weights | Outcome 0.35, Reliability 0.25, Cost 0.15, Speed 0.15, Safety 0.10 |
+| Cost families | spend, context, tools, memory, recovery |
 | Fleet latency reference | frozen provider, model, input-size, and streaming cohorts |
 | Publication gate | all five dimensions pass their traffic, coverage, and confidence floors |
 
@@ -202,10 +217,11 @@ The structure is fixed. Launch requires these versioned artifacts and acceptance
 
 1. The Task Success prompt, supported judge configuration, calibrated Outcome model, and pooled prior
    for newly promoted signals.
-2. Frozen TTFT and throughput reference distributions for every supported cohort.
-3. The matching features and overlap diagnostics used by signal-level Cost and Speed
-   counterfactuals.
-4. Reader-specific coverage and confidence floors validated on representative traffic.
-5. The complete Safety detector suite, its sampling contract, and confirmed-harm fixtures.
-6. Hosted and self-hosted loading of the same formulas, prompts, reference bundles, and calibration
+2. The Cost scoring artifact: family weights, metric curves, applicability rules, caps, overlap
+   groups, coverage floors, and residual-signal cap, calibrated on shadow traffic.
+3. Frozen TTFT and throughput reference distributions for every supported cohort.
+4. The matching features and overlap diagnostics used by signal-level Cost and Speed estimators.
+5. Reader-specific coverage and confidence floors validated on representative traffic.
+6. The complete Safety detector suite, its sampling contract, and confirmed-harm fixtures.
+7. Hosted and self-hosted loading of the same formulas, prompts, reference bundles, and calibration
    artifacts. A substituted judge model creates a distinct local scoring version.

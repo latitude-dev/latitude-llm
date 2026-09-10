@@ -21,6 +21,7 @@ export namespace SessionAssessmentDimensionEffect {
         /** How this evidence may be used in benchmark calculations. */
         benchmarkUse: SessionAssessmentDimensionEffectOutcome.BenchmarkUse;
         impact?: Latitude.SessionAssessmentEvidenceImpact | undefined;
+        costEvaluation?: Latitude.SessionAssessmentCostEvaluation | undefined;
     }
 
     export namespace SessionAssessmentDimensionEffectOutcome {
@@ -64,6 +65,7 @@ export namespace SessionAssessmentDimensionEffect {
         /** How this evidence may be used in benchmark calculations. */
         benchmarkUse: SessionAssessmentDimensionEffectReliability.BenchmarkUse;
         impact?: Latitude.SessionAssessmentEvidenceImpact | undefined;
+        costEvaluation?: Latitude.SessionAssessmentCostEvaluation | undefined;
     }
 
     export namespace SessionAssessmentDimensionEffectReliability {
@@ -108,6 +110,7 @@ export namespace SessionAssessmentDimensionEffect {
         /** How this evidence may be used in benchmark calculations. */
         benchmarkUse: SessionAssessmentDimensionEffectCost.BenchmarkUse;
         impact?: Latitude.SessionAssessmentEvidenceImpact | undefined;
+        costEvaluation?: Latitude.SessionAssessmentCostEvaluation | undefined;
     }
 
     export namespace SessionAssessmentDimensionEffectCost {
@@ -151,6 +154,7 @@ export namespace SessionAssessmentDimensionEffect {
         /** How this evidence may be used in benchmark calculations. */
         benchmarkUse: SessionAssessmentDimensionEffectSpeed.BenchmarkUse;
         impact?: Latitude.SessionAssessmentEvidenceImpact | undefined;
+        costEvaluation?: Latitude.SessionAssessmentCostEvaluation | undefined;
     }
 
     export namespace SessionAssessmentDimensionEffectSpeed {
@@ -194,6 +198,7 @@ export namespace SessionAssessmentDimensionEffect {
         /** How this evidence may be used in benchmark calculations. */
         benchmarkUse: SessionAssessmentDimensionEffectSafety.BenchmarkUse;
         impact?: Latitude.SessionAssessmentEvidenceImpact | undefined;
+        costEvaluation?: Latitude.SessionAssessmentCostEvaluation | undefined;
     }
 
     export namespace SessionAssessmentDimensionEffectSafety {

@@ -146,6 +146,8 @@ export namespace SessionAssessmentDimensionSummary {
         measuredAvoidableMicrocents?: number | undefined;
         /** Estimated avoidable spend. */
         estimatedAvoidableMicrocents?: number | undefined;
+        /** All five Cost families, always present, with raw metric readings and their measurement state. */
+        families: Latitude.SessionAssessmentCostFamilySummary[];
     }
 
     export namespace SessionAssessmentDimensionSummaryCost {

@@ -6,6 +6,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .session_assessment_cost_evaluation import SessionAssessmentCostEvaluation
 from .session_assessment_dimension_effect_speed_benchmark_use import SessionAssessmentDimensionEffectSpeedBenchmarkUse
 from .session_assessment_dimension_effect_speed_direction import SessionAssessmentDimensionEffectSpeedDirection
 from .session_assessment_dimension_effect_speed_measurement import SessionAssessmentDimensionEffectSpeedMeasurement
@@ -35,5 +36,10 @@ class SessionAssessmentDimensionEffectSpeed(UniversalBaseModel):
         pydantic.Field(alias="benchmarkUse", description="How this evidence may be used in benchmark calculations."),
     ]
     impact: typing.Optional[SessionAssessmentEvidenceImpact] = None
+    cost_evaluation: typing_extensions.Annotated[
+        typing.Optional[SessionAssessmentCostEvaluation],
+        FieldMetadata(alias="costEvaluation"),
+        pydantic.Field(alias="costEvaluation", default=None),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

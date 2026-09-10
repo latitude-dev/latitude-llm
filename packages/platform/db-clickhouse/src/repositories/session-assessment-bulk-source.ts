@@ -1,25 +1,38 @@
 import {
+  SESSION_ASSESSMENT_CONTENT_BUDGET,
   SessionAssessmentBulkTelemetrySource,
   type SessionAssessmentBulkTelemetrySourceShape,
 } from "@domain/agent-score"
 import {
   type SessionAnalysis,
   SessionAnalysisRepository,
-  type SessionMomentLabel,
   SessionMomentLabelRepository,
-  type SessionSemanticMoment,
   SessionSemanticMomentRepository,
 } from "@domain/conversation-intelligence"
-import { type FlaggerScreeningDecision, FlaggerScreeningDecisionRepository } from "@domain/flaggers"
-import { type SessionId, TraceId } from "@domain/shared"
-import { SessionRepository, type Span, SpanRepository } from "@domain/spans"
+import { FlaggerScreeningDecisionRepository } from "@domain/flaggers"
+import { MemoryRepository } from "@domain/memories"
+import { TraceId } from "@domain/shared"
+import { SessionRepository, SpanRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
 
-const append = <Value>(map: Map<string, Value[]>, key: string, value: Value) => {
-  const values = map.get(key) ?? []
-  values.push(value)
-  map.set(key, values)
+const groupByKey = <Value>(
+  items: readonly Value[],
+  keyOf: (value: Value) => string | undefined,
+): Map<string, Value[]> => {
+  const grouped = new Map<string, Value[]>()
+  for (const item of items) {
+    const key = keyOf(item)
+    if (key === undefined) continue
+    const values = grouped.get(key) ?? []
+    values.push(item)
+    grouped.set(key, values)
+  }
+  return grouped
 }
+
+/** Moments and labels of an unanalyzed session are kept; a superseded analysis generation is not. */
+const isAuthoritativeGeneration = (analysis: SessionAnalysis | undefined, analysisHash: string): boolean =>
+  !analysis || (analysis.analysisStatus === "analyzed" && analysis.analysisHash === analysisHash)
 
 export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
   SessionAssessmentBulkTelemetrySource,
@@ -30,6 +43,7 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
     const momentRepository = yield* SessionSemanticMomentRepository
     const labelRepository = yield* SessionMomentLabelRepository
     const screeningRepository = yield* FlaggerScreeningDecisionRepository
+    const memoryRepository = yield* MemoryRepository
 
     return {
       read: (input) =>
@@ -41,84 +55,75 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
             cutoff: input.cutoff,
           })
           const traceIds = [...new Set(sessions.flatMap((session) => session.traceIds.map(TraceId)))]
-          const [spans, analyses, moments, labels, screeningDecisions] = yield* Effect.all(
-            [
-              spanRepository.listByTraceIds({
-                organizationId: input.organizationId,
-                projectId: input.projectId,
-                traceIds,
-                startTimeTo: input.cutoff,
-              }),
-              analysisRepository.listLatestBySessions({
-                organizationId: input.organizationId,
-                projectId: input.projectId,
-                sessionIds: input.sessionIds,
-                indexedAtTo: input.cutoff,
-              }),
-              momentRepository.listBySessions({
-                organizationId: input.organizationId,
-                projectId: input.projectId,
-                sessionIds: input.sessionIds,
-                indexedAtTo: input.cutoff,
-              }),
-              labelRepository.listBySessions({
-                organizationId: input.organizationId,
-                projectId: input.projectId,
-                sessionIds: input.sessionIds,
-                indexedAtTo: input.cutoff,
-              }),
-              screeningRepository.listLatestBySessions(input),
-            ],
-            { concurrency: "unbounded" },
-          )
-
-          const traceSessionIds = new Map(
+          const sessionByTraceId = new Map(
             sessions.flatMap((session) =>
-              session.traceIds.map((traceId) => [String(traceId), session.sessionId] as const),
+              session.traceIds.map((traceId) => [String(traceId), String(session.sessionId)] as const),
             ),
           )
-          const spansBySession = new Map<string, Span[]>()
+          const scope = { organizationId: input.organizationId, projectId: input.projectId }
+          const traceScope = { ...scope, traceIds, startTimeTo: input.cutoff }
+          const sessionScope = { ...scope, sessionIds: input.sessionIds, indexedAtTo: input.cutoff }
+
+          const [spans, generations, toolCalls, memoryEvents, analyses, moments, labels, screeningDecisions] =
+            yield* Effect.all(
+              [
+                spanRepository.listByTraceIds(traceScope),
+                spanRepository.listGenerationFactsByTraceIds({
+                  ...traceScope,
+                  contentBudget: SESSION_ASSESSMENT_CONTENT_BUDGET,
+                  sessionKeyByTraceId: sessionByTraceId,
+                }),
+                spanRepository.listToolCallFactsByTraceIds(traceScope),
+                memoryRepository.readMemoryEventsBySessionIds({
+                  ...scope,
+                  sessionIds: input.sessionIds,
+                  endTimeTo: input.cutoff,
+                }),
+                analysisRepository.listLatestBySessions(sessionScope),
+                momentRepository.listBySessions(sessionScope),
+                labelRepository.listBySessions(sessionScope),
+                screeningRepository.listLatestBySessions(input),
+              ],
+              { concurrency: "unbounded" },
+            )
+
+          const sessionsById = new Map(sessions.map((session) => [session.sessionId, session]))
           const analysesBySession = new Map<string, SessionAnalysis>(
             analyses.map((analysis) => [analysis.sessionId, analysis]),
           )
-          const momentsBySession = new Map<string, SessionSemanticMoment[]>()
-          const labelsBySession = new Map<string, SessionMomentLabel[]>()
-          const screeningBySession = new Map<string, FlaggerScreeningDecision[]>()
+          const sessionOfTrace = (traceId: string) => sessionByTraceId.get(traceId)
+          const spansBySession = groupByKey(spans, (span) => sessionOfTrace(String(span.traceId)))
+          const generationsBySession = groupByKey(generations, (fact) => sessionOfTrace(String(fact.traceId)))
+          const toolCallsBySession = groupByKey(toolCalls, (fact) => sessionOfTrace(String(fact.traceId)))
+          const memoryEventsBySession = groupByKey(memoryEvents, (event) =>
+            sessionsById.has(event.sessionId) ? event.sessionId : undefined,
+          )
+          const momentsBySession = groupByKey(moments, (moment) =>
+            isAuthoritativeGeneration(analysesBySession.get(moment.sessionId), moment.analysisHash)
+              ? moment.sessionId
+              : undefined,
+          )
+          const labelsBySession = groupByKey(labels, (label) =>
+            isAuthoritativeGeneration(analysesBySession.get(label.sessionId), label.analysisHash)
+              ? label.sessionId
+              : undefined,
+          )
+          const screeningBySession = groupByKey(screeningDecisions, (decision) =>
+            analysesBySession.get(decision.sessionId)?.analysisHash === decision.analysisHash
+              ? decision.sessionId
+              : undefined,
+          )
 
-          for (const span of spans) {
-            const sessionId = traceSessionIds.get(String(span.traceId))
-            if (sessionId) append(spansBySession, sessionId, span)
-          }
-          for (const moment of moments) {
-            const analysis = analysesBySession.get(moment.sessionId)
-            if (
-              !analysis ||
-              (analysis.analysisStatus === "analyzed" && analysis.analysisHash === moment.analysisHash)
-            ) {
-              append(momentsBySession, moment.sessionId, moment)
-            }
-          }
-          for (const label of labels) {
-            const analysis = analysesBySession.get(label.sessionId)
-            if (!analysis || (analysis.analysisStatus === "analyzed" && analysis.analysisHash === label.analysisHash)) {
-              append(labelsBySession, label.sessionId, label)
-            }
-          }
-          for (const decision of screeningDecisions) {
-            const analysis = analysesBySession.get(decision.sessionId)
-            if (analysis?.analysisHash === decision.analysisHash) {
-              append(screeningBySession, decision.sessionId, decision)
-            }
-          }
-
-          const sessionsById = new Map(sessions.map((session) => [session.sessionId, session]))
-          return input.sessionIds.flatMap((sessionId: SessionId) => {
+          return input.sessionIds.flatMap((sessionId) => {
             const session = sessionsById.get(sessionId)
             if (!session) return []
             return [
               {
                 session,
                 spans: spansBySession.get(sessionId) ?? [],
+                generations: generationsBySession.get(sessionId) ?? [],
+                toolCalls: toolCallsBySession.get(sessionId) ?? [],
+                memoryEvents: memoryEventsBySession.get(sessionId) ?? [],
                 moments: {
                   moments: momentsBySession.get(sessionId) ?? [],
                   labels: labelsBySession.get(sessionId) ?? [],

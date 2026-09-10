@@ -76,9 +76,9 @@ from metrics.
 
 ### Value and event evidence
 
-Value evidence enters the session row in the dimension's native unit. Examples include spend,
-critical-path duration, calibrated task-success probability, cache opportunity, TTFT, and token
-throughput.
+Value evidence enters the session row in its native unit. Examples include spend, input tokens,
+tool calls, memory operations, eligible sessions, critical-path duration, calibrated task-success
+probability, cache opportunity, TTFT, and token throughput.
 
 Event evidence does one of four jobs:
 
@@ -156,7 +156,9 @@ The page also reports coverage facts that the interval cannot explain by itself:
 
 - eligible and readable session counts;
 - conversation-analysis coverage;
-- priced-token and priced-span coverage;
+- Cost-family applicability and readable-unit coverage;
+- provider-reported, registry-estimated, explicitly free, and unpriced spend coverage;
+- captured generation-content and known model-context coverage;
 - critical-path reconstruction coverage;
 - per-flagger examined share and selection mechanism;
 - the share of signal evidence corrected from non-uniform sampling;
@@ -174,9 +176,10 @@ share is too small to describe the eligible population. Reader-specific floors l
 and are frozen in the scoring version.
 
 Outcome requires enough sampled Task Success verdicts and feature coverage. Cost requires enough
-sessions with a complete priced resource base. Speed requires enough sessions with a complete,
-classifiable critical path. Safety requires a propensity-correctable population examined by the
-complete Safety suite.
+eligible and readable units in every required Cost family. A missing optional metric lowers its
+reader coverage, while an unreadable required family withholds Cost. Speed requires enough sessions
+with a complete, classifiable critical path. Safety requires a propensity-correctable population
+examined by the complete Safety suite.
 
 An unmeasured dimension has no numeric value. It does not display 100, 0, or a neutral midpoint, and
 its absence prevents every other numeric score from being published.
@@ -195,8 +198,11 @@ For each cause the engine computes two quantities:
 2. **Fix gain**: the score change when that cause is removed while the other observed evidence stays
    fixed. Fix gains can overlap and do not need to add up.
 
-Cost and Speed can attribute directly in money and time before applying the dimension ratio. Outcome,
-Reliability, and Safety run the same counterfactual through their probability estimator and transform.
+Cost attributes each cause in its family's native units before translating the result into Cost
+score points. Money remains available where the evidence supports it, but a context, tool, memory,
+or recovery cause does not need a defensible price to appear. Speed attributes in time before
+applying its ratio. Outcome, Reliability, and Safety run the same counterfactual through their
+probability estimator and transform.
 
 Near-duplicate signals and observations of the same underlying event are grouped before attribution.
 Exact Shapley attribution is used for 12 or fewer grouped causes. Larger sets use deterministic,
@@ -236,6 +242,7 @@ The scoring version changes when any of these changes:
 - the Outcome calibration model or its feature contract;
 - the Task Success prompt or supported judge configuration;
 - the signal-effect estimator or pooled priors;
+- the Cost family weights, metric curves, overlap rules, residual-signal cap, or coverage floors;
 - frozen fleet references;
 - terminal failure or confirmed harm taxonomy;
 - a reader floor or applicability rule;
@@ -344,11 +351,12 @@ A session fails operationally when it cannot produce a structurally usable compl
 - a Reliability signal that establishes equivalent terminal breakage.
 
 Recovered provider and tool errors do not lower Reliability by a fractional amount. If the session
-completed, they contribute their observed retry cost and critical-path time to Cost and Speed. They
-remain visible as resilience evidence on the Reliability page.
+completed, they contribute recovery-family evidence to Cost and marginal critical-path time to
+Speed. Paid retry generation or later prompt content contributes to Spend or Context only when it
+can be attributed. They remain visible as resilience evidence on the Reliability page.
 
-A structural defect only lowers Reliability when it prevents completion. Otherwise it is avoidable
-time and possibly avoidable spend.
+A structural defect only lowers Reliability when it prevents completion. Otherwise it can contribute
+an inefficient tool-call equivalent, attributable downstream resources, and marginal time.
 
 #### Denominator and coverage
 
@@ -364,47 +372,99 @@ Sessions holds the failed runs. Tools holds tool-specific failures and malformed
 
 #### Estimand
 
-Cost measures the share of observed spend that was necessary:
+Cost measures the health of the agent's use of resources that create or predict cost. It intentionally
+does not claim that a score of 80 means 80% of spend was unavoidable. Estimated recoverable money is
+one valuable input, not the definition of the whole dimension.
+
+The first version has five stable families:
+
+| Family | Question | Canonical denominator |
+| --- | --- | --- |
+| spend | How much priced spend was recoverable? | priced usage microcents |
+| context | How much readable model input was avoidable or poorly managed? | readable input tokens |
+| tools | How often did tool use repeat, fail, or loop inefficiently? | readable tool calls |
+| memory | How often did memory work repeat or undo itself? | readable memory operations |
+| recovery | How often did completed sessions pay a recovery burden? | readable completed sessions |
+
+Each metric maps its raw value through a versioned, monotone piecewise curve. Safe values contribute
+no penalty, watch values contribute gradually, and poor values approach the metric's family cap. The
+curve yields penalized units in the family's canonical unit. Metrics can use `resourceRatio`,
+`eventRate`, or `sessionMean` to produce the raw value, but each definition states which one.
+
+Within each session, exact source atoms take precedence over estimated ones, correlated observations
+share an overlap group, and penalized units are capped by eligible units. Every canonical eligible
+atom appears once in a family's denominator even when several metrics could read it. Metric claims
+are unioned and capped rather than adding duplicate denominators. Window aggregation happens after
+that resolution:
 
 ```text
-avoidableSpend[j] = clamp(actualSpend[j] - necessarySpend[j], 0, actualSpend[j])
-Cost = 100 * (1 - sum(avoidableSpend) / sum(actualSpend))
+familyPenalty[f] = clamp(sum(uniquePenalizedUnits[f]) / sum(uniqueEligibleUnits[f]), 0, 1)
+CostPenalty = clamp(sum(familyWeight[f] * familyPenalty[f]) + residualSignalPenalty, 0, 1)
+Cost = 100 * (1 - CostPenalty)
 ```
 
-`necessarySpend` is the counterfactual spend for the same work without identified waste. The
-counterfactual is computed once per session. Independent metric deductions are never summed beyond
-the session's actual spend.
+Family weights do not redistribute when a metric is not applicable. Applicability is not failure and
+contributes zero penalized units. A family that applies but cannot be read lowers coverage and can
+withhold the dimension instead of being treated as healthy. The weights, curves, caps, overlap
+groups, and coverage floors live in one Cost scoring artifact and change only at a scoring-version
+boundary.
 
 #### Evidence
 
-| Evidence | Native contribution |
+| Evidence | Cost family and native contribution |
 | --- | --- |
-| `cost.cache_gap` | spend recoverable at the traffic's achievable cache ceiling |
-| `tools.dead_surface` | model-input cost of definitions that remained unused over their observation period |
-| `tools.repeated_call` | confirmed redundant spend or modeled incremental spend for observed repetition |
-| `tools.thrashing` | confirmed redundant spend or modeled incremental spend for an observed loop |
-| `memory.noop_rewrite` | processing cost of a write that changed nothing |
-| `memory.reverted_write` | processing cost of a write later undone in the same session |
-| `memory.repeated_zero_hit` | processing cost of repeating the same fruitless search |
-| recovered provider and tool failures | retry spend that was not needed in the successful counterfactual |
-| Cost signals | incremental spend against matched clean sessions |
+| `cost.recoverable_spend_share` | spend: measured or estimated recoverable microcents over priced spend |
+| `cost.cache_gap` | context: missed achievable cache tokens, with linked Spend evidence and a cross-family cap when pricing supports it |
+| `context.redundant_input_share` | context: attributable redundant input-token equivalents |
+| `context.avoidable_pressure` | context: known avoidable tokens consuming model context capacity |
+| `tools.dead_surface` | context: tokenized unused definitions repeatedly sent to model calls |
+| `tools.repeated_call` | tools: inefficient-call equivalents; downstream context or spend stays in its own family |
+| `tools.thrashing` | tools: loop evidence sharing source atoms with repeated calls |
+| `tools.call_failed` | recovery: completed sessions with a recovered tool incident |
+| `tools.structural_defect` | tools: malformed interaction equivalents when the session recovered |
+| memory repetition and rewrites | memory: inefficient-operation equivalents; downstream context stays in its own family |
+| recovered provider failures | recovery and, when separately attributable, spend or context resource evidence |
+| Cost signals | linked explanation of a family penalty or a capped residual association |
 
-Exact resource evidence takes precedence over modeled signal effects. The joint counterfactual uses
-signals only for residual spend not already explained by deterministic readers.
+Tool and memory spans have no inherent billable cost in the current telemetry model. Their money or
+context effect exists only when their output can be attributed to a later model input or to a paid
+retry generation. Readers must not invent direct processing spend for those operations.
+
+Raw context-window utilization is not automatically bad. `context.avoidable_pressure` penalizes only
+the share attributable to known redundant source atoms. Total prompt size and model context limit
+remain visible as explanatory context when avoidability is unknown.
+
+Exact evidence takes precedence over modeled evidence. A signal linked to an existing source atom
+explains that family penalty and adds no second penalty. Eligible unlinked Cost signals may contribute
+only through a jointly estimated residual, grouped for correlation and capped by the scoring artifact.
+A weak comparison produces "effect not yet measured."
 
 #### Denominator and coverage
 
-The ratio uses only sessions whose complete spend-bearing activity is priced or explicitly
-zero-priced. A session with missing pricing is excluded from both numerator and denominator, while
-its readable facts remain visible. Coverage reports the excluded workload.
+Coverage is reported by family and metric. Spend evidence distinguishes provider-reported,
+registry-estimated, explicitly free, missing pair, missing catalog price, and unknown legacy cost.
+Only explicitly free or local-runtime activity is known zero. Missing provider/model identity and a
+catalog that declines to price a model are not silently treated as free.
 
-If every otherwise readable session is fully known to be zero-priced, Cost is 100 because no money
-was wasted. Unknown prices never receive that treatment.
+The score assumes most or all priced values may be registry estimates. Provider-reported cost is
+useful provenance, not a requirement for a readable Spend family. The scoring artifact and UI keep
+estimated pricing visible rather than presenting it as invoice reconciliation.
+
+Cost can still use readable context, tool, memory, and recovery evidence when some dollar pricing is
+missing. The spend family is unavailable when its coverage floor fails; because family weights never
+redistribute, a required unavailable family withholds the Cost score. Exact observations from partial
+sessions remain visible in session assessment and cause lists.
+
+Content readers report whether input messages, tool definitions, tool results, or memory-derived
+content were captured. Normalized messages are not exact provider wire payloads, so attributed token
+counts are estimates with identification bounds. Project intervals bootstrap complete sessions and
+rerun the full family estimator; they do not sum item-level bounds.
 
 #### Destination
 
-Cost shows cache opportunity and money recoverable. Tools and Memory show the operations that created
-waste.
+Cost shows the family breakdown, cache opportunity, context use, pricing coverage, and recoverable
+money. Tools and Memory show the operations that created the evidence. Sessions show the concrete
+items and measurement state without presenting a per-session Cost score.
 
 ### Speed
 

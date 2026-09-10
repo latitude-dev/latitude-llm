@@ -43,6 +43,9 @@ describe("readSessionAssessmentBatch", () => {
           sessions.map((session) => ({
             session,
             spans: [],
+            generations: [],
+            toolCalls: [],
+            memoryEvents: [],
             moments: { moments: [], labels: [] },
             screeningDecisions: [],
           })),
@@ -120,6 +123,9 @@ describe("readSessionAssessmentBatch", () => {
             .map((session) => ({
               session,
               spans: [],
+              generations: [],
+              toolCalls: [],
+              memoryEvents: [],
               moments: { moments: [], labels: [] },
               screeningDecisions: [],
             })),

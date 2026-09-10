@@ -17,11 +17,14 @@
   "dependencies": {
     "@domain/conversation-intelligence": "workspace:*",
     "@domain/flaggers": "workspace:*",
+    "@domain/memories": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/signals": "workspace:*",
     "@domain/spans": "workspace:*",
+    "@repo/utils": "workspace:*",
     "effect": "catalog:",
+    "rosetta-ai": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -105,6 +105,9 @@ export namespace SessionAssessmentReaderCoverage {
             MissingTelemetry: "missingTelemetry",
             UnmappedTelemetry: "unmappedTelemetry",
             MissingPricing: "missingPricing",
+            MissingContent: "missingContent",
+            TruncatedContent: "truncatedContent",
+            UnknownModelContext: "unknownModelContext",
             CriticalPathUnavailable: "criticalPathUnavailable",
         } as const;
         export type Limitation = (typeof Limitation)[keyof typeof Limitation];
@@ -170,6 +173,9 @@ export namespace SessionAssessmentReaderCoverage {
             MissingTelemetry: "missingTelemetry",
             UnmappedTelemetry: "unmappedTelemetry",
             MissingPricing: "missingPricing",
+            MissingContent: "missingContent",
+            TruncatedContent: "truncatedContent",
+            UnknownModelContext: "unknownModelContext",
             CriticalPathUnavailable: "criticalPathUnavailable",
         } as const;
         export type Limitation = (typeof Limitation)[keyof typeof Limitation];

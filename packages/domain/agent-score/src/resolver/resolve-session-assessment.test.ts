@@ -1,8 +1,9 @@
 import { SessionId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
+import { sessionAssessmentSchema } from "../entities/session-assessment.ts"
 import type { AssessmentFinding, NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
 import { decodeSessionAssessmentCursor } from "../pagination/session-assessment-cursor.ts"
-import { resolveSessionAssessmentPage } from "./resolve-session-assessment.ts"
+import { resolveSessionAssessment, resolveSessionAssessmentPage } from "./resolve-session-assessment.ts"
 
 const finding = (index: number): AssessmentFinding => ({
   evidenceKey: `finding-${String(index).padStart(3, "0")}`,
@@ -56,5 +57,26 @@ describe("resolveSessionAssessmentPage", () => {
     expect(second.nextCursor).toBeUndefined()
     expect(second.dimensions).toEqual(first.dimensions)
     expect(second.coverage).toEqual(first.coverage)
+  })
+
+  it("still resolves a schema-valid assessment with every Cost family before Cost readers exist", () => {
+    const assessment = resolveSessionAssessment(input)
+    const parsed = sessionAssessmentSchema.parse(assessment)
+    const cost = parsed.dimensions.find((dimension) => dimension.scoreDimension === "cost")
+
+    expect(cost?.scoreDimension === "cost" && cost.families.map((family) => family.family)).toEqual([
+      "spend",
+      "context",
+      "tools",
+      "memory",
+      "recovery",
+    ])
+    expect(
+      cost?.scoreDimension === "cost" &&
+        cost.families.every((family) => family.measurementState === "unmeasured" && family.metrics.length === 0),
+    ).toBe(true)
+    expect(
+      sessionAssessmentSchema.parse(resolveSessionAssessmentPage(input, { cutoff: new Date() })).items,
+    ).toHaveLength(100)
   })
 })

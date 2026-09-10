@@ -362,6 +362,7 @@ const getSessionAssessmentOperation = sessionEndpoint({
               SessionSemanticMomentRepositoryLive,
               SessionMomentLabelRepositoryLive,
               FlaggerScreeningDecisionRepositoryLive,
+              MemoryRepositoryLive,
             ),
           ),
         ),

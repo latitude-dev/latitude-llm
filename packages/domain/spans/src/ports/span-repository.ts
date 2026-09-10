@@ -12,8 +12,22 @@ import type {
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
-import type { Operation, Span, SpanDetail } from "../entities/span.ts"
+import type {
+  CostSource,
+  Operation,
+  Span,
+  SpanDetail,
+  SpanStatusCode,
+  SpanTokenCounts,
+  ToolDefinition,
+} from "../entities/span.ts"
 import type { TraceConversationChunk } from "../entities/trace.ts"
+import type {
+  GenerationContentState,
+  GenerationModelContextState,
+  GenerationPricingState,
+} from "../helpers/classify-generation-coverage.ts"
+import type { GenerationContentBudget } from "../helpers/select-generation-content.ts"
 
 /**
  * Minimal span shape with message content — used for conversation-to-span attribution.
@@ -81,6 +95,104 @@ export interface SpanIngestionCursor {
 export interface SpanIngestedAtWindow {
   readonly spans: readonly SpanDetail[]
   readonly nextCursor: SpanIngestionCursor | null
+}
+
+/**
+ * One generation-bearing span projected to the columns the Agent Score Cost and Speed readers use.
+ *
+ * Narrower than `Span` on purpose: a scoring window covers thousands of sessions, so the read
+ * selects only these columns and carries content as a separate budgeted payload. `content` is
+ * `null` when a read budget skipped the payload — `capturedBytes` still reports that it exists, so
+ * a skipped payload reads as truncated coverage rather than as absent content.
+ *
+ * Carries no `sessionId`: subagent spans override `session_id` to their own value, so session
+ * membership is resolved from the caller's trace map, never from the row.
+ *
+ * Foreground and subagent classification uses the structural columns (`operation`, `parentSpanId`,
+ * `name`, `agentName`, `toolName`) that `buildAgentGraph` already relies on. The read deliberately
+ * never touches `attr_string`: an interaction span's attribute map can hold the whole conversation,
+ * so subscripting it across a scoring window is the OOM hazard every other session-wide span read
+ * documents. An unclassifiable structure lowers coverage instead of being guessed.
+ */
+export interface SessionGenerationFact {
+  readonly traceId: TraceId
+  readonly spanId: SpanId
+  readonly parentSpanId: string
+  readonly operation: Operation
+  readonly provider: string
+  readonly model: string
+  readonly responseModel: string
+  readonly startTime: Date
+  readonly endTime: Date
+  readonly durationNs: number
+  readonly name: string
+  readonly toolName: string
+  readonly agentName: string
+  readonly tokens: SpanTokenCounts
+  readonly costInputMicrocents: number
+  readonly costOutputMicrocents: number
+  readonly costTotalMicrocents: number
+  readonly costSource: CostSource
+  readonly costPricedProvider: string
+  readonly costPricedModel: string
+  readonly isStreaming: boolean
+  readonly timeToFirstTokenNs: number
+  readonly finishReasons: readonly string[]
+  readonly statusCode: SpanStatusCode
+  readonly statusMessage: string
+  readonly errorType: string
+  readonly capturedBytes: SessionGenerationCapturedBytes
+  readonly content: SessionGenerationContent | null
+  readonly inputContentState: GenerationContentState
+  readonly outputContentState: GenerationContentState
+  readonly toolDefinitionContentState: GenerationContentState
+  readonly pricingState: GenerationPricingState
+  readonly modelContextState: GenerationModelContextState
+  readonly modelContextLimitTokens: number | null
+}
+
+/** Stored payload sizes, so absent content stays distinguishable from a budget-skipped read. */
+export interface SessionGenerationCapturedBytes {
+  readonly inputMessages: number
+  readonly outputMessages: number
+  readonly toolDefinitions: number
+}
+
+export interface SessionGenerationContent {
+  readonly inputMessages: readonly GenAIMessage[]
+  readonly outputMessages: readonly GenAIMessage[]
+  readonly toolDefinitions: readonly ToolDefinition[]
+}
+
+/**
+ * One `execute_tool` span projected for repetition, thrashing, and failure readers.
+ *
+ * `spanId` is the result identity (one span per call/result pair) and `toolCallId` the call
+ * identity, so a repeated call keeps a stable id even when its span is re-ingested. Hashes are
+ * computed server-side over whitespace-normalized payloads: the payloads themselves never leave
+ * ClickHouse, so key-order differences can under-detect repetition but never invent it. Empty
+ * captured input or output yields an empty hash, which readers must treat as unreadable.
+ *
+ * Message position for navigation comes from the conversation-to-span mapping, not from this fact;
+ * that mapping is a display aid and is not exact later-prompt token attribution.
+ */
+export interface SessionToolCallFact {
+  readonly traceId: TraceId
+  readonly spanId: SpanId
+  readonly parentSpanId: string
+  readonly toolCallId: string
+  readonly toolName: string
+  readonly normalizedToolName: string
+  readonly inputHash: string
+  readonly outputHash: string
+  readonly inputBytes: number
+  readonly outputBytes: number
+  readonly startTime: Date
+  readonly endTime: Date
+  readonly durationNs: number
+  readonly statusCode: SpanStatusCode
+  readonly statusMessage: string
+  readonly errorType: string
 }
 
 /**
@@ -289,6 +401,33 @@ export interface SpanRepositoryShape {
     readonly windowEnd: Date
     readonly limit: number
   }): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
+
+  /**
+   * Compact generation facts for every span in `traceIds`, deduped by `(trace_id, span_id)`, with
+   * content payloads loaded only while `contentBudget` allows. Two bounded queries regardless of
+   * session count: one over the projected columns, one over the payloads that fit the budget.
+   */
+  listGenerationFactsByTraceIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+    readonly startTimeTo?: Date
+    readonly contentBudget: GenerationContentBudget
+    /** Maps a trace to the session whose budget its payloads draw from. */
+    readonly sessionKeyByTraceId: ReadonlyMap<string, string>
+  }): Effect.Effect<readonly SessionGenerationFact[], RepositoryError, ChSqlClient>
+
+  /**
+   * Compact tool-call facts for every `execute_tool` span in `traceIds`, deduped by
+   * `(trace_id, span_id)`. Payload hashes are computed in ClickHouse so tool I/O — which can hold
+   * whole files — is never transferred for a scoring window.
+   */
+  listToolCallFactsByTraceIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+    readonly startTimeTo?: Date
+  }): Effect.Effect<readonly SessionToolCallFact[], RepositoryError, ChSqlClient>
 }
 
 export type SpanListOrderField = "startTime" | "duration" | "cost"

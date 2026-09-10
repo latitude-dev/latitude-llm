@@ -1,6 +1,7 @@
 import type { TraceDetail } from "@domain/spans"
 import { describe, expect, it } from "vitest"
 import {
+  collectToolCallErrorFindings,
   detectEmptyResponseFlagger,
   detectOutputSchemaValidationFlagger,
   detectToolCallErrorsFlagger,
@@ -189,7 +190,7 @@ describe("detectToolCallErrorsFlagger", () => {
     }
   })
 
-  it("does not match expected tool 4xx responses", () => {
+  it("matches an undeclared tool 4xx response", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([
         assistantToolCall("call-grep", "grep"),
@@ -197,7 +198,28 @@ describe("detectToolCallErrorsFlagger", () => {
       ]),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result.matched).toBe(true)
+  })
+
+  it("exempts a 4xx only for the tool whose caller declared it", () => {
+    const conversation = makeTrace([
+      assistantToolCall("call-grep", "grep"),
+      toolResponse("call-grep", { ok: false, statusCode: 404, error: "No matches found" }),
+    ])
+
+    expect(
+      collectToolCallErrorFindings(conversation, {
+        byToolName: new Map([["grep", new Set([404])]]),
+        anyTool: new Set(),
+      }),
+    ).toEqual([])
+    expect(
+      collectToolCallErrorFindings(conversation, {
+        byToolName: new Map([["search_docs", new Set([404])]]),
+        anyTool: new Set(),
+      }).map((finding) => finding.kind),
+    ).toEqual(["error"])
+    expect(collectToolCallErrorFindings(conversation, { byToolName: new Map(), anyTool: new Set([404]) })).toEqual([])
   })
 
   it("still matches tool 5xx responses", () => {
