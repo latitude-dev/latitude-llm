@@ -57,6 +57,18 @@ PostHog LLM Analytics consumes native `$ai_*` events. The mapping reads **spans 
 
 Because a root span emits two events, run accounting is `events sent = spans read + root spans` — the gap is the trace count, not duplication.
 
+Each span event carries `latitude_span_url`, built by `spanUrlBuilder` in `@domain/destinations`
+(`helpers.ts`). The worker and the web "What gets sent" preview both inject the same builder so
+preview and delivery never diverge. The URL opens the trace drawer in the web app:
+
+```
+{webUrl}/projects/{projectSlug}?tab=traces&traceId={traceId}&spanId={spanId}
+```
+
+`tab=traces` is required — without it the explorer stays on the sessions tab and the deep link
+never opens the trace drawer. The mapper accepts `buildSpanUrl` as a parameter; host and project
+slug resolution stay in the caller (worker resolves slug from project id; the preview does the same).
+
 Vendor mechanics that live in the PostHog adapter (not the engine): flagging old windows as a historical migration so backfills don't trip spike detection; chunked delivery within size limits; mapping transport status to retryable vs. non-retryable; and an SSRF guard on custom hosts (https-only, public-IP resolution at request time, no redirects).
 
 **Known limit:** PostHog `phc_` keys are write-only. Delivery to a *valid key for the wrong project* succeeds and silently lands data in that other project — reachability and key acceptance are verifiable, project identity is not.
