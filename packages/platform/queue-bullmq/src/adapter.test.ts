@@ -167,4 +167,14 @@ describe("resolveFinalFailureHook", () => {
     const invocation = resolveFinalFailureHook(job({ attemptsMade: 1, opts: { attempts: 1 } }), handlers)
     expect(invocation?.context).toEqual({ attemptsMade: 1, attemptsConfigured: 1 })
   })
+
+  it("treats an UnrecoverableError as terminal even with attempts left", () => {
+    const invocation = resolveFinalFailureHook(
+      job({ attemptsMade: 1, opts: { attempts: 10 } }),
+      handlers,
+      new UnrecoverableError("object never existed at this key"),
+    )
+    expect(invocation).not.toBeNull()
+    expect(invocation?.context).toEqual({ attemptsMade: 1, attemptsConfigured: 10 })
+  })
 })

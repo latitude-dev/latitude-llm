@@ -126,10 +126,7 @@ export const createSpanIngestionWorker = ({
           Effect.catchTag("RedactionError", (error) =>
             Effect.sync(() => logger.error("Dropping batch after redaction failure; not retrying", error)),
           ),
-          // Every retry of this job reads the same fileKey — a randomUUID minted once at
-          // publish time — so "key not found" recurs identically on every attempt and never
-          // self-heals. Failing fast skips the remaining ~8.5min of exponential backoff and
-          // collapses what would be 10 duplicate Error Tracking occurrences into one.
+          // Every retry re-reads the same once-generated fileKey, so a missing object never self-heals.
           Effect.catchTag(
             "StorageError",
             (error): Effect.Effect<never, StorageError | NonRetryableTaskError> =>

@@ -182,10 +182,11 @@ export const toWorkerThrowable = (error: unknown, recordedError: Error): Error =
 export const resolveFinalFailureHook = (
   job: Job | undefined,
   handlers: AnyFinalFailureHandlers | undefined,
+  error?: unknown,
 ): FinalFailureInvocation | null => {
   if (!job || !handlers) return null
 
-  const context = failedJobContextFromJob(job)
+  const context = failedJobContextFromJob(job, error)
   if (!context || context.willRetry) return null
 
   const hook = handlers[job.name]
@@ -411,11 +412,11 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
               logIncident({
                 kind: "job_failed",
                 queue,
-                job: failedJobContextFromJob(job),
+                job: failedJobContextFromJob(job, error),
                 error: toError(error),
               })
 
-              const invocation = resolveFinalFailureHook(job, finalFailureHandlers.get(queue))
+              const invocation = resolveFinalFailureHook(job, finalFailureHandlers.get(queue), error)
               if (!invocation) return
               void Effect.runPromiseExitWith(services)(
                 invocation.hook(invocation.payload, toError(error), invocation.context),
