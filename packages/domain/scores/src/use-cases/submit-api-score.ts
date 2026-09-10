@@ -12,12 +12,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const isRepositoryError = (error: unknown): error is RepositoryError =>
   isRecord(error) && error._tag === "RepositoryError" && "cause" in error
 
-/**
- * `scores_canonical_evaluation_trace_idx` enforces one non-draft evaluation score per
- * (project, evaluation, trace). A retried or concurrent submission for the same trace loses
- * this race in Postgres, not in application code, so the violation can be nested under
- * whatever the driver wraps it in.
- */
+// scores_canonical_evaluation_trace_idx; recurses because the driver may nest the raw pg error.
 const isCanonicalEvaluationConflict = (cause: unknown): boolean => {
   if (!isRecord(cause)) return false
   if (cause.code === "23505" && cause.constraint === "scores_canonical_evaluation_trace_idx") return true
@@ -144,10 +139,7 @@ export const submitApiScoreUseCase = Effect.fn("scores.submitApiScore")(function
     return writeExit.value
   }
 
-  // A duplicate evaluation-score submission (an SDK retry, or two concurrent calls for the
-  // same trace) loses the canonical-row race in Postgres. Treat it like the internal live-evaluation
-  // path does: the request is idempotently satisfied by whichever score won, so return that score
-  // instead of surfacing a 500 for something that already succeeded.
+  // A losing race here already has a winning score in Postgres; return it instead of failing.
   const errorOption = Cause.findErrorOption(writeExit.cause)
   const isDuplicateEvaluationScore =
     parsed.source === "evaluation" &&
