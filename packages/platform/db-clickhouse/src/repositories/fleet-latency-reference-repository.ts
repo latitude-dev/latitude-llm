@@ -121,7 +121,7 @@ export const FleetLatencyReferenceRepositoryLive = Layer.effect(
         aggregate({
           // Generation rate after the first token; a call with no post-first-token span has none.
           metricExpression: `(${OUTPUT_TOKENS}) / (greatest(reinterpretAsInt64(end_time) - reinterpretAsInt64(start_time) - toInt64(time_to_first_token_ns), 1) / 1000000000)`,
-          guard: `(${OUTPUT_TOKENS}) > 0 AND reinterpretAsInt64(end_time) > reinterpretAsInt64(start_time)`,
+          guard: `(${OUTPUT_TOKENS}) > 0 AND reinterpretAsInt64(end_time) - reinterpretAsInt64(start_time) > toInt64(time_to_first_token_ns)`,
           groupOutputBucket: true,
           window: input,
         }).pipe(

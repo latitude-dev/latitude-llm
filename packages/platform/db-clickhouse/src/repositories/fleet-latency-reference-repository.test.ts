@@ -235,4 +235,19 @@ describe("FleetLatencyReferenceRepositoryLive", () => {
 
     expect(samples.map((sample) => sample.model)).not.toContain("empty-output")
   })
+
+  it("excludes calls without a positive post-first-token duration", async () => {
+    await runCh(
+      insertJsonEachRow(ch.client, "spans", [
+        spanRow({ model: "ttft-equals-duration", time_to_first_token_ns: 10_000_000_000 }),
+        spanRow({ model: "ttft-exceeds-duration", time_to_first_token_ns: 11_000_000_000 }),
+      ]),
+    )
+
+    const samples = await withRepo((repo) => repo.listThroughputSamples({ since: SINCE, until: UNTIL }))
+    const models = samples.map((sample) => sample.model)
+
+    expect(models).not.toContain("ttft-equals-duration")
+    expect(models).not.toContain("ttft-exceeds-duration")
+  })
 })
