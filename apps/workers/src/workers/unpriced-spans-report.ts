@@ -1,6 +1,6 @@
 import type { OrganizationId } from "@domain/shared"
 import type { UnpricedSpanGroup } from "@domain/spans"
-import { createLogger, recordSpanExceptionForDatadog, SpanStatusCode, trace } from "@repo/observability"
+import { createLogger, SpanStatusCode, trace } from "@repo/observability"
 import { Effect } from "effect"
 
 const logger = createLogger("unpriced-spans")
@@ -58,18 +58,28 @@ function claimReportSlot(key: string, now: number): boolean {
  * A span of its own, not the ingest span: the batch succeeded and its spans were stored, so marking
  * that span as an error would fail a healthy job and pollute the `status:error` queries used to
  * triage real ingest breakage.
+ *
+ * Sets `error.*` as plain span attributes instead of calling the shared
+ * `recordSpanExceptionForDatadog` helper: that helper also calls `span.recordException(...)`, which
+ * Datadog ingests as a second, independent Error Tracking occurrence for the same span — one that
+ * carries only the exception event's own fields, not this span's `gen_ai.*`/`latitude.*` attributes.
+ * That silently doubled every occurrence count here while stripping the provider/model context this
+ * signal exists to carry. This span is a synthetic monitoring signal, not a caught exception in a
+ * real request flow, so it doesn't need the OTel exception-event convention.
  */
 function recordUnpricedSpanIssue(group: UnpricedSpanGroup, organizationId: OrganizationId): void {
   const span = tracer.startSpan("cost.unpriced_spans")
+  const error = new UnpricedSpanError()
   span.setAttributes({
     "latitude.organization_id": organizationId,
     "latitude.project_id": group.projectId,
     "gen_ai.provider.name": group.provider,
     "gen_ai.request.model": group.model,
     "cost.unpriced_spans": group.spans,
+    "error.type": error.name,
+    "error.message": error.message,
+    "error.stack": error.stack ?? "",
   })
-  const error = new UnpricedSpanError()
-  recordSpanExceptionForDatadog(span, error)
   span.setStatus({ code: SpanStatusCode.ERROR, message: error.message })
   span.end()
 }
