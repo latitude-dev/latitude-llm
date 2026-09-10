@@ -1,7 +1,7 @@
 import { NonRetryableTaskError } from "@domain/queue"
 import { base64urlEncode } from "@repo/utils"
 import { type Job, UnrecoverableError } from "bullmq"
-import { Effect } from "effect"
+import { Context, Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
 import { buildBullMqJobOptions, resolveFinalFailureHook, toWorkerThrowable } from "./adapter.ts"
 
@@ -117,6 +117,21 @@ describe("toWorkerThrowable", () => {
     const thrown = toWorkerThrowable(error, error)
     expect(thrown).toBe(error)
     expect(thrown).not.toBeInstanceOf(UnrecoverableError)
+  })
+
+  // Guards against Effect changing what a rejected promise carries: the worker callback's
+  // `catch (error)` receives whatever `Effect.runPromiseWith` rejects with, not a hand-constructed
+  // NonRetryableTaskError — so this exercises the real rejection instead of assuming its shape.
+  it("still recognizes a NonRetryableTaskError after a real Effect.runPromiseWith rejection", async () => {
+    const error = new NonRetryableTaskError({ reason: "object never existed at this key" })
+    let caught: unknown
+    try {
+      await Effect.runPromiseWith(Context.empty())(Effect.fail(error))
+    } catch (rejection) {
+      caught = rejection
+    }
+    expect(caught).toBe(error)
+    expect(toWorkerThrowable(caught, error)).toBeInstanceOf(UnrecoverableError)
   })
 })
 
