@@ -1,9 +1,4 @@
-import {
-  baseListScoresInputSchema,
-  isFlaggerReferenceVerdict,
-  ScoreRepository,
-  scoreDraftModeSchema,
-} from "@domain/scores"
+import { baseListScoresInputSchema, ScoreRepository, scoreDraftModeSchema } from "@domain/scores"
 import { BadRequestError, cuidSchema, ProjectId, type RepositoryError, TraceId, traceIdSchema } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -44,7 +39,11 @@ export const listTraceAnnotationsUseCase = Effect.fn("annotations.listTraceAnnot
 
   const scoreRepository = yield* ScoreRepository
 
-  const page = yield* scoreRepository.listByTraceId({
+  // A flagger's positive reference verdict is a measurement, not an annotation
+  // a reviewer left, so it never joins this list. Excluded in the query rather
+  // than over the page, or a hidden verdict would spend the page budget and
+  // displace a real annotation.
+  return yield* scoreRepository.listByTraceId({
     projectId: parsed.projectId,
     traceId: parsed.traceId,
     source: "annotation",
@@ -52,11 +51,7 @@ export const listTraceAnnotationsUseCase = Effect.fn("annotations.listTraceAnnot
       limit: parsed.limit,
       offset: parsed.offset,
       draftMode: parsed.draftMode,
+      omitFlaggerReferenceVerdicts: true,
     },
   })
-
-  // A flagger's positive reference verdict is a measurement, not an annotation
-  // a reviewer left, so it never joins this list. `hasMore` stays as the
-  // repository reported it; dropping rows can only shorten the page.
-  return { ...page, items: page.items.filter((score) => !isFlaggerReferenceVerdict(score)) }
 })

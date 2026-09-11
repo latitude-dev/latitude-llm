@@ -23,6 +23,8 @@ export interface ScoreListOptions {
   readonly draftMode?: ScoreDraftMode
   /** Drop failed, non-errored evaluation runs that have no stamped signal (`signalId` is null). */
   readonly omitAbsentEvaluations?: boolean
+  /** Drop a flagger's positive reference verdict, which is a measurement rather than a reviewer's annotation. */
+  readonly omitFlaggerReferenceVerdicts?: boolean
 }
 
 export interface ScoreListPage {
