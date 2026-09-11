@@ -1,58 +1,71 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import { FlaggerCoverageRepository, type FlaggerCoverageRow, flaggerCoverageRowSchema } from "@domain/flaggers"
+import {
+  FLAGGER_NO_REFLAG_TAG,
+  FlaggerCoverageRepository,
+  type FlaggerCoverageRow,
+  flaggerCoverageRowSchema,
+} from "@domain/flaggers"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { formatCHDate, normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
 const SESSION_END_DEBOUNCE_SECONDS = 5 * 60
 
-const eligibleSessionsQuery = `
-  SELECT count() AS eligible_sessions
-  FROM (
-    SELECT
-      session_id,
-      sum(tokens_total) AS tokens_total,
-      groupUniqArrayIfMerge(models) AS models,
-      argMaxIfMerge(simulation_id) AS simulation_id,
-      if(
-        max(max_start_time) >= min(min_start_time),
-        max(max_start_time),
-        max(max_end_time)
-      ) AS last_activity_time
-    FROM sessions
+// Sessions screening can actually reach: LLM traffic that has settled, minus
+// simulations and the no-reflag telemetry a flagger's own LLM calls produce
+// (`screenSessionFlaggersUseCase` exits on those before writing any decision).
+const eligibleSessionsSubquery = `
+  SELECT
+    session_id,
+    sum(tokens_total) AS tokens_total,
+    groupUniqArrayIfMerge(models) AS models,
+    argMaxIfMerge(simulation_id) AS simulation_id,
+    groupUniqArrayArray(tags) AS tags,
+    if(
+      max(max_start_time) >= min(min_start_time),
+      max(max_start_time),
+      max(max_end_time)
+    ) AS last_activity_time
+  FROM sessions
+  WHERE organization_id = {organizationId:String}
+    AND project_id = {projectId:String}
+  GROUP BY session_id
+  HAVING last_activity_time >= {from:DateTime64(9, 'UTC')}
+    AND last_activity_time <= subtractSeconds({to:DateTime64(9, 'UTC')}, {debounceSeconds:UInt32})
+    AND (tokens_total > 0 OR length(models) > 0)
+    AND simulation_id = ''
+    AND NOT has(tags, {noReflagTag:String})
+`
+
+// The oldest eligible session screening has a decision for. Measured from session
+// activity rather than from `min(created_at)` of the decisions themselves, which
+// always lands after the sessions it covers had already settled.
+const recordingSinceQuery = `
+  SELECT
+    count() AS decided_sessions,
+    toUnixTimestamp64Milli(min(last_activity_time)) AS recording_since_ms
+  FROM (${eligibleSessionsSubquery})
+  WHERE session_id IN (
+    SELECT session_id
+    FROM flagger_screening_decisions
     WHERE organization_id = {organizationId:String}
       AND project_id = {projectId:String}
-    GROUP BY session_id
-    HAVING last_activity_time >= {from:DateTime64(9, 'UTC')}
-      AND last_activity_time <= subtractSeconds({to:DateTime64(9, 'UTC')}, {debounceSeconds:UInt32})
-      AND (tokens_total > 0 OR length(models) > 0)
-      AND simulation_id = ''
+      AND created_at <= {to:DateTime64(9, 'UTC')}
   )
+`
+
+const coverageWindowQuery = `
+  SELECT
+    countIf(last_activity_time >= {windowStart:DateTime64(9, 'UTC')}) AS eligible_sessions,
+    countIf(last_activity_time < {windowStart:DateTime64(9, 'UTC')}) AS sessions_before_recording
+  FROM (${eligibleSessionsSubquery})
 `
 
 const coverageRowsQuery = `
   WITH eligible_sessions AS (
     SELECT session_id
-    FROM (
-      SELECT
-        session_id,
-        sum(tokens_total) AS tokens_total,
-        groupUniqArrayIfMerge(models) AS models,
-        argMaxIfMerge(simulation_id) AS simulation_id,
-        if(
-          max(max_start_time) >= min(min_start_time),
-          max(max_start_time),
-          max(max_end_time)
-        ) AS last_activity_time
-      FROM sessions
-      WHERE organization_id = {organizationId:String}
-        AND project_id = {projectId:String}
-      GROUP BY session_id
-      HAVING last_activity_time >= {from:DateTime64(9, 'UTC')}
-        AND last_activity_time <= subtractSeconds({to:DateTime64(9, 'UTC')}, {debounceSeconds:UInt32})
-        AND (tokens_total > 0 OR length(models) > 0)
-        AND simulation_id = ''
-    )
+    FROM (${eligibleSessionsSubquery})
+    WHERE last_activity_time >= {windowStart:DateTime64(9, 'UTC')}
   ),
   newest_decisions AS (
     SELECT * EXCEPT generation_created_at
@@ -126,8 +139,14 @@ const coverageRowsQuery = `
   ORDER BY flagger_slug
 `
 
-interface EligibleSessionsRow {
+interface RecordingSinceRow {
+  readonly decided_sessions: string
+  readonly recording_since_ms: string
+}
+
+interface CoverageWindowRow {
   readonly eligible_sessions: string
+  readonly sessions_before_recording: string
 }
 
 interface CoverageRow {
@@ -169,7 +188,7 @@ const toCoverageRow = (row: CoverageRow, eligibleSessions: number): FlaggerCover
     positiveFindings: toCount(row.positive_findings),
     calibrationReadyFindings: toCount(row.calibration_ready_findings),
     unknownSelectionProbability: toCount(row.unknown_selection_probability),
-    missingTelemetry: Math.max(0, eligibleSessions - decidedSessions),
+    unscreenedSessions: Math.max(0, eligibleSessions - decidedSessions),
   })
 }
 
@@ -182,21 +201,51 @@ export const FlaggerCoverageRepositoryLive = Layer.effect(
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
             .query(async (client) => {
-              const queryParams = {
+              const scopeParams = {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
                 from: formatCHDate(from),
                 to: formatCHDate(to),
                 debounceSeconds: SESSION_END_DEBOUNCE_SECONDS,
+                noReflagTag: FLAGGER_NO_REFLAG_TAG,
               }
-              const [eligibleResult, coverageResult] = await Promise.all([
-                client.query({ query: eligibleSessionsQuery, query_params: queryParams, format: "JSONEachRow" }),
+
+              const recordingResult = await client.query({
+                query: recordingSinceQuery,
+                query_params: scopeParams,
+                format: "JSONEachRow",
+              })
+              const recordingRow = (await recordingResult.json<RecordingSinceRow>())[0]
+              const recordingSince =
+                recordingRow && toCount(recordingRow.decided_sessions) > 0
+                  ? new Date(Number(recordingRow.recording_since_ms))
+                  : null
+
+              // Coverage is only measurable where screening records exist, so
+              // sessions older than the oldest screened one are counted apart
+              // rather than as unscreened.
+              const windowStart = recordingSince && recordingSince > from ? recordingSince : from
+              const queryParams = { ...scopeParams, windowStart: formatCHDate(windowStart) }
+
+              const [windowResult, coverageResult] = await Promise.all([
+                client.query({ query: coverageWindowQuery, query_params: queryParams, format: "JSONEachRow" }),
                 client.query({ query: coverageRowsQuery, query_params: queryParams, format: "JSONEachRow" }),
               ])
-              const eligibleRows = await eligibleResult.json<EligibleSessionsRow>()
-              const eligibleSessions = toCount(eligibleRows[0]?.eligible_sessions ?? "0")
+              const windowRow = (await windowResult.json<CoverageWindowRow>())[0]
+              const eligibleSessions = toCount(windowRow?.eligible_sessions ?? "0")
+              const sessionsBeforeRecording = toCount(windowRow?.sessions_before_recording ?? "0")
               const rows = (await coverageResult.json<CoverageRow>()).map((row) => toCoverageRow(row, eligibleSessions))
-              return { organizationId, projectId, from, to, eligibleSessions, rows }
+
+              return {
+                organizationId,
+                projectId,
+                from: windowStart,
+                to,
+                recordingSince,
+                eligibleSessions,
+                sessionsBeforeRecording,
+                rows,
+              }
             })
             .pipe(Effect.mapError((error) => toRepositoryError(error, "FlaggerCoverageRepository.getProjectCoverage")))
         }),

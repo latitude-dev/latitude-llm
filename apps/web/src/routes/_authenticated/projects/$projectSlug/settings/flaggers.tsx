@@ -19,7 +19,7 @@ import { useDirtyGuard } from "../../../../../lib/hooks/use-dirty-guard.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { DirtyActions } from "./-components/dirty-actions.tsx"
-import { FlaggerObservationStatus } from "./-components/flagger-observation-status.tsx"
+import { type FlaggerCoverageWindow, FlaggerObservationStatus } from "./-components/flagger-observation-status.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/flaggers")({
@@ -56,6 +56,14 @@ function ProjectFlaggersSettingsPage() {
   })
   const { data: coverage } = useProjectFlaggerCoverage({ projectId: currentProject.id, ...coverageWindow })
   const coverageBySlug = new Map((coverage?.rows ?? []).map((row) => [row.flaggerSlug, row]))
+  const measuredWindow: FlaggerCoverageWindow | null = coverage
+    ? {
+        fromIso: coverage.fromIso,
+        toIso: coverage.toIso,
+        recordingSinceIso: coverage.recordingSinceIso,
+        sessionsBeforeRecording: coverage.sessionsBeforeRecording,
+      }
+    : null
 
   const flaggersById = useMemo(() => {
     const map = new Map<string, FlaggerRecord>()
@@ -281,8 +289,12 @@ function ProjectFlaggersSettingsPage() {
                                   </Text.H6>
                                 </div>
                               )}
-                              {row.viewEnabled && coverageRow ? (
-                                <FlaggerObservationStatus flaggerSlug={row.slug} coverage={coverageRow} />
+                              {row.viewEnabled && coverageRow && measuredWindow ? (
+                                <FlaggerObservationStatus
+                                  flaggerSlug={row.slug}
+                                  coverage={coverageRow}
+                                  coverageWindow={measuredWindow}
+                                />
                               ) : null}
                             </div>
                           </div>

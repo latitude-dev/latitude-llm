@@ -25,16 +25,24 @@ export const flaggerCoverageRowSchema = z.object({
   positiveFindings: coverageCountSchema,
   calibrationReadyFindings: coverageCountSchema,
   unknownSelectionProbability: coverageCountSchema,
-  missingTelemetry: coverageCountSchema,
+  unscreenedSessions: coverageCountSchema,
 })
 export type FlaggerCoverageRow = z.infer<typeof flaggerCoverageRowSchema>
 
+/**
+ * Coverage is only meaningful over the span screening records cover: `from` is the
+ * requested start clamped up to `recordingSince` (the oldest eligible session any
+ * screening decision exists for), and the sessions falling before it are reported
+ * as `sessionsBeforeRecording` instead of counting against a flagger as unscreened.
+ */
 export const flaggerCoverageReportSchema = z.object({
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
   from: z.date(),
   to: z.date(),
+  recordingSince: z.date().nullable(),
   eligibleSessions: coverageCountSchema,
+  sessionsBeforeRecording: coverageCountSchema,
   rows: z.array(flaggerCoverageRowSchema).readonly(),
 })
 export type FlaggerCoverageReport = z.infer<typeof flaggerCoverageReportSchema>
@@ -60,5 +68,5 @@ export const emptyFlaggerCoverageRow = (input: {
   positiveFindings: 0,
   calibrationReadyFindings: 0,
   unknownSelectionProbability: 0,
-  missingTelemetry: input.eligibleSessions,
+  unscreenedSessions: input.eligibleSessions,
 })
