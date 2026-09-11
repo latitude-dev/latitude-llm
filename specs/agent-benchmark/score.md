@@ -141,9 +141,11 @@ resource counterfactuals, and reference-run transforms.
 
 Empirical resampling is not the sole uncertainty method for binary endpoint dimensions. Outcome,
 Reliability, and Safety compute boundary-aware intervals for their success or failure probabilities.
-Uniformly examined populations use an exact binomial interval; non-uniform populations use a
-stratified profile-likelihood interval that preserves known selection probabilities. A propensity
-pattern that cannot support that interval leaves the dimension unmeasured.
+A uniformly examined population uses an exact Clopper-Pearson binomial interval. A population split
+across several known selection probabilities, which is what a project that changed its sampling rate
+mid-window produces, groups into sub-strata and combines each one's exact bounds; the result is
+conservative rather than a joint interval, and it is labelled as the stratified kind so it cannot
+pass for exact. A propensity pattern that supports neither leaves the dimension unmeasured.
 
 The endpoint interval remains non-degenerate when the window contains only successes, zero observed
 failures, or zero observed harms. Reliability and Safety bounds pass through the monotone `p^20` or
@@ -286,14 +288,28 @@ sessionWeight[j] = 1 / inclusionProbability[j]
 Outcome = 100 * sum(sessionWeight[j] * success[j]) / sum(sessionWeight[j])
 ```
 
-The sampled `task-failure` flagger supplies the holistic verdicts. It uses the project-configured,
-hint-aware sampling infrastructure and stores the inclusion probability before judging the session.
-The ratio estimator corrects that selection. It does not infer a probability for each unexamined
+Two strata, because they are known with different certainty.
+
+The **deterministic census** holds sessions a reader proved could not have succeeded: no delivered
+output at all, or a final generation that ended on an unreliable finish reason. These are facts
+about the session rather than judgements of it, so they carry weight one and contribute no
+successes. A session in the census leaves the sampled stratum entirely, even when the judge also
+examined it, so the sample keeps its claim to be a random draw of the sessions it represents. The
+census applies only where a task is readable: a session with no user-authored request has nothing to
+have failed, and is not applicable to Outcome rather than a failure of it.
+
+The **sampled stratum** is the `task-failure` judge's verdicts. It uses the project-configured
+sampling infrastructure and stores the inclusion probability before judging the session, so the
+ratio estimator can correct that selection. It does not infer a probability for each unexamined
 session.
 
-the task-failure judge can return success, failure, indeterminate, or not applicable. Success and failure are
-passed and failed scores. The other verdicts lower coverage and do not enter the numerator or
-denominator. Compatible deterministic task-outcome endpoints use inclusion probability one.
+The judge returns success, failure, indeterminate, or not applicable. Success and failure are passed
+and failed scores. The other verdicts lower coverage and do not enter the numerator or denominator.
+
+A verdict counts only when its stored judgment version is one the scoring version supports. The
+version names the prompt, the result schema, and the judge configuration that produced it, so a
+deployment pointing its classifier at another model forms its own population instead of pooling two
+judges under one label.
 
 #### Evidence
 
@@ -318,6 +334,11 @@ The denominator contains examined sessions whose tasks can be judged, corrected 
 inclusion probabilities. Outcome is unmeasured until compatible task-outcome verdicts cover enough of
 the eligible base to pass the versioned floor. A disabled task-failure flagger or unknown inclusion
 probability prevents publication when the remaining direct endpoints are insufficient.
+
+An unmeasured Outcome carries no number at all: no zero, no hundred, no neutral midpoint, and the
+floor it missed is named. The deterministic census alone can never publish a score, since a project
+the judge never examined would otherwise report zero on the strength of its failures being the only
+evidence anyone gathered.
 
 The first version judges the whole session. Task and goal episodes may become first-class Outcome
 units in a future scoring version; existing episode extraction remains internal evidence until then.

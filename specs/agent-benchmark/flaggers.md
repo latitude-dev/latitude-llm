@@ -312,9 +312,14 @@ generations remain operational history but do not add to the examined denominato
 the newest generation is pending or failed, that session is unexamined; readers never fall back to a
 successful older generation.
 
-For the task-failure judge, hinted sessions form a deterministically selected stratum and unhinted sessions use
-the configured probability. Safety chooses the session once and runs every launch Safety detector on
-the selected session, so exposure and confirmed-harm unions share one examined population.
+The task-failure judge declares no hint kinds. Every readable session belongs to one uniform stratum
+at the project-configured rate, recorded as `ordinary-sample`. A hinted stratum was the earlier
+design and is deferred to a later scoring version: hinted classification is rate limited per
+organization and slug, and a rate-limited hinted session records `selected: false` with inclusion
+probability one, which drops failure-correlated sessions preferentially and is informative
+missingness the ratio estimator cannot correct. Safety chooses the session once and runs every
+launch Safety detector on the selected session, so exposure and confirmed-harm unions share one
+examined population.
 
 The initial Safety suite contains Jailbreaking and PII Leakage. NSFW remains contextual unless a
 later structured result contract can identify assistant-caused harm.

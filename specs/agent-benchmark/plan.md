@@ -838,32 +838,32 @@ persistence branch, and the window arithmetic. Do not rebuild these:
 
 ### Step 7: contracts, documentation, and regeneration
 
-- [ ] **P4-29** Regenerate the generated artifacts affected by the new slug. The public flagger
+- [x] **P4-29** Regenerate the generated artifacts affected by the new slug. The public flagger
   enum in `packages/operations/src/operations/projects.ts` is derived from
   `FLAGGER_STRATEGY_SLUGS`, so OpenAPI, MCP, the TypeScript and Python SDKs, and the CLI change even
   though the session-assessment contract does not. Follow the repository's generated-artifact and
   package-version conventions.
-- [ ] **P4-30** Update [`score.md`](score.md#confidence),
+- [x] **P4-30** Update [`score.md`](score.md#confidence),
   [`flaggers.md`](flaggers.md#screening-decisions), and [`metrics.md`](metrics.md) so the hint
   stratification described there matches D1, and record the deterministic census stratum, the task
   applicability gate, and the judge-identifying version from D2, D3, and D4.
 
 ### Exit gate
 
-- [ ] **P4-31** Tests cover every task-outcome verdict, the success path writing a passed score
+- [x] **P4-31** Tests cover every task-outcome verdict, the success path writing a passed score
   without a draft or annotator call, positive-score discovery exclusion, stable selection across
   retries of the same analysis generation, judgment-version compatibility filtering, selection
   correction, zero examined sessions, the coverage floors, deterministic dominance over a
   contradicting judge verdict, issue-ranking correction, unknown joint inclusion probabilities,
   duplicate issue evidence, and single-session versus bulk parity.
-- [ ] **P4-32** Interval tests prove non-degenerate bounds with zero observed failures and with zero
+- [x] **P4-32** Interval tests prove non-degenerate bounds with zero observed failures and with zero
   observed successes, monotonicity in the observed count, and that a non-uniform stratum B reports
   its method rather than silently using the uniform path.
-- [ ] **P4-33** Inspected fixtures reconcile the task-outcome score row, its screening decision, the
+- [x] **P4-33** Inspected fixtures reconcile the task-outcome score row, its screening decision, the
   session assessment item, the project estimator input, and the issue input without assigning a
   score to the session itself.
-- [ ] **P4-34** No score snapshot, public Outcome number, route, or scheduled job ships in PR 4.
-- [ ] `pnpm typecheck` and `pnpm test` pass. Generated API artifacts are current.
+- [x] **P4-34** No score snapshot, public Outcome number, route, or scheduled job ships in PR 4.
+- [x] `pnpm typecheck` and `pnpm test` pass. Generated API artifacts are current.
 
 ### Calibration questions to close before PR 6
 

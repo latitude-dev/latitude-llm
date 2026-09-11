@@ -7,14 +7,17 @@ import { type BinomialInterval, clopperPearsonInterval } from "./binomial-interv
  * artifact before launch, kept here as named constants rather than buried in a
  * comparison so the freeze has one place to land.
  */
-export const PROVISIONAL_OUTCOME_COVERAGE_FLOORS = {
+export interface OutcomeCoverageFloors {
   /** Compatible sampled verdicts required before the rate means anything. */
-  examinedSessions: 100,
+  readonly examinedSessions: number
   /** Share of the eligible base the examined population must describe. */
-  examinedShareOfEligible: 0.05,
-} as const
+  readonly examinedShareOfEligible: number
+}
 
-export type OutcomeCoverageFloors = typeof PROVISIONAL_OUTCOME_COVERAGE_FLOORS
+export const PROVISIONAL_OUTCOME_COVERAGE_FLOORS: OutcomeCoverageFloors = {
+  examinedSessions: 100,
+  examinedShareOfEligible: 0.05,
+}
 
 export const OUTCOME_EXCLUSION_REASONS = [
   "incompatibleJudgmentVersion",
