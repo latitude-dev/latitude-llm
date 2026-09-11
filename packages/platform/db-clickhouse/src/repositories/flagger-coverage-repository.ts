@@ -11,9 +11,7 @@ import { Effect, Layer } from "effect"
 
 const SESSION_END_DEBOUNCE_SECONDS = 5 * 60
 
-// Sessions screening can actually reach: LLM traffic that has settled, minus
-// simulations and the no-reflag telemetry a flagger's own LLM calls produce
-// (`screenSessionFlaggersUseCase` exits on those before writing any decision).
+// `screenSessionFlaggersUseCase` exits on no-reflag sessions before writing any decision.
 const eligibleSessionsSubquery = `
   SELECT
     session_id,
@@ -37,9 +35,7 @@ const eligibleSessionsSubquery = `
     AND NOT has(tags, {noReflagTag:String})
 `
 
-// The oldest eligible session screening has a decision for. Measured from session
-// activity rather than from `min(created_at)` of the decisions themselves, which
-// always lands after the sessions it covers had already settled.
+// Not `min(created_at)`: decisions are written after a session settles, past the sessions they cover.
 const recordingSinceQuery = `
   SELECT
     count() AS decided_sessions,
@@ -221,9 +217,6 @@ export const FlaggerCoverageRepositoryLive = Layer.effect(
                   ? new Date(Number(recordingRow.recording_since_ms))
                   : null
 
-              // Coverage is only measurable where screening records exist, so
-              // sessions older than the oldest screened one are counted apart
-              // rather than as unscreened.
               const windowStart = recordingSince && recordingSince > from ? recordingSince : from
               const queryParams = { ...scopeParams, windowStart: formatCHDate(windowStart) }
 

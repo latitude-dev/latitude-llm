@@ -18,8 +18,6 @@ export interface FlaggerCoverageWindow {
   readonly sessionsBeforeRecording: number
 }
 
-// The measured window, not the requested one: coverage starts where the project's
-// screening records start, so a young flagger reads "3 days" rather than "28 days".
 const formatWindow = ({ fromIso, toIso }: FlaggerCoverageWindow): string => {
   const span = Math.max(0, Date.parse(toIso) - Date.parse(fromIso))
   if (span < SUB_DAY_WINDOW_MS) {

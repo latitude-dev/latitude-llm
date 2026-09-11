@@ -29,12 +29,7 @@ export const flaggerCoverageRowSchema = z.object({
 })
 export type FlaggerCoverageRow = z.infer<typeof flaggerCoverageRowSchema>
 
-/**
- * Coverage is only meaningful over the span screening records cover: `from` is the
- * requested start clamped up to `recordingSince` (the oldest eligible session any
- * screening decision exists for), and the sessions falling before it are reported
- * as `sessionsBeforeRecording` instead of counting against a flagger as unscreened.
- */
+// `from` is the requested start clamped up to `recordingSince`, so it can differ from the caller's.
 export const flaggerCoverageReportSchema = z.object({
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
