@@ -120,10 +120,28 @@ describe("taskFailureStrategy.buildPrompt", () => {
   it("keeps the opening and closing turns and says how many it dropped", () => {
     const prompt = taskFailureStrategy.buildPrompt?.(conversationOf(exchange(20)))
 
-    expect(prompt).toContain("SESSION TRANSCRIPT (16 of 40 turns; 24 middle turns omitted):")
     expect(prompt).toContain("Request number 0")
     expect(prompt).toContain("Response number 39")
-    expect(prompt).not.toContain("Request number 20")
+    // A middle assistant turn is what the window sheds.
+    expect(prompt).not.toContain("Response number 21")
+  })
+
+  // The judge scores goals, and goals come from the user. Dropping a
+  // mid-session request would let it call a session successful while the goal
+  // it never saw sat unresolved.
+  it("keeps every mid-session user turn even when the window drops the middle", () => {
+    const prompt = taskFailureStrategy.buildPrompt?.(conversationOf(exchange(20)))
+
+    expect(prompt).toContain("Request number 20")
+    expect(prompt).toContain("middle assistant turns omitted, every mid-session user turn kept")
+  })
+
+  it("bounds the mid-session user turns it carries", () => {
+    const prompt = taskFailureStrategy.buildPrompt?.(conversationOf(exchange(60)))
+    const carried = [...(prompt ?? "").matchAll(/Request number (\d+)/g)].map((match) => Number(match[1]))
+
+    expect(carried.length).toBeLessThanOrEqual(6 + 12 + 10)
+    expect(prompt).toContain("Request number 0")
   })
 
   it("asks for notApplicable when no turn carried evidence", () => {

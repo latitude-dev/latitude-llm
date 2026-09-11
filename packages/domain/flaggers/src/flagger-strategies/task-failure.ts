@@ -56,6 +56,8 @@ const TASK_FAILURE_TAIL_TURNS = 10
 const TASK_FAILURE_USER_EXCERPT_LENGTH = MAX_SNIPPET_EXCERPT_LENGTH * 2
 const TASK_FAILURE_ASSISTANT_EXCERPT_LENGTH = MAX_SNIPPET_EXCERPT_LENGTH * 4
 const TASK_FAILURE_MAX_TOOL_NAMES = 12
+/** Mid-session user turns carried past the window, so a goal stated there is still judgeable. */
+const TASK_FAILURE_MIDDLE_USER_TURNS = 12
 
 interface TranscriptTurn {
   /** Index into `allMessages`, which is what the model may cite as messageIndex. */
@@ -115,14 +117,28 @@ export const extractJudgedTranscript = (
  * Keeps the opening turns, where the goals are stated, and the closing turns,
  * where delivery either happened or did not. The middle is where a long agentic
  * session spends its tokens and where the least outcome evidence lives.
+ *
+ * Every omitted user turn is kept regardless, because the judge scores goals and
+ * the user is where goals come from. Dropping a mid-session request outright
+ * would let the judge call a session successful while the goal it never saw sat
+ * unresolved. Assistant turns are what the window is really shedding, and the
+ * delivery evidence for them is at the end.
  */
 const selectTurnsForPrompt = (
   turns: readonly TranscriptTurn[],
 ): { readonly selected: readonly TranscriptTurn[]; readonly omitted: number } => {
   if (turns.length <= TASK_FAILURE_HEAD_TURNS + TASK_FAILURE_TAIL_TURNS) return { selected: turns, omitted: 0 }
+
+  const head = turns.slice(0, TASK_FAILURE_HEAD_TURNS)
+  const tail = turns.slice(-TASK_FAILURE_TAIL_TURNS)
+  const middle = turns.slice(TASK_FAILURE_HEAD_TURNS, turns.length - TASK_FAILURE_TAIL_TURNS)
+  const middleUserTurns = middle
+    .filter((turn) => turn.role === "user" && turn.text.length > 0)
+    .slice(0, TASK_FAILURE_MIDDLE_USER_TURNS)
+
   return {
-    selected: [...turns.slice(0, TASK_FAILURE_HEAD_TURNS), ...turns.slice(-TASK_FAILURE_TAIL_TURNS)],
-    omitted: turns.length - TASK_FAILURE_HEAD_TURNS - TASK_FAILURE_TAIL_TURNS,
+    selected: [...head, ...middleUserTurns, ...tail],
+    omitted: middle.length - middleUserTurns.length,
   }
 }
 
@@ -183,7 +199,7 @@ export const taskFailureStrategy: FlaggerStrategy = {
     const { selected, omitted } = selectTurnsForPrompt(turns)
     const header =
       omitted > 0
-        ? `SESSION TRANSCRIPT (${selected.length} of ${turns.length} turns; ${omitted} middle turns omitted):`
+        ? `SESSION TRANSCRIPT (${selected.length} of ${turns.length} turns; ${omitted} middle assistant turns omitted, every mid-session user turn kept):`
         : `SESSION TRANSCRIPT (${turns.length} turns):`
 
     return [
