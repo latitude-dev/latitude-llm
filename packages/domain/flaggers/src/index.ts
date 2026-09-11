@@ -172,6 +172,7 @@ export {
   type FlaggerScreeningDecisionRepositoryShape,
 } from "./ports/flagger-screening-decision-repository.ts"
 export {
+  FLAGGER_NO_REFLAG_TAG,
   isFlaggerGeneratedTrace,
   isReflagSuppressed,
   isUserCentricReflagInapplicable,

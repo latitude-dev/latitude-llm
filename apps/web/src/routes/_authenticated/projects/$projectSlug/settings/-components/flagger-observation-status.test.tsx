@@ -2,7 +2,7 @@
 import type { FlaggerCoverageRow } from "@domain/flaggers"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
-import { FlaggerObservationStatus } from "./flagger-observation-status.tsx"
+import { type FlaggerCoverageWindow, FlaggerObservationStatus } from "./flagger-observation-status.tsx"
 
 afterEach(cleanup)
 
@@ -24,19 +24,26 @@ const coverage: FlaggerCoverageRow = {
   positiveFindings: 8,
   calibrationReadyFindings: 7,
   unknownSelectionProbability: 10,
-  missingTelemetry: 0,
+  unscreenedSessions: 0,
+}
+
+const coverageWindow: FlaggerCoverageWindow = {
+  fromIso: "2026-08-14T00:00:00.000Z",
+  toIso: "2026-09-11T00:00:00.000Z",
+  recordingSinceIso: "2026-07-01T00:00:00.000Z",
+  sessionsBeforeRecording: 0,
 }
 
 describe("FlaggerObservationStatus", () => {
   it("keeps the recent observation summary compact by default", () => {
-    render(<FlaggerObservationStatus flaggerSlug="frustration" coverage={coverage} />)
+    render(<FlaggerObservationStatus flaggerSlug="frustration" coverage={coverage} coverageWindow={coverageWindow} />)
 
     expect(screen.getByText("Observed 120 of 1,000 sessions · 28 days")).toBeDefined()
     expect(screen.queryByText("Eligible sessions")).toBeNull()
   })
 
   it("reveals the diagnostic breakdown on request", () => {
-    render(<FlaggerObservationStatus flaggerSlug="frustration" coverage={coverage} />)
+    render(<FlaggerObservationStatus flaggerSlug="frustration" coverage={coverage} coverageWindow={coverageWindow} />)
 
     fireEvent.click(screen.getByRole("button", { name: /Observed 120/ }))
 
@@ -54,10 +61,50 @@ describe("FlaggerObservationStatus", () => {
           ...coverage,
           selectionPaths: { ...coverage.selectionPaths, rateLimited: 3 },
         }}
+        coverageWindow={coverageWindow}
       />,
     )
 
     expect(screen.getByText("· Rate limited").className).toContain("text-warning-muted-foreground")
+  })
+
+  it("labels the window screening records actually cover, not the one requested", () => {
+    render(
+      <FlaggerObservationStatus
+        flaggerSlug="frustration"
+        coverage={{ ...coverage, eligibleSessions: 834, examinedSessions: 831, unscreenedSessions: 3 }}
+        coverageWindow={{
+          fromIso: "2026-09-08T00:00:00.000Z",
+          toIso: "2026-09-11T00:00:00.000Z",
+          recordingSinceIso: "2026-09-08T00:00:00.000Z",
+          sessionsBeforeRecording: 1_022,
+        }}
+      />,
+    )
+
+    expect(screen.getByText("Observed 831 of 834 sessions · 3 days")).toBeDefined()
+
+    fireEvent.click(screen.getByRole("button", { name: /Observed 831/ }))
+
+    expect(screen.getByText(/Not yet screened 3/)).toBeDefined()
+    expect(screen.getByText(/1,022 older sessions in the requested window are not counted/)).toBeDefined()
+  })
+
+  it("reports a window shorter than a day in hours", () => {
+    render(
+      <FlaggerObservationStatus
+        flaggerSlug="frustration"
+        coverage={{ ...coverage, eligibleSessions: 12, examinedSessions: 12 }}
+        coverageWindow={{
+          fromIso: "2026-09-11T00:00:00.000Z",
+          toIso: "2026-09-11T06:00:00.000Z",
+          recordingSinceIso: "2026-09-11T00:00:00.000Z",
+          sessionsBeforeRecording: 0,
+        }}
+      />,
+    )
+
+    expect(screen.getByText("Observed 12 of 12 sessions · 6 hours")).toBeDefined()
   })
 
   it("does not turn an empty project into an analytics report", () => {
@@ -65,6 +112,7 @@ describe("FlaggerObservationStatus", () => {
       <FlaggerObservationStatus
         flaggerSlug="frustration"
         coverage={{ ...coverage, eligibleSessions: 0, examinedSessions: 0, readableSessions: 0, readableShare: 0 }}
+        coverageWindow={coverageWindow}
       />,
     )
 

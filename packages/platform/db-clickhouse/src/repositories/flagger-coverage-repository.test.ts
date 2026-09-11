@@ -1,4 +1,4 @@
-import { FlaggerCoverageRepository } from "@domain/flaggers"
+import { FLAGGER_NO_REFLAG_TAG, FlaggerCoverageRepository } from "@domain/flaggers"
 import { type ChSqlClient, OrganizationId, ProjectId } from "@domain/shared"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
@@ -12,6 +12,7 @@ const projectId = ProjectId("p".repeat(24))
 const otherProjectId = ProjectId("q".repeat(24))
 const from = new Date("2026-09-01T00:00:00.000Z")
 const to = new Date("2026-09-08T00:00:00.000Z")
+const recordingSince = new Date("2026-09-07T10:00:00.000Z")
 const ch = setupTestClickHouse()
 
 const run = <A, E>(effect: Effect.Effect<A, E, FlaggerCoverageRepository | ChSqlClient>) =>
@@ -110,7 +111,15 @@ describe("FlaggerCoverageRepositoryLive", () => {
       }),
     )
 
-    expect(report).toMatchObject({ organizationId, projectId, from, to, eligibleSessions: 4 })
+    expect(report).toMatchObject({
+      organizationId,
+      projectId,
+      from: recordingSince,
+      to,
+      recordingSince,
+      eligibleSessions: 4,
+      sessionsBeforeRecording: 0,
+    })
     expect(report.rows).toEqual([
       {
         flaggerSlug: "jailbreaking",
@@ -130,7 +139,7 @@ describe("FlaggerCoverageRepositoryLive", () => {
         positiveFindings: 0,
         calibrationReadyFindings: 0,
         unknownSelectionProbability: 0,
-        missingTelemetry: 3,
+        unscreenedSessions: 3,
       },
       {
         flaggerSlug: "refusal",
@@ -150,8 +159,85 @@ describe("FlaggerCoverageRepositoryLive", () => {
         positiveFindings: 2,
         calibrationReadyFindings: 1,
         unknownSelectionProbability: 1,
-        missingTelemetry: 0,
+        unscreenedSessions: 0,
       },
     ])
+  })
+
+  it("measures coverage from the oldest screened session instead of the requested window", async () => {
+    await ch.client.insert({
+      table: "sessions",
+      values: [
+        sessionRow("screened"),
+        sessionRow("predates-screening", {
+          min_start_time: "2026-09-02 10:00:00.000000000",
+          max_start_time: "2026-09-02 10:00:00.000000000",
+          max_end_time: "2026-09-02 10:00:01.000000000",
+        }),
+      ],
+      format: "JSONEachRow",
+    })
+    await ch.client.insert({
+      table: "flagger_screening_decisions",
+      values: [decisionRow("a", "screened", { reason: "deterministic", outcome: "matched" })],
+      format: "JSONEachRow",
+    })
+
+    const report = await run(
+      Effect.gen(function* () {
+        const repository = yield* FlaggerCoverageRepository
+        return yield* repository.getProjectCoverage({ organizationId, projectId, from, to })
+      }),
+    )
+
+    expect(report).toMatchObject({
+      from: recordingSince,
+      recordingSince,
+      eligibleSessions: 1,
+      sessionsBeforeRecording: 1,
+    })
+    expect(report.rows[0]).toMatchObject({ examinedSessions: 1, unscreenedSessions: 0 })
+  })
+
+  it("keeps the requested window when the project has no screening decisions", async () => {
+    await ch.client.insert({ table: "sessions", values: [sessionRow("never-screened")], format: "JSONEachRow" })
+
+    const report = await run(
+      Effect.gen(function* () {
+        const repository = yield* FlaggerCoverageRepository
+        return yield* repository.getProjectCoverage({ organizationId, projectId, from, to })
+      }),
+    )
+
+    expect(report).toMatchObject({
+      from,
+      recordingSince: null,
+      eligibleSessions: 1,
+      sessionsBeforeRecording: 0,
+      rows: [],
+    })
+  })
+
+  it("leaves no-reflag telemetry out of the eligible denominator", async () => {
+    await ch.client.insert({
+      table: "sessions",
+      values: [sessionRow("screened"), sessionRow("reflag-suppressed", { tags: [FLAGGER_NO_REFLAG_TAG] })],
+      format: "JSONEachRow",
+    })
+    await ch.client.insert({
+      table: "flagger_screening_decisions",
+      values: [decisionRow("a", "screened", { reason: "deterministic", outcome: "matched" })],
+      format: "JSONEachRow",
+    })
+
+    const report = await run(
+      Effect.gen(function* () {
+        const repository = yield* FlaggerCoverageRepository
+        return yield* repository.getProjectCoverage({ organizationId, projectId, from, to })
+      }),
+    )
+
+    expect(report).toMatchObject({ eligibleSessions: 1, sessionsBeforeRecording: 0 })
+    expect(report.rows[0]).toMatchObject({ eligibleSessions: 1, unscreenedSessions: 0 })
   })
 })

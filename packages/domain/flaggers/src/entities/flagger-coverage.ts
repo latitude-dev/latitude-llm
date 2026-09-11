@@ -25,16 +25,19 @@ export const flaggerCoverageRowSchema = z.object({
   positiveFindings: coverageCountSchema,
   calibrationReadyFindings: coverageCountSchema,
   unknownSelectionProbability: coverageCountSchema,
-  missingTelemetry: coverageCountSchema,
+  unscreenedSessions: coverageCountSchema,
 })
 export type FlaggerCoverageRow = z.infer<typeof flaggerCoverageRowSchema>
 
+// `from` is the requested start clamped up to `recordingSince`, so it can differ from the caller's.
 export const flaggerCoverageReportSchema = z.object({
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
   from: z.date(),
   to: z.date(),
+  recordingSince: z.date().nullable(),
   eligibleSessions: coverageCountSchema,
+  sessionsBeforeRecording: coverageCountSchema,
   rows: z.array(flaggerCoverageRowSchema).readonly(),
 })
 export type FlaggerCoverageReport = z.infer<typeof flaggerCoverageReportSchema>
@@ -60,5 +63,5 @@ export const emptyFlaggerCoverageRow = (input: {
   positiveFindings: 0,
   calibrationReadyFindings: 0,
   unknownSelectionProbability: 0,
-  missingTelemetry: input.eligibleSessions,
+  unscreenedSessions: input.eligibleSessions,
 })
