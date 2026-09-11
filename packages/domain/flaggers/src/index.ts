@@ -68,6 +68,14 @@ export {
   flaggerScreeningSelectionSchema,
 } from "./entities/flagger-screening-decision.ts"
 export {
+  isScoringTaskSuccessVerdict,
+  TASK_SUCCESS_VERDICTS,
+  type TaskSuccessVerdict,
+  type TaskSuccessVerdictKind,
+  taskSuccessVerdictKindSchema,
+  taskSuccessVerdictSchema,
+} from "./entities/task-success-verdict.ts"
+export {
   DETERMINISTIC_FLAGGER_INSTRUCTIONS,
   FLAGGER_DISPLAY,
   type FlaggerDisplay,
@@ -105,6 +113,7 @@ export {
   type SuspiciousSnippet,
   scoreRefusalLikelihood,
   suppressorSlug,
+  taskSuccessStrategy,
   toolCallErrorsStrategy,
   trashingStrategy,
   truncateExcerpt,

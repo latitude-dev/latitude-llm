@@ -128,4 +128,12 @@ export const FLAGGER_DISPLAY: Record<FlaggerSlug, FlaggerDisplay> = {
     mode: "deterministic",
     suppressedBy: [],
   },
+  "task-success": {
+    name: "Task Success",
+    description: "Whether the agent resolved every material goal the user still had at the end",
+    instructions:
+      "Use this flagger when the session ended with a material user goal unresolved, wrongly delivered, or abandoned. Do not use it for tone or formatting preferences, for goals the user withdrew or replaced, for correct refusals, for work blocked by access the user never granted, or for sessions with no user-authored task.",
+    mode: "llm",
+    suppressedBy: [],
+  },
 }

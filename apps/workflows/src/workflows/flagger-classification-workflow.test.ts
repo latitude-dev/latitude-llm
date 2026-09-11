@@ -7,6 +7,7 @@ const FLAGGER_TRACE_ID = "f".repeat(32)
 const { mockActivities } = vi.hoisted(() => {
   const matched = {
     matched: true as const,
+    outcome: "matched" as const,
     feedback: "The assistant refused a benign request.",
     messageIndex: 1,
     flaggerTraceId: "f".repeat(32),
@@ -83,6 +84,7 @@ describe("flaggerClassificationWorkflow", () => {
   it("omits the trace when the classification carried none", async () => {
     mockActivities.classifySessionFlagger.mockImplementationOnce(async () => ({
       matched: true,
+      outcome: "matched" as const,
       feedback: "The assistant refused a benign request.",
       messageIndex: 1,
       contentHash: "a".repeat(64),

@@ -23,6 +23,7 @@ import {
   FLAGGER_PROMPT_MAX_HINTS,
 } from "../constants.ts"
 import type { FlaggerConversation } from "../conversation.ts"
+import { TASK_SUCCESS_VERDICTS, type TaskSuccessVerdictKind } from "../entities/task-success-verdict.ts"
 import { getFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 import {
   EXPLICIT_PROFANITY_PATTERN_SOURCE,
@@ -42,6 +43,13 @@ export interface RunFlaggerResult {
   readonly classificationOutcome?: "indeterminate" | undefined
   /** Latitude trace of the classification generation behind this decision, matched or not; absent for uncaptured and cached calls. */
   readonly flaggerTraceId?: string | undefined
+  /**
+   * Holistic verdict, present only for verdict-shaped flaggers. `matched`
+   * stays authoritative for the annotation path (`failure` is the only verdict
+   * that writes a negative annotation), so callers that predate the verdict
+   * contract keep behaving correctly on all four verdicts.
+   */
+  readonly verdict?: TaskSuccessVerdictKind | undefined
 }
 
 /**
@@ -136,11 +144,42 @@ const flaggerOutputSchema = z
     }
   })
 
+// Generation schema for verdict-shaped flaggers. Deliberately a flat object
+// with one `explanation` slot rather than the domain's discriminated union:
+// Bedrock's structured-output subset rejects `oneOf`, and two nullable
+// explanation fields would let a t0 decoder satisfy the schema by filling
+// neither. `parseTaskSuccessOutput` maps the flat shape back onto the union.
+const providerTaskSuccessOutputFields = {
+  verdict: z.enum(TASK_SUCCESS_VERDICTS),
+  explanation: z.string().min(1),
+}
+
+export const buildProviderTaskSuccessOutputSchema = (messageCount: number) => {
+  const usable = Math.min(Math.max(messageCount, 0), FLAGGER_MESSAGE_INDEX_ENUM_LIMIT)
+  if (usable === 0) return z.object(providerTaskSuccessOutputFields)
+
+  const indices = Array.from({ length: usable }, (_, index) => String(index)) as [string, ...string[]]
+  return z.object({ ...providerTaskSuccessOutputFields, messageIndex: z.enum(indices).optional() })
+}
+
+const taskSuccessOutputSchema = z.object({
+  verdict: z.enum(TASK_SUCCESS_VERDICTS),
+  explanation: z.string().min(1),
+  messageIndex: z.string().regex(/^\d+$/).optional(),
+})
+
 const FLAGGER_OUTPUT_CONTRACT = `
 Structured output contract:
 - Set matched=false when the trace does not belong to this flagger; in that case feedback must be null.
 - Set matched=true only when the trace belongs to this flagger; in that case feedback is required.
 - For matched=true, feedback must be the final human-readable annotation: one or two short sentences (under 300 characters) describing the issue and concrete evidence.
+- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be a quoted integer string naming an existing transcript line, e.g. "0" or "12"; pick one of the offered indices, and never output it as a JSON number, decimal, exponent, list, or range.
+`.trim()
+
+const TASK_SUCCESS_OUTPUT_CONTRACT = `
+Structured output contract:
+- Set verdict to exactly one of: success, failure, indeterminate, notApplicable.
+- explanation is always required. For success and failure it is the human-readable judgement shown to the user: one or two short sentences (under 300 characters) naming the goal and what happened to it. For indeterminate and notApplicable it states why no verdict could be reached.
 - Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be a quoted integer string naming an existing transcript line, e.g. "0" or "12"; pick one of the offered indices, and never output it as a JSON number, decimal, exponent, list, or range.
 `.trim()
 
@@ -796,7 +835,9 @@ const buildClassificationSystemPrompt = (strategy: FlaggerStrategy, conversation
     ? `${EVALUATED_TRACE_NESTED_CONTENT_GUIDANCE}\n${EVALUATED_TRACE_ASSISTANT_ONLY_GUIDANCE}`
     : EVALUATED_TRACE_NESTED_CONTENT_GUIDANCE
 
-  return `${strategy.buildSystemPrompt!(conversation)}\n\n${guidance}\n\n${FLAGGER_OUTPUT_CONTRACT}`
+  const contract = strategy.verdictContract === "taskSuccess" ? TASK_SUCCESS_OUTPUT_CONTRACT : FLAGGER_OUTPUT_CONTRACT
+
+  return `${strategy.buildSystemPrompt!(conversation)}\n\n${guidance}\n\n${contract}`
 }
 
 function renderAssistantResponsesForReview(conversation: FlaggerConversation): string {
@@ -906,6 +947,61 @@ const parseFlaggerOutput = (input: unknown, flaggerTraceId: string | undefined):
   })
 }
 
+const indeterminateVerdict = (flaggerTraceId?: string): RunFlaggerResult => ({
+  ...(flaggerTraceId !== undefined ? { flaggerTraceId } : {}),
+  matched: false,
+  verdict: "indeterminate",
+  classificationOutcome: "indeterminate",
+})
+
+/**
+ * Maps the flat generation output back onto the four-verdict contract.
+ *
+ * A verdict the schema could not have produced, or an empty explanation, is a
+ * contract violation rather than a judgement, so it becomes indeterminate: the
+ * session stays unexamined instead of counting as a success nobody judged.
+ * An anchor outside the transcript is dropped on its own, because losing the
+ * evidence pointer is cheaper than discarding the verdict behind it.
+ */
+const parseTaskSuccessOutput = (
+  input: unknown,
+  flaggerTraceId: string | undefined,
+  conversation: FlaggerConversation,
+): Effect.Effect<RunFlaggerResult> => {
+  const parsed = taskSuccessOutputSchema.safeParse(input)
+  if (!parsed.success) {
+    return Effect.annotateCurrentSpan("flagger.malformedClassifierOutput", true).pipe(
+      Effect.as(indeterminateVerdict(flaggerTraceId)),
+    )
+  }
+
+  const verdict = parsed.data.verdict
+  const explanation = parsed.data.explanation.trim()
+  if (!explanation) {
+    return Effect.annotateCurrentSpan("flagger.malformedClassifierOutput", true).pipe(
+      Effect.as(indeterminateVerdict(flaggerTraceId)),
+    )
+  }
+
+  if (verdict === "indeterminate" || verdict === "notApplicable") {
+    return Effect.succeed({ flaggerTraceId, matched: false, verdict, feedback: explanation })
+  }
+
+  const parsedIndex = parseMessageIndex(parsed.data.messageIndex)
+  const messageIndex =
+    parsedIndex !== undefined && parsedIndex < conversation.allMessages.length ? parsedIndex : undefined
+
+  return Effect.succeed({
+    flaggerTraceId,
+    // Only `failure` writes a negative annotation, so it is the only verdict
+    // that enters the shared matched path: review, draft, discovery.
+    matched: verdict === "failure",
+    verdict,
+    feedback: explanation,
+    ...(messageIndex !== undefined ? { messageIndex } : {}),
+  })
+}
+
 // The Vercel AI SDK raises `NoObjectGeneratedError` / `NoOutputGeneratedError`
 // when the model returns output that does not materialize as the requested schema,
 // `AI_APICallError` with a "prompt is too long" message when the trace evidence
@@ -935,9 +1031,12 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
   input: ClassifyConversationForFlaggerInput,
 ) {
   const strategy = input.strategyOverride ?? getFlaggerStrategy(input.flaggerSlug)
+  const verdictShaped = strategy?.verdictContract === "taskSuccess"
+  const unexamined = (): RunFlaggerResult =>
+    verdictShaped ? indeterminateVerdict() : { matched: false, classificationOutcome: "indeterminate" }
 
   if (!strategy || !isLlmCapableStrategy(strategy) || !strategy.hasRequiredContext(input.conversation)) {
-    return { matched: false, classificationOutcome: "indeterminate" } satisfies RunFlaggerResult
+    return unexamined()
   }
 
   const ai = yield* AI
@@ -954,11 +1053,16 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
   if (!inspectedAgentContext.available) {
     yield* Effect.annotateCurrentSpan("flagger.skipped", "missing-inspected-agent-context")
     yield* Effect.annotateCurrentSpan("flagger.inspectedAgentContextReason", inspectedAgentContext.reason)
-    return { matched: false, classificationOutcome: "indeterminate" } satisfies RunFlaggerResult
+    return unexamined()
   }
 
   const classificationSystemPrompt = buildClassificationSystemPrompt(strategy, input.conversation)
   const classificationPrompt = buildFlaggerPrompt(strategy, input.conversation, inspectedAgentContext.text, input.hints)
+
+  const messageCount = input.conversation.allMessages.length
+  const outputSchema: z.ZodType<unknown> = verdictShaped
+    ? buildProviderTaskSuccessOutputSchema(messageCount)
+    : buildProviderFlaggerOutputSchema(messageCount)
 
   const flaggerModelConfig = yield* resolveGenerationConfig("FLAGGER_CLASSIFIER", FLAGGER_DEFAULT_CLASSIFIER_MODEL)
   const decisions = yield* ai
@@ -966,7 +1070,7 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
       ...flaggerModelConfig,
       system: classificationSystemPrompt,
       prompt: classificationPrompt,
-      schema: buildProviderFlaggerOutputSchema(input.conversation.allMessages.length),
+      schema: outputSchema,
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
         project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
@@ -980,13 +1084,17 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
       },
     })
     .pipe(
-      Effect.flatMap((result) => parseFlaggerOutput(result.object, result.traceId)),
+      Effect.flatMap((result) =>
+        verdictShaped
+          ? parseTaskSuccessOutput(result.object, result.traceId, input.conversation)
+          : parseFlaggerOutput(result.object, result.traceId),
+      ),
       Effect.catchIf(
         (error): error is AIError => error instanceof AIError && isUnclassifiableModelFailureCause(error.cause),
         () =>
           Effect.gen(function* () {
             yield* Effect.annotateCurrentSpan("flagger.flaggerSchemaMismatch", true)
-            return { matched: false, classificationOutcome: "indeterminate" } satisfies RunFlaggerResult
+            return unexamined()
           }),
       ),
     )
@@ -1042,6 +1150,10 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
 
   if (!review.annotationMakesSense) {
     yield* Effect.annotateCurrentSpan("flagger.annotationReviewRejected", true)
+    // A rejected failure annotation is not a success: the reviewer only says
+    // the proposed judgement does not hold up on the evidence. Leaving the
+    // session unexamined is the honest result.
+    if (verdictShaped) return indeterminateVerdict(decisions.flaggerTraceId)
     const result: RunFlaggerResult = {
       matched: false,
       ...("classificationOutcome" in review ? { classificationOutcome: review.classificationOutcome } : {}),

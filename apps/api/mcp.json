@@ -826,7 +826,8 @@
                 "tool-call-errors",
                 "output-schema-validation",
                 "empty-response",
-                "low-cache-hit-rate"
+                "low-cache-hit-rate",
+                "task-success"
               ]
             },
             "additionalProperties": {

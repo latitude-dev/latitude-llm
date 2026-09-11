@@ -154,3 +154,100 @@ describe("classifySessionFlaggerUseCase gating", () => {
     expect(result).toEqual({ matched: false, outcome: "notApplicable" })
   })
 })
+
+describe("classifySessionFlaggerUseCase task-success verdicts", () => {
+  const SESSION = makeSessionDetail(
+    [
+      user("Cancel my subscription and confirm the last billing date."),
+      assistant("Cancelled. Your last billing date was 3 March."),
+    ],
+    { systemInstructions: [{ type: "text", content: "You are a billing support agent." }] },
+  )
+
+  const classify = (classification: unknown) => {
+    const { repository: sessionRepo } = createFakeSessionRepository({
+      findBySessionId: () => Effect.succeed(SESSION),
+    })
+    const { repository: spanRepo } = createFakeSpanRepository({
+      findLatestOutputTraceId: () => Effect.die("spans must not be queried for single-trace sessions"),
+    })
+    const { repository: flaggerRepo } = createFakeFlaggerRepository([], {
+      findByProjectAndSlug: () =>
+        Effect.succeed({
+          id: FlaggerId(generateId()),
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          slug: "task-success",
+          enabled: true,
+          sampling: 10,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as Flagger),
+    })
+    const { layer: aiLayer } = createFakeAI({
+      generate: <T>(input: { readonly system?: string }) =>
+        Effect.succeed({
+          object: ((input.system?.includes("adversarial quality reviewer") ?? false)
+            ? { annotationMakesSense: true }
+            : classification) as T,
+          tokens: 20,
+          duration: 90_000_000,
+        }),
+    })
+
+    return Effect.runPromise(
+      classifySessionFlaggerUseCase({ ...INPUT, flaggerSlug: "task-success" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(SessionRepository, sessionRepo),
+            Layer.succeed(SpanRepository, spanRepo),
+            Layer.succeed(FlaggerRepository, flaggerRepo),
+            Layer.succeed(CacheStore, {
+              get: () => Effect.succeed(null),
+              set: () => Effect.void,
+              delete: () => Effect.void,
+            }),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
+      ),
+    )
+  }
+
+  it("carries persistence anchors on success even though it writes no annotation", async () => {
+    const result = await classify({
+      verdict: "success",
+      explanation: "The subscription was cancelled and the billing date confirmed.",
+      messageIndex: "1",
+    })
+
+    expect(result).toMatchObject({
+      matched: false,
+      outcome: "success",
+      feedback: "The subscription was cancelled and the billing date confirmed.",
+      messageIndex: 1,
+      simulationId: null,
+    })
+    expect(result).toHaveProperty("contentHash", expect.any(String))
+    expect(result).toHaveProperty("latestTraceId", expect.any(String))
+  })
+
+  it("reports failure as a match so the annotation path stays unchanged", async () => {
+    const result = await classify({
+      verdict: "failure",
+      explanation: "The cancellation never happened and the user asked twice.",
+      messageIndex: "1",
+    })
+
+    expect(result).toMatchObject({ matched: true, outcome: "failure" })
+    expect(result).toHaveProperty("contentHash", expect.any(String))
+  })
+
+  it.each(["indeterminate", "notApplicable"])("keeps %s free of persistence anchors", async (verdict) => {
+    const result = await classify({ verdict, explanation: "Nothing to judge here." })
+
+    expect(result).toEqual({ matched: false, outcome: verdict })
+  })
+})

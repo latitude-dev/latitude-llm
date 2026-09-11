@@ -27,7 +27,10 @@ data definitions live in the other benchmark specifications:
 | 6. Agent Score benchmark | the five proven estimators become snapshots and a project benchmark | 1 through 5 |
 
 PRs 4 and 5 can run in parallel after PR 3. They share a small additive structured-flagger-result
-contract, so the second branch to merge must rebase before regenerating shared API artifacts.
+contract: both widen `RunFlaggerResult` and `ClassifySessionFlaggerResult` so a non-negative
+classifier outcome can carry feedback and anchors, and both add a slug to `FLAGGER_STRATEGY_SLUGS`,
+which is a public enum. The second branch to merge must rebase before regenerating shared API
+artifacts.
 
 PRs 1 through 5 each ship a user-facing feature without requiring the benchmark page. PR 6 does not
 introduce new evidence semantics. It composes the behavior already exercised by those features.
@@ -564,9 +567,10 @@ performance validation; PR 6 publishes the benchmark and snapshots.
 
 ## PR 4: Outcome intelligence
 
-**Product result**: the session Scores panel shows successful Task Success judgments under positive
-evidence and failed judgments under needs attention. PR 4 also provides the window estimator and
-issue inputs that PR 6 needs for a project Outcome score.
+**Product result**: the session Scores panel shows a Task Success verdict for every judged session,
+success under positive evidence and failure under needs attention, with the judge's feedback and
+evidence anchor. PR 4 also provides the window estimator and issue inputs that PR 6 needs for a
+project Outcome score.
 
 ### Scope boundary
 
@@ -575,45 +579,259 @@ It does not infer a probability for each unexamined session. PR 4 does not train
 add hierarchical signal effects, or change Behaviors. Outcome signals remain project issues and
 session evidence, but they do not apply a second deduction on top of Task Success failures.
 
-### Task Success flagger
+PR 4 publishes no score. The estimator and the issue inputs are pure domain use-cases with tests, in
+the same position `runCostSpeedShadow` holds after PR 3: no route, no snapshot, no public operation,
+no scheduled job.
 
-- [ ] **P4-1** Add the configurable `task-success` LLM-as-judge flagger and holistic verdict contract
-  from [`flaggers.md`](flaggers.md#task-success).
-- [ ] **P4-2** Extend the flagger workflow to persist passed scores for success, failed scores for
-  failure, and coverage-only decisions for indeterminate and not-applicable results. Store the
-  judgment version and inclusion probability used for each decision.
-- [ ] **P4-3** Publish failed Task Success scores to normal signal discovery while preventing passed
-  scores from creating signals.
-- [ ] **P4-4** Store selection probabilities before classification and preserve hinted, sampled,
-  skipped, rate-limited, and errored outcomes.
+### What PRs 1 through 3 already built
 
-### Session and project evidence
+The consumption side of Task Success is already wired. PR 4 supplies the missing producer, the
+persistence branch, and the window arithmetic. Do not rebuild these:
 
-- [ ] **P4-5** Add Task Success judgments to the shared session-assessment sources and resolver.
-  Render success under positive evidence and failure under needs attention with the judgment's
-  feedback and evidence anchor. Omit indeterminate and not-applicable decisions from both lists and
-  expose them through coverage.
-- [ ] **P4-6** Add the selection-corrected project Outcome estimator from
-  [`score.md`](score.md#outcome). Return the 0 through 100 success rate, interval, examined count,
-  eligible count, and coverage state without publishing an Agent Score snapshot.
-- [ ] **P4-7** Produce bounded project issue inputs from failed Task Success scores, deterministic
-  Outcome findings, and eligible Outcome signal occurrences. Deduplicate shared source evidence and
-  report selection-corrected issue reach and failed reach, plus raw examined overlap for coverage.
-  Rank by corrected failed reach and leave rows unranked when a required joint inclusion probability
-  is unknown. Issue counts explain the score but do not create extra points.
-- [ ] **P4-8** Extend the session-assessment operation, generated contracts, and Scores UI only as
-  needed for the new Outcome items and coverage. Defer Behaviors and standalone Signal-detail
-  analytics until after the initial Agent Score launch.
+| Already in place | Location |
+| --- | --- |
+| `task-success` static signal evidence role `outcome/taskOutcome` | `packages/domain/signals/src/score-evidence.ts` |
+| `task-success` reader dimension mapping for coverage | `packages/domain/agent-score/src/resolver/build-assessment-coverage.ts` |
+| Score to `taskOutcome` finding with `verdict` from `score.passed` and `metricId: "sessions.task_success"` | `packages/domain/agent-score/src/readers/read-session-assessment-sources.ts` |
+| `taskOutcome` effect, positive/negative polarity, high impact level | `packages/domain/agent-score/src/resolver/resolve-assessment-findings.ts` |
+| Outcome dimension summary carrying the resolved verdict | `packages/domain/agent-score/src/resolver/build-dimension-summaries.ts` |
+| Scores panel rendering of "Task outcome: Succeeded / Failed" in the positive and attention slices | `session-detail-drawer/session-assessment.tsx` |
+| `taskOutcome` impact and Outcome summary in OpenAPI, MCP, and both SDKs | `packages/operations/src/openapi/entities/session-assessment.ts` |
+| `success`, `failure`, `indeterminate`, `notApplicable` screening outcomes in the enum and the ClickHouse table | `packages/domain/flaggers/src/constants.ts`, migration `00057` |
+| Screening coverage mapping: `indeterminate` to `executionFailed`, absent outcome to `pending`, `notApplicable` to not applicable | `packages/domain/flaggers/src/entities/flagger-screening-coverage.ts` |
+| Passed annotation scores already rejected by signal discovery | `packages/domain/signals/src/use-cases/check-eligibility.ts` |
+| Deterministic no-output already emitting a `taskOutcome: failure` effect | `resolve-assessment-findings.ts` (`terminalOutcomeEffects`) |
+| Eligible-session definition, newest-generation decision collapse, inclusion-probability counters in SQL | `packages/platform/db-clickhouse/src/repositories/flagger-coverage-repository.ts` |
+| Postgres judgment reads split from ClickHouse telemetry reads for bulk paths | `SessionAssessmentBulkJudgmentSource` in `packages/domain/agent-score/src/ports/session-assessment-sources.ts` |
+
+### Decisions fixed for this PR
+
+- **D1. One uniform sampled stratum.** `task-success` declares no `hintKinds`. Every readable
+  session enters one stratum at the project-configured rate and records `reason: "ordinary-sample"`
+  with `inclusionProbability = sampling / 100`. The hint-stratified design in
+  [`score.md`](score.md#confidence) and [`flaggers.md`](flaggers.md#screening-decisions) is deferred
+  to a later scoring version, for two reasons. Hinted classification is rate limited per
+  organization and slug, and a rate-limited hinted session is recorded as selected `false` with
+  inclusion probability 1, which drops failure-correlated sessions preferentially and is
+  informative missingness the estimator cannot correct. Uniform selection also makes the interval an
+  exact binomial rather than a stratified profile likelihood. Both specification documents are
+  updated in this PR to match.
+- **D2. Deterministic endpoints form a census stratum and dominate the judge.** A session with a
+  hard deterministic Outcome endpoint is a certain failure with inclusion probability 1 and is
+  removed from the sampled stratum even when the judge also examined it. This keeps the sampled
+  stratum a genuine random sample of the sessions it represents, and it satisfies the one-verdict
+  invariant: a session that delivered no usable output cannot have succeeded. The launch
+  deterministic endpoints are `sessions.no_output` with finding kind `blank` or
+  `confirmedUnusablePattern`, and `spans.finish_failure` on the final generation paired with output
+  damage. `unconfirmedPattern` is not an endpoint.
+- **D3. Task applicability gates the deterministic endpoints.** A deterministic endpoint counts only
+  when the session contains a readable user task, defined as at least one non-empty user text
+  message in `SessionDetail.inputMessages`. Sessions with no readable task are not applicable and
+  lower coverage.
+- **D4. The judgment version identifies the judge.** Persisted Task Success scores carry
+  `scoringArtifactVersion = "task-success-v1:<provider>/<model>"` built from the resolved
+  `FLAGGER_CLASSIFIER` generation config, falling back to `task-success-v1:h:<16 hex>` when the
+  readable form exceeds `FLAGGER_SCORING_ARTIFACT_VERSION_MAX_LENGTH`. A substituted judge model
+  therefore produces a distinct version, as required by the launch artifacts. The estimator takes an
+  explicit supported-version list and excludes anything else as a coverage limitation. Freezing that
+  list belongs to PR 6.
+- **D5. Generation anchoring uses the analysis hash, in Postgres.** The Task Success score stores
+  `analysisHash` in its annotation metadata. The window reader selects the newest decision
+  generation per session from ClickHouse and accepts only the score whose `analysisHash` matches it.
+  A newest generation that is pending, failed, or indeterminate leaves the session unexamined; the
+  reader never falls back to an older generation. No ClickHouse migration is needed: score metadata
+  is jsonb, verdicts are read from Postgres through `scores_session_lookup_idx` for the bounded
+  decided-session list, and that split already exists for bulk assessment reads. The existing
+  ClickHouse `flagger_slug` and `scoring_artifact_version` columns keep working for coverage
+  queries.
+- **D6. A new slug is inert on existing projects, so it is backfilled.** `screenOneStrategy` drops a
+  slug with no `flaggers` row as `missing-flagger`, and rows are only created by onboarding, seeds,
+  or an explicit toggle. Without a backfill, Outcome would be permanently unmeasured on every
+  project that already exists. PR 4 ships an idempotent maintenance script that provisions every
+  registered slug for every organization and project. Lazy `findOrCreateFlagger` inside screening is
+  rejected: it puts a write on the screening hot path and needs a cache eviction on every pass for
+  an unprovisioned project.
+- **D7. Task Success ships enabled at the standard default sampling.** It reuses
+  `FLAGGER_DEFAULT_ENABLED` and `FLAGGER_DEFAULT_SAMPLING`. Ten LLM flaggers already sample at 10%
+  each, so this is roughly a tenth more flagger spend, not a new order of magnitude. Unlike the
+  others it has no deterministic prefilter, so it runs on the whole sampled share. The provisional
+  Outcome coverage floor is 100 compatible verdicts and 5% of the eligible base; both numbers are
+  calibration candidates frozen in PR 6, not constants buried in a reader.
+- **D8. No new session-assessment contract surface.** Incompatible judgment version and insufficient
+  examined population are window concerns, not session concerns, so `SessionCoverageLimitation`
+  gains no member and the generated contracts do not change shape. Adding the slug still changes the
+  public flagger-slug enum, so generated artifacts are regenerated.
+
+### Step 1: the Task Success verdict contract
+
+- [x] **P4-1** Register the slug. Add `task-success` to `FLAGGER_STRATEGY_SLUGS`, the strategy
+  registry, and `FLAGGER_DISPLAY` with name "Task Success" and `mode: "llm"`. Keep
+  `display-sync.test.ts` and `registry.test.ts` green.
+- [x] **P4-2** Define the holistic verdict contract in `@domain/flaggers` as a Zod-first
+  discriminated union over `success`, `failure`, `indeterminate`, and `notApplicable`, matching
+  [`flaggers.md`](flaggers.md#task-success). `success` and `failure` carry feedback and an optional
+  `messageIndex`; the other two carry a reason and never produce a score.
+- [x] **P4-3** Build the generation schema per call. Reuse the `messageIndex` enum bound from
+  `buildProviderFlaggerOutputSchema`: a Bedrock-constrained decoder runs away on open-ended numeric
+  fields, so the index must stay a finite enum of the transcript's real indices. Keep a lenient
+  parsing schema separate from the strict generation schema, as the existing flagger output does.
+- [x] **P4-4** Write the judge prompt. It asks whether the agent resolved all material user goals
+  that remained active at the end of the session, judged holistically rather than per episode. It
+  returns `notApplicable` when the transcript contains no user-authored task, and `indeterminate`
+  when the evidence cannot support either verdict. Set `classifiesAssistantResponseOnly: false` so
+  the judge reads user messages as the source of goals and so nested-sample telemetry is skipped.
+- [x] **P4-5** Mark the strategy verdict-shaped and branch `classifyConversationForFlaggerUseCase`
+  rather than forking it. Reuse the inspected-agent context, reflag suppression tags, telemetry
+  metadata, and the existing mapping of schema mismatch, prompt-too-long, and grammar-compilation
+  timeout to `indeterminate`. Run the adversarial annotation review on `failure` only: a success
+  verdict has no proposed annotation to sanity check.
+- [x] **P4-6** Widen `RunFlaggerResult` and `ClassifySessionFlaggerResult` so a non-negative outcome
+  can carry feedback, `messageIndex`, `contentHash`, `latestTraceId`, `simulationId`, and the
+  judgment version. The current shapes only carry those fields on the matched branch, so a success
+  verdict cannot be persisted through them.
+- [x] **P4-7** Set `hasRequiredContext` to require at least one non-empty user text message and at
+  least one assistant turn. Declare no `suppressedBy` and no `hintKinds` (D1).
+- [x] **P4-7b** Regenerate `apps/api/openapi.json`, `apps/api/mcp.json`, both Fern SDKs, and the
+  CLI. The slug is a public enum member, and `api-manifests.yml` fails on drift, so this cannot wait
+  for Step 7.
+- [x] **P4-7c** Add `task-success` to every onboarding preset and to a `task-outcome` flagger group
+  in `apps/web`. `presets.ts` carries a compile-time exhaustiveness assertion over the slug union,
+  and onboarding disables any slug a chosen preset omits, which would have left Outcome unmeasured
+  for every project created through onboarding.
+
+### Step 2: persistence, scoring version, and the workflow branch
+
+- [ ] **P4-8** Parameterize `upsertFlaggerAnnotationScore` with `passed` and `value` instead of the
+  hardcoded `FLAGGER_DRAFT_DEFAULTS`. Existing callers keep the failed defaults. Task Success writes
+  `passed: true, value: 1` for success and `passed: false, value: 0` for failure.
+- [ ] **P4-9** Add `analysisHash` to `annotationScoreMetadataSchema` and thread it from the
+  screening selection through classification to the written score (D5). It is jsonb, so no Postgres
+  migration is required.
+- [ ] **P4-10** Add the judgment version builder from D4 and a test proving the default judge
+  configuration produces a readable version under the 128-character limit and that a different
+  resolved model produces a different version.
+- [ ] **P4-11** Branch `flaggerClassificationWorkflow`. A `failure` verdict keeps the existing
+  classify, draft, save path. A `success` verdict writes the passed score directly and skips the
+  draft and annotator steps: there is no annotation to enrich and the annotator fallback would spend
+  credits. `indeterminate` and `notApplicable` write no score.
+- [ ] **P4-12** Map the terminal screening outcome in `flagger-session-activities.ts` to `success`
+  or `failure` for verdict-shaped flaggers instead of the current `matched` or `unmatched`. Keep the
+  error path writing `error`.
+- [ ] **P4-13** Confirm and test that a passed Task Success score never creates a signal. The
+  existing eligibility predicate already rejects passed annotation scores, so this is a regression
+  test plus an assertion that a failed verdict does reach `signalDiscoveryWorkflow`.
+
+### Step 3: coverage, provisioning, and selection probabilities
+
+- [ ] **P4-14** Verify with tests that the screening decision written before classification carries
+  `selected`, `reason: "ordinary-sample"`, and `inclusionProbability = sampling / 100`, and that a
+  sampled-out session records the same probability with `selected: false`. This is existing PR 2
+  behavior; the tests pin it for the estimator.
+- [ ] **P4-15** Add the idempotent provisioning maintenance script from D6 under
+  `packages/platform/db-postgres/scripts`, following the `maintain-billing-usage-events.ts` pattern
+  and reusing `provisionFlaggersUseCase` per organization and project. Add the package script entry.
+  Document that it must run once after the deploy that ships the slug. Ask before running it against
+  any real database.
+- [ ] **P4-16** Confirm the Flaggers settings page and its 28-day coverage panel render the new
+  flagger, including the case where no decisions exist yet, and that the cached project flagger list
+  picks up backfilled rows within its TTL.
+
+### Step 4: session evidence
+
+- [ ] **P4-17** Label flagger-authored score findings with `FLAGGER_DISPLAY[slug].name` instead of
+  the raw slug in `readScoreFindings`, so the item reads "Task Success" rather than `task-success`.
+  This improves every flagger row, not only this one.
+- [ ] **P4-18** Test the session assessment end to end for all four verdicts: success renders under
+  positive evidence with the judge's feedback and anchor, failure under needs attention,
+  `indeterminate` and `notApplicable` produce no item and appear only through reader coverage, and
+  an unexamined session is never a clean result.
+- [ ] **P4-19** Prove single-session and bulk parity for a session carrying a Task Success verdict,
+  reusing the existing parity fixtures.
+
+### Step 5: the project Outcome estimator
+
+- [ ] **P4-20** Add the numeric primitives the repository does not have: a continued-fraction
+  regularized incomplete beta and a Clopper-Pearson exact binomial interval, as pure helpers under
+  `@domain/agent-score/src/scoring`. Do not add a runtime dependency for this. Property-test
+  monotonicity, coverage at the boundaries, and the zero-failure and zero-success cases, which must
+  stay non-degenerate.
+- [ ] **P4-21** Implement the two-stratum Outcome estimator from
+  [`score.md`](score.md#outcome). Stratum A is the deterministic census (weight 1, all failures)
+  after applying D2 and D3. Stratum B is the sampled judge population, weighted by
+  `1 / inclusionProbability`. The point estimate is
+  `100 * sum(weight * success) / sum(weight)` over both strata. The interval transforms stratum B's
+  binomial bounds through the pooled ratio, which is monotone, so no naive addition of bounds is
+  involved.
+- [ ] **P4-22** Handle a non-uniform stratum B. When a project changed its sampling rate mid-window,
+  group stratum B into sub-strata by distinct inclusion probability, compute each sub-stratum's
+  binomial bounds, and combine them into a conservative pooled interval. Record which method
+  produced the interval. Exclude any examined session whose inclusion probability is unknown or
+  zero, and report it as a coverage limitation rather than dropping it silently.
+- [ ] **P4-23** Return a result carrying the 0 through 100 rate, the interval and its method, the
+  examined count, the eligible count, the deterministic and sampled stratum sizes, the excluded
+  counts by reason, and a coverage state of measured or unmeasured with the failing floor named.
+  Never return 0, 100, or a midpoint for an unmeasured dimension.
+- [ ] **P4-24** Add the window source port and its ClickHouse plus Postgres implementation. The
+  ClickHouse side reuses the eligible-session definition and the newest-generation collapse already
+  written in `flagger-coverage-repository.ts` and returns one row per session with its decision,
+  reason, inclusion probability, outcome, and analysis hash. The Postgres side reads the Task
+  Success scores for that bounded session list through `scores_session_lookup_idx`. Both reads are
+  organization and project scoped and must not be per-session queries.
+- [ ] **P4-25** Compose the estimator and the sources into a use-case that mirrors
+  `runCostSpeedShadow`: deterministic bounded batches, no snapshot write, no public surface.
+
+### Step 6: project issue inputs
+
+- [ ] **P4-26** Produce bounded Outcome issue inputs from failed Task Success scores, deterministic
+  Outcome findings, and eligible Outcome signal occurrences, using the shared
+  `isSignalEligibleForScoring` predicate so ignored and unpromoted signals are excluded.
+- [ ] **P4-27** Deduplicate shared source evidence before counting. A signal and the score it was
+  discovered from are one issue's evidence, not two, and several moments on one session collapse
+  into one issue input. Report selection-corrected reach and failed reach alongside the raw examined
+  count, which is coverage context and never a ranking key.
+- [ ] **P4-28** Rank by corrected failed reach. Leave a row unranked and marked when a required joint
+  inclusion probability is unknown. Issue counts explain the score; they add no points and never
+  claim a fixed recoverable amount.
+
+### Step 7: contracts, documentation, and regeneration
+
+- [ ] **P4-29** Regenerate the generated artifacts affected by the new slug. The public flagger
+  enum in `packages/operations/src/operations/projects.ts` is derived from
+  `FLAGGER_STRATEGY_SLUGS`, so OpenAPI, MCP, the TypeScript and Python SDKs, and the CLI change even
+  though the session-assessment contract does not. Follow the repository's generated-artifact and
+  package-version conventions.
+- [ ] **P4-30** Update [`score.md`](score.md#confidence),
+  [`flaggers.md`](flaggers.md#screening-decisions), and [`metrics.md`](metrics.md) so the hint
+  stratification described there matches D1, and record the deterministic census stratum, the task
+  applicability gate, and the judge-identifying version from D2, D3, and D4.
 
 ### Exit gate
 
-- [ ] **P4-9** Tests cover every Task Success verdict, positive-score discovery exclusion, stable
-  selection, version compatibility, selection correction, zero examined sessions, coverage floors,
-  issue-ranking correction, unknown joint inclusion probabilities, duplicate issue evidence, and
-  single-session versus bulk parity.
-- [ ] **P4-10** Inspected fixtures reconcile the Task Success score row, session assessment item,
-  project estimator input, and issue input without assigning a score to the session itself.
-- [ ] `pnpm typecheck` and `pnpm test` pass.
+- [ ] **P4-31** Tests cover every Task Success verdict, the success path writing a passed score
+  without a draft or annotator call, positive-score discovery exclusion, stable selection across
+  retries of the same analysis generation, judgment-version compatibility filtering, selection
+  correction, zero examined sessions, the coverage floors, deterministic dominance over a
+  contradicting judge verdict, issue-ranking correction, unknown joint inclusion probabilities,
+  duplicate issue evidence, and single-session versus bulk parity.
+- [ ] **P4-32** Interval tests prove non-degenerate bounds with zero observed failures and with zero
+  observed successes, monotonicity in the observed count, and that a non-uniform stratum B reports
+  its method rather than silently using the uniform path.
+- [ ] **P4-33** Inspected fixtures reconcile the Task Success score row, its screening decision, the
+  session assessment item, the project estimator input, and the issue input without assigning a
+  score to the session itself.
+- [ ] **P4-34** No score snapshot, public Outcome number, route, or scheduled job ships in PR 4.
+- [ ] `pnpm typecheck` and `pnpm test` pass. Generated API artifacts are current.
+
+### Calibration questions to close before PR 6
+
+- What sampling rate and examined-session floor keep the Outcome interval useful without making the
+  judge the dominant flagger cost line?
+- Does the holistic session verdict stay stable across re-judgment of the same transcript, and what
+  agreement rate against human labels is required before Outcome can publish?
+- Which judge configurations belong in the supported-version list, and what happens to a window that
+  spans a version change?
+- When is the hint-stratified design worth reintroducing, and what rate-limit policy makes its
+  missingness ignorable?
 
 ## PR 5: Safety assurance
 
@@ -685,7 +903,8 @@ PR 6 starts only when all of these gates pass:
   recalibration and cross-surface expansion are later follow-ups.
 - [ ] Cost native impacts and Speed counterfactuals are bounded and visible on existing pages.
 - [ ] Outcome uses compatible sampled Task Success verdicts with known inclusion probabilities and
-  passes its examined-population coverage floor.
+  passes its examined-population coverage floor. The flagger provisioning backfill has run, so the
+  slug is not silently inert on projects that predate it.
 - [ ] Safety uses a full-window examined population and confirmed-harm definition.
 - [ ] Duplicate detectors and split signals pass invariance tests.
 - [ ] Every reader exposes coverage and missing-evidence reasons.

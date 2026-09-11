@@ -33,6 +33,7 @@ import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
 import {
   buildProviderFlaggerOutputSchema,
+  buildProviderTaskSuccessOutputSchema,
   classifyConversationForFlaggerUseCase,
   classifyTraceForFlaggerUseCase,
   normalizeSystemPromptForCacheKey,
@@ -2468,5 +2469,181 @@ describe("malformed classifier output", () => {
 
     expect(result).toEqual({ matched: false })
     expect(calls.generate).toHaveLength(1) // discarded before the adversarial review
+  })
+})
+
+describe("task-success verdict classification", () => {
+  const TASK_SUCCESS_CONVERSATION = makeTraceDetail([
+    { role: "user", parts: [{ type: "text", content: "Cancel my subscription and confirm the last billing date." }] },
+    { role: "assistant", parts: [{ type: "text", content: "Cancelled. Your last billing date was 3 March." }] },
+  ])
+
+  const createVerdictAI = (
+    classification: unknown,
+    review: { readonly annotationMakesSense: boolean } = { annotationMakesSense: true },
+  ) =>
+    createFakeAI({
+      generate: <T>(input: { readonly system?: string }) => {
+        const isAnnotationReview = input.system?.includes("adversarial quality reviewer") ?? false
+        return Effect.succeed({
+          object: (isAnnotationReview ? review : classification) as T,
+          tokens: 20,
+          duration: 90_000_000,
+        })
+      },
+    })
+
+  const classifyTaskSuccess = (classification: unknown, review?: { readonly annotationMakesSense: boolean }) => {
+    const { calls, layer: aiLayer } = createVerdictAI(classification, review)
+    return Effect.runPromise(
+      classifyConversationForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        flaggerSlug: "task-success",
+        conversation: TASK_SUCCESS_CONVERSATION,
+        traceId: INPUT.traceId,
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    ).then((result) => ({ result, calls }))
+  }
+
+  it("offers the verdict contract instead of the matched/unmatched one", async () => {
+    const { calls } = await classifyTaskSuccess({
+      verdict: "success",
+      explanation: "The subscription was cancelled and the billing date confirmed.",
+    })
+
+    expect(calls.generate[0].system).toContain("Set verdict to exactly one of")
+    expect(calls.generate[0].system).not.toContain("Set matched=false when the trace does not belong")
+    expect(calls.generate[0].prompt).toContain("SESSION TRANSCRIPT")
+  })
+
+  it("returns success without writing an annotation or running the reviewer", async () => {
+    const { result, calls } = await classifyTaskSuccess({
+      verdict: "success",
+      explanation: "The subscription was cancelled and the billing date confirmed.",
+      messageIndex: "1",
+    })
+
+    expect(result).toMatchObject({
+      matched: false,
+      verdict: "success",
+      feedback: "The subscription was cancelled and the billing date confirmed.",
+      messageIndex: 1,
+    })
+    expect(result.classificationOutcome).toBeUndefined()
+    expect(calls.generate).toHaveLength(1)
+  })
+
+  it("routes failure through the adversarial review as a normal match", async () => {
+    const { result, calls } = await classifyTaskSuccess({
+      verdict: "failure",
+      explanation: "The cancellation never happened; the user asked twice and left.",
+      messageIndex: "1",
+    })
+
+    expect(result).toMatchObject({
+      matched: true,
+      verdict: "failure",
+      feedback: "The cancellation never happened; the user asked twice and left.",
+      messageIndex: 1,
+    })
+    expect(calls.generate).toHaveLength(2)
+  })
+
+  it("leaves a session unexamined when the reviewer rejects the failure", async () => {
+    const { result } = await classifyTaskSuccess(
+      { verdict: "failure", explanation: "The cancellation never happened." },
+      { annotationMakesSense: false },
+    )
+
+    expect(result).toMatchObject({ matched: false, verdict: "indeterminate", classificationOutcome: "indeterminate" })
+  })
+
+  it.each([
+    ["indeterminate", "The transcript stops before the confirmation."],
+    ["notApplicable", "The session contains no user request."],
+  ])("keeps %s as a coverage decision with no annotation", async (verdict, explanation) => {
+    const { result, calls } = await classifyTaskSuccess({ verdict, explanation })
+
+    expect(result).toMatchObject({ matched: false, verdict, feedback: explanation })
+    expect(calls.generate).toHaveLength(1)
+  })
+
+  it("marks indeterminate rather than success when the verdict is unusable", async () => {
+    const unknownVerdict = await classifyTaskSuccess({ verdict: "partial", explanation: "Half done." })
+    const emptyExplanation = await classifyTaskSuccess({ verdict: "success", explanation: "   " })
+
+    for (const { result } of [unknownVerdict, emptyExplanation]) {
+      expect(result).toMatchObject({ matched: false, verdict: "indeterminate" })
+    }
+  })
+
+  it("drops an out-of-range anchor without discarding the verdict", async () => {
+    const { result } = await classifyTaskSuccess({
+      verdict: "failure",
+      explanation: "The cancellation never happened.",
+      messageIndex: "94",
+    })
+
+    expect(result).toMatchObject({ matched: true, verdict: "failure" })
+    expect(result.messageIndex).toBeUndefined()
+  })
+
+  it("requires verdict and explanation so a constrained decoder cannot omit them", () => {
+    const schema = buildProviderTaskSuccessOutputSchema(2)
+
+    expect(schema.safeParse({ verdict: "success", explanation: "Delivered.", messageIndex: "1" }).success).toBe(true)
+    expect(schema.safeParse({ verdict: "success" }).success).toBe(false)
+    expect(schema.safeParse({ explanation: "Delivered." }).success).toBe(false)
+    expect(schema.safeParse({ verdict: "partial", explanation: "Half done." }).success).toBe(false)
+  })
+
+  it("bounds messageIndex to the transcript in the generation schema", () => {
+    expect(
+      buildProviderTaskSuccessOutputSchema(2).safeParse({ verdict: "failure", explanation: "No.", messageIndex: "5" })
+        .success,
+    ).toBe(false)
+    expect("messageIndex" in buildProviderTaskSuccessOutputSchema(0).shape).toBe(false)
+  })
+
+  it("stays unexamined rather than unmatched when the agent context is missing", async () => {
+    const { calls, layer: aiLayer } = createVerdictAI({ verdict: "success", explanation: "Delivered." })
+
+    const result = await Effect.runPromise(
+      classifyConversationForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        flaggerSlug: "task-success",
+        conversation: makeTraceDetail(TASK_SUCCESS_CONVERSATION.allMessages, [], []),
+        traceId: INPUT.traceId,
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toMatchObject({ matched: false, verdict: "indeterminate", classificationOutcome: "indeterminate" })
+    expect(calls.generate).toHaveLength(0)
+  })
+
+  it("marks indeterminate when the model cannot produce the schema at all", async () => {
+    const { layer: aiLayer } = createFakeAI({
+      generate: () =>
+        Effect.fail(
+          new AIError({
+            message: "no object",
+            cause: Object.assign(new Error("response did not match schema"), { name: "AI_NoObjectGeneratedError" }),
+          }),
+        ),
+    })
+
+    const result = await Effect.runPromise(
+      classifyConversationForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        flaggerSlug: "task-success",
+        conversation: TASK_SUCCESS_CONVERSATION,
+        traceId: INPUT.traceId,
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toMatchObject({ matched: false, verdict: "indeterminate", classificationOutcome: "indeterminate" })
   })
 })
