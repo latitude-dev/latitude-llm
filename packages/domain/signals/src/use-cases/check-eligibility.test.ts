@@ -118,6 +118,31 @@ describe("checkEligibilityUseCase", () => {
     })
   })
 
+  // Outcome's reference judge persists a passed score for every session it
+  // finds successful. Those must never open a signal, or a healthy project
+  // would accumulate one "the task succeeded" signal per judged session.
+  it("rejects a passed Task Success verdict and accepts a failed one", async () => {
+    const verdict = (passed: boolean) =>
+      makeScore({
+        passed,
+        value: passed ? 1 : 0,
+        sourceId: "SYSTEM",
+        feedback: "The cancellation never happened.",
+        metadata: {
+          rawFeedback: "The cancellation never happened.",
+          flaggerSlug: "task-success",
+          flaggerPath: "sampled",
+          scoringArtifactVersion: "task-success-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          analysisHash: "a".repeat(64),
+        },
+      })
+
+    await expect(runEligibility(verdict(true))).rejects.toMatchObject({
+      _tag: "PassedScoreNotEligibleForDiscoveryError",
+    })
+    await expect(runEligibility(verdict(false))).resolves.toMatchObject({ passed: false })
+  })
+
   it("rejects organization mismatches", async () => {
     await expect(runEligibility(makeScore(), { organizationId: "xxxxxxxxxxxxxxxxxxxxxxxx" })).rejects.toMatchObject({
       _tag: "ScoreDiscoveryOrganizationMismatchError",

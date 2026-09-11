@@ -20,6 +20,8 @@ export interface ClassifySessionFlaggerInput {
   readonly sessionId: string
   readonly flaggerSlug: string
   readonly hints?: readonly SessionHint[] | undefined
+  /** Screening generation this classification belongs to; persisted on the written score. */
+  readonly analysisHash?: string | undefined
 }
 
 /**
@@ -37,6 +39,7 @@ export interface JudgedSessionAnchors {
   readonly sessionStartedAt: string
   readonly simulationId: string | null
   readonly scoringArtifactVersion: string
+  readonly analysisHash?: string | undefined
 }
 
 /**
@@ -169,7 +172,10 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     latestTraceId: context.latestTraceId,
     sessionStartedAt: session.startTime.toISOString(),
     simulationId: session.simulationId === "" ? null : session.simulationId,
-    scoringArtifactVersion: FLAGGER_SCORING_ARTIFACT_VERSION,
+    // A verdict reports the judge that produced it; detection flaggers share
+    // the one classification artifact version.
+    scoringArtifactVersion: result.judgmentVersion ?? FLAGGER_SCORING_ARTIFACT_VERSION,
+    ...(input.analysisHash !== undefined ? { analysisHash: input.analysisHash } : {}),
   } satisfies JudgedSessionAnchors
 
   if (result.verdict === "success") {

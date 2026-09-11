@@ -69,9 +69,11 @@ export {
 } from "./entities/flagger-screening-decision.ts"
 export {
   isScoringTaskSuccessVerdict,
+  TASK_SUCCESS_JUDGMENT_VERSION_PREFIX,
   TASK_SUCCESS_VERDICTS,
   type TaskSuccessVerdict,
   type TaskSuccessVerdictKind,
+  taskSuccessJudgmentVersion,
   taskSuccessVerdictKindSchema,
   taskSuccessVerdictSchema,
 } from "./entities/task-success-verdict.ts"
@@ -179,6 +181,7 @@ export {
   type ClassifySessionFlaggerInput,
   type ClassifySessionFlaggerResult,
   classifySessionFlaggerUseCase,
+  type JudgedSessionAnchors,
   loadFlaggerSessionContextUseCase,
 } from "./use-cases/classify-session-flagger.ts"
 export {
@@ -257,3 +260,7 @@ export {
   type UpdateFlaggerInput,
   updateFlaggerUseCase,
 } from "./use-cases/update-flagger.ts"
+export {
+  type UpsertFlaggerVerdictScoreInput,
+  upsertFlaggerVerdictScore,
+} from "./use-cases/upsert-flagger-annotation-score.ts"

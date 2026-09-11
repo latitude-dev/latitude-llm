@@ -320,6 +320,7 @@ describe("screenSessionFlaggersUseCase", () => {
       contentHash: expect.stringMatching(/^[0-9a-f]{64}$/),
       flaggerFindingKey: expect.stringMatching(/^[0-9a-f]{64}$/),
       flaggerPath: "deterministic",
+      analysisHash: ANALYSIS_HASH,
     })
     expect(screeningDecisions.find((decision) => decision.flaggerSlug === "empty-response")).toMatchObject({
       organizationId: ORG_ID,

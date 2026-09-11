@@ -701,23 +701,34 @@ persistence branch, and the window arithmetic. Do not rebuild these:
 
 ### Step 2: persistence, scoring version, and the workflow branch
 
-- [ ] **P4-8** Parameterize `upsertFlaggerAnnotationScore` with `passed` and `value` instead of the
-  hardcoded `FLAGGER_DRAFT_DEFAULTS`. Existing callers keep the failed defaults. Task Success writes
-  `passed: true, value: 1` for success and `passed: false, value: 0` for failure.
-- [ ] **P4-9** Add `analysisHash` to `annotationScoreMetadataSchema` and thread it from the
+- [x] **P4-8** Give verdict flaggers their own write path, `upsertFlaggerVerdictScore`, which writes
+  `passed: true, value: 1` for success and `passed: false, value: 0` for failure. Built as a
+  sibling of `upsertFlaggerAnnotationScore` rather than a `passed`/`value` parameter on it, because
+  the two dedup rules are genuinely different and the detection rule is the wrong one here: its
+  anchor key deliberately survives re-screens, so a judge citing the same message in two
+  generations would make the second verdict look like a duplicate of the first, and a session that
+  succeeded, gained turns, and then failed would record only the success. The verdict rule is one
+  score per project, session, flagger, and analysis generation. Both paths share one metadata
+  builder, and the detection path is untouched.
+- [x] **P4-9** Add `analysisHash` to `annotationScoreMetadataSchema` and thread it from the
   screening selection through classification to the written score (D5). It is jsonb, so no Postgres
-  migration is required.
-- [ ] **P4-10** Add the judgment version builder from D4 and a test proving the default judge
+  migration is required. Written for every flagger score, not only verdicts: the deterministic
+  screening match and the sampled annotation save both know their generation, and recording it
+  costs one field while making any flagger score traceable to the session content it judged.
+- [x] **P4-10** Add the judgment version builder from D4 and a test proving the default judge
   configuration produces a readable version under the 128-character limit and that a different
   resolved model produces a different version.
-- [ ] **P4-11** Branch `flaggerClassificationWorkflow`. A `failure` verdict keeps the existing
-  classify, draft, save path. A `success` verdict writes the passed score directly and skips the
-  draft and annotator steps: there is no annotation to enrich and the annotator fallback would spend
-  credits. `indeterminate` and `notApplicable` write no score.
-- [ ] **P4-12** Map the terminal screening outcome in `flagger-session-activities.ts` to `success`
+- [x] **P4-11** Branch `flaggerClassificationWorkflow`. Both scoring verdicts write directly and
+  skip the draft step, not only `success` as first planned: a verdict always arrives with its own
+  feedback, so the annotator fallback never fires, and the draft step's anchor dedup is the wrong
+  rule for a failure for the same reason it is wrong for a success. `indeterminate` and
+  `notApplicable` write no score. No `patched()` is required: a replaying execution restores a
+  classify result written before `outcome` existed, so the new guard is false and the command
+  sequence matches the recorded history.
+- [x] **P4-12** Map the terminal screening outcome in `flagger-session-activities.ts` to `success`
   or `failure` for verdict-shaped flaggers instead of the current `matched` or `unmatched`. Keep the
   error path writing `error`.
-- [ ] **P4-13** Confirm and test that a passed Task Success score never creates a signal. The
+- [x] **P4-13** Confirm and test that a passed Task Success score never creates a signal. The
   existing eligibility predicate already rejects passed annotation scores, so this is a regression
   test plus an assertion that a failed verdict does reach `signalDiscoveryWorkflow`.
 

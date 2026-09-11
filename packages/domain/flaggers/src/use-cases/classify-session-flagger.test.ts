@@ -6,7 +6,9 @@ import { SessionRepository, SpanRepository } from "@domain/spans"
 import { createFakeSessionRepository, createFakeSpanRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import { FLAGGER_DEFAULT_CLASSIFIER_MODEL } from "../constants.ts"
 import type { Flagger } from "../entities/flagger.ts"
+import { taskSuccessJudgmentVersion } from "../entities/task-success-verdict.ts"
 import { assistant, makeSessionDetail, user } from "../flagger-strategies/test-helpers.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
@@ -164,6 +166,8 @@ describe("classifySessionFlaggerUseCase task-success verdicts", () => {
     { systemInstructions: [{ type: "text", content: "You are a billing support agent." }] },
   )
 
+  const ANALYSIS_HASH = "a".repeat(64)
+
   const classify = (classification: unknown) => {
     const { repository: sessionRepo } = createFakeSessionRepository({
       findBySessionId: () => Effect.succeed(SESSION),
@@ -196,7 +200,7 @@ describe("classifySessionFlaggerUseCase task-success verdicts", () => {
     })
 
     return Effect.runPromise(
-      classifySessionFlaggerUseCase({ ...INPUT, flaggerSlug: "task-success" }).pipe(
+      classifySessionFlaggerUseCase({ ...INPUT, flaggerSlug: "task-success", analysisHash: ANALYSIS_HASH }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(SessionRepository, sessionRepo),
@@ -215,6 +219,16 @@ describe("classifySessionFlaggerUseCase task-success verdicts", () => {
       ),
     )
   }
+
+  it("reports the judge that produced the verdict and the generation it judged", async () => {
+    const result = await classify({ verdict: "success", explanation: "Delivered." })
+
+    expect(result).toMatchObject({
+      outcome: "success",
+      analysisHash: ANALYSIS_HASH,
+      scoringArtifactVersion: taskSuccessJudgmentVersion(FLAGGER_DEFAULT_CLASSIFIER_MODEL),
+    })
+  })
 
   it("carries persistence anchors on success even though it writes no annotation", async () => {
     const result = await classify({

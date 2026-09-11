@@ -9,7 +9,7 @@ import type { ProjectId, ScoreId, SessionId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import { FLAGGER_DRAFT_DEFAULTS } from "../constants.ts"
 
-interface UpsertFlaggerAnnotationScoreInput {
+interface FlaggerScoreInput {
   readonly id?: ScoreId
   readonly projectId: ProjectId
   readonly traceId: TraceId
@@ -22,11 +22,25 @@ interface UpsertFlaggerAnnotationScoreInput {
   readonly flaggerFindingKey?: FlaggerFindingKey | undefined
   readonly flaggerPath?: FlaggerPath | undefined
   readonly scoringArtifactVersion?: ScoringArtifactVersion | undefined
+  /** Session analysis generation this judgement belongs to. */
+  readonly analysisHash?: string | undefined
   /** Absent for deterministic detections and cached generations — neither leaves a trace to grade. */
   readonly flaggerTraceId?: string | undefined
 }
 
-type UpsertFlaggerAnnotationScoreResult =
+const flaggerScoreMetadata = (input: FlaggerScoreInput) => ({
+  rawFeedback: input.feedback,
+  flaggerSlug: input.flaggerSlug,
+  ...(input.messageIndex !== undefined ? { messageIndex: input.messageIndex } : {}),
+  ...(input.contentHash !== undefined ? { contentHash: input.contentHash } : {}),
+  ...(input.flaggerTraceId !== undefined ? { flaggerTraceId: input.flaggerTraceId } : {}),
+  ...(input.flaggerFindingKey !== undefined ? { flaggerFindingKey: input.flaggerFindingKey } : {}),
+  ...(input.flaggerPath !== undefined ? { flaggerPath: input.flaggerPath } : {}),
+  ...(input.scoringArtifactVersion !== undefined ? { scoringArtifactVersion: input.scoringArtifactVersion } : {}),
+  ...(input.analysisHash !== undefined ? { analysisHash: input.analysisHash } : {}),
+})
+
+type FlaggerScoreResult =
   | { readonly status: "existing"; readonly scoreId: string }
   | { readonly status: "written"; readonly scoreId: string }
 
@@ -60,7 +74,7 @@ export const findFlaggerAnnotationByAnchor = (input: {
  * drift. Two dedup layers: exact feedback per trace, then the content anchor
  * above (LLM feedback is nondeterministic across re-runs).
  */
-export const upsertFlaggerAnnotationScore = (input: UpsertFlaggerAnnotationScoreInput) =>
+export const upsertFlaggerAnnotationScore = (input: FlaggerScoreInput) =>
   Effect.gen(function* () {
     const scoreRepository = yield* ScoreRepository
     const existing = yield* scoreRepository.findPublishedSystemAnnotationByTraceAndFeedback({
@@ -70,7 +84,7 @@ export const upsertFlaggerAnnotationScore = (input: UpsertFlaggerAnnotationScore
     })
 
     if (existing !== null) {
-      return { status: "existing", scoreId: existing.id } satisfies UpsertFlaggerAnnotationScoreResult
+      return { status: "existing", scoreId: existing.id } satisfies FlaggerScoreResult
     }
 
     if (input.contentHash && input.sessionId) {
@@ -82,7 +96,7 @@ export const upsertFlaggerAnnotationScore = (input: UpsertFlaggerAnnotationScore
       })
 
       if (anchored !== null) {
-        return { status: "existing", scoreId: anchored.id } satisfies UpsertFlaggerAnnotationScoreResult
+        return { status: "existing", scoreId: anchored.id } satisfies FlaggerScoreResult
       }
     }
 
@@ -100,19 +114,86 @@ export const upsertFlaggerAnnotationScore = (input: UpsertFlaggerAnnotationScore
       value: FLAGGER_DRAFT_DEFAULTS.value,
       passed: FLAGGER_DRAFT_DEFAULTS.passed,
       feedback: input.feedback,
-      metadata: {
-        rawFeedback: input.feedback,
-        flaggerSlug: input.flaggerSlug,
-        ...(input.messageIndex !== undefined ? { messageIndex: input.messageIndex } : {}),
-        ...(input.contentHash !== undefined ? { contentHash: input.contentHash } : {}),
-        ...(input.flaggerTraceId !== undefined ? { flaggerTraceId: input.flaggerTraceId } : {}),
-        ...(input.flaggerFindingKey !== undefined ? { flaggerFindingKey: input.flaggerFindingKey } : {}),
-        ...(input.flaggerPath !== undefined ? { flaggerPath: input.flaggerPath } : {}),
-        ...(input.scoringArtifactVersion !== undefined ? { scoringArtifactVersion: input.scoringArtifactVersion } : {}),
-      },
+      metadata: flaggerScoreMetadata(input),
       error: null,
       draftedAt: null,
     })
 
-    return { status: "written", scoreId: written.id } satisfies UpsertFlaggerAnnotationScoreResult
+    return { status: "written", scoreId: written.id } satisfies FlaggerScoreResult
+  })
+
+/**
+ * One verdict per (project, session, flagger, analysis generation).
+ *
+ * Verdict flaggers re-judge the whole session every generation, so they cannot
+ * use the anchor dedup above: that key deliberately survives re-screens, and a
+ * judge citing the same message twice would make the second generation's
+ * verdict look like a duplicate of the first. A session that succeeded, gained
+ * turns, and then failed must record both.
+ */
+const findFlaggerVerdictByGeneration = (input: {
+  readonly projectId: ProjectId
+  readonly sessionId: string
+  readonly flaggerSlug: string
+  readonly analysisHash: string
+}) =>
+  Effect.gen(function* () {
+    const scoreRepository = yield* ScoreRepository
+    const published = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
+      projectId: input.projectId,
+      sessionId: input.sessionId as SessionId,
+    })
+
+    return (
+      published.find((score) => {
+        const metadata = score.metadata as { flaggerSlug?: string; analysisHash?: string } | null
+        return metadata?.flaggerSlug === input.flaggerSlug && metadata?.analysisHash === input.analysisHash
+      }) ?? null
+    )
+  })
+
+export interface UpsertFlaggerVerdictScoreInput extends FlaggerScoreInput {
+  readonly sessionId: string
+  readonly analysisHash: string
+  readonly verdict: "success" | "failure"
+}
+
+/**
+ * Writes a verdict flagger's published SYSTEM score. A `success` is a passed
+ * score, which signal discovery already rejects, so a positive reference
+ * verdict never opens a signal.
+ */
+export const upsertFlaggerVerdictScore = (input: UpsertFlaggerVerdictScoreInput) =>
+  Effect.gen(function* () {
+    const existing = yield* findFlaggerVerdictByGeneration({
+      projectId: input.projectId,
+      sessionId: input.sessionId,
+      flaggerSlug: input.flaggerSlug,
+      analysisHash: input.analysisHash,
+    })
+
+    if (existing !== null) {
+      return { status: "existing", scoreId: existing.id } satisfies FlaggerScoreResult
+    }
+
+    const passed = input.verdict === "success"
+    const written = yield* writeScoreUseCase({
+      projectId: input.projectId,
+      sourceType: "annotation",
+      sourceId: "SYSTEM",
+      sessionId: input.sessionId,
+      traceId: input.traceId,
+      spanId: null,
+      simulationId: input.simulationId,
+      signalId: null,
+      annotatorId: null,
+      value: passed ? 1 : 0,
+      passed,
+      feedback: input.feedback,
+      metadata: flaggerScoreMetadata(input),
+      error: null,
+      draftedAt: null,
+    })
+
+    return { status: "written", scoreId: written.id } satisfies FlaggerScoreResult
   })

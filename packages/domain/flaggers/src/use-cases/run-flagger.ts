@@ -23,7 +23,11 @@ import {
   FLAGGER_PROMPT_MAX_HINTS,
 } from "../constants.ts"
 import type { FlaggerConversation } from "../conversation.ts"
-import { TASK_SUCCESS_VERDICTS, type TaskSuccessVerdictKind } from "../entities/task-success-verdict.ts"
+import {
+  TASK_SUCCESS_VERDICTS,
+  type TaskSuccessVerdictKind,
+  taskSuccessJudgmentVersion,
+} from "../entities/task-success-verdict.ts"
 import { getFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 import {
   EXPLICIT_PROFANITY_PATTERN_SOURCE,
@@ -50,6 +54,8 @@ export interface RunFlaggerResult {
    * contract keep behaving correctly on all four verdicts.
    */
   readonly verdict?: TaskSuccessVerdictKind | undefined
+  /** Judge identity behind a scoring verdict; absent when nothing is persisted. */
+  readonly judgmentVersion?: string | undefined
 }
 
 /**
@@ -967,6 +973,7 @@ const parseTaskSuccessOutput = (
   input: unknown,
   flaggerTraceId: string | undefined,
   conversation: FlaggerConversation,
+  judgmentVersion: string,
 ): Effect.Effect<RunFlaggerResult> => {
   const parsed = taskSuccessOutputSchema.safeParse(input)
   if (!parsed.success) {
@@ -998,6 +1005,7 @@ const parseTaskSuccessOutput = (
     matched: verdict === "failure",
     verdict,
     feedback: explanation,
+    judgmentVersion,
     ...(messageIndex !== undefined ? { messageIndex } : {}),
   })
 }
@@ -1086,7 +1094,12 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
     .pipe(
       Effect.flatMap((result) =>
         verdictShaped
-          ? parseTaskSuccessOutput(result.object, result.traceId, input.conversation)
+          ? parseTaskSuccessOutput(
+              result.object,
+              result.traceId,
+              input.conversation,
+              taskSuccessJudgmentVersion(flaggerModelConfig),
+            )
           : parseFlaggerOutput(result.object, result.traceId),
       ),
       Effect.catchIf(
