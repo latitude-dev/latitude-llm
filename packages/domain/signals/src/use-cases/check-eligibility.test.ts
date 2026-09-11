@@ -121,7 +121,7 @@ describe("checkEligibilityUseCase", () => {
   // Outcome's reference judge persists a passed score for every session it
   // finds successful. Those must never open a signal, or a healthy project
   // would accumulate one "the task succeeded" signal per judged session.
-  it("rejects a passed Task Success verdict and accepts a failed one", async () => {
+  it("rejects a passed task-outcome verdict and accepts a failed one", async () => {
     const verdict = (passed: boolean) =>
       makeScore({
         passed,
@@ -130,9 +130,9 @@ describe("checkEligibilityUseCase", () => {
         feedback: "The cancellation never happened.",
         metadata: {
           rawFeedback: "The cancellation never happened.",
-          flaggerSlug: "task-success",
+          flaggerSlug: "task-failure",
           flaggerPath: "sampled",
-          scoringArtifactVersion: "task-success-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          scoringArtifactVersion: "task-failure-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
           analysisHash: "a".repeat(64),
         },
       })

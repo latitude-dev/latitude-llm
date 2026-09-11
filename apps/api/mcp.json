@@ -827,7 +827,7 @@
                 "output-schema-validation",
                 "empty-response",
                 "low-cache-hit-rate",
-                "task-success"
+                "task-failure"
               ]
             },
             "additionalProperties": {

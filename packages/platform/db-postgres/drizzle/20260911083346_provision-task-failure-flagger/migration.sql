@@ -1,9 +1,9 @@
--- Backfills the `task-success` flagger row for every live project.
+-- Backfills the `task-failure` flagger row for every live project.
 --
 -- Flagger rows are written once, when a project is created, and nothing ever
 -- re-provisions an existing project. Screening drops a slug with no row as
 -- `missing-flagger` rather than falling back to defaults, so a slug that ships
--- later never runs on a project that already existed. `task-success` is the
+-- later never runs on a project that already existed. `task-failure` is the
 -- only evidence source for the Agent Score's Outcome dimension, which would
 -- therefore read as unmeasured on all existing projects indefinitely.
 --
@@ -20,7 +20,7 @@ SELECT
     'c' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 23),
     p."organization_id",
     p."id",
-    'task-success'
+    'task-failure'
 FROM "latitude"."projects" p
 WHERE p."deleted_at" IS NULL
 ON CONFLICT ("organization_id", "project_id", "slug") DO NOTHING;

@@ -66,7 +66,7 @@ const makeHarness = () => {
         traceId: TRACE_ID,
         sessionId: SESSION_ID,
         simulationId: null,
-        flaggerSlug: input.flaggerSlug ?? "task-success",
+        flaggerSlug: input.flaggerSlug ?? "task-failure",
         verdict: input.verdict,
         feedback: input.feedback,
         analysisHash: input.analysisHash,
@@ -255,7 +255,7 @@ describe("upsertFlaggerVerdictScore", () => {
 
     expect([...scores.values()][0]?.metadata).toMatchObject({
       analysisHash: GENERATION_A,
-      flaggerSlug: "task-success",
+      flaggerSlug: "task-failure",
     })
   })
 })

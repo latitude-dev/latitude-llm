@@ -8,7 +8,7 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { FLAGGER_DEFAULT_CLASSIFIER_MODEL } from "../constants.ts"
 import type { Flagger } from "../entities/flagger.ts"
-import { taskSuccessJudgmentVersion } from "../entities/task-success-verdict.ts"
+import { taskOutcomeJudgmentVersion } from "../entities/task-outcome-verdict.ts"
 import { assistant, makeSessionDetail, user } from "../flagger-strategies/test-helpers.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
@@ -157,7 +157,7 @@ describe("classifySessionFlaggerUseCase gating", () => {
   })
 })
 
-describe("classifySessionFlaggerUseCase task-success verdicts", () => {
+describe("classifySessionFlaggerUseCase task-failure verdicts", () => {
   const SESSION = makeSessionDetail(
     [
       user("Cancel my subscription and confirm the last billing date."),
@@ -181,7 +181,7 @@ describe("classifySessionFlaggerUseCase task-success verdicts", () => {
           id: FlaggerId(generateId()),
           organizationId: INPUT.organizationId,
           projectId: INPUT.projectId,
-          slug: "task-success",
+          slug: "task-failure",
           enabled: true,
           sampling: 10,
           createdAt: new Date(),
@@ -200,7 +200,7 @@ describe("classifySessionFlaggerUseCase task-success verdicts", () => {
     })
 
     return Effect.runPromise(
-      classifySessionFlaggerUseCase({ ...INPUT, flaggerSlug: "task-success", analysisHash: ANALYSIS_HASH }).pipe(
+      classifySessionFlaggerUseCase({ ...INPUT, flaggerSlug: "task-failure", analysisHash: ANALYSIS_HASH }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(SessionRepository, sessionRepo),
@@ -226,7 +226,7 @@ describe("classifySessionFlaggerUseCase task-success verdicts", () => {
     expect(result).toMatchObject({
       outcome: "success",
       analysisHash: ANALYSIS_HASH,
-      scoringArtifactVersion: taskSuccessJudgmentVersion(FLAGGER_DEFAULT_CLASSIFIER_MODEL),
+      scoringArtifactVersion: taskOutcomeJudgmentVersion(FLAGGER_DEFAULT_CLASSIFIER_MODEL),
     })
   })
 

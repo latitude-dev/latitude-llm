@@ -45,8 +45,8 @@ class UpdateProjectBodyFlaggers(UniversalBaseModel):
         FieldMetadata(alias="low-cache-hit-rate"),
         pydantic.Field(alias="low-cache-hit-rate", default=None),
     ]
-    task_success: typing_extensions.Annotated[
-        typing.Optional[bool], FieldMetadata(alias="task-success"), pydantic.Field(alias="task-success", default=None)
+    task_failure: typing_extensions.Annotated[
+        typing.Optional[bool], FieldMetadata(alias="task-failure"), pydantic.Field(alias="task-failure", default=None)
     ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

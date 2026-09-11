@@ -757,6 +757,54 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(countsByTraceId.has(TraceId("cccccccccccccccccccccccccccccccc"))).toBe(false)
   })
 
+  // A flagger's positive reference verdict is a measurement, not something a
+  // reviewer left on the trace, so it must not show up as a positive annotation.
+  it("omits a flagger's positive reference verdict from the annotation counts", async () => {
+    const organizationId = "ffffffffffffffffffffbbbb"
+    const traceId = TraceId("dddddddddddddddddddddddddddddddd")
+    const projectId = ProjectId("ffffffffffffffffffffbbbb")
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        traceId,
+        value: 1,
+        passed: true,
+        feedback: "The task was completed.",
+        metadata: { rawFeedback: "raw", flaggerSlug: "task-failure", flaggerPath: "sampled" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId,
+        sourceType: "annotation",
+        sourceId: "UI",
+        traceId,
+        value: 1,
+        passed: true,
+        feedback: "A reviewer liked this",
+        metadata: { rawFeedback: "A reviewer liked this" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const counts = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.countAnnotationsByTraceIds({
+          projectId,
+          traceIds: [traceId],
+          source: "annotation",
+          options: { draftMode: "include" },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(counts[0]).toMatchObject({ positiveCount: 1, negativeCount: 0 })
+  })
+
   it("counts every score source by trace when source is omitted, except absent evaluations", async () => {
     const organizationId = "dddddddddddddddddddddddd"
     const mixedTraceId = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")

@@ -500,21 +500,21 @@ describe("readSessionAssessmentSources", () => {
     })
   })
 
-  describe("Task Success verdicts", () => {
+  describe("task-outcome verdicts", () => {
     const ANALYSIS_HASH = "a".repeat(64)
 
     const verdictScore = (passed: boolean): Score =>
       ({
-        ...score("score-task-success", "signal-unused"),
+        ...score("score-task-failure", "signal-unused"),
         signalId: null,
         passed,
         value: passed ? 1 : 0,
         feedback: passed ? "Cancelled the subscription and confirmed the date." : "The cancellation never happened.",
         metadata: {
           rawFeedback: "raw",
-          flaggerSlug: "task-success",
+          flaggerSlug: "task-failure",
           flaggerPath: "sampled",
-          scoringArtifactVersion: "task-success-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          scoringArtifactVersion: "task-failure-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
           analysisHash: ANALYSIS_HASH,
           messageIndex: 0,
         },
@@ -529,7 +529,7 @@ describe("readSessionAssessmentSources", () => {
         organizationId,
         projectId,
         sessionId,
-        flaggerSlug: "task-success",
+        flaggerSlug: "task-failure",
         analysisHash: ANALYSIS_HASH,
         scoringArtifactVersion: "flagger-screening-v1",
         attempt: 1,
@@ -550,19 +550,19 @@ describe("readSessionAssessmentSources", () => {
         screeningDecisions: [judgeDecision(outcome)],
       })
 
-    const taskSuccessItem = (resolved: ReturnType<typeof resolveSessionAssessment>) =>
+    const taskOutcomeItem = (resolved: ReturnType<typeof resolveSessionAssessment>) =>
       resolved.items.find((item) => item.metricId === "sessions.task_success")
 
     it("renders a success as positive Outcome evidence with the judge's own words", async () => {
       const resolved = resolveSessionAssessment(await judged(true, "success"))
-      const item = taskSuccessItem(resolved)
+      const item = taskOutcomeItem(resolved)
 
       expect(item).toMatchObject({
-        label: "Task Success",
+        label: "Task failure",
         description: "Cancelled the subscription and confirmed the date.",
         polarity: "positive",
         source: "flagger",
-        scoreIds: ["score-task-success"],
+        scoreIds: ["score-task-failure"],
       })
       expect(item?.effects).toEqual([
         expect.objectContaining({
@@ -578,8 +578,8 @@ describe("readSessionAssessmentSources", () => {
     it("renders a failure as negative Outcome evidence", async () => {
       const resolved = resolveSessionAssessment(await judged(false, "failure"))
 
-      expect(taskSuccessItem(resolved)).toMatchObject({ polarity: "negative", impactLevel: "high" })
-      expect(taskSuccessItem(resolved)?.effects[0]).toMatchObject({
+      expect(taskOutcomeItem(resolved)).toMatchObject({ polarity: "negative", impactLevel: "high" })
+      expect(taskOutcomeItem(resolved)?.effects[0]).toMatchObject({
         direction: "negative",
         impact: { kind: "taskOutcome", verdict: "failure" },
       })
@@ -594,10 +594,10 @@ describe("readSessionAssessmentSources", () => {
         }),
       )
 
-      expect(taskSuccessItem(resolved)).toBeUndefined()
+      expect(taskOutcomeItem(resolved)).toBeUndefined()
       expect(resolved.coverage.readers).toContainEqual(
         expect.objectContaining({
-          readerId: "flagger:task-success",
+          readerId: "flagger:task-failure",
           scoreDimensions: ["outcome"],
           status: outcome === "notApplicable" ? "notApplicable" : "notExamined",
         }),
@@ -612,10 +612,10 @@ describe("readSessionAssessmentSources", () => {
       )
       const outcome = resolved.dimensions.find((dimension) => dimension.scoreDimension === "outcome")
 
-      expect(taskSuccessItem(resolved)).toBeUndefined()
+      expect(taskOutcomeItem(resolved)).toBeUndefined()
       expect(resolved.coverage.readers).toContainEqual(
         expect.objectContaining({
-          readerId: "flagger:task-success",
+          readerId: "flagger:task-failure",
           status: "notExamined",
           limitation: "notSelected",
           selection: { method: "ordinary-sample", inclusionProbability: 0.1 },

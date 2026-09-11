@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { FlaggerConversation } from "../conversation.ts"
-import { extractTaskSuccessTranscript, taskSuccessStrategy } from "./task-success.ts"
+import { extractJudgedTranscript, taskFailureStrategy } from "./task-failure.ts"
 
 const text = (content: string) => [{ type: "text", content }]
 
@@ -21,9 +21,9 @@ const exchange = (turns: number): FlaggerConversation["allMessages"] =>
       : { role: "assistant" as const, parts: text(`Response number ${index}`) },
   )
 
-describe("extractTaskSuccessTranscript", () => {
+describe("extractJudgedTranscript", () => {
   it("keeps the real transcript index so the judge's anchor survives", () => {
-    const turns = extractTaskSuccessTranscript(
+    const turns = extractJudgedTranscript(
       conversationOf([
         { role: "system", parts: text("You are helpful") },
         { role: "user", parts: text("Cancel my subscription") },
@@ -38,7 +38,7 @@ describe("extractTaskSuccessTranscript", () => {
   })
 
   it("records assistant tool calls and drops tool responses", () => {
-    const turns = extractTaskSuccessTranscript(
+    const turns = extractJudgedTranscript(
       conversationOf([
         { role: "user", parts: text("Refund order 12") },
         {
@@ -58,7 +58,7 @@ describe("extractTaskSuccessTranscript", () => {
   })
 
   it("skips turns that carry neither text nor a tool call", () => {
-    const turns = extractTaskSuccessTranscript(
+    const turns = extractJudgedTranscript(
       conversationOf([
         { role: "user", parts: text("   ") },
         { role: "assistant", parts: [{ type: "reasoning", content: "thinking" }] },
@@ -70,17 +70,17 @@ describe("extractTaskSuccessTranscript", () => {
   })
 })
 
-describe("taskSuccessStrategy.hasRequiredContext", () => {
+describe("taskFailureStrategy.hasRequiredContext", () => {
   it("requires a user-authored task", () => {
     const conversation = conversationOf([{ role: "assistant", parts: text("Anything else?") }])
 
-    expect(taskSuccessStrategy.hasRequiredContext(conversation)).toBe(false)
+    expect(taskFailureStrategy.hasRequiredContext(conversation)).toBe(false)
   })
 
   it("requires an assistant turn to judge", () => {
     const conversation = conversationOf([{ role: "user", parts: text("Cancel my subscription") }])
 
-    expect(taskSuccessStrategy.hasRequiredContext(conversation)).toBe(false)
+    expect(taskFailureStrategy.hasRequiredContext(conversation)).toBe(false)
   })
 
   it("does not treat a tool-only user turn as a task", () => {
@@ -89,7 +89,7 @@ describe("taskSuccessStrategy.hasRequiredContext", () => {
       { role: "assistant", parts: text("Done") },
     ])
 
-    expect(taskSuccessStrategy.hasRequiredContext(conversation)).toBe(false)
+    expect(taskFailureStrategy.hasRequiredContext(conversation)).toBe(false)
   })
 
   it("accepts a session with a user task and an assistant turn", () => {
@@ -98,13 +98,13 @@ describe("taskSuccessStrategy.hasRequiredContext", () => {
       { role: "assistant", parts: text("Done") },
     ])
 
-    expect(taskSuccessStrategy.hasRequiredContext(conversation)).toBe(true)
+    expect(taskFailureStrategy.hasRequiredContext(conversation)).toBe(true)
   })
 })
 
-describe("taskSuccessStrategy.buildPrompt", () => {
+describe("taskFailureStrategy.buildPrompt", () => {
   it("labels every turn with the transcript index the judge may cite", () => {
-    const prompt = taskSuccessStrategy.buildPrompt?.(
+    const prompt = taskFailureStrategy.buildPrompt?.(
       conversationOf([
         { role: "user", parts: text("Cancel my subscription") },
         { role: "assistant", parts: text("Cancelled, you keep access until March") },
@@ -118,7 +118,7 @@ describe("taskSuccessStrategy.buildPrompt", () => {
   })
 
   it("keeps the opening and closing turns and says how many it dropped", () => {
-    const prompt = taskSuccessStrategy.buildPrompt?.(conversationOf(exchange(20)))
+    const prompt = taskFailureStrategy.buildPrompt?.(conversationOf(exchange(20)))
 
     expect(prompt).toContain("SESSION TRANSCRIPT (16 of 40 turns; 24 middle turns omitted):")
     expect(prompt).toContain("Request number 0")
@@ -127,7 +127,7 @@ describe("taskSuccessStrategy.buildPrompt", () => {
   })
 
   it("asks for notApplicable when no turn carried evidence", () => {
-    const prompt = taskSuccessStrategy.buildPrompt?.(conversationOf([]))
+    const prompt = taskFailureStrategy.buildPrompt?.(conversationOf([]))
 
     expect(prompt).toContain("Return notApplicable")
   })

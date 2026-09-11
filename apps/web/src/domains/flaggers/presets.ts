@@ -15,7 +15,7 @@ export const FLAGGER_USE_CASE_PRESETS = [
     label: "Support agent",
     description: "Customer-facing assistants handling questions, escalations, and account workflows.",
     enabledSlugs: [
-      "task-success",
+      "task-failure",
       "frustration",
       "refusal",
       "forgetting",
@@ -32,7 +32,7 @@ export const FLAGGER_USE_CASE_PRESETS = [
     label: "Coding agent",
     description: "Agents that edit files, call tools, and work through multi-step implementation tasks.",
     enabledSlugs: [
-      "task-success",
+      "task-failure",
       "laziness",
       "trashing",
       "bluffing",
@@ -51,7 +51,7 @@ export const FLAGGER_USE_CASE_PRESETS = [
     label: "Sales agent",
     description: "Lead qualification and buyer-facing assistants where tone and follow-through matter.",
     enabledSlugs: [
-      "task-success",
+      "task-failure",
       "frustration",
       "refusal",
       "forgetting",
@@ -66,7 +66,7 @@ export const FLAGGER_USE_CASE_PRESETS = [
     label: "Tool workflow agent",
     description: "Agents that coordinate tools, APIs, and structured workflows.",
     enabledSlugs: [
-      "task-success",
+      "task-failure",
       "tool-call-errors",
       "trashing",
       "bluffing",
@@ -82,7 +82,7 @@ export const FLAGGER_USE_CASE_PRESETS = [
     label: "Knowledge-base agent",
     description: "RAG and documentation assistants that need to preserve context and answer directly.",
     enabledSlugs: [
-      "task-success",
+      "task-failure",
       "forgetting",
       "refusal",
       "incompletion",
@@ -96,13 +96,13 @@ export const FLAGGER_USE_CASE_PRESETS = [
     id: "structured-extraction-agent",
     label: "Structured extraction",
     description: "Extraction and classification agents that return machine-readable output.",
-    enabledSlugs: ["task-success", "output-schema-validation", "empty-response", "tool-call-errors", "laziness"],
+    enabledSlugs: ["task-failure", "output-schema-validation", "empty-response", "tool-call-errors", "laziness"],
   },
   {
     id: "safety-agent",
     label: "Safety agent",
     description: "Moderation and policy-sensitive assistants exposed to adversarial or unsafe inputs.",
-    enabledSlugs: ["task-success", "nsfw", "jailbreaking", "refusal", "frustration", "empty-response", "pii-leakage"],
+    enabledSlugs: ["task-failure", "nsfw", "jailbreaking", "refusal", "frustration", "empty-response", "pii-leakage"],
   },
 ] as const satisfies ReadonlyArray<FlaggerUseCasePreset>
 
@@ -136,7 +136,7 @@ export const FLAGGER_GROUPS = [
     id: "task-outcome",
     label: "Task outcome",
     description: "The LLM reference judge behind the Outcome score.",
-    slugs: ["task-success"],
+    slugs: ["task-failure"],
   },
   {
     id: "agent-behavior",

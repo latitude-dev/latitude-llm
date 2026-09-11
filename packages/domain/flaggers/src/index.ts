@@ -68,15 +68,15 @@ export {
   flaggerScreeningSelectionSchema,
 } from "./entities/flagger-screening-decision.ts"
 export {
-  isScoringTaskSuccessVerdict,
-  TASK_SUCCESS_JUDGMENT_VERSION_PREFIX,
-  TASK_SUCCESS_VERDICTS,
-  type TaskSuccessVerdict,
-  type TaskSuccessVerdictKind,
-  taskSuccessJudgmentVersion,
-  taskSuccessVerdictKindSchema,
-  taskSuccessVerdictSchema,
-} from "./entities/task-success-verdict.ts"
+  isScoringTaskOutcomeVerdict,
+  TASK_OUTCOME_JUDGMENT_VERSION_PREFIX,
+  TASK_OUTCOME_VERDICTS,
+  type TaskOutcomeVerdict,
+  type TaskOutcomeVerdictKind,
+  taskOutcomeJudgmentVersion,
+  taskOutcomeVerdictKindSchema,
+  taskOutcomeVerdictSchema,
+} from "./entities/task-outcome-verdict.ts"
 export {
   DETERMINISTIC_FLAGGER_INSTRUCTIONS,
   FLAGGER_DISPLAY,
@@ -115,7 +115,7 @@ export {
   type SuspiciousSnippet,
   scoreRefusalLikelihood,
   suppressorSlug,
-  taskSuccessStrategy,
+  taskFailureStrategy,
   toolCallErrorsStrategy,
   trashingStrategy,
   truncateExcerpt,

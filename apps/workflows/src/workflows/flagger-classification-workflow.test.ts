@@ -112,14 +112,14 @@ describe("flaggerClassificationWorkflow", () => {
         latestTraceId: "t".repeat(32),
         sessionStartedAt: "2026-08-17T12:00:00.000Z",
         simulationId: null,
-        scoringArtifactVersion: "task-success-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+        scoringArtifactVersion: "task-failure-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
       }
       return outcome === "success"
         ? { matched: false, outcome: "success", ...anchors }
         : { matched: true, outcome: "failure", ...anchors }
     }
 
-    const VERDICT_INPUT = { ...INPUT, flaggerSlug: "task-success" as const }
+    const VERDICT_INPUT = { ...INPUT, flaggerSlug: "task-failure" as const }
 
     it.each(["success", "failure"] as const)("saves a %s verdict without drafting an annotation", async (outcome) => {
       mockActivities.classifySessionFlagger.mockImplementationOnce(async () => verdict(outcome))
@@ -131,7 +131,7 @@ describe("flaggerClassificationWorkflow", () => {
         expect.objectContaining({
           verdict: outcome,
           analysisHash: INPUT.screeningSelection.analysisHash,
-          scoringArtifactVersion: "task-success-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          scoringArtifactVersion: "task-failure-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
           flaggerTraceId: FLAGGER_TRACE_ID,
         }),
       )

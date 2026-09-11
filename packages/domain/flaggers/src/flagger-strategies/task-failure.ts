@@ -2,7 +2,7 @@ import type { FlaggerConversation } from "../conversation.ts"
 import { isRecord, iterMessageParts, MAX_SNIPPET_EXCERPT_LENGTH, truncateExcerpt } from "./shared.ts"
 import type { FlaggerStrategy } from "./types.ts"
 
-const TASK_SUCCESS_SYSTEM_PROMPT = `
+const TASK_FAILURE_SYSTEM_PROMPT = `
 You are a reference judge for LLM telemetry sessions. Decide whether the evaluated agent succeeded at what the user asked of it.
 
 Judge the SESSION AS A WHOLE, not individual responses. The session succeeds when the agent resolved every material user goal that was still active when the session ended.
@@ -51,11 +51,11 @@ Write explanation as one or two short sentences (under 300 characters) naming th
 Return no explanation outside the structured output.
 `.trim()
 
-const TASK_SUCCESS_HEAD_TURNS = 6
-const TASK_SUCCESS_TAIL_TURNS = 10
-const TASK_SUCCESS_USER_EXCERPT_LENGTH = MAX_SNIPPET_EXCERPT_LENGTH * 2
-const TASK_SUCCESS_ASSISTANT_EXCERPT_LENGTH = MAX_SNIPPET_EXCERPT_LENGTH * 4
-const TASK_SUCCESS_MAX_TOOL_NAMES = 12
+const TASK_FAILURE_HEAD_TURNS = 6
+const TASK_FAILURE_TAIL_TURNS = 10
+const TASK_FAILURE_USER_EXCERPT_LENGTH = MAX_SNIPPET_EXCERPT_LENGTH * 2
+const TASK_FAILURE_ASSISTANT_EXCERPT_LENGTH = MAX_SNIPPET_EXCERPT_LENGTH * 4
+const TASK_FAILURE_MAX_TOOL_NAMES = 12
 
 interface TranscriptTurn {
   /** Index into `allMessages`, which is what the model may cite as messageIndex. */
@@ -94,7 +94,7 @@ const turnToolNames = (message: { readonly parts?: unknown }): readonly string[]
  * both out of the prompt. Assistant tool-call names stay as evidence that work
  * was attempted.
  */
-export const extractTaskSuccessTranscript = (
+export const extractJudgedTranscript = (
   conversation: Pick<FlaggerConversation, "allMessages">,
 ): readonly TranscriptTurn[] => {
   const turns: TranscriptTurn[] = []
@@ -119,23 +119,23 @@ export const extractTaskSuccessTranscript = (
 const selectTurnsForPrompt = (
   turns: readonly TranscriptTurn[],
 ): { readonly selected: readonly TranscriptTurn[]; readonly omitted: number } => {
-  if (turns.length <= TASK_SUCCESS_HEAD_TURNS + TASK_SUCCESS_TAIL_TURNS) return { selected: turns, omitted: 0 }
+  if (turns.length <= TASK_FAILURE_HEAD_TURNS + TASK_FAILURE_TAIL_TURNS) return { selected: turns, omitted: 0 }
   return {
-    selected: [...turns.slice(0, TASK_SUCCESS_HEAD_TURNS), ...turns.slice(-TASK_SUCCESS_TAIL_TURNS)],
-    omitted: turns.length - TASK_SUCCESS_HEAD_TURNS - TASK_SUCCESS_TAIL_TURNS,
+    selected: [...turns.slice(0, TASK_FAILURE_HEAD_TURNS), ...turns.slice(-TASK_FAILURE_TAIL_TURNS)],
+    omitted: turns.length - TASK_FAILURE_HEAD_TURNS - TASK_FAILURE_TAIL_TURNS,
   }
 }
 
 const renderToolNames = (toolNames: readonly string[]): readonly string[] => {
   if (toolNames.length === 0) return []
-  const listed = toolNames.slice(0, TASK_SUCCESS_MAX_TOOL_NAMES)
+  const listed = toolNames.slice(0, TASK_FAILURE_MAX_TOOL_NAMES)
   const omitted = toolNames.length - listed.length
   return [`Tools called in this turn: ${listed.join(", ")}${omitted > 0 ? `, and ${omitted} more` : ""}`]
 }
 
 const renderTurn = (turn: TranscriptTurn): string => {
   const tag = turn.role === "user" ? "evaluated_trace_user_message" : "evaluated_trace_assistant_response"
-  const excerptLength = turn.role === "user" ? TASK_SUCCESS_USER_EXCERPT_LENGTH : TASK_SUCCESS_ASSISTANT_EXCERPT_LENGTH
+  const excerptLength = turn.role === "user" ? TASK_FAILURE_USER_EXCERPT_LENGTH : TASK_FAILURE_ASSISTANT_EXCERPT_LENGTH
 
   return [
     `--- Turn at transcript index ${turn.messageIndex} (${turn.role}) ---`,
@@ -146,14 +146,14 @@ const renderTurn = (turn: TranscriptTurn): string => {
   ].join("\n")
 }
 
-export const taskSuccessStrategy: FlaggerStrategy = {
-  verdictContract: "taskSuccess",
+export const taskFailureStrategy: FlaggerStrategy = {
+  verdictContract: "taskOutcome",
 
   annotator: {
-    name: "Task Success",
-    description: "Whether the agent resolved every material goal the user still had at the end",
+    name: "Task failure",
+    description: "The session ended with a material user goal unresolved",
     instructions:
-      "Use this flagger when the session ended with a material user goal unresolved, wrongly delivered, or abandoned. Do not use it for tone or formatting preferences, for goals the user withdrew or replaced, for correct refusals, for work blocked by access the user never granted, or for sessions with no user-authored task.",
+      "Use this flagger when the session ended with a material user goal unresolved, wrongly delivered, or abandoned, judged over the whole session rather than one response. Do not use it for tone or formatting preferences, for goals the user withdrew or replaced, for correct refusals, for work blocked by access the user never granted, or for sessions with no user-authored task.",
   },
 
   // The judge reads user messages as the source of the goals it scores, so it
@@ -167,17 +167,17 @@ export const taskSuccessStrategy: FlaggerStrategy = {
   // unevenly, which the ratio estimator cannot correct for.
 
   hasRequiredContext(conversation: FlaggerConversation): boolean {
-    const turns = extractTaskSuccessTranscript(conversation)
+    const turns = extractJudgedTranscript(conversation)
     const hasUserTask = turns.some((turn) => turn.role === "user" && turn.text.length > 0)
     return hasUserTask && turns.some((turn) => turn.role === "assistant")
   },
 
   buildSystemPrompt(): string {
-    return TASK_SUCCESS_SYSTEM_PROMPT
+    return TASK_FAILURE_SYSTEM_PROMPT
   },
 
   buildPrompt(conversation: FlaggerConversation): string {
-    const turns = extractTaskSuccessTranscript(conversation)
+    const turns = extractJudgedTranscript(conversation)
     if (turns.length === 0) return "No user or assistant turns were captured for this session. Return notApplicable."
 
     const { selected, omitted } = selectTurnsForPrompt(turns)

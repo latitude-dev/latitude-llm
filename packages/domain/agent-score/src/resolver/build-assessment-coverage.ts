@@ -14,7 +14,7 @@ import type { AssessmentReaderFact } from "../entities/session-assessment-input.
 import type { SessionDimensionCoverage } from "./build-dimension-summaries.ts"
 
 const FLAGGER_DIMENSIONS = {
-  "task-success": ["outcome"],
+  "task-failure": ["outcome"],
   "tool-call-errors": ["reliability", "cost", "speed"],
   "output-schema-validation": ["outcome", "reliability"],
   "empty-response": ["outcome", "reliability"],

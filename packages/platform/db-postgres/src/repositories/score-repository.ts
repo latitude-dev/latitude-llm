@@ -482,7 +482,9 @@ export const ScoreRepositoryLive = Layer.effect(
               db
                 .select({
                   traceId: scores.traceId,
-                  positiveCount: sql<number>`count(*) filter (where ${scores.passed} = true and ${scores.errored} = false)::int`,
+                  // A flagger's positive reference verdict is a measurement, not a
+                  // reviewer's annotation, so it must not inflate this badge.
+                  positiveCount: sql<number>`count(*) filter (where ${scores.passed} = true and ${scores.errored} = false and not (${scores.sourceId} = 'SYSTEM' and ${scores.metadata}->>'flaggerSlug' is not null))::int`,
                   negativeCount: sql<number>`count(*) filter (where ${scores.passed} = false and ${scores.errored} = false and not (${scores.sourceType} = 'evaluation' and ${scores.signalId} is null))::int`,
                 })
                 .from(scores)

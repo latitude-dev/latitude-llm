@@ -1,30 +1,30 @@
 import { FLAGGER_SCORING_ARTIFACT_VERSION_MAX_LENGTH } from "@domain/scores"
 import { z } from "zod"
 
-export const TASK_SUCCESS_VERDICTS = ["success", "failure", "indeterminate", "notApplicable"] as const
+export const TASK_OUTCOME_VERDICTS = ["success", "failure", "indeterminate", "notApplicable"] as const
 
-export const taskSuccessVerdictKindSchema = z.enum(TASK_SUCCESS_VERDICTS)
-export type TaskSuccessVerdictKind = z.infer<typeof taskSuccessVerdictKindSchema>
+export const taskOutcomeVerdictKindSchema = z.enum(TASK_OUTCOME_VERDICTS)
+export type TaskOutcomeVerdictKind = z.infer<typeof taskOutcomeVerdictKindSchema>
 
 const judgedVerdictFields = {
   feedback: z.string().min(1),
   messageIndex: z.number().int().nonnegative().optional(),
 } as const
 
-export const taskSuccessVerdictSchema = z.discriminatedUnion("verdict", [
+export const taskOutcomeVerdictSchema = z.discriminatedUnion("verdict", [
   z.object({ verdict: z.literal("success"), ...judgedVerdictFields }),
   z.object({ verdict: z.literal("failure"), ...judgedVerdictFields }),
   z.object({ verdict: z.literal("indeterminate"), reason: z.string().min(1) }),
   z.object({ verdict: z.literal("notApplicable"), reason: z.string().min(1) }),
 ])
 
-export type TaskSuccessVerdict = z.infer<typeof taskSuccessVerdictSchema>
+export type TaskOutcomeVerdict = z.infer<typeof taskOutcomeVerdictSchema>
 
 /** The two verdicts that persist a score; the other two are coverage decisions. */
-export const isScoringTaskSuccessVerdict = (verdict: TaskSuccessVerdictKind): verdict is "success" | "failure" =>
+export const isScoringTaskOutcomeVerdict = (verdict: TaskOutcomeVerdictKind): verdict is "success" | "failure" =>
   verdict === "success" || verdict === "failure"
 
-export const TASK_SUCCESS_JUDGMENT_VERSION_PREFIX = "task-success-v1"
+export const TASK_OUTCOME_JUDGMENT_VERSION_PREFIX = "task-failure-v1"
 
 const fnv1a32 = (value: string): string => {
   let hash = 0x811c9dc5
@@ -47,8 +47,8 @@ const fnv1a32 = (value: string): string => {
  * the persisted version column collapses to a digest instead, since truncating
  * it would let two judges share a label.
  */
-export const taskSuccessJudgmentVersion = (judge: { readonly provider: string; readonly model: string }): string => {
-  const readable = `${TASK_SUCCESS_JUDGMENT_VERSION_PREFIX}:${judge.provider}/${judge.model}`
+export const taskOutcomeJudgmentVersion = (judge: { readonly provider: string; readonly model: string }): string => {
+  const readable = `${TASK_OUTCOME_JUDGMENT_VERSION_PREFIX}:${judge.provider}/${judge.model}`
   if (readable.length <= FLAGGER_SCORING_ARTIFACT_VERSION_MAX_LENGTH) return readable
-  return `${TASK_SUCCESS_JUDGMENT_VERSION_PREFIX}:h:${fnv1a32(readable)}`
+  return `${TASK_OUTCOME_JUDGMENT_VERSION_PREFIX}:h:${fnv1a32(readable)}`
 }

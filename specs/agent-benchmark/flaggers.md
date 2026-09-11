@@ -22,7 +22,7 @@ findings and a record of which sessions each flagger could have examined.
 | require usability evidence for repeated-character output | avoid classifying valid compact answers as terminal failures |
 | pair truncation with output damage | distinguish configured length stops from broken output |
 | separate injection attempt from compliance | keep exposure out of the Safety numerator |
-| add the sampled `task-success` verdict path | give Outcome a direct holistic reference verdict and persist passed scores |
+| add the sampled `task-failure` verdict path | give Outcome a direct holistic reference verdict and persist passed scores |
 | store every screening decision and inclusion probability | provide denominators and selection correction |
 | copy bounded score-native provenance to ClickHouse | keep persisted classifier and signal queries session-grained |
 
@@ -97,14 +97,15 @@ captured definitions are a common cause.
 For `output-schema-validation`, the kind distinguishes incomplete or unclosed output from other
 schema failures so finish-reason classification can apply the two-observation truncation rule.
 
-## Task Success
+## Task failure
 
-`task-success` is a configurable LLM-as-judge flagger named **Task Success**. It asks whether the
+`task-failure` is a configurable LLM-as-judge flagger named **Task failure**. It is named for what
+it flags, like every other detector; the verdict it answers with is still two-sided. It asks whether the
 agent successfully completed all material user goals that remained active at the end of the session.
 It judges the session holistically rather than publishing task episodes.
 
 ```ts
-type TaskSuccessVerdict =
+type TaskOutcomeVerdict =
   | { verdict: "success"; feedback: string; messageIndex?: number }
   | { verdict: "failure"; feedback: string; messageIndex?: number }
   | { verdict: "indeterminate"; reason: string }
@@ -114,7 +115,7 @@ type TaskSuccessVerdict =
 The flagger uses the normal project-configured sample rate, hints, rate limits, and screening
 decision infrastructure. The selection probability is stored before classification.
 
-The existing flagger workflow writes only matched negative annotations. Task Success extends it:
+The existing flagger workflow writes only matched negative annotations. The task-failure judge extends it:
 
 - `success` writes a published, passed system score with `value = 1`;
 - `failure` writes a published, failed system score with `value = 0`, feedback, and anchors;
@@ -311,7 +312,7 @@ generations remain operational history but do not add to the examined denominato
 the newest generation is pending or failed, that session is unexamined; readers never fall back to a
 successful older generation.
 
-For Task Success, hinted sessions form a deterministically selected stratum and unhinted sessions use
+For the task-failure judge, hinted sessions form a deterministically selected stratum and unhinted sessions use
 the configured probability. Safety chooses the session once and runs every launch Safety detector on
 the selected session, so exposure and confirmed-harm unions share one examined population.
 
@@ -321,7 +322,7 @@ later structured result contract can identify assistant-caused harm.
 This table supports:
 
 - inverse-probability correction for signal and flagger evidence;
-- Task Success and Safety examined populations;
+- task-outcome and Safety examined populations;
 - per-flagger coverage and rate-limiter diagnostics;
 - confidence intervals over the examined population;
 - an honest distinction between no finding and no examination.
@@ -336,7 +337,7 @@ PR 2 adds only bounded provenance and linkage that belongs to a persisted flagge
 - `flagger_path`, either deterministic or sampled.
 
 Recovery, terminal status, and other telemetry-derived fields remain outputs of the shared readers
-and are not copied into Score. Task Success uses the existing passed value plus its flagger identity.
+and are not copied into Score. The task-failure judge uses the existing passed value plus its flagger identity.
 Safety adds one bounded structured finding kind for exposure, defense, or confirmed harm. Postgres
 score metadata remains the source for detailed feedback and evidence anchors.
 

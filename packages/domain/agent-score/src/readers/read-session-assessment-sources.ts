@@ -426,7 +426,7 @@ const readScoreFindings = (scores: readonly Score[], signals: readonly SignalWit
         score.annotatorId !== null || (score.sourceType === "annotation" && score.sourceId !== "SYSTEM"),
     }
 
-    if (metadata?.flaggerSlug === "task-success") {
+    if (metadata?.flaggerSlug === "task-failure") {
       return [
         {
           ...base,

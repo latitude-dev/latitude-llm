@@ -33,7 +33,7 @@ import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
 import {
   buildProviderFlaggerOutputSchema,
-  buildProviderTaskSuccessOutputSchema,
+  buildProviderTaskOutcomeOutputSchema,
   classifyConversationForFlaggerUseCase,
   classifyTraceForFlaggerUseCase,
   normalizeSystemPromptForCacheKey,
@@ -2472,7 +2472,7 @@ describe("malformed classifier output", () => {
   })
 })
 
-describe("task-success verdict classification", () => {
+describe("task-failure verdict classification", () => {
   const TASK_SUCCESS_CONVERSATION = makeTraceDetail([
     { role: "user", parts: [{ type: "text", content: "Cancel my subscription and confirm the last billing date." }] },
     { role: "assistant", parts: [{ type: "text", content: "Cancelled. Your last billing date was 3 March." }] },
@@ -2499,7 +2499,7 @@ describe("task-success verdict classification", () => {
       classifyConversationForFlaggerUseCase({
         organizationId: INPUT.organizationId,
         projectId: INPUT.projectId,
-        flaggerSlug: "task-success",
+        flaggerSlug: "task-failure",
         conversation: TASK_SUCCESS_CONVERSATION,
         traceId: INPUT.traceId,
       }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
@@ -2590,7 +2590,7 @@ describe("task-success verdict classification", () => {
   })
 
   it("requires verdict and explanation so a constrained decoder cannot omit them", () => {
-    const schema = buildProviderTaskSuccessOutputSchema(2)
+    const schema = buildProviderTaskOutcomeOutputSchema(2)
 
     expect(schema.safeParse({ verdict: "success", explanation: "Delivered.", messageIndex: "1" }).success).toBe(true)
     expect(schema.safeParse({ verdict: "success" }).success).toBe(false)
@@ -2600,10 +2600,10 @@ describe("task-success verdict classification", () => {
 
   it("bounds messageIndex to the transcript in the generation schema", () => {
     expect(
-      buildProviderTaskSuccessOutputSchema(2).safeParse({ verdict: "failure", explanation: "No.", messageIndex: "5" })
+      buildProviderTaskOutcomeOutputSchema(2).safeParse({ verdict: "failure", explanation: "No.", messageIndex: "5" })
         .success,
     ).toBe(false)
-    expect("messageIndex" in buildProviderTaskSuccessOutputSchema(0).shape).toBe(false)
+    expect("messageIndex" in buildProviderTaskOutcomeOutputSchema(0).shape).toBe(false)
   })
 
   it("stays unexamined rather than unmatched when the agent context is missing", async () => {
@@ -2613,7 +2613,7 @@ describe("task-success verdict classification", () => {
       classifyConversationForFlaggerUseCase({
         organizationId: INPUT.organizationId,
         projectId: INPUT.projectId,
-        flaggerSlug: "task-success",
+        flaggerSlug: "task-failure",
         conversation: makeTraceDetail(TASK_SUCCESS_CONVERSATION.allMessages, [], []),
         traceId: INPUT.traceId,
       }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
@@ -2638,7 +2638,7 @@ describe("task-success verdict classification", () => {
       classifyConversationForFlaggerUseCase({
         organizationId: INPUT.organizationId,
         projectId: INPUT.projectId,
-        flaggerSlug: "task-success",
+        flaggerSlug: "task-failure",
         conversation: TASK_SUCCESS_CONVERSATION,
         traceId: INPUT.traceId,
       }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),

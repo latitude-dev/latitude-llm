@@ -35,7 +35,7 @@ const makeSession = (sessionId: string, traceId: string): SessionDetail =>
 // A persisted judgement is the one assessment input that does not come from
 // telemetry, so parity has to cover it: the single-session path and the window
 // job must read the same verdict for the same session.
-const taskSuccessVerdict = (sessionId: string, traceId: string): Score =>
+const taskOutcomeVerdict = (sessionId: string, traceId: string): Score =>
   ({
     id: ScoreId(`score-${sessionId}`),
     organizationId: OrganizationId("org-1"),
@@ -52,9 +52,9 @@ const taskSuccessVerdict = (sessionId: string, traceId: string): Score =>
     feedback: "Cancelled the subscription and confirmed the date.",
     metadata: {
       rawFeedback: "raw",
-      flaggerSlug: "task-success",
+      flaggerSlug: "task-failure",
       flaggerPath: "sampled",
-      scoringArtifactVersion: "task-success-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+      scoringArtifactVersion: "task-failure-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
       analysisHash: "a".repeat(64),
       messageIndex: 0,
     },
@@ -174,7 +174,7 @@ describe("readSessionAssessmentBatch", () => {
         Effect.succeed(
           input.sessions.map(({ sessionId, traceIds }) => ({
             sessionId,
-            scores: [taskSuccessVerdict(sessionId, traceIds[0] ?? "trace-1")],
+            scores: [taskOutcomeVerdict(sessionId, traceIds[0] ?? "trace-1")],
             signals: [],
           })),
         ),

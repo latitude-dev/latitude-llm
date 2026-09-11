@@ -24,10 +24,10 @@ import {
 } from "../constants.ts"
 import type { FlaggerConversation } from "../conversation.ts"
 import {
-  TASK_SUCCESS_VERDICTS,
-  type TaskSuccessVerdictKind,
-  taskSuccessJudgmentVersion,
-} from "../entities/task-success-verdict.ts"
+  TASK_OUTCOME_VERDICTS,
+  type TaskOutcomeVerdictKind,
+  taskOutcomeJudgmentVersion,
+} from "../entities/task-outcome-verdict.ts"
 import { getFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 import {
   EXPLICIT_PROFANITY_PATTERN_SOURCE,
@@ -53,7 +53,7 @@ export interface RunFlaggerResult {
    * that writes a negative annotation), so callers that predate the verdict
    * contract keep behaving correctly on all four verdicts.
    */
-  readonly verdict?: TaskSuccessVerdictKind | undefined
+  readonly verdict?: TaskOutcomeVerdictKind | undefined
   /** Judge identity behind a scoring verdict; absent when nothing is persisted. */
   readonly judgmentVersion?: string | undefined
 }
@@ -154,22 +154,22 @@ const flaggerOutputSchema = z
 // with one `explanation` slot rather than the domain's discriminated union:
 // Bedrock's structured-output subset rejects `oneOf`, and two nullable
 // explanation fields would let a t0 decoder satisfy the schema by filling
-// neither. `parseTaskSuccessOutput` maps the flat shape back onto the union.
-const providerTaskSuccessOutputFields = {
-  verdict: z.enum(TASK_SUCCESS_VERDICTS),
+// neither. `parseTaskOutcomeOutput` maps the flat shape back onto the union.
+const providerTaskOutcomeOutputFields = {
+  verdict: z.enum(TASK_OUTCOME_VERDICTS),
   explanation: z.string().min(1),
 }
 
-export const buildProviderTaskSuccessOutputSchema = (messageCount: number) => {
+export const buildProviderTaskOutcomeOutputSchema = (messageCount: number) => {
   const usable = Math.min(Math.max(messageCount, 0), FLAGGER_MESSAGE_INDEX_ENUM_LIMIT)
-  if (usable === 0) return z.object(providerTaskSuccessOutputFields)
+  if (usable === 0) return z.object(providerTaskOutcomeOutputFields)
 
   const indices = Array.from({ length: usable }, (_, index) => String(index)) as [string, ...string[]]
-  return z.object({ ...providerTaskSuccessOutputFields, messageIndex: z.enum(indices).optional() })
+  return z.object({ ...providerTaskOutcomeOutputFields, messageIndex: z.enum(indices).optional() })
 }
 
-const taskSuccessOutputSchema = z.object({
-  verdict: z.enum(TASK_SUCCESS_VERDICTS),
+const taskOutcomeOutputSchema = z.object({
+  verdict: z.enum(TASK_OUTCOME_VERDICTS),
   explanation: z.string().min(1),
   messageIndex: z.string().regex(/^\d+$/).optional(),
 })
@@ -182,7 +182,7 @@ Structured output contract:
 - Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be a quoted integer string naming an existing transcript line, e.g. "0" or "12"; pick one of the offered indices, and never output it as a JSON number, decimal, exponent, list, or range.
 `.trim()
 
-const TASK_SUCCESS_OUTPUT_CONTRACT = `
+const TASK_OUTCOME_OUTPUT_CONTRACT = `
 Structured output contract:
 - Set verdict to exactly one of: success, failure, indeterminate, notApplicable.
 - explanation is always required. For success and failure it is the human-readable judgement shown to the user: one or two short sentences (under 300 characters) naming the goal and what happened to it. For indeterminate and notApplicable it states why no verdict could be reached.
@@ -841,7 +841,7 @@ const buildClassificationSystemPrompt = (strategy: FlaggerStrategy, conversation
     ? `${EVALUATED_TRACE_NESTED_CONTENT_GUIDANCE}\n${EVALUATED_TRACE_ASSISTANT_ONLY_GUIDANCE}`
     : EVALUATED_TRACE_NESTED_CONTENT_GUIDANCE
 
-  const contract = strategy.verdictContract === "taskSuccess" ? TASK_SUCCESS_OUTPUT_CONTRACT : FLAGGER_OUTPUT_CONTRACT
+  const contract = strategy.verdictContract === "taskOutcome" ? TASK_OUTCOME_OUTPUT_CONTRACT : FLAGGER_OUTPUT_CONTRACT
 
   return `${strategy.buildSystemPrompt!(conversation)}\n\n${guidance}\n\n${contract}`
 }
@@ -969,13 +969,13 @@ const indeterminateVerdict = (flaggerTraceId?: string): RunFlaggerResult => ({
  * An anchor outside the transcript is dropped on its own, because losing the
  * evidence pointer is cheaper than discarding the verdict behind it.
  */
-const parseTaskSuccessOutput = (
+const parseTaskOutcomeOutput = (
   input: unknown,
   flaggerTraceId: string | undefined,
   conversation: FlaggerConversation,
   judgmentVersion: string,
 ): Effect.Effect<RunFlaggerResult> => {
-  const parsed = taskSuccessOutputSchema.safeParse(input)
+  const parsed = taskOutcomeOutputSchema.safeParse(input)
   if (!parsed.success) {
     return Effect.annotateCurrentSpan("flagger.malformedClassifierOutput", true).pipe(
       Effect.as(indeterminateVerdict(flaggerTraceId)),
@@ -1039,7 +1039,7 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
   input: ClassifyConversationForFlaggerInput,
 ) {
   const strategy = input.strategyOverride ?? getFlaggerStrategy(input.flaggerSlug)
-  const verdictShaped = strategy?.verdictContract === "taskSuccess"
+  const verdictShaped = strategy?.verdictContract === "taskOutcome"
   const unexamined = (): RunFlaggerResult =>
     verdictShaped ? indeterminateVerdict() : { matched: false, classificationOutcome: "indeterminate" }
 
@@ -1069,7 +1069,7 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
 
   const messageCount = input.conversation.allMessages.length
   const outputSchema: z.ZodType<unknown> = verdictShaped
-    ? buildProviderTaskSuccessOutputSchema(messageCount)
+    ? buildProviderTaskOutcomeOutputSchema(messageCount)
     : buildProviderFlaggerOutputSchema(messageCount)
 
   const flaggerModelConfig = yield* resolveGenerationConfig("FLAGGER_CLASSIFIER", FLAGGER_DEFAULT_CLASSIFIER_MODEL)
@@ -1094,11 +1094,11 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
     .pipe(
       Effect.flatMap((result) =>
         verdictShaped
-          ? parseTaskSuccessOutput(
+          ? parseTaskOutcomeOutput(
               result.object,
               result.traceId,
               input.conversation,
-              taskSuccessJudgmentVersion(flaggerModelConfig),
+              taskOutcomeJudgmentVersion(flaggerModelConfig),
             )
           : parseFlaggerOutput(result.object, result.traceId),
       ),

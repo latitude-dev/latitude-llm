@@ -10,7 +10,7 @@ import { nsfwStrategy } from "./nsfw.ts"
 import { outputSchemaValidationStrategy } from "./output-schema-validation.ts"
 import { piiLeakageStrategy } from "./pii-leakage.ts"
 import { refusalStrategy } from "./refusal.ts"
-import { taskSuccessStrategy } from "./task-success.ts"
+import { taskFailureStrategy } from "./task-failure.ts"
 import { toolCallErrorsStrategy } from "./tool-call-errors.ts"
 import { trashingStrategy } from "./trashing.ts"
 import {
@@ -34,7 +34,7 @@ const STRATEGY_REGISTRY = {
   bluffing: bluffingStrategy,
   "pii-leakage": piiLeakageStrategy,
   incompletion: incompletionStrategy,
-  "task-success": taskSuccessStrategy,
+  "task-failure": taskFailureStrategy,
 
   // Deterministic-only
   "tool-call-errors": toolCallErrorsStrategy,
@@ -111,7 +111,7 @@ export {
   outputSchemaValidationStrategy,
   piiLeakageStrategy,
   refusalStrategy,
-  taskSuccessStrategy,
+  taskFailureStrategy,
   toolCallErrorsStrategy,
   trashingStrategy,
 }

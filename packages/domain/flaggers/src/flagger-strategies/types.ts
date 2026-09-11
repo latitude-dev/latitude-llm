@@ -26,7 +26,7 @@ export const FLAGGER_STRATEGY_SLUGS = [
   "output-schema-validation",
   "empty-response",
   "low-cache-hit-rate",
-  "task-success",
+  "task-failure",
 ] as const
 
 export type FlaggerSlug = (typeof FLAGGER_STRATEGY_SLUGS)[number]
@@ -75,7 +75,7 @@ export interface FlaggerStrategy {
    * the adversarial annotation review, since the other verdicts propose no
    * annotation to review. Absent means the ordinary detection contract.
    */
-  readonly verdictContract?: "taskSuccess"
+  readonly verdictContract?: "taskOutcome"
 
   /**
    * Whether this strategy classifies ONLY the evaluated agent's own assistant
