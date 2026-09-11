@@ -184,7 +184,6 @@ const COST_METRIC_LABELS: Readonly<Record<string, string>> = {
   "tools.dead_surface": "Unused tool definitions",
   "tools.repeated_call": "Repeated tool calls",
   "tools.thrashing": "Tool-call loops",
-  "tools.structural_defect": "Recovered tool-call defects",
   "memory.repeated_zero_hit": "Repeated empty memory searches",
   "memory.noop_rewrite": "No-op memory writes",
   "memory.reverted_write": "Reverted memory writes",
@@ -247,6 +246,7 @@ const costMetrics = (
 ): FindingMetric[] =>
   (cost?.families ?? [])
     .flatMap((family) => family.metrics)
+    .filter((metric) => metric.metricId !== "tools.structural_defect")
     .filter((metric) => costMetricPolarity(metric) === polarity)
     .map((metric) => ({
       key: `cost-metric-${metric.metricId}`,

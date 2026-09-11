@@ -221,10 +221,26 @@ describe("SessionAssessmentContent", () => {
     expect(screen.queryByText("not measured")).toBeNull()
   })
 
-  it("shows raw adverse Cost readings as attention and complete zeroes as positive evidence", () => {
+  it("shows raw Cost readings without duplicating structural defect finding groups", () => {
+    const structuralFinding = assessment.items[1]
+    if (!structuralFinding) throw new Error("expected assessment fixture item")
     const withCostEvidence: SessionAssessment = {
       ...assessment,
-      items: [],
+      items: [
+        {
+          ...structuralFinding,
+          id: "structural-defect",
+          evidenceKey: "structural-defect",
+          groupKey: "issue:tool-structure:unknown-id:tool-response-did-not-match-a-call",
+          source: "metric",
+          metricId: "tools.structural_defect",
+          signalIds: [],
+          scoreIds: [],
+          occurrenceCount: 3,
+          anchors: [],
+          destinations: [],
+        },
+      ],
       dimensions: assessment.dimensions.map((summary) => {
         if (summary.scoreDimension === "outcome") return { ...summary, taskOutcome: undefined }
         if (summary.scoreDimension === "reliability") return { ...summary, completion: "undetermined" as const }
@@ -269,11 +285,11 @@ describe("SessionAssessmentContent", () => {
                           aggregation: "eventRate",
                           measurementState: "measured",
                           rawUnit: "toolCalls",
-                          rawValue: 0,
+                          rawValue: 3 / 7,
                           eligibleUnits: 7,
-                          adverseUnits: 0,
+                          adverseUnits: 3,
                           evidence: "confirmed",
-                          limitations: ["missingContent"],
+                          limitations: [],
                         },
                       ],
                     }
@@ -288,10 +304,12 @@ describe("SessionAssessmentContent", () => {
 
     expect(screen.getByText("Repeated tool calls")).toBeTruthy()
     expect(screen.getByText("2 of 7 tool calls")).toBeTruthy()
+    expect(screen.getByText("Tool response did not match a call")).toBeTruthy()
+    expect(screen.getByText("3 occurrences")).toBeTruthy()
+    expect(screen.queryByText("Recovered tool-call defects")).toBeNull()
     fireEvent.click(screen.getByRole("button", { name: "Positive evidence" }))
     expect(screen.getByText("Tool-call loops")).toBeTruthy()
     expect(screen.getByText("0 of 7 tool calls")).toBeTruthy()
-    expect(screen.queryByText("Recovered tool-call defects")).toBeNull()
   })
 
   it("does not imply a positive result when nothing meaningful was evaluated", () => {
