@@ -756,15 +756,17 @@ persistence branch, and the window arithmetic. Do not rebuild these:
 
 ### Step 4: session evidence
 
-- [ ] **P4-17** Label flagger-authored score findings with `FLAGGER_DISPLAY[slug].name` instead of
+- [x] **P4-17** Label flagger-authored score findings with `FLAGGER_DISPLAY[slug].name` instead of
   the raw slug in `readScoreFindings`, so the item reads "Task Success" rather than `task-success`.
   This improves every flagger row, not only this one.
-- [ ] **P4-18** Test the session assessment end to end for all four verdicts: success renders under
+- [x] **P4-18** Test the session assessment end to end for all four verdicts: success renders under
   positive evidence with the judge's feedback and anchor, failure under needs attention,
   `indeterminate` and `notApplicable` produce no item and appear only through reader coverage, and
   an unexamined session is never a clean result.
-- [ ] **P4-19** Prove single-session and bulk parity for a session carrying a Task Success verdict,
-  reusing the existing parity fixtures.
+- [x] **P4-19** Prove single-session and bulk parity for a session carrying a Task Success verdict,
+  reusing the existing parity fixtures. The existing byte-identical comparison now carries a
+  persisted verdict, which is the one assessment input that does not come from telemetry and so the
+  one the two paths could most easily disagree on.
 
 ### Step 5: the project Outcome estimator
 

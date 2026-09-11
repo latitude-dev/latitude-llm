@@ -2,7 +2,9 @@ import type { SessionMomentLabel, SessionSemanticMoment } from "@domain/conversa
 import {
   buildFlaggerSessionContext,
   emptyResponseStrategy,
+  FLAGGER_DISPLAY,
   type FlaggerFinding,
+  type FlaggerSlug,
   type FlaggerStrategy,
   lowCacheHitRateStrategy,
   outputSchemaValidationStrategy,
@@ -394,6 +396,9 @@ const scoreAnchors = (score: Score) => {
   return { anchors, destinations }
 }
 
+const flaggerLabel = (slug: string | undefined): string | undefined =>
+  slug === undefined ? undefined : (FLAGGER_DISPLAY[slug as FlaggerSlug]?.name ?? slug)
+
 const readScoreFindings = (scores: readonly Score[], signals: readonly SignalWithLifecycle[]): AssessmentFinding[] => {
   const signalsById = new Map<string, SignalWithLifecycle>(signals.map((signal) => [signal.id, signal]))
   return scores.flatMap((score): AssessmentFinding[] => {
@@ -406,7 +411,7 @@ const readScoreFindings = (scores: readonly Score[], signals: readonly SignalWit
     const references = scoreAnchors(score)
     const base = {
       evidenceKey,
-      label: signal?.name ?? metadata?.flaggerSlug ?? "Score",
+      label: signal?.name ?? flaggerLabel(metadata?.flaggerSlug) ?? "Score",
       ...(score.feedback ? { description: score.feedback } : {}),
       source: signal ? ("signal" as const) : metadata?.flaggerSlug ? ("flagger" as const) : ("score" as const),
       signalIds,
