@@ -91,6 +91,35 @@ describe("buildOutcomeIssues", () => {
       expect(rows[0]!.estimatedFailedReach).toBeUndefined()
     })
 
+    // An uncorrected raw count is not a reach estimate: a reader sampling at
+    // 10% would report a tenth of the sessions it stands for.
+    it("reports no reach estimate either, rather than an uncorrected count", () => {
+      const rows = buildOutcomeIssues({
+        sessions: [session("a", false, [unknown]), session("b", false, [unknown])],
+      })
+
+      expect(rows[0]).toMatchObject({ ranked: false, examinedSessions: 2 })
+      expect(rows[0]!.estimatedReach).toBeUndefined()
+    })
+
+    it("drops the estimate for the whole issue when only some sessions lack a probability", () => {
+      const rows = buildOutcomeIssues({
+        sessions: [session("a", false, [{ ...unknown, observationProbability: 1 }]), session("b", false, [unknown])],
+      })
+
+      expect(rows[0]!.estimatedReach).toBeUndefined()
+      expect(rows[0]!.examinedSessions).toBe(2)
+    })
+
+    it("orders unranked rows by the raw count they do have", () => {
+      const other = { issueKey: "other-unknown", label: "Another unrecorded reader" }
+      const rows = buildOutcomeIssues({
+        sessions: [session("a", true, [unknown]), session("b", true, [unknown]), session("c", true, [other])],
+      })
+
+      expect(rows.map((row) => row.issueKey)).toEqual(["unknown", "other-unknown"])
+    })
+
     it("still reports the issue, below the rows that earned a position", () => {
       const rows = buildOutcomeIssues({
         sessions: [session("a", true, [unknown]), session("b", true, [moment])],

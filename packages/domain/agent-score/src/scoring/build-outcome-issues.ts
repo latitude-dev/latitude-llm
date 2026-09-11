@@ -33,8 +33,8 @@ export interface OutcomeIssueRow {
   readonly issueKey: string
   readonly label: string
   readonly signalIds: readonly string[]
-  /** Selection-corrected sessions the issue reached. */
-  readonly estimatedReach: number
+  /** Selection-corrected sessions the issue reached. Absent when a contributing reader recorded no selection. */
+  readonly estimatedReach?: number
   /** Selection-corrected sessions it reached that also failed. */
   readonly estimatedFailedReach?: number
   /** Raw counts, which are coverage context and never a ranking key. */
@@ -51,7 +51,8 @@ interface IssueAccumulator {
   estimatedFailedReach: number
   examinedSessions: number
   examinedFailedSessions: number
-  ranked: boolean
+  reachCorrected: boolean
+  failedReachCorrected: boolean
 }
 
 /**
@@ -103,36 +104,46 @@ export const buildOutcomeIssues = (input: {
         estimatedFailedReach: 0,
         examinedSessions: 0,
         examinedFailedSessions: 0,
-        ranked: true,
+        reachCorrected: true,
+        failedReachCorrected: true,
       }
 
       if (observation.signalId) issue.signalIds.add(observation.signalId)
       issue.examinedSessions += 1
-      issue.estimatedReach += isUsable(observation.observationProbability) ? 1 / observation.observationProbability : 1
+      // An uncorrected raw count is not a reach estimate. A reader sampling at
+      // 10% that did not record its selection would report a tenth of the
+      // sessions it stands for, so the row reports no estimate at all and
+      // leans on `examinedSessions`, which is honestly raw.
+      if (isUsable(observation.observationProbability)) {
+        issue.estimatedReach += 1 / observation.observationProbability
+      } else {
+        issue.reachCorrected = false
+      }
 
       if (session.failed) {
         issue.examinedFailedSessions += 1
         const joint = jointProbability(observation, session.outcomeInclusionProbability)
         if (isUsable(joint)) issue.estimatedFailedReach += 1 / joint
-        else issue.ranked = false
+        else issue.failedReachCorrected = false
       }
 
       issues.set(observation.issueKey, issue)
     }
   }
 
-  const rows = [...issues.entries()].map(
-    ([issueKey, issue]): OutcomeIssueRow => ({
+  const rows = [...issues.entries()].map(([issueKey, issue]): OutcomeIssueRow => {
+    const ranked = issue.reachCorrected && issue.failedReachCorrected
+    return {
       issueKey,
       label: issue.label,
       signalIds: [...issue.signalIds],
-      estimatedReach: issue.estimatedReach,
-      ...(issue.ranked ? { estimatedFailedReach: issue.estimatedFailedReach } : {}),
+      ...(issue.reachCorrected ? { estimatedReach: issue.estimatedReach } : {}),
+      ...(issue.failedReachCorrected ? { estimatedFailedReach: issue.estimatedFailedReach } : {}),
       examinedSessions: issue.examinedSessions,
       examinedFailedSessions: issue.examinedFailedSessions,
-      ranked: issue.ranked,
-    }),
-  )
+      ranked,
+    }
+  })
 
   // Ranked rows lead, ordered by corrected failed reach. An unranked row still
   // appears, because the issue is real even when its share of the failures
@@ -141,7 +152,9 @@ export const buildOutcomeIssues = (input: {
     .sort((left, right) => {
       if (left.ranked !== right.ranked) return left.ranked ? -1 : 1
       if (left.ranked) return (right.estimatedFailedReach ?? 0) - (left.estimatedFailedReach ?? 0)
-      return right.estimatedReach - left.estimatedReach
+      // An unranked row may have no corrected reach either, so the raw count is
+      // the only figure both sides are guaranteed to have.
+      return right.examinedSessions - left.examinedSessions
     })
     .slice(0, input.rowLimit ?? OUTCOME_ISSUE_ROW_LIMIT)
 }
