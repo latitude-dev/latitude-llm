@@ -17,7 +17,9 @@ import {
   saveFlaggerAnnotationUseCase,
   screenSessionFlaggersUseCase,
   upsertFlaggerVerdictScore,
+  upsertSafetyFindingScore,
 } from "@domain/flaggers"
+import type { SafetyFindingKind } from "@domain/scores"
 import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { checkRedisRateLimit, RedisBillingSpendReservationLive, RedisCacheStoreLive } from "@platform/cache-redis"
@@ -258,6 +260,82 @@ export const saveSessionFlaggerVerdict = async (input: SaveSessionFlaggerVerdict
       Effect.tapError((error) =>
         Effect.sync(() =>
           logger.error("Session flagger verdict save failed", {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            sessionId: input.sessionId,
+            flaggerSlug: input.flaggerSlug,
+            error,
+          }),
+        ),
+      ),
+      Effect.asVoid,
+    ),
+  )
+
+export interface SaveSessionFlaggerSafetyFindingActivityInput {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly sessionId: string
+  readonly flaggerSlug: string
+  readonly safetyFindingKind: SafetyFindingKind
+  readonly feedback: string
+  readonly latestTraceId: string
+  readonly simulationId: string | null
+  readonly contentHash: string
+  readonly scoringArtifactVersion: string
+  readonly analysisHash?: string | undefined
+  readonly messageIndex?: number | undefined
+  readonly flaggerTraceId?: string | undefined
+}
+
+/**
+ * Persists a Safety detector's structured finding in one step.
+ *
+ * The finding kind decides the polarity, so exposure and confirmed harm take
+ * the same path as a defense; only the written score differs.
+ */
+export const saveSessionFlaggerSafetyFinding = async (
+  input: SaveSessionFlaggerSafetyFindingActivityInput,
+): Promise<void> =>
+  Effect.runPromise(
+    upsertSafetyFindingScore({
+      projectId: ProjectId(input.projectId),
+      traceId: TraceId(input.latestTraceId),
+      sessionId: input.sessionId,
+      simulationId: input.simulationId,
+      flaggerSlug: input.flaggerSlug,
+      safetyFindingKind: input.safetyFindingKind,
+      feedback: input.feedback,
+      contentHash: input.contentHash,
+      scoringArtifactVersion: input.scoringArtifactVersion,
+      flaggerPath: "sampled",
+      ...(input.analysisHash !== undefined ? { analysisHash: input.analysisHash } : {}),
+      ...(input.messageIndex !== undefined ? { messageIndex: input.messageIndex } : {}),
+      ...(input.flaggerTraceId !== undefined ? { flaggerTraceId: input.flaggerTraceId } : {}),
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+      withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      withTracing,
+      Effect.tap((result) =>
+        Effect.sync(() =>
+          logger.info("Session flagger safety finding saved", {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            sessionId: input.sessionId,
+            flaggerSlug: input.flaggerSlug,
+            safetyFindingKind: input.safetyFindingKind,
+            status: result.status,
+            scoreId: result.scoreId,
+          }),
+        ),
+      ),
+      Effect.tapError((error) =>
+        Effect.sync(() =>
+          logger.error("Session flagger safety finding save failed", {
             organizationId: input.organizationId,
             projectId: input.projectId,
             sessionId: input.sessionId,

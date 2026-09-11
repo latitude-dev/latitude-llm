@@ -1045,28 +1045,40 @@ flagger provisioning backfill: both launch slugs already exist on every project.
 
 ### Step 2: persistence and the workflow branch
 
-- [ ] **P5-8** Add the bounded finding kind to `annotationScoreMetadataSchema`. It is jsonb, so no
-  Postgres migration is required.
-- [ ] **P5-9** Add one nullable ClickHouse column for the structured finding kind and project it in
+- [x] **P5-8** Add the bounded finding kind to `annotationScoreMetadataSchema`. It is jsonb, so no
+  Postgres migration is required. The kind list itself belongs to `@domain/scores` beside the other
+  flagger provenance fields, because the metadata schema cannot depend on `@domain/flaggers` without
+  inverting the existing dependency.
+- [x] **P5-9** Add one nullable ClickHouse column for the structured finding kind and project it in
   the score analytics repository. Name it generically rather than for Safety, so the next structured
   detector reuses the column instead of adding a sibling. Create the migration only with
   `pnpm --filter @platform/db-clickhouse ch:create`. The migration is forward-only: historical rows
-  stay null, which means unknown, never clean or absent-and-therefore-safe.
-- [ ] **P5-10** Write one Safety score per project, session, flagger, and analysis generation,
-  reusing the verdict write path's dedup rule rather than the detection path's anchor rule, for the
-  same reason PR 4 gave: the anchor key survives re-screens, so a re-judged session would look like
-  a duplicate. Derive `passed` from the finding kind per D1. Persist the evidence anchor and
-  selection provenance that the existing metadata builder already carries.
-- [ ] **P5-11** Branch the flagger classification workflow so a defense writes its passed score
-  directly and skips the draft step, exactly as a positive task-outcome verdict does. The verdict
-  already carries its own feedback, so the annotator fallback never fires. No `patched()` is
-  required: a replaying execution restores a classify result written before the Safety branch
-  existed, so the guard is false and the recorded command sequence still matches.
-- [ ] **P5-12** Map the terminal screening outcome for Safety results in
-  `flagger-session-activities.ts` so a defense is not recorded as `unmatched`. An unexamined session
-  and an examined session with a positive result must stay distinguishable in the screening
-  decision, because the estimator reads that field for the examined denominator.
-- [ ] **P5-13** Confirm and test that a defense score never creates a signal. The existing
+  stay null, which means unknown, never clean or absent-and-therefore-safe. The chdb test schema is
+  a dump of the development database, so it needs `ch:up` and `ch:schema:dump` against a running
+  ClickHouse to be authoritative.
+- [x] **P5-10** Write one Safety score per project, session, flagger, and **finding kind**, as a
+  third sibling of the annotation and verdict write paths rather than a reuse of either. Neither
+  existing rule fits, which is why the identity is new: the anchor key survives re-screens, so a
+  session whose finding escalated from an attempt to a confirmed compliance would keep only the
+  attempt, while the verdict's per-generation key would re-write the same jailbreak attempt on every
+  re-analysis and duplicate both the card and the signal occurrence. The finding kind is the fact,
+  it is monotone within a session, and an escalation is genuinely new information. `analysisHash`
+  stays on the score as provenance rather than as the key. Derive `passed` from the finding kind per
+  D1, and persist the evidence anchor and selection provenance the existing metadata builder already
+  carries.
+- [x] **P5-11** Branch the flagger classification workflow so **every** Safety finding writes
+  directly and skips the draft step, exposure and confirmed harm included, not only the defense as
+  first planned. The judge always returns its own explanation, so the draft step's annotator
+  fallback never fires, and its anchor dedup is the wrong identity for all five kinds by P5-10. No
+  `patched()` is required: a replaying execution restores a classify result written before
+  `safetyFindingKind` existed, so the guard is false and the recorded command sequence still
+  matches.
+- [x] **P5-12** Map the terminal screening outcome for Safety results so a defense is not recorded
+  as `unmatched`. An unexamined session and an examined session with a positive result must stay
+  distinguishable in the screening decision, because the estimator reads that field for the examined
+  denominator. The existing `success` member carries it: the coverage resolver already treats it as
+  examined with a finding, so no screening enum or ClickHouse column changes.
+- [x] **P5-13** Confirm and test that a defense score never creates a signal. The existing
   eligibility predicate already rejects passed scores, so this is a regression test plus an
   assertion that a confirmed-harm finding does reach `signalDiscoveryWorkflow`.
 

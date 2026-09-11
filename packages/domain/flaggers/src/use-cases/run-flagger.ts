@@ -7,6 +7,7 @@ import {
   buildProjectScopedAiMetadata,
   resolveGenerationConfig,
 } from "@domain/ai"
+import type { SafetyFindingKind } from "@domain/scores"
 import { CacheStore, LATITUDE_TELEMETRY_PROJECT_SLUGS } from "@domain/shared"
 import type { TraceDetail } from "@domain/spans"
 import { hammingDistance64, hash, simhash64 } from "@repo/utils"
@@ -26,7 +27,6 @@ import type { FlaggerConversation } from "../conversation.ts"
 import {
   resolveInjectionFindingKind,
   resolvePiiFindingKind,
-  type SafetyFindingKind,
   safetyJudgmentVersion,
   writesSafetyAnnotation,
 } from "../entities/safety-verdict.ts"

@@ -786,6 +786,9 @@ describe("ScoreRepositoryLive + score use cases", () => {
 
     await write({ sourceId: "SYSTEM", passed: true, feedback: "Task completed", flaggerSlug: "task-failure" })
     await write({ sourceId: "SYSTEM", passed: false, feedback: "Task not completed", flaggerSlug: "task-failure" })
+    // A Safety measurement is the same kind of row: persisted because the score
+    // needs it, not because a reviewer has anything to act on.
+    await write({ sourceId: "SYSTEM", passed: true, feedback: "The agent refused", flaggerSlug: "jailbreaking" })
     await write({ sourceId: "UI", passed: true, feedback: "A reviewer liked this" })
 
     const listed = await Effect.runPromise(

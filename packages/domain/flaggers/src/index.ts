@@ -68,10 +68,7 @@ export {
   flaggerScreeningSelectionSchema,
 } from "./entities/flagger-screening-decision.ts"
 export {
-  SAFETY_FINDING_KINDS,
   SAFETY_JUDGMENT_VERSION_PREFIX,
-  type SafetyFindingKind,
-  safetyFindingKindSchema,
   safetyJudgmentVersion,
   writesSafetyAnnotation,
 } from "./entities/safety-verdict.ts"
@@ -271,5 +268,7 @@ export {
 } from "./use-cases/update-flagger.ts"
 export {
   type UpsertFlaggerVerdictScoreInput,
+  type UpsertSafetyFindingScoreInput,
   upsertFlaggerVerdictScore,
+  upsertSafetyFindingScore,
 } from "./use-cases/upsert-flagger-annotation-score.ts"

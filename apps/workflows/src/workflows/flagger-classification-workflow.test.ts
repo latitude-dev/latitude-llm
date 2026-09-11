@@ -27,6 +27,7 @@ const { mockActivities } = vi.hoisted(() => {
     })),
     saveSessionFlaggerAnnotation: vi.fn(async () => ({})),
     saveSessionFlaggerVerdict: vi.fn(async () => undefined),
+    saveSessionFlaggerSafetyFinding: vi.fn(async () => undefined),
   }
   return { mockActivities }
 })
@@ -166,6 +167,73 @@ describe("flaggerClassificationWorkflow", () => {
       expect(result).toMatchObject({ result: "not_matched" })
       expect(mockActivities.saveSessionFlaggerVerdict).not.toHaveBeenCalled()
       expect(mockActivities.draftSessionFlaggerAnnotation).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("Safety detectors", () => {
+    const anchors = {
+      feedback: "An instruction-override attempt arrived in the first user turn.",
+      messageIndex: 0,
+      flaggerTraceId: FLAGGER_TRACE_ID,
+      contentHash: "a".repeat(64),
+      latestTraceId: "t".repeat(32),
+      sessionStartedAt: "2026-08-17T12:00:00.000Z",
+      simulationId: null,
+      scoringArtifactVersion: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+    }
+
+    const finding = (
+      safetyFindingKind: "injectionAttempt" | "injectionCompliance" | "injectionDefense" | "piiExposure",
+    ): ClassifySessionFlaggerResult =>
+      safetyFindingKind === "injectionDefense" || safetyFindingKind === "piiExposure"
+        ? { matched: false, outcome: "success", ...anchors, safetyFindingKind }
+        : { matched: true, outcome: "matched", ...anchors, safetyFindingKind }
+
+    const SAFETY_INPUT = { ...INPUT, flaggerSlug: "jailbreaking" as const }
+
+    it.each([
+      "injectionAttempt",
+      "injectionCompliance",
+      "injectionDefense",
+      "piiExposure",
+    ] as const)("saves %s in one step without drafting an annotation", async (safetyFindingKind) => {
+      mockActivities.classifySessionFlagger.mockImplementationOnce(async () => finding(safetyFindingKind))
+
+      const result = await flaggerClassificationWorkflow(SAFETY_INPUT)
+
+      expect(result).toMatchObject({ result: `safety_${safetyFindingKind}` })
+      expect(mockActivities.saveSessionFlaggerSafetyFinding).toHaveBeenCalledWith(
+        expect.objectContaining({
+          safetyFindingKind,
+          analysisHash: INPUT.screeningSelection.analysisHash,
+          scoringArtifactVersion: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          flaggerTraceId: FLAGGER_TRACE_ID,
+        }),
+      )
+      expect(mockActivities.draftSessionFlaggerAnnotation).not.toHaveBeenCalled()
+      expect(mockActivities.saveSessionFlaggerAnnotation).not.toHaveBeenCalled()
+      expect(mockActivities.saveSessionFlaggerVerdict).not.toHaveBeenCalled()
+    })
+
+    // The finding kind is the identity, so a generation is provenance the score
+    // can do without rather than a reason to drop the judgement.
+    it("still persists a finding when no analysis generation is available", async () => {
+      mockActivities.classifySessionFlagger.mockImplementationOnce(async () => finding("injectionCompliance"))
+
+      const result = await flaggerClassificationWorkflow({ ...SAFETY_INPUT, screeningSelection: undefined })
+
+      expect(result).toMatchObject({ result: "safety_injectionCompliance" })
+      expect(mockActivities.saveSessionFlaggerSafetyFinding).toHaveBeenCalledWith(
+        expect.not.objectContaining({ analysisHash: expect.anything() }),
+      )
+    })
+
+    it("leaves a result with no finding kind on the annotation path", async () => {
+      const result = await flaggerClassificationWorkflow(SAFETY_INPUT)
+
+      expect(result).toMatchObject({ result: "annotated" })
+      expect(mockActivities.saveSessionFlaggerSafetyFinding).not.toHaveBeenCalled()
+      expect(mockActivities.draftSessionFlaggerAnnotation).toHaveBeenCalled()
     })
   })
 })

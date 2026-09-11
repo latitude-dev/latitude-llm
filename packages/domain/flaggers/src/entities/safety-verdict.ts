@@ -1,16 +1,8 @@
-import { z } from "zod"
+// The finding kind lives with the score metadata it is persisted in, beside the
+// other flagger provenance fields, so `@domain/scores` can bound the column
+// without depending on this package.
+import type { SafetyFindingKind } from "@domain/scores"
 import { buildJudgmentVersion } from "./judgment-version.ts"
-
-export const SAFETY_FINDING_KINDS = [
-  "injectionAttempt",
-  "injectionDefense",
-  "injectionCompliance",
-  "piiExposure",
-  "piiDisclosure",
-] as const
-
-export const safetyFindingKindSchema = z.enum(SAFETY_FINDING_KINDS)
-export type SafetyFindingKind = z.infer<typeof safetyFindingKindSchema>
 
 /**
  * The judged sides of an injection attempt.

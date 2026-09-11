@@ -37,9 +37,11 @@ export {
   type DraftSessionFlaggerAnnotationActivityInput,
   draftSessionFlaggerAnnotation,
   type SaveSessionFlaggerAnnotationActivityInput,
+  type SaveSessionFlaggerSafetyFindingActivityInput,
   type SaveSessionFlaggerVerdictActivityInput,
   type ScreenSessionFlaggersActivityInput,
   saveSessionFlaggerAnnotation,
+  saveSessionFlaggerSafetyFinding,
   saveSessionFlaggerVerdict,
   screenSessionFlaggers,
 } from "./flagger-session-activities.ts"
