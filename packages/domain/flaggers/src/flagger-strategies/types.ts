@@ -69,13 +69,17 @@ export interface FlaggerStrategy {
   readonly details?: FlaggerDisplayDetails
 
   /**
-   * Marks a strategy whose classifier answers with a holistic verdict instead
-   * of a matched/unmatched detection. The classifier builds the verdict
-   * generation schema for these, and only the negative verdict goes through
-   * the adversarial annotation review, since the other verdicts propose no
-   * annotation to review. Absent means the ordinary detection contract.
+   * Marks a strategy whose classifier answers with a structured verdict instead
+   * of a matched/unmatched detection. The classifier builds the matching
+   * generation schema and output contract for each one, and only the verdicts
+   * that propose an annotation go through the adversarial review. Absent means
+   * the ordinary detection contract.
+   *
+   * The two Safety contracts are separate because their fields are: injection
+   * judges an attack and the assistant's response to it, while PII judges who
+   * authored the personal data.
    */
-  readonly verdictContract?: "taskOutcome"
+  readonly verdictContract?: "taskOutcome" | "safetyInjection" | "safetyPii"
 
   /**
    * Whether this strategy classifies ONLY the evaluated agent's own assistant

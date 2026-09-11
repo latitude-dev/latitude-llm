@@ -68,6 +68,14 @@ export {
   flaggerScreeningSelectionSchema,
 } from "./entities/flagger-screening-decision.ts"
 export {
+  SAFETY_FINDING_KINDS,
+  SAFETY_JUDGMENT_VERSION_PREFIX,
+  type SafetyFindingKind,
+  safetyFindingKindSchema,
+  safetyJudgmentVersion,
+  writesSafetyAnnotation,
+} from "./entities/safety-verdict.ts"
+export {
   isScoringTaskOutcomeVerdict,
   TASK_OUTCOME_JUDGMENT_VERSION_PREFIX,
   TASK_OUTCOME_VERDICTS,
