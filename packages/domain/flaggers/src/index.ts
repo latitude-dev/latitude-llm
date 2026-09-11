@@ -68,6 +68,16 @@ export {
   flaggerScreeningSelectionSchema,
 } from "./entities/flagger-screening-decision.ts"
 export {
+  isScoringTaskOutcomeVerdict,
+  TASK_OUTCOME_JUDGMENT_VERSION_PREFIX,
+  TASK_OUTCOME_VERDICTS,
+  type TaskOutcomeVerdict,
+  type TaskOutcomeVerdictKind,
+  taskOutcomeJudgmentVersion,
+  taskOutcomeVerdictKindSchema,
+  taskOutcomeVerdictSchema,
+} from "./entities/task-outcome-verdict.ts"
+export {
   DETERMINISTIC_FLAGGER_INSTRUCTIONS,
   FLAGGER_DISPLAY,
   type FlaggerDisplay,
@@ -105,6 +115,7 @@ export {
   type SuspiciousSnippet,
   scoreRefusalLikelihood,
   suppressorSlug,
+  taskFailureStrategy,
   toolCallErrorsStrategy,
   trashingStrategy,
   truncateExcerpt,
@@ -170,6 +181,7 @@ export {
   type ClassifySessionFlaggerInput,
   type ClassifySessionFlaggerResult,
   classifySessionFlaggerUseCase,
+  type JudgedSessionAnchors,
   loadFlaggerSessionContextUseCase,
 } from "./use-cases/classify-session-flagger.ts"
 export {
@@ -248,3 +260,7 @@ export {
   type UpdateFlaggerInput,
   updateFlaggerUseCase,
 } from "./use-cases/update-flagger.ts"
+export {
+  type UpsertFlaggerVerdictScoreInput,
+  upsertFlaggerVerdictScore,
+} from "./use-cases/upsert-flagger-annotation-score.ts"

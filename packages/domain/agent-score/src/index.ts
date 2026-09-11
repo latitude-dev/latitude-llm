@@ -165,6 +165,13 @@ export {
   type SessionAssessmentPageCursor,
 } from "./pagination/session-assessment-cursor.ts"
 export {
+  type OutcomeWindowDecision,
+  OutcomeWindowDecisionSource,
+  type OutcomeWindowDecisionSourceShape,
+  type OutcomeWindowDecisions,
+  type OutcomeWindowScope,
+} from "./ports/outcome-window-source.ts"
+export {
   type SessionAssessmentBulkJudgmentScope,
   SessionAssessmentBulkJudgmentSource,
   type SessionAssessmentBulkJudgmentSourceShape,
@@ -274,6 +281,13 @@ export type {
 export { aggregateSessionCost, EMPTY_COST_FAMILY_DENOMINATORS } from "./scoring/aggregate-session-cost.ts"
 export type { ArbitratedReading, CostAtomArbitration } from "./scoring/arbitrate-cost-atoms.ts"
 export { arbitrateCostAtoms } from "./scoring/arbitrate-cost-atoms.ts"
+export {
+  type BinomialInterval,
+  clopperPearsonInterval,
+  DEFAULT_CONFIDENCE_LEVEL,
+  inverseRegularizedIncompleteBeta,
+  regularizedIncompleteBeta,
+} from "./scoring/binomial-interval.ts"
 export type {
   SessionWindowContribution,
   WindowBootstrapResult,
@@ -282,12 +296,31 @@ export type {
   WindowSpeedAggregate,
 } from "./scoring/bootstrap-window.ts"
 export { aggregateWindowCost, aggregateWindowSpeed, bootstrapWindow } from "./scoring/bootstrap-window.ts"
+export {
+  buildOutcomeIssues,
+  OUTCOME_ISSUE_ROW_LIMIT,
+  type OutcomeIssueObservation,
+  type OutcomeIssueRow,
+  type OutcomeIssueSession,
+} from "./scoring/build-outcome-issues.ts"
 export type {
   SpeedAvoidableClaim,
   SpeedClaimDropReason,
   SpeedCounterfactual,
 } from "./scoring/compose-speed-counterfactual.ts"
 export { composeSpeedCounterfactual, SPEED_CLAIM_DROP_REASONS } from "./scoring/compose-speed-counterfactual.ts"
+export {
+  type EstimateProjectOutcomeInput,
+  estimateProjectOutcome,
+  OUTCOME_EXCLUSION_REASONS,
+  type OutcomeCoverageFloors,
+  type OutcomeExclusionReason,
+  type OutcomeIntervalMethod,
+  type OutcomeSessionVerdict,
+  type OutcomeUnmeasuredReason,
+  PROVISIONAL_OUTCOME_COVERAGE_FLOORS,
+  type ProjectOutcomeEstimate,
+} from "./scoring/estimate-outcome.ts"
 export type {
   MatchedSession,
   ResidualEffect,
@@ -323,6 +356,16 @@ export {
 } from "./scoring/fold-window-contributions.ts"
 export type { LinkedSignalOccurrence, SignalLinkage, SignalOccurrence } from "./scoring/link-signal-occurrences.ts"
 export { linkSignalOccurrences } from "./scoring/link-signal-occurrences.ts"
+export { readOutcomeIssueObservations } from "./scoring/read-outcome-issue-observations.ts"
+export {
+  hasDeterministicOutcomeFailure,
+  selectDeterministicOutcomeFailures,
+} from "./scoring/select-outcome-endpoints.ts"
+export {
+  type EstimateProjectOutcomeWindowInput,
+  estimateProjectOutcomeWindow,
+  OUTCOME_VERDICT_BATCH_SIZE,
+} from "./use-cases/estimate-project-outcome.ts"
 export {
   type GetSessionAssessmentInput,
   getSessionAssessment,

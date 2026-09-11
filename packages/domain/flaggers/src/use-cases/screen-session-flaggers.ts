@@ -387,6 +387,7 @@ const handleMatched = (args: ScreenOneStrategyInput, feedback: string, messageIn
       flaggerSlug: args.slug,
       messageIndex,
       contentHash,
+      analysisHash: args.input.analysisHash,
       ...(findingKey !== undefined ? { flaggerFindingKey: findingKey, flaggerPath: "deterministic" } : {}),
     })
 

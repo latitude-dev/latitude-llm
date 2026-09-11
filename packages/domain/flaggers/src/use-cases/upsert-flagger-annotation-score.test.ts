@@ -5,7 +5,7 @@ import { ChSqlClient, OrganizationId, ProjectId, SqlClient, TraceId } from "@dom
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { upsertFlaggerAnnotationScore } from "./upsert-flagger-annotation-score.ts"
+import { upsertFlaggerAnnotationScore, upsertFlaggerVerdictScore } from "./upsert-flagger-annotation-score.ts"
 
 const ORG_ID = "a".repeat(24)
 const PROJECT_ID = ProjectId("b".repeat(24))
@@ -34,6 +34,7 @@ const makeHarness = () => {
     readonly flaggerFindingKey?: string
     readonly flaggerPath?: "deterministic" | "sampled"
     readonly scoringArtifactVersion?: string
+    readonly analysisHash?: string
   }) =>
     Effect.runPromise(
       upsertFlaggerAnnotationScore({
@@ -48,10 +49,32 @@ const makeHarness = () => {
         flaggerFindingKey: input.flaggerFindingKey,
         flaggerPath: input.flaggerPath,
         scoringArtifactVersion: input.scoringArtifactVersion,
+        analysisHash: input.analysisHash,
       }).pipe(Effect.provide(layer)),
     )
 
-  return { upsert, scores }
+  const upsertVerdict = (input: {
+    readonly verdict: "success" | "failure"
+    readonly feedback: string
+    readonly analysisHash: string
+    readonly contentHash?: string
+    readonly flaggerSlug?: string
+  }) =>
+    Effect.runPromise(
+      upsertFlaggerVerdictScore({
+        projectId: PROJECT_ID,
+        traceId: TRACE_ID,
+        sessionId: SESSION_ID,
+        simulationId: null,
+        flaggerSlug: input.flaggerSlug ?? "task-failure",
+        verdict: input.verdict,
+        feedback: input.feedback,
+        analysisHash: input.analysisHash,
+        contentHash: input.contentHash ?? ANCHOR_A,
+      }).pipe(Effect.provide(layer)),
+    )
+
+  return { upsert, upsertVerdict, scores }
 }
 
 describe("upsertFlaggerAnnotationScore anchor dedup", () => {
@@ -160,5 +183,79 @@ describe("upsertFlaggerAnnotationScore anchor dedup", () => {
     expect(repeat.status).toBe("existing")
     expect(reworded.status).toBe("written")
     expect(scores.size).toBe(2)
+  })
+})
+
+describe("upsertFlaggerVerdictScore", () => {
+  const GENERATION_A = "a".repeat(64)
+  const GENERATION_B = "b".repeat(64)
+
+  it("writes a passed score for success and a failed score for failure", async () => {
+    const { upsertVerdict, scores } = makeHarness()
+
+    await upsertVerdict({ verdict: "success", feedback: "The task was completed.", analysisHash: GENERATION_A })
+    await upsertVerdict({
+      verdict: "failure",
+      feedback: "The cancellation never happened.",
+      analysisHash: GENERATION_B,
+    })
+
+    const written = [...scores.values()]
+    expect(written).toHaveLength(2)
+    expect(written[0]).toMatchObject({ passed: true, value: 1, sourceType: "annotation", sourceId: "SYSTEM" })
+    expect(written[1]).toMatchObject({ passed: false, value: 0 })
+  })
+
+  it("dedups one verdict per analysis generation", async () => {
+    const { upsertVerdict, scores } = makeHarness()
+
+    const first = await upsertVerdict({ verdict: "success", feedback: "Done.", analysisHash: GENERATION_A })
+    const rerun = await upsertVerdict({ verdict: "success", feedback: "Done again.", analysisHash: GENERATION_A })
+
+    expect(rerun).toEqual({ status: "existing", scoreId: first.scoreId })
+    expect(scores.size).toBe(1)
+  })
+
+  // The anchor dedup the detection path uses survives re-screens on purpose,
+  // which would drop the newer verdict of a session that changed.
+  it("records a later generation that reverses an earlier verdict on the same anchor", async () => {
+    const { upsertVerdict, scores } = makeHarness()
+
+    await upsertVerdict({ verdict: "success", feedback: "Done.", analysisHash: GENERATION_A, contentHash: ANCHOR_A })
+    const reversed = await upsertVerdict({
+      verdict: "failure",
+      feedback: "The user came back and it was still broken.",
+      analysisHash: GENERATION_B,
+      contentHash: ANCHOR_A,
+    })
+
+    expect(reversed.status).toBe("written")
+    expect(scores.size).toBe(2)
+  })
+
+  it("scopes the generation dedup per flagger slug", async () => {
+    const { upsertVerdict, scores } = makeHarness()
+
+    await upsertVerdict({ verdict: "success", feedback: "Done.", analysisHash: GENERATION_A })
+    const other = await upsertVerdict({
+      verdict: "success",
+      feedback: "Done.",
+      analysisHash: GENERATION_A,
+      flaggerSlug: "refusal",
+    })
+
+    expect(other.status).toBe("written")
+    expect(scores.size).toBe(2)
+  })
+
+  it("stores the analysis generation so window readers can pick the newest one", async () => {
+    const { upsertVerdict, scores } = makeHarness()
+
+    await upsertVerdict({ verdict: "success", feedback: "Done.", analysisHash: GENERATION_A })
+
+    expect([...scores.values()][0]?.metadata).toMatchObject({
+      analysisHash: GENERATION_A,
+      flaggerSlug: "task-failure",
+    })
   })
 })

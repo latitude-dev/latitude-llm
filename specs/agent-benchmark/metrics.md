@@ -180,7 +180,7 @@ gates at 30, 100, and 1,000 observations remain the minimum evidence for publish
 
 - Dimension: Outcome.
 - Evidence role: holistic task-outcome verdict.
-- Reader: passed and failed scores from the sampled `task-success` flagger.
+- Reader: passed and failed scores from the sampled `task-failure` flagger.
 
 The verdict concerns the complete session. Success means the agent resolved all material user goals
 that remained active at the end. Failure means at least one material goal failed, was abandoned, or
@@ -642,7 +642,7 @@ behavior. Annotation volume is not itself a metric. Scores assigned to ignored s
 explicit exclusion defined in [`signals.md`](signals.md); independent telemetry readers remain
 unchanged.
 
-## Positive evidence beyond Task Success
+## Positive evidence beyond the task-outcome verdict
 
 Resolution and satisfaction moments can become Outcome estimator inputs in a later scoring version.
 Their absence is not failure.

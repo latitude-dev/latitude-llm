@@ -8,7 +8,7 @@ const decision = (overrides: Partial<FlaggerScreeningDecision> = {}): FlaggerScr
     organizationId: "org-1",
     projectId: "project-1",
     sessionId: "session-1",
-    flaggerSlug: "task-success",
+    flaggerSlug: "task-failure",
     analysisHash: "b".repeat(64),
     scoringArtifactVersion: "v1",
     attempt: 1,
@@ -42,7 +42,7 @@ describe("buildSessionAssessmentCoverage", () => {
 
     expect(result.coverage.readers).toEqual([
       expect.objectContaining({ readerId: "tools.call_failed", status: "examined", findingCount: 0 }),
-      expect.objectContaining({ readerId: "flagger:task-success", status: "notExamined", limitation: "notSelected" }),
+      expect.objectContaining({ readerId: "flagger:task-failure", status: "notExamined", limitation: "notSelected" }),
     ])
     expect(result.dimensions.reliability).toBe("complete")
     expect(result.dimensions.outcome).toBe("notExamined")

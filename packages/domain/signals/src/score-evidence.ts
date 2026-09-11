@@ -2,7 +2,7 @@ import { SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT } from "@domain/scores"
 import type { SignalScoreEvidence } from "./entities/signal.ts"
 
 const signalScoreEvidenceByFlaggerSlug = {
-  "task-success": [{ scoreDimension: "outcome", role: "taskOutcome" }],
+  "task-failure": [{ scoreDimension: "outcome", role: "taskOutcome" }],
   "tool-call-errors": [
     { scoreDimension: "reliability", role: "operationalIncident" },
     { scoreDimension: "cost", role: "spendEfficiency" },

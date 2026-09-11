@@ -1,4 +1,5 @@
-import { ChSqlClient, OrganizationId, ProjectId, SessionId, SqlClient, TraceId } from "@domain/shared"
+import type { Score } from "@domain/scores"
+import { ChSqlClient, OrganizationId, ProjectId, ScoreId, SessionId, SqlClient, TraceId } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import type { SessionDetail } from "@domain/spans"
 import { Effect, Layer } from "effect"
@@ -30,6 +31,43 @@ const makeSession = (sessionId: string, traceId: string): SessionDetail =>
     startTime: new Date("2026-01-01T00:00:00.000Z"),
     endTime: new Date("2026-01-01T00:00:01.000Z"),
   }) as unknown as SessionDetail
+
+// A persisted judgement is the one assessment input that does not come from
+// telemetry, so parity has to cover it: the single-session path and the window
+// job must read the same verdict for the same session.
+const taskOutcomeVerdict = (sessionId: string, traceId: string): Score =>
+  ({
+    id: ScoreId(`score-${sessionId}`),
+    organizationId: OrganizationId("org-1"),
+    projectId: ProjectId("project-1"),
+    sessionId: SessionId(sessionId),
+    traceId: TraceId(traceId),
+    spanId: null,
+    simulationId: null,
+    signalId: null,
+    sourceType: "annotation",
+    sourceId: "SYSTEM",
+    value: 1,
+    passed: true,
+    feedback: "Cancelled the subscription and confirmed the date.",
+    metadata: {
+      rawFeedback: "raw",
+      flaggerSlug: "task-failure",
+      flaggerPath: "sampled",
+      scoringArtifactVersion: "task-failure-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+      analysisHash: "a".repeat(64),
+      messageIndex: 0,
+    },
+    error: null,
+    errored: false,
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+    draftedAt: null,
+    annotatorId: null,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  }) as Score
 
 describe("readSessionAssessmentBatch", () => {
   it("reads each bulk source once and resolves every session through the shared pipeline", async () => {
@@ -132,7 +170,14 @@ describe("readSessionAssessmentBatch", () => {
         ),
     })
     const judgmentLayer = Layer.succeed(SessionAssessmentBulkJudgmentSource, {
-      read: (input) => Effect.succeed(input.sessions.map(({ sessionId }) => ({ sessionId, scores: [], signals: [] }))),
+      read: (input) =>
+        Effect.succeed(
+          input.sessions.map(({ sessionId, traceIds }) => ({
+            sessionId,
+            scores: [taskOutcomeVerdict(sessionId, traceIds[0] ?? "trace-1")],
+            signals: [],
+          })),
+        ),
     })
     const layer = Layer.mergeAll(
       telemetryLayer,
@@ -171,6 +216,9 @@ describe("readSessionAssessmentBatch", () => {
 
       expect(JSON.stringify(singleFacts[0])).toBe(JSON.stringify(bulkSessionFacts))
       expect(JSON.stringify(singleSemantics)).toBe(JSON.stringify(bulkSessionAssessment))
+      expect(singleAssessment.items).toContainEqual(
+        expect.objectContaining({ metricId: "sessions.task_success", polarity: "positive" }),
+      )
     } finally {
       vi.useRealTimers()
     }

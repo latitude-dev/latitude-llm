@@ -37,8 +37,10 @@ export {
   type DraftSessionFlaggerAnnotationActivityInput,
   draftSessionFlaggerAnnotation,
   type SaveSessionFlaggerAnnotationActivityInput,
+  type SaveSessionFlaggerVerdictActivityInput,
   type ScreenSessionFlaggersActivityInput,
   saveSessionFlaggerAnnotation,
+  saveSessionFlaggerVerdict,
   screenSessionFlaggers,
 } from "./flagger-session-activities.ts"
 export { buildOptimizationDedupeKey, scheduleEvaluationOptimization } from "./schedule-evaluation-optimization.ts"

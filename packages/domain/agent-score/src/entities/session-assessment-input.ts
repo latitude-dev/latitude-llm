@@ -131,6 +131,12 @@ export interface NormalizedSessionCostEvidence {
 
 export interface NormalizedSessionAssessmentInput {
   readonly sessionId: SessionId
+  /**
+   * Whether the session states a task at all, which is what makes a delivery
+   * failure judgeable. A session with no user-authored request cannot fail
+   * Outcome; it is not applicable to it.
+   */
+  readonly hasReadableUserTask: boolean
   readonly observedMicrocents: number
   readonly observedDurationNs: number
   readonly findings: readonly AssessmentFinding[]

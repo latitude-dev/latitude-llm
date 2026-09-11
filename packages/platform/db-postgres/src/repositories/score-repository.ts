@@ -105,6 +105,17 @@ const applyDraftMode = (options: ScoreListOptions | undefined) => {
   return isNull(scores.draftedAt)
 }
 
+/**
+ * Excludes a flagger's positive reference verdict.
+ *
+ * Applied in SQL rather than over the returned page so a hidden verdict cannot
+ * consume the page budget and displace a real annotation.
+ */
+const applyFlaggerReferenceVerdictFilter = (options: ScoreListOptions | undefined) => {
+  if (!options?.omitFlaggerReferenceVerdicts) return undefined
+  return or(eq(scores.passed, false), ne(scores.sourceId, "SYSTEM"), sql`${scores.metadata}->>'flaggerSlug' is null`)
+}
+
 const applyAbsentEvaluationFilter = (options: ScoreListOptions | undefined) => {
   if (!options?.omitAbsentEvaluations) return undefined
   return or(
@@ -147,11 +158,13 @@ export const ScoreRepositoryLive = Layer.effect(
             const offset = input.options?.offset ?? 0
             const draftClause = applyDraftMode(input.options)
             const absentEvaluationClause = applyAbsentEvaluationFilter(input.options)
+            const referenceVerdictClause = applyFlaggerReferenceVerdictFilter(input.options)
             const whereClause = and(
               eq(scores.organizationId, organizationId),
               input.baseWhere,
               draftClause,
               absentEvaluationClause,
+              referenceVerdictClause,
             )
 
             return db
@@ -482,7 +495,9 @@ export const ScoreRepositoryLive = Layer.effect(
               db
                 .select({
                   traceId: scores.traceId,
-                  positiveCount: sql<number>`count(*) filter (where ${scores.passed} = true and ${scores.errored} = false)::int`,
+                  // A flagger's positive reference verdict is a measurement, not a
+                  // reviewer's annotation, so it must not inflate this badge.
+                  positiveCount: sql<number>`count(*) filter (where ${scores.passed} = true and ${scores.errored} = false and not (${scores.sourceId} = 'SYSTEM' and ${scores.metadata}->>'flaggerSlug' is not null))::int`,
                   negativeCount: sql<number>`count(*) filter (where ${scores.passed} = false and ${scores.errored} = false and not (${scores.sourceType} = 'evaluation' and ${scores.signalId} is null))::int`,
                 })
                 .from(scores)

@@ -69,14 +69,14 @@ Every benchmark observation belongs to one of four forms:
 
 | Form | What it contributes | Examples |
 | --- | --- | --- |
-| Outcome evidence | A direct Task Success endpoint or issue context | Task Success verdicts, corrections, abandonment, no output, Outcome signals |
+| Outcome evidence | A direct task-outcome endpoint or issue context | task-outcome verdicts, corrections, abandonment, no output, Outcome signals |
 | Terminal failure evidence | Whether the session ended in an operational failure | unrecovered provider or tool errors, broken final output |
 | Resource evidence | Spend, context tokens, operations, session burden, or critical-path time | cache gap, redundant context, retries, repeated calls, slow generation |
 | Safety evidence | Whether the agent caused confirmed harm | PII disclosure, injection compliance |
 
 Value observations enter in their natural unit. Cost families use money, input tokens, tool calls,
 memory operations, and eligible sessions. Speed uses critical-path time. Event observations
-establish a Task Success, terminal-failure, or confirmed-harm endpoint; provide issue context; or
+establish a task-outcome, terminal-failure, or confirmed-harm endpoint; provide issue context; or
 identify inefficient resource use. Both forms meet at the session before the dimension aggregates
 the window.
 
@@ -104,7 +104,7 @@ force unrelated evidence to become less important.
 
 Evidence that overlaps on one session is resolved once on that session. Cost evidence is deduplicated
 within its family and capped by the family's eligible units. Time is capped by the critical path the
-session actually consumed. Outcome uses one Task Success verdict per session, and Safety uses one
+session actually consumed. Outcome uses one task-outcome verdict per session, and Safety uses one
 confirmed-harm union. Duplicate detectors and split signal clusters cannot multiply the underlying
 result.
 
@@ -193,7 +193,7 @@ Read them in this order:
 | Cost readers expose family-native eligible and penalized units | Cost must combine money and non-money evidence without pretending every effect is priced |
 | Content readers expose bounded generation inputs and tool definitions | Context and downstream tool or memory footprint cannot be inferred from the latest conversation window |
 | Duration readers expose trace structure and foreground classification | Speed waste must be capped and deduplicated before window aggregation |
-| A sampled Task Success flagger persists passed and failed scores | Outcome needs a direct holistic reference verdict, not a union of defect counts |
+| A sampled task-failure flagger persists passed and failed scores | Outcome needs a direct holistic reference verdict, not a union of defect counts |
 
 ## Fixed score settings
 
@@ -217,7 +217,7 @@ influence among causes.
 
 The structure is fixed. Launch requires these versioned artifacts and acceptance reports:
 
-1. The Task Success prompt, supported judge configuration, result schema, sampling policy, and
+1. The task-failure prompt, supported judge configuration, result schema, sampling policy, and
    Outcome coverage floors.
 2. The initial Cost scoring artifact: family weights, metric curves, applicability rules, caps,
    overlap groups, coverage floors, and residual-signal cap. Launch requires an audit, shadow

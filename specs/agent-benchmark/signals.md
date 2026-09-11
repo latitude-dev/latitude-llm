@@ -45,7 +45,7 @@ model classification and static fallback are unavailable or empty all use an emp
 
 | Role | How occurrences are used |
 | --- | --- |
-| `taskOutcome` | an Outcome issue linked to examined Task Success results where possible |
+| `taskOutcome` | an Outcome issue linked to examined task-outcome results where possible |
 | `completionOutcome` | informs the usable or terminal completion result established per occurrence |
 | `operationalIncident` | records an incident whose terminal or recovered result is decided per occurrence |
 | `spendEfficiency` | persisted compatibility name for a candidate Cost-family explanation after deterministic evidence is accounted for |
@@ -85,7 +85,7 @@ When model generation fails, flagger-derived signals can use this static fallbac
 
 | Flagger | Evidence roles |
 | --- | --- |
-| `task-success` | Outcome `taskOutcome` for failed scores only |
+| `task-failure` | Outcome `taskOutcome` for failed scores only |
 | `tool-call-errors` | Reliability `operationalIncident`; Cost `spendEfficiency`; Speed `criticalPathEfficiency` |
 | `output-schema-validation` | Outcome `taskOutcome`; Reliability `completionOutcome` |
 | `empty-response` | Outcome `taskOutcome`; Reliability `completionOutcome` |
@@ -152,8 +152,8 @@ native quantity.
 ### Outcome
 
 Outcome signals explain recurring issues. The project cause reader reports each signal's affected
-sessions and its overlap with compatible examined Task Success failures. Several signals on one
-session still contribute one Task Success result to the project estimator.
+sessions and its overlap with compatible examined task-outcome failures. Several signals on one
+session still contribute one the task-failure judge result to the project estimator.
 
 Signal occurrence does not apply a separate point deduction. A signal without enough examined
 overlap remains visible with reach and examples, but without an Outcome effect claim.
@@ -214,7 +214,7 @@ Every logical screening decision stores:
 - inclusion probability;
 - finding kind and conditional fields when matched.
 
-Task Success uses the same configurable sampling and hint path as other flaggers. Outcome corrects
+the task-failure judge uses the same configurable sampling and hint path as other flaggers. Outcome corrects
 its verdicts with stored inclusion probabilities. Safety selects a complete detector suite per
 session. Other sampled observations use inverse-probability weights. A decision without a known
 inclusion probability is usable for an example or raw coverage count, but not for a score or ranked
@@ -242,8 +242,8 @@ the session estimand, not on the number or identity of clusters.
 ## Promotion evidence and issue evidence
 
 Sessions used to discover and promote a signal can establish its examples and reach. They cannot
-establish an unbiased relationship with Task Success by themselves. Outcome issue rows report
-examined failure overlap only when compatible Task Success decisions cover the signal's sessions.
+establish an unbiased relationship with the task-failure judge by themselves. Outcome issue rows report
+examined failure overlap only when compatible the task-failure judge decisions cover the signal's sessions.
 
 Historical occurrences without measurable selection remain examples and counts until a full score
 window of usable decisions accumulates.

@@ -110,6 +110,7 @@ export const annotationScoreMetadataSchema = baseScoreMetadataSchema
     flaggerFindingKey: flaggerFindingKeySchema.optional(), // stable calculated finding selected for deterministic discovery
     scoringArtifactVersion: scoringArtifactVersionSchema.optional(), // prompt, judge configuration, and result-schema version for persisted model evidence
     flaggerPath: flaggerPathSchema.optional(), // whether the persisted result came from a deterministic reader or sampled model call
+    analysisHash: z.string().optional(), // session analysis generation this judgement belongs to; window readers accept only the newest generation's verdict and never fall back to an older one
     ...annotationAnchorFields,
   })
   .superRefine(validateAnnotationAnchor)

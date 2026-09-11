@@ -16,8 +16,9 @@ import {
   type SessionHint,
   saveFlaggerAnnotationUseCase,
   screenSessionFlaggersUseCase,
+  upsertFlaggerVerdictScore,
 } from "@domain/flaggers"
-import { OrganizationId } from "@domain/shared"
+import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { checkRedisRateLimit, RedisBillingSpendReservationLive, RedisCacheStoreLive } from "@platform/cache-redis"
 import {
@@ -133,6 +134,7 @@ export interface ClassifySessionFlaggerActivityInput {
   readonly sessionId: string
   readonly flaggerSlug: string
   readonly hints: readonly SessionHint[]
+  readonly analysisHash?: string | undefined
   readonly screeningSelection?: FlaggerScreeningSelection | undefined
 }
 
@@ -151,7 +153,7 @@ export const classifySessionFlagger = async (
           ? recordFlaggerScreeningOutcomeUseCase({
               selection: input.screeningSelection,
               attempt: currentActivityAttempt(),
-              outcome: result.matched ? "matched" : result.outcome,
+              outcome: result.outcome,
             })
           : Effect.void,
       ),
@@ -189,6 +191,82 @@ export const classifySessionFlagger = async (
           }),
         ),
       ),
+    ),
+  )
+
+export interface SaveSessionFlaggerVerdictActivityInput {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly sessionId: string
+  readonly flaggerSlug: string
+  readonly verdict: "success" | "failure"
+  readonly feedback: string
+  readonly latestTraceId: string
+  readonly simulationId: string | null
+  readonly contentHash: string
+  readonly analysisHash: string
+  readonly scoringArtifactVersion: string
+  readonly messageIndex?: number | undefined
+  readonly flaggerTraceId?: string | undefined
+}
+
+/**
+ * Persists a verdict flagger's judgement in one step.
+ *
+ * Unlike the negative-annotation path there is nothing to draft: a verdict
+ * always arrives with its own feedback, so the annotator fallback would only
+ * spend credits, and the anchor dedup that path performs is the wrong rule for
+ * a whole-session verdict that is re-judged each generation.
+ */
+export const saveSessionFlaggerVerdict = async (input: SaveSessionFlaggerVerdictActivityInput): Promise<void> =>
+  Effect.runPromise(
+    upsertFlaggerVerdictScore({
+      projectId: ProjectId(input.projectId),
+      traceId: TraceId(input.latestTraceId),
+      sessionId: input.sessionId,
+      simulationId: input.simulationId,
+      flaggerSlug: input.flaggerSlug,
+      verdict: input.verdict,
+      feedback: input.feedback,
+      contentHash: input.contentHash,
+      analysisHash: input.analysisHash,
+      scoringArtifactVersion: input.scoringArtifactVersion,
+      flaggerPath: "sampled",
+      ...(input.messageIndex !== undefined ? { messageIndex: input.messageIndex } : {}),
+      ...(input.flaggerTraceId !== undefined ? { flaggerTraceId: input.flaggerTraceId } : {}),
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+      withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      withTracing,
+      Effect.tap((result) =>
+        Effect.sync(() =>
+          logger.info("Session flagger verdict saved", {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            sessionId: input.sessionId,
+            flaggerSlug: input.flaggerSlug,
+            verdict: input.verdict,
+            status: result.status,
+            scoreId: result.scoreId,
+          }),
+        ),
+      ),
+      Effect.tapError((error) =>
+        Effect.sync(() =>
+          logger.error("Session flagger verdict save failed", {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            sessionId: input.sessionId,
+            flaggerSlug: input.flaggerSlug,
+            error,
+          }),
+        ),
+      ),
+      Effect.asVoid,
     ),
   )
 

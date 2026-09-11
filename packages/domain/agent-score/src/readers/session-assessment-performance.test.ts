@@ -39,6 +39,7 @@ const session = (index: number): SessionDetail =>
   ({
     organizationId,
     projectId,
+    hasReadableUserTask: true,
     sessionId: SessionId(`session-${index}`),
     traceIds: [TraceId(`trace-${index}`)],
     systemInstructions: [],
@@ -60,6 +61,7 @@ describe("session assessment representative load", () => {
   it("keeps a large single-session resolution page-bounded with controlled heap growth", () => {
     const input: NormalizedSessionAssessmentInput = {
       sessionId: SessionId("large-session"),
+      hasReadableUserTask: true,
       observedMicrocents: 0,
       observedDurationNs: 0,
       findings: Array.from({ length: largeFindingCount }, (_, index) => finding(index)),

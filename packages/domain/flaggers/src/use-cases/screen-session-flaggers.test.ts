@@ -320,6 +320,7 @@ describe("screenSessionFlaggersUseCase", () => {
       contentHash: expect.stringMatching(/^[0-9a-f]{64}$/),
       flaggerFindingKey: expect.stringMatching(/^[0-9a-f]{64}$/),
       flaggerPath: "deterministic",
+      analysisHash: ANALYSIS_HASH,
     })
     expect(screeningDecisions.find((decision) => decision.flaggerSlug === "empty-response")).toMatchObject({
       organizationId: ORG_ID,
@@ -574,6 +575,69 @@ describe("screenSessionFlaggersUseCase", () => {
       selected: true,
       reason: "ordinary-sample",
       inclusionProbability: 1,
+    })
+  })
+
+  // Outcome is a selection-corrected rate, so its estimator reads these fields
+  // for every eligible session: one uniform stratum, the configured probability
+  // on both sides of the draw, and a sampled-out session that still declares
+  // the probability it lost.
+  it("records one uniform sampled stratum for the task-outcome judge", async () => {
+    const session = makeSessionDetail([
+      user("Cancel my subscription and confirm the last billing date."),
+      assistant("Cancelled. Your last billing date was 3 March."),
+    ])
+
+    const selected = await runScreening({
+      session,
+      flaggers: [makeFlagger("task-failure", 100)],
+      deps: makeDeps().deps,
+    })
+    expect(decisionFor(selected.result.decisions, "task-failure")).toMatchObject({
+      action: "classify",
+      reason: "sampled",
+      hintKinds: [],
+    })
+    const selectedDecision = selected.screeningDecisions.find((decision) => decision.flaggerSlug === "task-failure")
+    expect(selectedDecision).toMatchObject({
+      selected: true,
+      reason: "ordinary-sample",
+      inclusionProbability: 1,
+      hintKinds: [],
+    })
+    // Written before the judge runs, so coverage can tell pending from unexamined.
+    expect(selectedDecision?.outcome).toBeUndefined()
+
+    const sampledOut = await runScreening({
+      session,
+      flaggers: [makeFlagger("task-failure", 0)],
+      deps: makeDeps().deps,
+    })
+    expect(sampledOut.screeningDecisions.find((decision) => decision.flaggerSlug === "task-failure")).toMatchObject({
+      selected: false,
+      reason: "ordinary-sample",
+      inclusionProbability: 0,
+    })
+  })
+
+  it("keeps the task-outcome judge out of the hinted stratum on a failing session", async () => {
+    const session = makeSessionDetail([
+      user("Cancel my subscription."),
+      assistant("Done."),
+      user("I already told you twice, it is still active. Try again."),
+      assistant("Sorry about that."),
+    ])
+
+    const { screeningDecisions } = await runScreening({
+      session,
+      flaggers: [makeFlagger("task-failure", 40)],
+      deps: makeDeps().deps,
+    })
+
+    expect(screeningDecisions.find((decision) => decision.flaggerSlug === "task-failure")).toMatchObject({
+      reason: "ordinary-sample",
+      inclusionProbability: 0.4,
+      hintKinds: [],
     })
   })
 

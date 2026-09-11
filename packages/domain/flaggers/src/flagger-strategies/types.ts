@@ -26,6 +26,7 @@ export const FLAGGER_STRATEGY_SLUGS = [
   "output-schema-validation",
   "empty-response",
   "low-cache-hit-rate",
+  "task-failure",
 ] as const
 
 export type FlaggerSlug = (typeof FLAGGER_STRATEGY_SLUGS)[number]
@@ -66,6 +67,15 @@ export interface FlaggerStrategy {
   readonly annotator?: FlaggerAnnotatorContext
 
   readonly details?: FlaggerDisplayDetails
+
+  /**
+   * Marks a strategy whose classifier answers with a holistic verdict instead
+   * of a matched/unmatched detection. The classifier builds the verdict
+   * generation schema for these, and only the negative verdict goes through
+   * the adversarial annotation review, since the other verdicts propose no
+   * annotation to review. Absent means the ordinary detection contract.
+   */
+  readonly verdictContract?: "taskOutcome"
 
   /**
    * Whether this strategy classifies ONLY the evaluated agent's own assistant

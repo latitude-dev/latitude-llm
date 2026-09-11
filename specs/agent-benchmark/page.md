@@ -176,7 +176,7 @@ Refund-flow loop signal                190 sessions        141              92 s
 No usable final output                  36 sessions         36              36 sessions
 ```
 
-The score comes from Task Success judgments. Issue rows explain where failures concentrate without
+The score comes from task-outcome judgments. Issue rows explain where failures concentrate without
 claiming that every affected session failed or that removing one issue guarantees a fixed point
 gain. Estimated reach and failed reach use stored inclusion probabilities. Examined is the raw count
 shown for coverage, not ranking.

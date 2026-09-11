@@ -6,7 +6,9 @@ import { SessionRepository, SpanRepository } from "@domain/spans"
 import { createFakeSessionRepository, createFakeSpanRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import { FLAGGER_DEFAULT_CLASSIFIER_MODEL } from "../constants.ts"
 import type { Flagger } from "../entities/flagger.ts"
+import { taskOutcomeJudgmentVersion } from "../entities/task-outcome-verdict.ts"
 import { assistant, makeSessionDetail, user } from "../flagger-strategies/test-helpers.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
@@ -152,5 +154,114 @@ describe("classifySessionFlaggerUseCase gating", () => {
     )
 
     expect(result).toEqual({ matched: false, outcome: "notApplicable" })
+  })
+})
+
+describe("classifySessionFlaggerUseCase task-failure verdicts", () => {
+  const SESSION = makeSessionDetail(
+    [
+      user("Cancel my subscription and confirm the last billing date."),
+      assistant("Cancelled. Your last billing date was 3 March."),
+    ],
+    { systemInstructions: [{ type: "text", content: "You are a billing support agent." }] },
+  )
+
+  const ANALYSIS_HASH = "a".repeat(64)
+
+  const classify = (classification: unknown) => {
+    const { repository: sessionRepo } = createFakeSessionRepository({
+      findBySessionId: () => Effect.succeed(SESSION),
+    })
+    const { repository: spanRepo } = createFakeSpanRepository({
+      findLatestOutputTraceId: () => Effect.die("spans must not be queried for single-trace sessions"),
+    })
+    const { repository: flaggerRepo } = createFakeFlaggerRepository([], {
+      findByProjectAndSlug: () =>
+        Effect.succeed({
+          id: FlaggerId(generateId()),
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          slug: "task-failure",
+          enabled: true,
+          sampling: 10,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as Flagger),
+    })
+    const { layer: aiLayer } = createFakeAI({
+      generate: <T>(input: { readonly system?: string }) =>
+        Effect.succeed({
+          object: ((input.system?.includes("adversarial quality reviewer") ?? false)
+            ? { annotationMakesSense: true }
+            : classification) as T,
+          tokens: 20,
+          duration: 90_000_000,
+        }),
+    })
+
+    return Effect.runPromise(
+      classifySessionFlaggerUseCase({ ...INPUT, flaggerSlug: "task-failure", analysisHash: ANALYSIS_HASH }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(SessionRepository, sessionRepo),
+            Layer.succeed(SpanRepository, spanRepo),
+            Layer.succeed(FlaggerRepository, flaggerRepo),
+            Layer.succeed(CacheStore, {
+              get: () => Effect.succeed(null),
+              set: () => Effect.void,
+              delete: () => Effect.void,
+            }),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
+      ),
+    )
+  }
+
+  it("reports the judge that produced the verdict and the generation it judged", async () => {
+    const result = await classify({ verdict: "success", explanation: "Delivered." })
+
+    expect(result).toMatchObject({
+      outcome: "success",
+      analysisHash: ANALYSIS_HASH,
+      scoringArtifactVersion: taskOutcomeJudgmentVersion(FLAGGER_DEFAULT_CLASSIFIER_MODEL),
+    })
+  })
+
+  it("carries persistence anchors on success even though it writes no annotation", async () => {
+    const result = await classify({
+      verdict: "success",
+      explanation: "The subscription was cancelled and the billing date confirmed.",
+      messageIndex: "1",
+    })
+
+    expect(result).toMatchObject({
+      matched: false,
+      outcome: "success",
+      feedback: "The subscription was cancelled and the billing date confirmed.",
+      messageIndex: 1,
+      simulationId: null,
+    })
+    expect(result).toHaveProperty("contentHash", expect.any(String))
+    expect(result).toHaveProperty("latestTraceId", expect.any(String))
+  })
+
+  it("reports failure as a match so the annotation path stays unchanged", async () => {
+    const result = await classify({
+      verdict: "failure",
+      explanation: "The cancellation never happened and the user asked twice.",
+      messageIndex: "1",
+    })
+
+    expect(result).toMatchObject({ matched: true, outcome: "failure" })
+    expect(result).toHaveProperty("contentHash", expect.any(String))
+  })
+
+  it.each(["indeterminate", "notApplicable"])("keeps %s free of persistence anchors", async (verdict) => {
+    const result = await classify({ verdict, explanation: "Nothing to judge here." })
+
+    expect(result).toEqual({ matched: false, outcome: verdict })
   })
 })

@@ -499,4 +499,132 @@ describe("readSessionAssessmentSources", () => {
       impactLevel: "high",
     })
   })
+
+  describe("task-outcome verdicts", () => {
+    const ANALYSIS_HASH = "a".repeat(64)
+
+    const verdictScore = (passed: boolean): Score =>
+      ({
+        ...score("score-task-failure", "signal-unused"),
+        signalId: null,
+        passed,
+        value: passed ? 1 : 0,
+        feedback: passed ? "Cancelled the subscription and confirmed the date." : "The cancellation never happened.",
+        metadata: {
+          rawFeedback: "raw",
+          flaggerSlug: "task-failure",
+          flaggerPath: "sampled",
+          scoringArtifactVersion: "task-failure-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          analysisHash: ANALYSIS_HASH,
+          messageIndex: 0,
+        },
+      }) as Score
+
+    const judgeDecision = (
+      outcome: FlaggerScreeningDecision["outcome"],
+      overrides: Partial<FlaggerScreeningDecision> = {},
+    ): FlaggerScreeningDecision =>
+      ({
+        decisionId: "d".repeat(64),
+        organizationId,
+        projectId,
+        sessionId,
+        flaggerSlug: "task-failure",
+        analysisHash: ANALYSIS_HASH,
+        scoringArtifactVersion: "flagger-screening-v1",
+        attempt: 1,
+        version: 2,
+        selected: true,
+        reason: "ordinary-sample",
+        inclusionProbability: 0.1,
+        hintKinds: [],
+        outcome,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        retentionDays: 90,
+        ...overrides,
+      }) satisfies FlaggerScreeningDecision
+
+    const judged = (passed: boolean, outcome: FlaggerScreeningDecision["outcome"]) =>
+      read(session([{ role: "assistant", parts: [{ type: "text", content: "Cancelled" }] }]), [], {
+        scores: [verdictScore(passed)],
+        screeningDecisions: [judgeDecision(outcome)],
+      })
+
+    const taskOutcomeItem = (resolved: ReturnType<typeof resolveSessionAssessment>) =>
+      resolved.items.find((item) => item.metricId === "sessions.task_success")
+
+    it("renders a success as positive Outcome evidence with the judge's own words", async () => {
+      const resolved = resolveSessionAssessment(await judged(true, "success"))
+      const item = taskOutcomeItem(resolved)
+
+      expect(item).toMatchObject({
+        label: "Task failure",
+        description: "Cancelled the subscription and confirmed the date.",
+        polarity: "positive",
+        source: "flagger",
+        scoreIds: ["score-task-failure"],
+      })
+      expect(item?.effects).toEqual([
+        expect.objectContaining({
+          scoreDimension: "outcome",
+          role: "taskOutcome",
+          direction: "positive",
+          impact: { kind: "taskOutcome", verdict: "success" },
+        }),
+      ])
+      expect(item?.anchors).toContainEqual(expect.objectContaining({ kind: "message", messageIndex: 0 }))
+    })
+
+    it("renders a failure as negative Outcome evidence", async () => {
+      const resolved = resolveSessionAssessment(await judged(false, "failure"))
+
+      expect(taskOutcomeItem(resolved)).toMatchObject({ polarity: "negative", impactLevel: "high" })
+      expect(taskOutcomeItem(resolved)?.effects[0]).toMatchObject({
+        direction: "negative",
+        impact: { kind: "taskOutcome", verdict: "failure" },
+      })
+    })
+
+    // The judge writes no score for these two, so the only place they can show
+    // up is coverage. An item would claim a verdict nobody reached.
+    it.each(["indeterminate", "notApplicable"] as const)("keeps %s out of the evidence list", async (outcome) => {
+      const resolved = resolveSessionAssessment(
+        await read(session([{ role: "assistant", parts: [{ type: "text", content: "Cancelled" }] }]), [], {
+          screeningDecisions: [judgeDecision(outcome)],
+        }),
+      )
+
+      expect(taskOutcomeItem(resolved)).toBeUndefined()
+      expect(resolved.coverage.readers).toContainEqual(
+        expect.objectContaining({
+          readerId: "flagger:task-failure",
+          scoreDimensions: ["outcome"],
+          status: outcome === "notApplicable" ? "notApplicable" : "notExamined",
+        }),
+      )
+    })
+
+    it("reports a session the judge never examined as unexamined rather than clean", async () => {
+      const resolved = resolveSessionAssessment(
+        await read(session([{ role: "assistant", parts: [{ type: "text", content: "Cancelled" }] }]), [], {
+          screeningDecisions: [judgeDecision(undefined, { selected: false })],
+        }),
+      )
+      const outcome = resolved.dimensions.find((dimension) => dimension.scoreDimension === "outcome")
+
+      expect(taskOutcomeItem(resolved)).toBeUndefined()
+      expect(resolved.coverage.readers).toContainEqual(
+        expect.objectContaining({
+          readerId: "flagger:task-failure",
+          status: "notExamined",
+          limitation: "notSelected",
+          selection: { method: "ordinary-sample", inclusionProbability: 0.1 },
+        }),
+      )
+      // The deterministic Outcome readers did run, so the dimension is partly
+      // covered; what must never happen is a verdict appearing without a judge.
+      expect(outcome?.coverage).toBe("partial")
+      expect(outcome).not.toHaveProperty("taskOutcome")
+    })
+  })
 })

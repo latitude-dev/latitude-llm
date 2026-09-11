@@ -757,6 +757,150 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(countsByTraceId.has(TraceId("cccccccccccccccccccccccccccccccc"))).toBe(false)
   })
 
+  it("omits a flagger's positive reference verdict from a listing that asks for it", async () => {
+    const organizationId = "ffffffffffffffffffffcccc"
+    const traceId = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+    const projectId = ProjectId("ffffffffffffffffffffcccc")
+
+    const write = (input: {
+      readonly sourceId: string
+      readonly passed: boolean
+      readonly feedback: string
+      readonly flaggerSlug?: string
+    }) =>
+      Effect.runPromise(
+        writeScoreUseCase({
+          projectId,
+          sourceType: "annotation",
+          sourceId: input.sourceId,
+          traceId,
+          value: input.passed ? 1 : 0,
+          passed: input.passed,
+          feedback: input.feedback,
+          metadata: {
+            rawFeedback: input.feedback,
+            ...(input.flaggerSlug ? { flaggerSlug: input.flaggerSlug, flaggerPath: "sampled" } : {}),
+          },
+        }).pipe(createWriteProvider(database, organizationId)),
+      )
+
+    await write({ sourceId: "SYSTEM", passed: true, feedback: "Task completed", flaggerSlug: "task-failure" })
+    await write({ sourceId: "SYSTEM", passed: false, feedback: "Task not completed", flaggerSlug: "task-failure" })
+    await write({ sourceId: "UI", passed: true, feedback: "A reviewer liked this" })
+
+    const listed = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.listByTraceId({
+          projectId,
+          traceId,
+          source: "annotation",
+          options: { draftMode: "include", omitFlaggerReferenceVerdicts: true },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(listed.items.map((score) => score.feedback).sort()).toEqual(["A reviewer liked this", "Task not completed"])
+  })
+
+  // Excluding after pagination would let the hidden verdict spend the page
+  // budget, returning one row where two were asked for and available.
+  it("spends the page budget on rows the caller can actually see", async () => {
+    const organizationId = "ffffffffffffffffffffdddd"
+    const traceId = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab")
+    const projectId = ProjectId("ffffffffffffffffffffdddd")
+
+    for (const [index, feedback] of ["Reviewer note one", "Reviewer note two"].entries()) {
+      await Effect.runPromise(
+        writeScoreUseCase({
+          projectId,
+          sourceType: "annotation",
+          sourceId: "SYSTEM",
+          traceId,
+          value: 1,
+          passed: true,
+          feedback: `Verdict ${index}`,
+          metadata: { rawFeedback: "raw", flaggerSlug: "task-failure", flaggerPath: "sampled" },
+        }).pipe(createWriteProvider(database, organizationId)),
+      )
+      await Effect.runPromise(
+        writeScoreUseCase({
+          projectId,
+          sourceType: "annotation",
+          sourceId: "UI",
+          traceId,
+          value: 0,
+          passed: false,
+          feedback,
+          metadata: { rawFeedback: feedback },
+        }).pipe(createWriteProvider(database, organizationId)),
+      )
+    }
+
+    const page = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.listByTraceId({
+          projectId,
+          traceId,
+          source: "annotation",
+          options: { draftMode: "include", limit: 2, omitFlaggerReferenceVerdicts: true },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(page.items).toHaveLength(2)
+    expect(page.items.every((score) => !score.passed)).toBe(true)
+  })
+
+  // A flagger's positive reference verdict is a measurement, not something a
+  // reviewer left on the trace, so it must not show up as a positive annotation.
+  it("omits a flagger's positive reference verdict from the annotation counts", async () => {
+    const organizationId = "ffffffffffffffffffffbbbb"
+    const traceId = TraceId("dddddddddddddddddddddddddddddddd")
+    const projectId = ProjectId("ffffffffffffffffffffbbbb")
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        traceId,
+        value: 1,
+        passed: true,
+        feedback: "The task was completed.",
+        metadata: { rawFeedback: "raw", flaggerSlug: "task-failure", flaggerPath: "sampled" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId,
+        sourceType: "annotation",
+        sourceId: "UI",
+        traceId,
+        value: 1,
+        passed: true,
+        feedback: "A reviewer liked this",
+        metadata: { rawFeedback: "A reviewer liked this" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const counts = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.countAnnotationsByTraceIds({
+          projectId,
+          traceIds: [traceId],
+          source: "annotation",
+          options: { draftMode: "include" },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(counts[0]).toMatchObject({ positiveCount: 1, negativeCount: 0 })
+  })
+
   it("counts every score source by trace when source is omitted, except absent evaluations", async () => {
     const organizationId = "dddddddddddddddddddddddd"
     const mixedTraceId = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
