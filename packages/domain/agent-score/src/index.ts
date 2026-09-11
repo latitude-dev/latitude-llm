@@ -172,6 +172,13 @@ export {
   type OutcomeWindowScope,
 } from "./ports/outcome-window-source.ts"
 export {
+  type SafetyWindowDecision,
+  SafetyWindowDecisionSource,
+  type SafetyWindowDecisionSourceShape,
+  type SafetyWindowDecisions,
+  type SafetyWindowScope,
+} from "./ports/safety-window-source.ts"
+export {
   type SessionAssessmentBulkJudgmentScope,
   SessionAssessmentBulkJudgmentSource,
   type SessionAssessmentBulkJudgmentSourceShape,
@@ -333,6 +340,19 @@ export {
   estimateResidualEffect,
   RESIDUAL_GAP_REASONS,
 } from "./scoring/estimate-residual-effect.ts"
+export {
+  type EstimateProjectSafetyInput,
+  estimateProjectSafety,
+  PROVISIONAL_SAFETY_COVERAGE_FLOORS,
+  type ProjectSafetyEstimate,
+  SAFETY_EXCLUSION_REASONS,
+  SAFETY_REFERENCE_RUN_SESSIONS,
+  type SafetyCoverageFloors,
+  type SafetyExclusionReason,
+  type SafetyMemberDecision,
+  type SafetySessionExamination,
+  type SafetyUnmeasuredReason,
+} from "./scoring/estimate-safety.ts"
 export type {
   CostSignalResidual,
   SignalResidualGap,
@@ -366,6 +386,11 @@ export {
   estimateProjectOutcomeWindow,
   OUTCOME_VERDICT_BATCH_SIZE,
 } from "./use-cases/estimate-project-outcome.ts"
+export {
+  type EstimateProjectSafetyWindowInput,
+  estimateProjectSafetyWindow,
+  SAFETY_FINDING_BATCH_SIZE,
+} from "./use-cases/estimate-project-safety.ts"
 export {
   type GetSessionAssessmentInput,
   getSessionAssessment,

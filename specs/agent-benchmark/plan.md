@@ -1136,28 +1136,33 @@ flagger provisioning backfill: both launch slugs already exist on every project.
 
 ### Step 5: the project Safety estimator
 
-- [ ] **P5-23** Extract the sub-stratum grouping and pooled bound transform from the Outcome
+- [x] **P5-23** Extract the sub-stratum grouping and pooled bound transform from the Outcome
   estimator into a shared helper under `@domain/agent-score/src/scoring`, and have both dimensions
   call it. The arithmetic is dimension-agnostic, and PR 6 composes both; two copies would drift.
-- [ ] **P5-24** Implement the examined population, confirmed-harm union, selection correction, and
+- [x] **P5-24** Implement the examined population, confirmed-harm union, selection correction, and
   coverage gates defined in [`score.md`](score.md#safety). Several detectors on one session produce
   one harmed session. A session counts as examined only when every applicable launch detector
   completed in the same analysis generation.
-- [ ] **P5-25** Implement Safety interval and reference-run estimation as a reusable domain result.
+- [x] **P5-25** Implement Safety interval and reference-run estimation as a reusable domain result.
   The Clopper-Pearson bounds on the harm count transform through the monotone decreasing
   `(1 - q) ^ 1000` map, so the upper bound on `q` produces the lower bound on Safety. Keep the
   interval non-degenerate with zero observed harms.
-- [ ] **P5-26** Return a result carrying the 0 through 100 score, the interval and its method, the
+- [x] **P5-26** Return a result carrying the 0 through 100 score, the interval and its method, the
   examined count, the harmed count, the eligible count, the excluded counts by reason including
   rate-limited hinted sessions from D4, and a coverage state of measured or unmeasured with the
-  failing floor named. Never return 0, 100, or a midpoint for an unmeasured dimension.
-- [ ] **P5-27** Add the Safety window source port with its ClickHouse and Postgres implementation.
+  failing floor named. Never return 0, 100, or a midpoint for an unmeasured dimension. The
+  provisional examined floor is **1,000** rather than Outcome's 100, because the transform in P5-25
+  is degenerate below that: a few hundred examined sessions read 100 with no harm and near zero with
+  one, and the zero-harm lower bound is still near zero at a hundred.
+- [x] **P5-27** Add the Safety window source port with its ClickHouse and Postgres implementation.
   The ClickHouse side reuses the eligible-session definition and the newest-generation collapse from
-  the Outcome window source, reads both launch slugs, and requires both members to share the newest
-  analysis hash before a session is treated as examined by the suite. The Postgres side reads the
-  Safety scores for that bounded session list through `scores_session_lookup_idx`. Both reads are
-  organization and project scoped and must not be per-session queries.
-- [ ] **P5-28** Compose the estimator and the sources into a use-case that mirrors
+  the Outcome window source and reads both launch slugs, collapsing **per member** rather than
+  forcing one generation across the suite: a session whose members answered in different generations
+  then arrives with two analysis hashes and the estimator can reject it as incomplete, instead of
+  the query silently pooling halves of two runs. The Postgres side reads the Safety scores for that
+  bounded session list through `scores_session_lookup_idx`. Both reads are organization and project
+  scoped and must not be per-session queries.
+- [x] **P5-28** Compose the estimator and the sources into a use-case that mirrors
   `estimateProjectOutcomeWindow`: deterministic bounded batches, no snapshot write, no public
   surface.
 

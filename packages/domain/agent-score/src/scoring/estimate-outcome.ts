@@ -1,4 +1,5 @@
-import { type BinomialInterval, clopperPearsonInterval } from "./binomial-interval.ts"
+import type { BinomialInterval } from "./binomial-interval.ts"
+import { estimateStratifiedRate, type StratifiedIntervalMethod } from "./stratified-rate.ts"
 
 /**
  * Outcome's coverage floors.
@@ -27,7 +28,7 @@ export const OUTCOME_EXCLUSION_REASONS = [
 
 export type OutcomeExclusionReason = (typeof OUTCOME_EXCLUSION_REASONS)[number]
 
-export type OutcomeIntervalMethod = "exactBinomial" | "stratifiedBinomial"
+export type OutcomeIntervalMethod = StratifiedIntervalMethod
 
 export type OutcomeUnmeasuredReason = "examinedFloor" | "coverageFloor"
 
@@ -67,38 +68,11 @@ export interface ProjectOutcomeEstimate {
   readonly unmeasuredReason?: OutcomeUnmeasuredReason
 }
 
-interface SubStratum {
-  readonly inclusionProbability: number
-  readonly examined: number
-  readonly successes: number
-}
-
 const emptyExclusions = (): Record<OutcomeExclusionReason, number> => ({
   incompatibleJudgmentVersion: 0,
   unknownInclusionProbability: 0,
   deterministicEndpoint: 0,
 })
-
-/**
- * Groups the judged stratum by the probability that put each session in it.
- *
- * A project that changes its sampling rate mid-window produces more than one
- * group, and the groups are not interchangeable: each is its own binomial with
- * its own weight.
- */
-const groupByInclusionProbability = (verdicts: readonly OutcomeSessionVerdict[]): readonly SubStratum[] => {
-  const groups = new Map<number, { examined: number; successes: number }>()
-  for (const verdict of verdicts) {
-    const group = groups.get(verdict.inclusionProbability) ?? { examined: 0, successes: 0 }
-    group.examined += 1
-    if (verdict.succeeded) group.successes += 1
-    groups.set(verdict.inclusionProbability, group)
-  }
-
-  return [...groups.entries()]
-    .map(([inclusionProbability, group]) => ({ inclusionProbability, ...group }))
-    .sort((left, right) => right.inclusionProbability - left.inclusionProbability)
-}
 
 /**
  * The selection-corrected share of judgeable sessions that accomplished what
@@ -135,11 +109,6 @@ export const estimateProjectOutcome = (input: EstimateProjectOutcomeInput): Proj
     eligible.push(verdict)
   }
 
-  const strata = groupByInclusionProbability(eligible)
-  const deterministicWeight = deterministic.size
-  const sampledWeight = strata.reduce((total, stratum) => total + stratum.examined / stratum.inclusionProbability, 0)
-  const totalWeight = deterministicWeight + sampledWeight
-
   const base = {
     eligibleSessionCount: input.eligibleSessionCount,
     examinedSessionCount: deterministic.size + eligible.length,
@@ -157,35 +126,25 @@ export const estimateProjectOutcome = (input: EstimateProjectOutcomeInput): Proj
     return { ...base, coverage: "unmeasured", unmeasuredReason: "coverageFloor" }
   }
 
-  const weightedSuccesses = strata.reduce(
-    (total, stratum) => total + stratum.successes / stratum.inclusionProbability,
-    0,
-  )
+  // The deterministic stratum is a census of sessions that demonstrably failed,
+  // so it carries weight one each and contributes no successes.
+  const estimate = estimateStratifiedRate({
+    observations: eligible.map((verdict) => ({
+      inclusionProbability: verdict.inclusionProbability,
+      event: verdict.succeeded,
+    })),
+    censusWeight: deterministic.size,
+    censusEvents: 0,
+    ...(input.confidenceLevel !== undefined ? { confidenceLevel: input.confidenceLevel } : {}),
+  })
 
-  const bounds = strata.map((stratum) =>
-    clopperPearsonInterval({
-      successes: stratum.successes,
-      trials: stratum.examined,
-      ...(input.confidenceLevel !== undefined ? { confidenceLevel: input.confidenceLevel } : {}),
-    }),
-  )
-
-  const scaledBound = (pick: (interval: BinomialInterval) => number) =>
-    (100 *
-      strata.reduce(
-        (total, stratum, index) => total + (stratum.examined * pick(bounds[index]!)) / stratum.inclusionProbability,
-        0,
-      )) /
-    totalWeight
+  const scale = (bound: number) => 100 * bound
 
   return {
     ...base,
-    outcome: (100 * weightedSuccesses) / totalWeight,
-    interval: { lower: scaledBound((interval) => interval.lower), upper: scaledBound((interval) => interval.upper) },
-    // One group is a single binomial, so its transformed bounds are exact. More
-    // than one assumes every group reaches its bound at once, which is wider
-    // than a joint interval would be, so the label says which was used.
-    intervalMethod: strata.length === 1 ? "exactBinomial" : "stratifiedBinomial",
+    outcome: 100 * estimate.rate,
+    interval: { lower: scale(estimate.interval.lower), upper: scale(estimate.interval.upper) },
+    intervalMethod: estimate.method,
     coverage: "measured",
   }
 }
