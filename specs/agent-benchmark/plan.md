@@ -645,12 +645,13 @@ persistence branch, and the window arithmetic. Do not rebuild these:
   ClickHouse `flagger_slug` and `scoring_artifact_version` columns keep working for coverage
   queries.
 - **D6. A new slug is inert on existing projects, so it is backfilled.** `screenOneStrategy` drops a
-  slug with no `flaggers` row as `missing-flagger`, and rows are only created by onboarding, seeds,
-  or an explicit toggle. Without a backfill, Outcome would be permanently unmeasured on every
-  project that already exists. PR 4 ships an idempotent maintenance script that provisions every
-  registered slug for every organization and project. Lazy `findOrCreateFlagger` inside screening is
-  rejected: it puts a write on the screening hot path and needs a cache eviction on every pass for
-  an unprovisioned project.
+  slug with no `flaggers` row as `missing-flagger`, and rows are only created when a project is
+  created, or by an explicit toggle. Without a backfill, Outcome would be permanently unmeasured on
+  every project that already exists. PR 4 backfills the row in a Drizzle custom migration, so it
+  deploys with the slug that needs it and each future slug carries its own. Two alternatives are
+  rejected: a maintenance script, which only works if somebody remembers to run it against every
+  environment, and lazy `findOrCreateFlagger` inside screening, which puts a write on the screening
+  hot path and needs a cache eviction on every pass for an unprovisioned project.
 - **D7. Task Success ships enabled at the standard default sampling.** It reuses
   `FLAGGER_DEFAULT_ENABLED` and `FLAGGER_DEFAULT_SAMPLING`. Ten LLM flaggers already sample at 10%
   each, so this is roughly a tenth more flagger spend, not a new order of magnitude. Unlike the
@@ -738,17 +739,13 @@ persistence branch, and the window arithmetic. Do not rebuild these:
   `selected`, `reason: "ordinary-sample"`, and `inclusionProbability = sampling / 100`, and that a
   sampled-out session records the same probability with `selected: false`. This is existing PR 2
   behavior; the tests pin it for the estimator.
-- [x] **P4-15** Add the idempotent provisioning maintenance script from D6 under
-  `packages/platform/db-postgres/scripts`, following the `maintain-billing-usage-events.ts` pattern
-  and reusing `provisionFlaggersUseCase` per organization and project. Add the package script entry.
-  Document that it must run once after the deploy that ships the slug. Ask before running it against
-  any real database. Shipped as `pnpm --filter @platform/db-postgres flaggers:provision`: it reads
-  live projects with a system-scoped client, provisions per organization so row-level security still
-  applies to the write, keeps going past a failing project and reports its id, and leaves an
-  existing row's enabled state and sampling untouched.
-- [ ] **P4-15b (operational)** Run `flaggers:provision` against production once the PR is deployed.
-  Until it runs, Task Success has no row on any project that predates the deploy, so Outcome has no
-  coverage there.
+- [x] **P4-15** Backfill the `task-success` row for every live project through the Drizzle custom
+  migration from D6, generated with the package migration script. The insert takes its defaults from
+  the column definitions and conflicts against the (organization, project, slug) unique index, so it
+  is replay-safe and a project that turns the judge off or retunes its sampling keeps that choice.
+  Migrations run as the table owner, so row-level security does not block it. The PGlite harness
+  applies the real migrations folder, so the SQL is exercised by every Postgres test; a dedicated
+  test replays it against seeded projects to prove it inserts what it claims.
 - [x] **P4-16** Confirm the Flaggers settings page and its 28-day coverage panel render the new
   flagger, including the case where no decisions exist yet, and that the cached project flagger list
   picks up backfilled rows within its TTL. Both surfaces already iterate `FLAGGER_STRATEGY_SLUGS`
@@ -924,7 +921,7 @@ PR 6 starts only when all of these gates pass:
   recalibration and cross-surface expansion are later follow-ups.
 - [ ] Cost native impacts and Speed counterfactuals are bounded and visible on existing pages.
 - [ ] Outcome uses compatible sampled Task Success verdicts with known inclusion probabilities and
-  passes its examined-population coverage floor. The flagger provisioning backfill has run, so the
+  passes its examined-population coverage floor. The provisioning migration has deployed, so the
   slug is not silently inert on projects that predate it.
 - [ ] Safety uses a full-window examined population and confirmed-harm definition.
 - [ ] Duplicate detectors and split signals pass invariance tests.

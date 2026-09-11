@@ -22,7 +22,6 @@
     "pg:seed": "node --import tsx src/seeds/run.ts",
     "pg:seed:integrations": "node --import tsx src/seeds/dev-integrations.ts",
     "billing:usage-events:maintain": "node --import tsx scripts/maintain-billing-usage-events.ts",
-    "flaggers:provision": "node --import tsx scripts/provision-flaggers.ts",
     "pg:reset": "bash ../../../docker/reset-postgres.sh",
     "auth:generate-schema-reference": "pnpm dlx @better-auth/cli@1.4.22 generate --config ./auth.cli.ts --output ./better-auth.schema.reference.ts --yes",
     "check": "biome check src",
