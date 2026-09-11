@@ -734,18 +734,28 @@ persistence branch, and the window arithmetic. Do not rebuild these:
 
 ### Step 3: coverage, provisioning, and selection probabilities
 
-- [ ] **P4-14** Verify with tests that the screening decision written before classification carries
+- [x] **P4-14** Verify with tests that the screening decision written before classification carries
   `selected`, `reason: "ordinary-sample"`, and `inclusionProbability = sampling / 100`, and that a
   sampled-out session records the same probability with `selected: false`. This is existing PR 2
   behavior; the tests pin it for the estimator.
-- [ ] **P4-15** Add the idempotent provisioning maintenance script from D6 under
+- [x] **P4-15** Add the idempotent provisioning maintenance script from D6 under
   `packages/platform/db-postgres/scripts`, following the `maintain-billing-usage-events.ts` pattern
   and reusing `provisionFlaggersUseCase` per organization and project. Add the package script entry.
   Document that it must run once after the deploy that ships the slug. Ask before running it against
-  any real database.
-- [ ] **P4-16** Confirm the Flaggers settings page and its 28-day coverage panel render the new
+  any real database. Shipped as `pnpm --filter @platform/db-postgres flaggers:provision`: it reads
+  live projects with a system-scoped client, provisions per organization so row-level security still
+  applies to the write, keeps going past a failing project and reports its id, and leaves an
+  existing row's enabled state and sampling untouched.
+- [ ] **P4-15b (operational)** Run `flaggers:provision` against production once the PR is deployed.
+  Until it runs, Task Success has no row on any project that predates the deploy, so Outcome has no
+  coverage there.
+- [x] **P4-16** Confirm the Flaggers settings page and its 28-day coverage panel render the new
   flagger, including the case where no decisions exist yet, and that the cached project flagger list
-  picks up backfilled rows within its TTL.
+  picks up backfilled rows within its TTL. Both surfaces already iterate `FLAGGER_STRATEGY_SLUGS`
+  and fall back to a placeholder row, so no web change is needed. An unprovisioned project renders
+  Task Success as disabled, which is honest rather than a bug: screening does drop a missing row, so
+  the page and the pipeline agree until the backfill runs. The 300-second flagger cache is never
+  evicted by the backfill, so provisioned rows take effect within one TTL.
 
 ### Step 4: session evidence
 
