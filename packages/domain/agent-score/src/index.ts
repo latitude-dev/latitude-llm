@@ -296,6 +296,13 @@ export type {
   WindowSpeedAggregate,
 } from "./scoring/bootstrap-window.ts"
 export { aggregateWindowCost, aggregateWindowSpeed, bootstrapWindow } from "./scoring/bootstrap-window.ts"
+export {
+  buildOutcomeIssues,
+  OUTCOME_ISSUE_ROW_LIMIT,
+  type OutcomeIssueObservation,
+  type OutcomeIssueRow,
+  type OutcomeIssueSession,
+} from "./scoring/build-outcome-issues.ts"
 export type {
   SpeedAvoidableClaim,
   SpeedClaimDropReason,
@@ -349,6 +356,7 @@ export {
 } from "./scoring/fold-window-contributions.ts"
 export type { LinkedSignalOccurrence, SignalLinkage, SignalOccurrence } from "./scoring/link-signal-occurrences.ts"
 export { linkSignalOccurrences } from "./scoring/link-signal-occurrences.ts"
+export { readOutcomeIssueObservations } from "./scoring/read-outcome-issue-observations.ts"
 export {
   hasDeterministicOutcomeFailure,
   selectDeterministicOutcomeFailures,

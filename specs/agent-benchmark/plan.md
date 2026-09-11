@@ -823,16 +823,18 @@ persistence branch, and the window arithmetic. Do not rebuild these:
 
 ### Step 6: project issue inputs
 
-- [ ] **P4-26** Produce bounded Outcome issue inputs from failed task-outcome scores, deterministic
+- [x] **P4-26** Produce bounded Outcome issue inputs from failed task-outcome scores, deterministic
   Outcome findings, and eligible Outcome signal occurrences, using the shared
   `isSignalEligibleForScoring` predicate so ignored and unpromoted signals are excluded.
-- [ ] **P4-27** Deduplicate shared source evidence before counting. A signal and the score it was
+- [x] **P4-27** Deduplicate shared source evidence before counting. A signal and the score it was
   discovered from are one issue's evidence, not two, and several moments on one session collapse
   into one issue input. Report selection-corrected reach and failed reach alongside the raw examined
   count, which is coverage context and never a ranking key.
-- [ ] **P4-28** Rank by corrected failed reach. Leave a row unranked and marked when a required joint
+- [x] **P4-28** Rank by corrected failed reach. Leave a row unranked and marked when a required joint
   inclusion probability is unknown. Issue counts explain the score; they add no points and never
-  claim a fixed recoverable amount.
+  claim a fixed recoverable amount. The joint probability multiplies two independent sampling draws
+  but collapses to one when the issue rode the verdict's own draw, since a signal discovered from
+  the verdict score was selected once, not twice.
 
 ### Step 7: contracts, documentation, and regeneration
 
