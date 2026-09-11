@@ -1084,19 +1084,30 @@ flagger provisioning backfill: both launch slugs already exist on every project.
 
 ### Step 3: suite-level examination
 
-- [ ] **P5-14** Declare the launch Safety suite in `@domain/flaggers` as a named constant, and add
+- [x] **P5-14** Declare the launch Safety suite in `@domain/flaggers` as a named constant, and add
   suite-level selection to the screening pass from PR 2. One `deterministicSampling` draw per
   session on a key that omits the slug, so both members share the draw, with the suite inclusion
-  probability from D3 recorded on both members' screening decisions.
-- [ ] **P5-15** Check the suite's rate limit once, in its own bucket, so both members are allowed or
+  probability from D3 recorded on both members' screening decisions. The suite resolves **before**
+  any member is screened rather than inside each member's unmatched path, because the rate limit
+  below has to answer once and a per-member call cannot.
+- [x] **P5-15** Check the suite's rate limit once, in its own bucket, so both members are allowed or
   neither. The per-slug check today can admit one member and drop the other, which spends a model
-  call on a session the estimator must then discard as unexamined.
-- [ ] **P5-16** Apply the applicability rule from D5 so a member whose `hasRequiredContext` fails is
-  not applicable rather than missing, and the suite can still complete.
-- [ ] **P5-17** Verify with tests that the screening decisions written before classification carry
+  call on a session the estimator must then discard as unexamined. Members screen concurrently, so
+  two calls against one shared bucket would also consume two tokens and could split on the second.
+- [x] **P5-16** Apply the applicability rule from D5 so a member whose `hasRequiredContext` fails is
+  not applicable rather than missing, and the suite can still complete. Express it as
+  `outcome: "notApplicable"` on the screening decision rather than a new selection reason:
+  [`flaggers.md`](flaggers.md#screening-decisions) reserves `skipped` for a policy skip and its
+  reason list has no applicability member, so the outcome is where the distinction belongs.
+- [x] **P5-17** Verify with tests that the screening decisions written before classification carry
   the shared probability on both members, that a sampled-out session records the same probability
   with `selected: false`, that a hinted session records inclusion probability one, and that a
-  retried execution reuses the generation's draw instead of drawing again.
+  retried execution reuses the generation's draw instead of drawing again. Cover the suppression
+  hazard the shared selection creates: whether a member was hinted stays that member's own fact, or
+  a session hinted only for personal data would make the jailbreaking decision look
+  injection-hinted and mute the refusal detector, whose suppressor fires on any hinted classify. A
+  member the suite carried along records `uniform-sample`, which is what the vocabulary already
+  calls an examination that happened with certainty.
 
 ### Step 4: session evidence
 
