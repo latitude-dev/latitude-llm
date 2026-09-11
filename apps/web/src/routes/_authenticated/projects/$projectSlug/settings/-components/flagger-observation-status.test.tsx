@@ -90,6 +90,23 @@ describe("FlaggerObservationStatus", () => {
     expect(screen.getByText(/1,022 older sessions in the requested window are not counted/)).toBeDefined()
   })
 
+  it("reports a window shorter than a day in hours", () => {
+    render(
+      <FlaggerObservationStatus
+        flaggerSlug="frustration"
+        coverage={{ ...coverage, eligibleSessions: 12, examinedSessions: 12 }}
+        coverageWindow={{
+          fromIso: "2026-09-11T00:00:00.000Z",
+          toIso: "2026-09-11T06:00:00.000Z",
+          recordingSinceIso: "2026-09-11T00:00:00.000Z",
+          sessionsBeforeRecording: 0,
+        }}
+      />,
+    )
+
+    expect(screen.getByText("Observed 12 of 12 sessions · 6 hours")).toBeDefined()
+  })
+
   it("does not turn an empty project into an analytics report", () => {
     render(
       <FlaggerObservationStatus
