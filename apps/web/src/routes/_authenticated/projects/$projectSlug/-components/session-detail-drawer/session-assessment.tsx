@@ -305,6 +305,13 @@ const metricsByPolarity = (
       value: String(safety.confirmedHarmCount),
     })
   }
+  if (safety && safety.exposureCount > 0) {
+    negative.push({
+      key: "safety-exposure",
+      label: "Hostile exposure",
+      value: String(safety.exposureCount),
+    })
+  }
   if (reliability && reliability.unrecoveredIncidentCount > 0) {
     negative.push({
       key: "unrecovered-incidents",

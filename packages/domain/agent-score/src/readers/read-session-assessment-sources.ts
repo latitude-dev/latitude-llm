@@ -15,7 +15,7 @@ import {
 } from "@domain/flaggers"
 import type { MemoryEvent } from "@domain/memories"
 import { countTokens } from "@domain/memories"
-import type { Score } from "@domain/scores"
+import { isConfirmedHarmFindingKind, type Score } from "@domain/scores"
 import type { ScoreDimension } from "@domain/shared"
 import type { SignalWithLifecycle } from "@domain/signals"
 import {
@@ -435,6 +435,19 @@ const readScoreFindings = (scores: readonly Score[], signals: readonly SignalWit
           metricId: "sessions.task_success",
           kind: "taskOutcome",
           verdict: score.passed ? "success" : "failure",
+        },
+      ]
+    }
+    // The structured finding outranks the signal's model-assigned roles below:
+    // it names the assistant-side evidence, which is what turns a Safety
+    // classification into a confirmation.
+    if (metadata?.safetyFindingKind) {
+      return [
+        {
+          ...base,
+          ...(isConfirmedHarmFindingKind(metadata.safetyFindingKind) ? { metricId: "safety.confirmed_failure" } : {}),
+          kind: "safetyFinding",
+          findingKind: metadata.safetyFindingKind,
         },
       ]
     }

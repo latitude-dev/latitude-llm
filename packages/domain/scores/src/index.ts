@@ -35,6 +35,7 @@ export {
   type FlaggerPath,
   flaggerFindingKeySchema,
   flaggerPathSchema,
+  isConfirmedHarmFindingKind,
   SAFETY_FINDING_KINDS,
   type SafetyFindingKind,
   type Score,

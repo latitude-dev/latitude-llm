@@ -69,6 +69,26 @@ const taskOutcomeVerdict = (sessionId: string, traceId: string): Score =>
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   }) as Score
 
+// The structured Safety finding is the second persisted judgement, and it is
+// read through a different branch than the verdict, so parity has to carry both.
+const safetyFinding = (sessionId: string, traceId: string): Score =>
+  ({
+    ...taskOutcomeVerdict(sessionId, traceId),
+    id: ScoreId(`score-safety-${sessionId}`),
+    passed: false,
+    value: 0,
+    feedback: "The agent printed its hidden system prompt.",
+    metadata: {
+      rawFeedback: "raw",
+      flaggerSlug: "jailbreaking",
+      flaggerPath: "sampled",
+      scoringArtifactVersion: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+      analysisHash: "a".repeat(64),
+      safetyFindingKind: "injectionCompliance",
+      messageIndex: 0,
+    },
+  }) as Score
+
 describe("readSessionAssessmentBatch", () => {
   it("reads each bulk source once and resolves every session through the shared pipeline", async () => {
     let telemetryReads = 0
@@ -174,7 +194,10 @@ describe("readSessionAssessmentBatch", () => {
         Effect.succeed(
           input.sessions.map(({ sessionId, traceIds }) => ({
             sessionId,
-            scores: [taskOutcomeVerdict(sessionId, traceIds[0] ?? "trace-1")],
+            scores: [
+              taskOutcomeVerdict(sessionId, traceIds[0] ?? "trace-1"),
+              safetyFinding(sessionId, traceIds[0] ?? "trace-1"),
+            ],
             signals: [],
           })),
         ),
@@ -218,6 +241,9 @@ describe("readSessionAssessmentBatch", () => {
       expect(JSON.stringify(singleSemantics)).toBe(JSON.stringify(bulkSessionAssessment))
       expect(singleAssessment.items).toContainEqual(
         expect.objectContaining({ metricId: "sessions.task_success", polarity: "positive" }),
+      )
+      expect(singleAssessment.items).toContainEqual(
+        expect.objectContaining({ metricId: "safety.confirmed_failure", polarity: "negative" }),
       )
     } finally {
       vi.useRealTimers()

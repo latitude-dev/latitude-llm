@@ -1,5 +1,5 @@
 import type { FlaggerScreeningDecision } from "@domain/flaggers"
-import type { Score } from "@domain/scores"
+import type { SafetyFindingKind, Score } from "@domain/scores"
 import { OrganizationId, ProjectId, ScoreId, SessionId, SignalId, SpanId, TraceId } from "@domain/shared"
 import type { SignalWithLifecycle } from "@domain/signals"
 import type { SessionDetail, SessionGenerationFact, SessionToolCallFact, Span } from "@domain/spans"
@@ -625,6 +625,121 @@ describe("readSessionAssessmentSources", () => {
       // covered; what must never happen is a verdict appearing without a judge.
       expect(outcome?.coverage).toBe("partial")
       expect(outcome).not.toHaveProperty("taskOutcome")
+    })
+  })
+
+  describe("Safety findings", () => {
+    const SAFETY_ANALYSIS_HASH = "b".repeat(64)
+
+    const safetyScore = (findingKind: SafetyFindingKind, passed: boolean): Score =>
+      ({
+        ...score("score-safety", "signal-unused"),
+        signalId: null,
+        passed,
+        value: passed ? 1 : 0,
+        feedback: "An instruction-override attempt arrived in the first user turn.",
+        metadata: {
+          rawFeedback: "raw",
+          flaggerSlug: "jailbreaking",
+          flaggerPath: "sampled",
+          scoringArtifactVersion: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          analysisHash: SAFETY_ANALYSIS_HASH,
+          safetyFindingKind: findingKind,
+          messageIndex: 0,
+        },
+      }) as Score
+
+    const safetyDecision = (
+      outcome: FlaggerScreeningDecision["outcome"],
+      overrides: Partial<FlaggerScreeningDecision> = {},
+    ): FlaggerScreeningDecision =>
+      ({
+        decisionId: "e".repeat(64),
+        organizationId,
+        projectId,
+        sessionId,
+        flaggerSlug: "jailbreaking",
+        analysisHash: SAFETY_ANALYSIS_HASH,
+        scoringArtifactVersion: "flagger-screening-v1",
+        attempt: 1,
+        version: 2,
+        selected: true,
+        reason: "ordinary-sample",
+        inclusionProbability: 0.1,
+        hintKinds: [],
+        outcome,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        retentionDays: 90,
+        ...overrides,
+      }) satisfies FlaggerScreeningDecision
+
+    const examined = (findingKind: SafetyFindingKind, passed: boolean, outcome: FlaggerScreeningDecision["outcome"]) =>
+      read(session([{ role: "assistant", parts: [{ type: "text", content: "I can't do that." }] }]), [], {
+        scores: [safetyScore(findingKind, passed)],
+        screeningDecisions: [safetyDecision(outcome)],
+      })
+
+    const safetyDimension = (resolved: ReturnType<typeof resolveSessionAssessment>) =>
+      resolved.dimensions.find((dimension) => dimension.scoreDimension === "safety")
+
+    it("renders confirmed harm under needs attention and counts the attack beside it", async () => {
+      const resolved = resolveSessionAssessment(await examined("injectionCompliance", false, "matched"))
+      const item = resolved.items.find((candidate) => candidate.scoreIds.includes("score-safety"))
+
+      expect(item).toMatchObject({ label: "Jailbreaking", polarity: "negative", source: "flagger" })
+      expect(safetyDimension(resolved)).toMatchObject({ confirmedHarmCount: 1, exposureCount: 1 })
+      expect(item?.anchors).toContainEqual(expect.objectContaining({ kind: "message", messageIndex: 0 }))
+    })
+
+    it("renders a successful defense as positive evidence", async () => {
+      const resolved = resolveSessionAssessment(await examined("injectionDefense", true, "success"))
+      const item = resolved.items.find((candidate) => candidate.scoreIds.includes("score-safety"))
+
+      expect(item).toMatchObject({ polarity: "positive" })
+      expect(safetyDimension(resolved)).toMatchObject({
+        successfulDefenseCount: 1,
+        exposureCount: 1,
+        confirmedHarmCount: 0,
+      })
+    })
+
+    it("keeps user-authored personal data out of the harm count", async () => {
+      const resolved = resolveSessionAssessment(await examined("piiExposure", true, "success"))
+
+      expect(safetyDimension(resolved)).toMatchObject({ exposureCount: 1, confirmedHarmCount: 0 })
+    })
+
+    // An examined session with nothing to report is not positive evidence, and
+    // an unexamined one is not a clean result either.
+    it("produces no item for an examined session with no finding", async () => {
+      const resolved = resolveSessionAssessment(
+        await read(session([{ role: "assistant", parts: [{ type: "text", content: "Sure." }] }]), [], {
+          screeningDecisions: [safetyDecision("unmatched")],
+        }),
+      )
+
+      expect(resolved.items.some((item) => item.scoreIds.includes("score-safety"))).toBe(false)
+      expect(safetyDimension(resolved)).toMatchObject({ exposureCount: 0, confirmedHarmCount: 0 })
+      expect(resolved.coverage.readers).toContainEqual(
+        expect.objectContaining({ readerId: "flagger:jailbreaking", status: "examined" }),
+      )
+    })
+
+    it("reports a session the suite never examined as unexamined", async () => {
+      const resolved = resolveSessionAssessment(
+        await read(session([{ role: "assistant", parts: [{ type: "text", content: "Sure." }] }]), [], {
+          screeningDecisions: [safetyDecision(undefined, { selected: false })],
+        }),
+      )
+
+      expect(resolved.coverage.readers).toContainEqual(
+        expect.objectContaining({
+          readerId: "flagger:jailbreaking",
+          status: "notExamined",
+          limitation: "notSelected",
+          selection: { method: "ordinary-sample", inclusionProbability: 0.1 },
+        }),
+      )
     })
   })
 })

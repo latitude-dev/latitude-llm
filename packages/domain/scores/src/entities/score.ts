@@ -40,6 +40,11 @@ export const SAFETY_FINDING_KINDS = [
 export const safetyFindingKindSchema = z.enum(SAFETY_FINDING_KINDS)
 export type SafetyFindingKind = z.infer<typeof safetyFindingKindSchema>
 
+const CONFIRMED_HARM_FINDING_KINDS: ReadonlySet<SafetyFindingKind> = new Set(["injectionCompliance", "piiDisclosure"])
+
+/** The kinds where the agent itself caused the harm. Exposure and defense describe what reached it. */
+export const isConfirmedHarmFindingKind = (kind: SafetyFindingKind): boolean => CONFIRMED_HARM_FINDING_KINDS.has(kind)
+
 export const scoringArtifactVersionSchema = z.string().min(1).max(FLAGGER_SCORING_ARTIFACT_VERSION_MAX_LENGTH)
 export type ScoringArtifactVersion = z.infer<typeof scoringArtifactVersionSchema>
 

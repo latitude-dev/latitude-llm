@@ -1111,23 +1111,26 @@ flagger provisioning backfill: both launch slugs already exist on every project.
 
 ### Step 4: session evidence
 
-- [ ] **P5-18** Add a Safety finding to the assessment finding union and produce it from score
+- [x] **P5-18** Add a Safety finding to the assessment finding union and produce it from score
   metadata in `readScoreFindings`, branching on the structured finding kind before the existing
   classified-judgment and standalone-score fallbacks, the way the task-outcome verdict already does.
-- [ ] **P5-19** Resolve the finding into effects, keeping attempt, response, and confirmation as one
+- [x] **P5-19** Resolve the finding into effects, keeping attempt, response, and confirmation as one
   item with several effects. `injectionDefense` carries exposure as context and successful defense
   as positive, and reads as positive evidence. `injectionCompliance` carries exposure as context and
   confirmed harm as an observed, direct negative effect. `injectionAttempt` and `piiExposure` carry
-  exposure alone and read under needs attention. `piiDisclosure` carries confirmed harm.
-- [ ] **P5-20** Leave the existing model-assigned Safety role mapping untouched. A signal whose
+  exposure alone and read under needs attention. `piiDisclosure` carries confirmed harm **alone**:
+  third-party data the assistant surfaced never reached the conversation, so there is no exposure to
+  pair it with. Only the confirmed-harm effect is `direct`; exposure and defense are `contextOnly`,
+  which is what keeps them visible without moving the score.
+- [x] **P5-20** Leave the existing model-assigned Safety role mapping untouched. A signal whose
   `confirmedHarm` role came from classification stays not-measured and attribution-only, because
   [`signals.md`](signals.md#safety) requires an assistant-side confirmation field on the occurrence.
   Only the structured finding is observed and direct. Test that the two paths cannot cross.
-- [ ] **P5-21** Add the exposure count to the Scores panel beside the confirmed-harm and successful
+- [x] **P5-21** Add the exposure count to the Scores panel beside the confirmed-harm and successful
   defense counts it already renders, and prove that an examined session with no Safety finding
   produces no item and appears only through reader coverage. An unexamined session is never a clean
   observation.
-- [ ] **P5-22** Prove single-session and bulk parity for a session carrying a Safety finding,
+- [x] **P5-22** Prove single-session and bulk parity for a session carrying a Safety finding,
   reusing the existing parity fixtures. Like the task-outcome verdict, this is an assessment input
   that does not come from telemetry, so it is one the two paths could most easily disagree on.
 
