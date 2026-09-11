@@ -2,6 +2,7 @@ import type { SessionMomentLabel, SessionSemanticMoment } from "@domain/conversa
 import {
   buildFlaggerSessionContext,
   emptyResponseStrategy,
+  extractUserTextMessages,
   FLAGGER_DISPLAY,
   type FlaggerFinding,
   type FlaggerSlug,
@@ -26,6 +27,7 @@ import {
   type SessionGenerationFact,
   type SessionToolCallFact,
   type Span,
+  sessionConversationMessages,
 } from "@domain/spans"
 import { Effect } from "effect"
 import type { LatencyReferenceArtifact } from "../entities/latency-reference-artifact.ts"
@@ -734,6 +736,8 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
 
     return {
       sessionId: input.session.sessionId,
+      hasReadableUserTask:
+        extractUserTextMessages({ allMessages: sessionConversationMessages(input.session) }).length > 0,
       observedMicrocents: input.session.costTotalMicrocents,
       observedDurationNs: input.session.durationNs,
       findings,

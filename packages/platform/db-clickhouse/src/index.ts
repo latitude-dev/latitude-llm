@@ -26,6 +26,7 @@ export { MemoryAnalyticsRepositoryLive } from "./repositories/memory-analytics-r
 export { MemoryRepositoryLive } from "./repositories/memory-repository.ts"
 export { MessageEmbeddingRepositoryLive } from "./repositories/message-embedding-repository.ts"
 export { MetricSeriesReaderLive } from "./repositories/metric-series-reader.ts"
+export { OutcomeWindowDecisionSourceLive } from "./repositories/outcome-window-decision-source.ts"
 export { ScoreAnalyticsRepositoryLive } from "./repositories/score-analytics-repository.ts"
 export { SessionAssessmentBulkTelemetrySourceLive } from "./repositories/session-assessment-bulk-source.ts"
 export {

@@ -788,35 +788,38 @@ persistence branch, and the window arithmetic. Do not rebuild these:
 
 ### Step 5: the project Outcome estimator
 
-- [ ] **P4-20** Add the numeric primitives the repository does not have: a continued-fraction
+- [x] **P4-20** Add the numeric primitives the repository does not have: a continued-fraction
   regularized incomplete beta and a Clopper-Pearson exact binomial interval, as pure helpers under
   `@domain/agent-score/src/scoring`. Do not add a runtime dependency for this. Property-test
   monotonicity, coverage at the boundaries, and the zero-failure and zero-success cases, which must
   stay non-degenerate.
-- [ ] **P4-21** Implement the two-stratum Outcome estimator from
+- [x] **P4-21** Implement the two-stratum Outcome estimator from
   [`score.md`](score.md#outcome). Stratum A is the deterministic census (weight 1, all failures)
   after applying D2 and D3. Stratum B is the sampled judge population, weighted by
   `1 / inclusionProbability`. The point estimate is
   `100 * sum(weight * success) / sum(weight)` over both strata. The interval transforms stratum B's
   binomial bounds through the pooled ratio, which is monotone, so no naive addition of bounds is
   involved.
-- [ ] **P4-22** Handle a non-uniform stratum B. When a project changed its sampling rate mid-window,
+- [x] **P4-22** Handle a non-uniform stratum B. When a project changed its sampling rate mid-window,
   group stratum B into sub-strata by distinct inclusion probability, compute each sub-stratum's
   binomial bounds, and combine them into a conservative pooled interval. Record which method
   produced the interval. Exclude any examined session whose inclusion probability is unknown or
   zero, and report it as a coverage limitation rather than dropping it silently.
-- [ ] **P4-23** Return a result carrying the 0 through 100 rate, the interval and its method, the
+- [x] **P4-23** Return a result carrying the 0 through 100 rate, the interval and its method, the
   examined count, the eligible count, the deterministic and sampled stratum sizes, the excluded
   counts by reason, and a coverage state of measured or unmeasured with the failing floor named.
   Never return 0, 100, or a midpoint for an unmeasured dimension.
-- [ ] **P4-24** Add the window source port and its ClickHouse plus Postgres implementation. The
+- [x] **P4-24** Add the window source port and its ClickHouse plus Postgres implementation. The
   ClickHouse side reuses the eligible-session definition and the newest-generation collapse already
   written in `flagger-coverage-repository.ts` and returns one row per session with its decision,
   reason, inclusion probability, outcome, and analysis hash. The Postgres side reads the Task
   Success scores for that bounded session list through `scores_session_lookup_idx`. Both reads are
   organization and project scoped and must not be per-session queries.
-- [ ] **P4-25** Compose the estimator and the sources into a use-case that mirrors
-  `runCostSpeedShadow`: deterministic bounded batches, no snapshot write, no public surface.
+- [x] **P4-25** Compose the estimator and the sources into a use-case that mirrors
+  `runCostSpeedShadow`: deterministic bounded batches, no snapshot write, no public surface. The
+  deterministic census arrives as an input rather than being re-read: PR 6's window job already
+  resolves that telemetry for the other dimensions, and `selectDeterministicOutcomeFailures` turns
+  its normalized inputs into the stratum.
 
 ### Step 6: project issue inputs
 

@@ -1,0 +1,188 @@
+import { type BinomialInterval, clopperPearsonInterval } from "./binomial-interval.ts"
+
+/**
+ * Outcome's coverage floors.
+ *
+ * Provisional: both numbers are calibration candidates frozen into the scoring
+ * artifact before launch, kept here as named constants rather than buried in a
+ * comparison so the freeze has one place to land.
+ */
+export const PROVISIONAL_OUTCOME_COVERAGE_FLOORS = {
+  /** Compatible sampled verdicts required before the rate means anything. */
+  examinedSessions: 100,
+  /** Share of the eligible base the examined population must describe. */
+  examinedShareOfEligible: 0.05,
+} as const
+
+export type OutcomeCoverageFloors = typeof PROVISIONAL_OUTCOME_COVERAGE_FLOORS
+
+export const OUTCOME_EXCLUSION_REASONS = [
+  "incompatibleJudgmentVersion",
+  "unknownInclusionProbability",
+  "deterministicEndpoint",
+] as const
+
+export type OutcomeExclusionReason = (typeof OUTCOME_EXCLUSION_REASONS)[number]
+
+export type OutcomeIntervalMethod = "exactBinomial" | "stratifiedBinomial"
+
+export type OutcomeUnmeasuredReason = "examinedFloor" | "coverageFloor"
+
+export interface OutcomeSessionVerdict {
+  readonly sessionId: string
+  readonly succeeded: boolean
+  /** Probability the session had of entering the judged sample, before its result was known. */
+  readonly inclusionProbability: number
+  readonly judgmentVersion: string
+}
+
+export interface EstimateProjectOutcomeInput {
+  readonly eligibleSessionCount: number
+  /**
+   * Sessions a deterministic reader proved could not have succeeded. They are a
+   * census, not a sample, and they leave the judged stratum entirely so the
+   * sample stays a random draw of the sessions it represents.
+   */
+  readonly deterministicFailureSessionIds: readonly string[]
+  readonly judgedSessions: readonly OutcomeSessionVerdict[]
+  readonly supportedJudgmentVersions: readonly string[]
+  readonly floors?: OutcomeCoverageFloors
+  readonly confidenceLevel?: number
+}
+
+export interface ProjectOutcomeEstimate {
+  /** 0 through 100. Absent when unmeasured: no midpoint, no zero, no hundred. */
+  readonly outcome?: number
+  readonly interval?: BinomialInterval
+  readonly intervalMethod?: OutcomeIntervalMethod
+  readonly eligibleSessionCount: number
+  readonly examinedSessionCount: number
+  readonly deterministicSessionCount: number
+  readonly sampledSessionCount: number
+  readonly excluded: Readonly<Record<OutcomeExclusionReason, number>>
+  readonly coverage: "measured" | "unmeasured"
+  readonly unmeasuredReason?: OutcomeUnmeasuredReason
+}
+
+interface SubStratum {
+  readonly inclusionProbability: number
+  readonly examined: number
+  readonly successes: number
+}
+
+const emptyExclusions = (): Record<OutcomeExclusionReason, number> => ({
+  incompatibleJudgmentVersion: 0,
+  unknownInclusionProbability: 0,
+  deterministicEndpoint: 0,
+})
+
+/**
+ * Groups the judged stratum by the probability that put each session in it.
+ *
+ * A project that changes its sampling rate mid-window produces more than one
+ * group, and the groups are not interchangeable: each is its own binomial with
+ * its own weight.
+ */
+const groupByInclusionProbability = (verdicts: readonly OutcomeSessionVerdict[]): readonly SubStratum[] => {
+  const groups = new Map<number, { examined: number; successes: number }>()
+  for (const verdict of verdicts) {
+    const group = groups.get(verdict.inclusionProbability) ?? { examined: 0, successes: 0 }
+    group.examined += 1
+    if (verdict.succeeded) group.successes += 1
+    groups.set(verdict.inclusionProbability, group)
+  }
+
+  return [...groups.entries()]
+    .map(([inclusionProbability, group]) => ({ inclusionProbability, ...group }))
+    .sort((left, right) => right.inclusionProbability - left.inclusionProbability)
+}
+
+/**
+ * The selection-corrected share of judgeable sessions that accomplished what
+ * the user asked.
+ *
+ * Two strata, because they are known with different certainty. The
+ * deterministic stratum is a census of sessions that demonstrably failed, so it
+ * carries weight one and contributes no successes. The judged stratum is a
+ * sample, so each session stands for `1 / inclusionProbability` of them. The
+ * pooled rate is a monotone function of the sampled success rate, which is what
+ * lets an exact binomial interval on the sample transform into an interval on
+ * the score. Lower and upper bounds are never summed across strata.
+ */
+export const estimateProjectOutcome = (input: EstimateProjectOutcomeInput): ProjectOutcomeEstimate => {
+  const floors = input.floors ?? PROVISIONAL_OUTCOME_COVERAGE_FLOORS
+  const supported = new Set(input.supportedJudgmentVersions)
+  const deterministic = new Set(input.deterministicFailureSessionIds)
+  const excluded = emptyExclusions()
+
+  const eligible: OutcomeSessionVerdict[] = []
+  for (const verdict of input.judgedSessions) {
+    if (deterministic.has(verdict.sessionId)) {
+      excluded.deterministicEndpoint += 1
+      continue
+    }
+    if (!supported.has(verdict.judgmentVersion)) {
+      excluded.incompatibleJudgmentVersion += 1
+      continue
+    }
+    if (!Number.isFinite(verdict.inclusionProbability) || verdict.inclusionProbability <= 0) {
+      excluded.unknownInclusionProbability += 1
+      continue
+    }
+    eligible.push(verdict)
+  }
+
+  const strata = groupByInclusionProbability(eligible)
+  const deterministicWeight = deterministic.size
+  const sampledWeight = strata.reduce((total, stratum) => total + stratum.examined / stratum.inclusionProbability, 0)
+  const totalWeight = deterministicWeight + sampledWeight
+
+  const base = {
+    eligibleSessionCount: input.eligibleSessionCount,
+    examinedSessionCount: deterministic.size + eligible.length,
+    deterministicSessionCount: deterministic.size,
+    sampledSessionCount: eligible.length,
+    excluded,
+  }
+
+  const examinedShare = input.eligibleSessionCount > 0 ? base.examinedSessionCount / input.eligibleSessionCount : 0
+
+  if (eligible.length < floors.examinedSessions) {
+    return { ...base, coverage: "unmeasured", unmeasuredReason: "examinedFloor" }
+  }
+  if (examinedShare < floors.examinedShareOfEligible) {
+    return { ...base, coverage: "unmeasured", unmeasuredReason: "coverageFloor" }
+  }
+
+  const weightedSuccesses = strata.reduce(
+    (total, stratum) => total + stratum.successes / stratum.inclusionProbability,
+    0,
+  )
+
+  const bounds = strata.map((stratum) =>
+    clopperPearsonInterval({
+      successes: stratum.successes,
+      trials: stratum.examined,
+      ...(input.confidenceLevel !== undefined ? { confidenceLevel: input.confidenceLevel } : {}),
+    }),
+  )
+
+  const scaledBound = (pick: (interval: BinomialInterval) => number) =>
+    (100 *
+      strata.reduce(
+        (total, stratum, index) => total + (stratum.examined * pick(bounds[index]!)) / stratum.inclusionProbability,
+        0,
+      )) /
+    totalWeight
+
+  return {
+    ...base,
+    outcome: (100 * weightedSuccesses) / totalWeight,
+    interval: { lower: scaledBound((interval) => interval.lower), upper: scaledBound((interval) => interval.upper) },
+    // One group is a single binomial, so its transformed bounds are exact. More
+    // than one assumes every group reaches its bound at once, which is wider
+    // than a joint interval would be, so the label says which was used.
+    intervalMethod: strata.length === 1 ? "exactBinomial" : "stratifiedBinomial",
+    coverage: "measured",
+  }
+}
