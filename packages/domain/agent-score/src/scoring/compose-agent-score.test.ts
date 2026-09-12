@@ -211,6 +211,28 @@ describe("the composite interval", () => {
   })
 })
 
+describe("the published dimensions", () => {
+  // The snapshot stores an interval beside every dimension and the trend plots all five, so a
+  // dimension that publishes a score without one cannot be written at all.
+  it("each carry an interval containing their own score", () => {
+    const result = compose()
+
+    expect(result.composite).toBeDefined()
+    for (const dimension of result.dimensions) {
+      expect(dimension.interval).toBeDefined()
+      expect(dimension.interval?.lower).toBeLessThanOrEqual(dimension.score as number)
+      expect(dimension.interval?.upper).toBeGreaterThanOrEqual(dimension.score as number)
+    }
+  })
+
+  it("carry no interval when the window publishes nothing", () => {
+    const result = compose({ outcome: outcome({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" }) })
+
+    expect(result.composite).toBeUndefined()
+    expect(result.dimensions.every((dimension) => dimension.interval === undefined)).toBe(true)
+  })
+})
+
 describe("the composite policy cap", () => {
   const withCap = (maxCompositeWithConfirmedHarm: number): AgentScoreArtifact => ({
     ...LAUNCH_AGENT_SCORE_ARTIFACT,

@@ -252,6 +252,19 @@ const applyPolicyCap = ({
   }
 }
 
+interface WindowBootstrap {
+  readonly composite: BinomialInterval
+  /** The two dimensions with no closed-form interval of their own; the other three fit one. */
+  readonly cost: BinomialInterval
+  readonly speed: BinomialInterval
+}
+
+const boundsOf = (values: number[], confidenceLevel: number): BinomialInterval => {
+  values.sort((left, right) => left - right)
+  const tail = (1 - confidenceLevel) / 2
+  return { lower: percentile(values, tail), upper: percentile(values, 1 - tail) }
+}
+
 /**
  * The interval on the composite, drawn from every dimension's own uncertainty at once.
  *
@@ -259,11 +272,15 @@ const applyPolicyCap = ({
  * other and resampling metrics would understate the spread. The three endpoint dimensions redraw
  * their rate from the fitted posterior. One replicate does both, so a window where Cost is stable
  * and Outcome is thin produces an interval that says so.
+ *
+ * Cost's and Speed's own intervals come out of the same replicates rather than a second pass: they
+ * are the resampled scores this loop already computed, and reading them here is what lets the
+ * snapshot store an interval beside every dimension instead of only beside the composite.
  */
-const bootstrapComposite = (input: ComposeAgentScoreInput): BinomialInterval => {
+const bootstrapWindow = (input: ComposeAgentScoreInput): WindowBootstrap => {
   const replicates = input.replicates ?? DEFAULT_COMPOSITE_REPLICATES
   const random = seededRandom(input.seed ?? 1)
-  const interval = input.confidenceLevel ?? 0.95
+  const confidenceLevel = input.confidenceLevel ?? 0.95
   const models = {
     outcome: outcomeModel(input.outcome),
     reliability: reliabilityModel(input.reliability, input.artifact.referenceRuns.reliability),
@@ -272,6 +289,8 @@ const bootstrapComposite = (input: ComposeAgentScoreInput): BinomialInterval => 
   const residualSignalPenalty = input.residualSignalPenalty ?? 0
   const residualAvoidableNs = input.residualAvoidableNs ?? 0
   const composites: number[] = []
+  const costs: number[] = []
+  const speeds: number[] = []
 
   for (let replicate = 0; replicate < replicates; replicate += 1) {
     const resampled =
@@ -281,27 +300,33 @@ const bootstrapComposite = (input: ComposeAgentScoreInput): BinomialInterval => 
             { length: input.contributions.length },
             () => input.contributions[Math.floor(random() * input.contributions.length)] as SessionWindowContribution,
           )
+    const cost = aggregateWindowCost({
+      contributions: resampled,
+      artifact: input.costArtifact,
+      residualSignalPenalty,
+    }).cost
+    const speed = aggregateWindowSpeed(resampled, residualAvoidableNs).speed
+    costs.push(cost)
+    speeds.push(speed)
     composites.push(
       weightedComposite({
         artifact: input.artifact,
         scores: {
           outcome: models.outcome.scoreAt(drawAdverseRate({ model: models.outcome, random })),
           reliability: models.reliability.scoreAt(drawAdverseRate({ model: models.reliability, random })),
-          cost: aggregateWindowCost({
-            contributions: resampled,
-            artifact: input.costArtifact,
-            residualSignalPenalty,
-          }).cost,
-          speed: aggregateWindowSpeed(resampled, residualAvoidableNs).speed,
+          cost,
+          speed,
           safety: models.safety.scoreAt(drawAdverseRate({ model: models.safety, random })),
         },
       }),
     )
   }
 
-  composites.sort((left, right) => left - right)
-  const tail = (1 - interval) / 2
-  return { lower: percentile(composites, tail), upper: percentile(composites, 1 - tail) }
+  return {
+    composite: boundsOf(composites, confidenceLevel),
+    cost: boundsOf(costs, confidenceLevel),
+    speed: boundsOf(speeds, confidenceLevel),
+  }
 }
 
 /**
@@ -349,14 +374,19 @@ export const composeAgentScore = (input: ComposeAgentScoreInput): AgentScoreComp
   ) as Record<ScoreDimension, number>
   const weighted = weightedComposite({ artifact: input.artifact, scores })
   const { score, policyCap } = applyPolicyCap({ artifact: input.artifact, composite: weighted, safety: input.safety })
+  const bootstrap = bootstrapWindow(input)
 
   return {
-    dimensions,
+    dimensions: dimensions.map((dimension) => {
+      if (dimension.scoreDimension === "cost") return { ...dimension, interval: bootstrap.cost }
+      if (dimension.scoreDimension === "speed") return { ...dimension, interval: bootstrap.speed }
+      return dimension
+    }),
     unmeasuredDimensions: [],
     ...aggregates,
     composite: {
       score,
-      interval: bootstrapComposite(input),
+      interval: bootstrap.composite,
       ...(policyCap ? { policyCap } : {}),
     },
   }
