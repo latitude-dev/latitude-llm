@@ -312,6 +312,14 @@ const middleTruncate = (value: string, maxLength: number): string => {
   return `${value.slice(0, head)}${NAMING_SAMPLE_TRUNCATION_MARKER}${value.slice(value.length - tail)}`
 }
 
+// JS strings are UTF-16 and may contain unpaired surrogates — either from malformed
+// input in the original session summary or from a code-unit slice above splitting a
+// surrogate pair. Bedrock's JSON parser rejects them ("lone leading surrogate in hex
+// escape"), so we replace any lone surrogate with U+FFFD before the sample reaches
+// the naming prompt (mirrors `stripLoneSurrogates` in build-trace-search-document.ts).
+const stripLoneSurrogates = (value: string): string =>
+  value.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "�")
+
 const serializedNamingSamplesLength = (bodies: readonly string[]): number => {
   if (bodies.length === 0) return 0
   return bodies.reduce((sum, body, index) => sum + `${index}: ${body}`.length, 0) + (bodies.length - 1)
@@ -320,13 +328,13 @@ const serializedNamingSamplesLength = (bodies: readonly string[]): number => {
 const boundNamingSamples = (samples: readonly string[]): readonly string[] => {
   const perSample = samples.map((sample) => middleTruncate(sample, TAXONOMY_NAMING_SAMPLE_CHAR_CAP))
   if (serializedNamingSamplesLength(perSample) <= TAXONOMY_NAMING_SAMPLES_TOTAL_CHAR_CAP || perSample.length === 0) {
-    return perSample
+    return perSample.map(stripLoneSurrogates)
   }
 
   const framing = perSample.reduce((sum, _, index) => sum + `${index}: `.length, 0) + Math.max(0, perSample.length - 1)
   const bodyBudget = Math.max(perSample.length, TAXONOMY_NAMING_SAMPLES_TOTAL_CHAR_CAP - framing)
   const perCap = Math.max(1, Math.floor(bodyBudget / perSample.length))
-  return perSample.map((sample) => middleTruncate(sample, perCap))
+  return perSample.map((sample) => stripLoneSurrogates(middleTruncate(sample, perCap)))
 }
 
 const generateWithCollisionGuard = (input: Omit<GenerateInput, "retryForbiddenName">) =>
