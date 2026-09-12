@@ -18,7 +18,7 @@
     "clean": "node ./scripts/clean-repo.mjs",
     "db:reset": "pnpm --filter \"@platform/db-postgres\" pg:reset && pnpm --filter \"@platform/db-clickhouse\" ch:reset",
     "db:up": "pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up",
-    "seed": "pnpm --filter \"@platform/db-postgres\" pg:seed && pnpm --filter \"@platform/db-clickhouse\" ch:seed",
+    "seed": "pnpm --filter \"@platform/db-postgres\" pg:seed && pnpm --filter \"@platform/db-clickhouse\" ch:seed && pnpm --filter \"@app/workers\" agent-score:seed",
     "migrate": "pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up",
     "reset": "pnpm clean && pnpm install && pnpm build && pnpm db:reset",
     "catchup": "pnpm clean && pnpm install && pnpm build && pnpm db:up",
