@@ -187,6 +187,19 @@ describe("Agent Score Routes Integration", () => {
     expect(body.snapshots.map((snapshot) => snapshot.score)).toEqual([80])
   })
 
+  it<ApiTestContext>("rejects impossible history dates", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Invalid Date Project")
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}/agent-score/history?from=2026-99-99`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(response.status).toBe(400)
+  })
+
   it<ApiTestContext>("reports a policy cap and its absence", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const project = await createProjectRecord(database, tenant.organizationId, "Capped Project")

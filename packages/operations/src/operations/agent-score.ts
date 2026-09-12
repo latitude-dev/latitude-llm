@@ -87,16 +87,8 @@ const AgentScoreHistorySchema = z
   .openapi("AgentScoreHistory")
 
 const HistoryQuerySchema = z.object({
-  from: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional()
-    .describe("Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`."),
-  to: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional()
-    .describe("Inclusive end date as `YYYY-MM-DD`. Defaults to today."),
+  from: z.iso.date().optional().describe("Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`."),
+  to: z.iso.date().optional().describe("Inclusive end date as `YYYY-MM-DD`. Defaults to today."),
 })
 
 const toSnapshotResponse = (snapshot: AgentScoreSnapshot) => ({
