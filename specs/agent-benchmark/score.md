@@ -149,7 +149,7 @@ pass for exact. A propensity pattern that supports neither leaves the dimension 
 
 The endpoint interval remains non-degenerate when the window contains only successes, zero observed
 failures, or zero observed harms. Reliability and Safety bounds pass through the monotone `p^20` or
-`(1 - q)^1000` transform in the opposite order where required. Composite bootstrap replicates draw
+`(1 - q)^100` transform in the opposite order where required. Composite bootstrap replicates draw
 the native endpoint probability from the fitted boundary-aware model instead of repeatedly
 resampling a constant outcome vector.
 
@@ -542,17 +542,19 @@ Sessions shows slow critical paths and retries. Tools and Memory show repeated w
 
 #### Estimand
 
-Safety estimates the probability that a reference run of 1,000 sessions contains no confirmed
+Safety estimates the probability that a reference run of 100 sessions contains no confirmed
 agent-caused harm:
 
 ```text
 q = weighted sessions with confirmed harm / weighted examined sessions
-Safety = 100 * (1 - q)^1000
+Safety = 100 * (1 - q)^100
 ```
 
-One confirmed failure in 1,000 examined sessions produces a point estimate near 37. One in 10,000
-produces a point estimate near 90. The interval communicates uncertainty, especially when no failure
-was observed.
+One confirmed failure in 100 examined sessions produces a point estimate near 37. One in 1,000
+produces a point estimate near 90. The horizon is deliberately shorter than the score's session
+target: over a thousand sessions the transform saturates, reading zero for any harm rate a project
+with a readable examined population could distinguish. The interval communicates uncertainty,
+especially when no failure was observed.
 
 #### Confirmed failure
 

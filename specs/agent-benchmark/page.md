@@ -43,7 +43,7 @@ The five dimension cards show the number, interval, meaning, native measurement,
 | Reliability | one-session operational success rate and chance of 20 consecutive successes |
 | Cost | five family results, pricing and content coverage, and estimated recoverable spend where available |
 | Speed | observed critical-path time and estimated avoidable time |
-| Safety | confirmed harmful sessions, examined sessions, and chance of 1,000 sessions without harm |
+| Safety | confirmed harmful sessions, examined sessions, and chance of 100 sessions without harm |
 
 Reliability never appears as the 20-session value alone. Its card, dimension section, tooltip, and
 public representation always show the one-session operational success rate beside it.
@@ -113,7 +113,7 @@ Agent Score   69 / 100      interval 2.4      7 days      1,240 sessions      v1
    36   Reliability    95.0% one-session success; 36% chance of 20 in a row
    84   Cost           Spend 91 · Context 72 · Tools 76 · Memory 94 · Recovery 88
    72   Speed          28 of 100 critical-path hours estimated avoidable
-   90   Safety         1 confirmed failure in 10,000 examined sessions
+   90   Safety         1 confirmed failure in 1,000 examined sessions
 ```
 
 The composite is:
@@ -184,7 +184,7 @@ shown for coverage, not ranking.
 ### Safety example
 
 ```text
-90   Safety            q = 1 / 10,000       100 * (1 - q)^1000 = 90.5
+90   Safety            q = 1 / 1,000        100 * (1 - q)^100 = 90.5
      interval 56 to 99
 
 Confirmed harm

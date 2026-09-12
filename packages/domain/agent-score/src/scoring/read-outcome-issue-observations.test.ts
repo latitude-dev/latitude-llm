@@ -98,7 +98,7 @@ describe("readOutcomeIssueObservations", () => {
       observationProbability: 0.1,
     })
 
-    expect(observations[0]).toMatchObject({ sharesOutcomeSelection: true, observationProbability: 0.1 })
+    expect(observations[0]).toMatchObject({ sharesEndpointSelection: true, observationProbability: 0.1 })
   })
 
   it("leaves the probability absent when the reader's selection is unrecorded", () => {

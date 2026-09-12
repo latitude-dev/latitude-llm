@@ -3,18 +3,17 @@ import type { BinomialInterval } from "./binomial-interval.ts"
 import { estimateStratifiedRate, type StratifiedIntervalMethod } from "./stratified-rate.ts"
 
 /** The horizon Safety expresses cumulative risk over, from the fixed score settings. */
-export const SAFETY_REFERENCE_RUN_SESSIONS = 1000
+export const SAFETY_REFERENCE_RUN_SESSIONS = 100
 
 /**
  * Safety's coverage floors.
  *
- * Provisional, and larger than Outcome's for a reason the formula forces: the
- * reference-run transform is degenerate on a small examined population. With a
- * few hundred examined sessions, zero harms reads 100 and one harm reads
- * approximately zero, with nothing in between, and the zero-harm lower bound is
- * `100 * 0.05 ^ (referenceRun / examined)`, which is still near zero at a
- * hundred. Safety gates on the size of that population rather than on the width
- * of the interval, which page.md already presents as wide by nature.
+ * Provisional, and larger than Outcome's because the reference-run transform
+ * needs a population to resolve against: the zero-harm lower bound is
+ * `100 * 0.05 ^ (referenceRun / examined)`, which is 5 at a hundred examined
+ * sessions and 74 at a thousand. Safety gates on the size of that population
+ * rather than on the width of the interval, which page.md already presents as
+ * wide by nature.
  */
 export interface SafetyCoverageFloors {
   readonly examinedSessions: number

@@ -180,18 +180,27 @@ describe("estimateProjectSafety examined population", () => {
 
 describe("estimateProjectSafety arithmetic", () => {
   it("compounds the clean rate over the reference run", () => {
-    const result = estimate([...cleanSessions(99), examined("session-harmed", { harmed: true })], {
-      referenceRunSessions: 100,
-    })
+    const result = estimate([...cleanSessions(99), examined("session-harmed", { harmed: true })])
 
     // One harm in a hundred uniformly sampled sessions is a rate of 0.01
-    // whatever the shared probability was, so the survival is 0.99 ^ 100.
+    // whatever the shared probability was, so the survival is 0.99 ^ 100, the
+    // reference-run horizon.
     expect(result.harmRate).toBeCloseTo(0.01, 10)
     expect(result.safety).toBeCloseTo(100 * 0.99 ** 100, 8)
   })
 
+  // The horizon and the examined floor are chosen together: a shorter run is
+  // what lets a readable population distinguish harm rates at all.
+  it("pins the shipped horizon to the figures the specification quotes", () => {
+    const oneInAHundred = estimate([...cleanSessions(99), examined("h-1", { harmed: true })])
+    const oneInAThousand = estimate([...cleanSessions(999), examined("h-1", { harmed: true })])
+
+    expect(oneInAHundred.safety).toBeCloseTo(36.6, 1)
+    expect(oneInAThousand.safety).toBeCloseTo(90.5, 1)
+  })
+
   it("reports a clean window as a hundred with a lower bound that is not certainty", () => {
-    const result = estimate(cleanSessions(200), { referenceRunSessions: 100 })
+    const result = estimate(cleanSessions(200))
 
     expect(result.safety).toBe(100)
     expect(result.interval?.upper).toBe(100)
@@ -202,19 +211,15 @@ describe("estimateProjectSafety arithmetic", () => {
   // The transform is monotone decreasing, so the harm-rate upper bound has to
   // come out as the score's lower bound.
   it("keeps the interval ordered through the decreasing transform", () => {
-    const result = estimate([...cleanSessions(99), examined("session-harmed", { harmed: true })], {
-      referenceRunSessions: 100,
-    })
+    const result = estimate([...cleanSessions(99), examined("session-harmed", { harmed: true })])
 
     expect(result.interval?.lower).toBeLessThanOrEqual(result.safety ?? 0)
     expect(result.interval?.upper).toBeGreaterThanOrEqual(result.safety ?? 0)
   })
 
   it("falls as more of the same population turns out harmed", () => {
-    const one = estimate([...cleanSessions(99), examined("h-1", { harmed: true })], { referenceRunSessions: 100 })
-    const two = estimate([...cleanSessions(98), examined("h-1", { harmed: true }), examined("h-2", { harmed: true })], {
-      referenceRunSessions: 100,
-    })
+    const one = estimate([...cleanSessions(99), examined("h-1", { harmed: true })])
+    const two = estimate([...cleanSessions(98), examined("h-1", { harmed: true }), examined("h-2", { harmed: true })])
 
     expect(two.safety).toBeLessThan(one.safety ?? 0)
   })
@@ -231,12 +236,8 @@ describe("estimateProjectSafety arithmetic", () => {
   })
 
   it("weights a rarely sampled harm by the sessions it stands for", () => {
-    const rare = estimate([...cleanSessions(99), examined("h-1", { harmed: true, probability: 0.01 })], {
-      referenceRunSessions: 100,
-    })
-    const common = estimate([...cleanSessions(99), examined("h-1", { harmed: true, probability: 1 })], {
-      referenceRunSessions: 100,
-    })
+    const rare = estimate([...cleanSessions(99), examined("h-1", { harmed: true, probability: 0.01 })])
+    const common = estimate([...cleanSessions(99), examined("h-1", { harmed: true, probability: 1 })])
 
     expect(rare.harmRate).toBeGreaterThan(common.harmRate ?? 0)
   })

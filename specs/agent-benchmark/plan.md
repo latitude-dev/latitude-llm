@@ -985,15 +985,18 @@ flagger provisioning backfill: both launch slugs already exist on every project.
   task-outcome version. A substituted judge model produces a distinct version and the estimator
   treats it as its own population. The shared builder is extracted from
   `taskOutcomeJudgmentVersion` rather than copied.
-- **D9. Safety's publication floor is a sample-size floor, not an interval-width floor.** The
-  reference-run transform is severe by design: with the default 10% sampling on a window that just
-  reaches the 1,000-session target, roughly 100 sessions are examined, zero observed harms gives a
-  point estimate of 100 and one observed harm gives approximately 0.004. The 95% lower bound with
-  zero harms is `100 * 0.05 ^ (1000 / examined)`, which is near zero at 100 examined, 5 at 1,000,
-  and 47 at 4,000. A dimension gated on interval width would therefore never publish. Safety gates
-  on examined population and suite completeness, and page.md already accepts the wide interval as
-  the honest presentation of a rare event. The floor constants ship as
-  `PROVISIONAL_SAFETY_COVERAGE_FLOORS` and are frozen in PR 6.
+- **D9. Safety's publication floor is a sample-size floor, not an interval-width floor, and its
+  reference run is 100 sessions.** A 1,000-session horizon saturates: on a window that just reaches
+  the session target at the default 10% sampling, roughly 100 sessions are examined, and
+  `(1 - q) ^ 1000` reads 100 with no harm and approximately 0.004 with one, with nothing in
+  between. The horizon is therefore 100 sessions, which is shorter than the score's session target
+  on purpose: it is the range over which a readable examined population can actually distinguish
+  harm rates. One confirmed failure in 100 examined sessions reads near 37 and one in 1,000 reads
+  near 90. The zero-harm 95% lower bound is `100 * 0.05 ^ (100 / examined)`, which is 5 at 100
+  examined and 74 at 1,000, so the examined floor and the horizon have to be chosen together.
+  Safety still gates on examined population and suite completeness rather than interval width, and
+  page.md accepts the wide interval as the honest presentation of a rare event. The floor constants
+  ship as `PROVISIONAL_SAFETY_COVERAGE_FLOORS` and are frozen in PR 6.
 - **D10. The launch Safety detectors join every onboarding preset.** Onboarding disables every slug
   its chosen preset omits, and four of the seven presets omit both launch detectors. Those projects
   could never complete the suite, so Safety would be permanently unmeasured and the all-five
@@ -1145,15 +1148,16 @@ flagger provisioning backfill: both launch slugs already exist on every project.
   completed in the same analysis generation.
 - [x] **P5-25** Implement Safety interval and reference-run estimation as a reusable domain result.
   The Clopper-Pearson bounds on the harm count transform through the monotone decreasing
-  `(1 - q) ^ 1000` map, so the upper bound on `q` produces the lower bound on Safety. Keep the
+  `(1 - q) ^ 100` map, so the upper bound on `q` produces the lower bound on Safety. Keep the
   interval non-degenerate with zero observed harms.
 - [x] **P5-26** Return a result carrying the 0 through 100 score, the interval and its method, the
   examined count, the harmed count, the eligible count, the excluded counts by reason including
   rate-limited hinted sessions from D4, and a coverage state of measured or unmeasured with the
   failing floor named. Never return 0, 100, or a midpoint for an unmeasured dimension. The
   provisional examined floor is **1,000** rather than Outcome's 100, because the transform in P5-25
-  is degenerate below that: a few hundred examined sessions read 100 with no harm and near zero with
-  one, and the zero-harm lower bound is still near zero at a hundred.
+  needs a population to resolve against: the zero-harm lower bound is
+  `100 * 0.05 ^ (referenceRun / examined)`, which is 5 at a hundred examined sessions and 74 at a
+  thousand.
 - [x] **P5-27** Add the Safety window source port with its ClickHouse and Postgres implementation.
   The ClickHouse side reuses the eligible-session definition and the newest-generation collapse from
   the Outcome window source and reads both launch slugs, collapsing **per member** rather than
@@ -1168,19 +1172,26 @@ flagger provisioning backfill: both launch slugs already exist on every project.
 
 ### Step 6: project issue inputs
 
-- [ ] **P5-29** Generalize the Outcome issue builder into one shared issue-row builder over a named
+- [x] **P5-29** Generalize the Outcome issue builder into one shared issue-row builder over a named
   adverse axis, and produce Safety rows from confirmed-harm findings and eligible Safety signal
   occurrences through the shared `isSignalEligibleForScoring` predicate. The two builders differ
   only in which session predicate counts, so a second copy would be 150 duplicated lines of
-  selection-correction arithmetic.
-- [ ] **P5-30** Union harm once per session and deduplicate shared source evidence before counting.
+  selection-correction arithmetic. Outcome adopts the neutral vocabulary rather than keeping its own
+  behind a translation layer, so PR 6 reads one set of row fields for both dimensions. Safety
+  returns **two** tables, because the page lists confirmed harm separately from exposure: a session
+  the agent harmed lands in the harm table only, which is what makes the second one exposure-only
+  rather than a double count.
+- [x] **P5-30** Union harm once per session and deduplicate shared source evidence before counting.
   A signal and the score it was discovered from are one issue's evidence, not two. Report
   selection-corrected exposure reach and harmed reach alongside the raw examined counts, which are
   coverage context and never a ranking key.
-- [ ] **P5-31** Rank by corrected harmed reach, and leave a row unranked and marked when a required
-  joint inclusion probability is unknown. The joint probability collapses to one draw when the issue
-  rode the suite's own selection, since a signal discovered from a Safety score was selected once,
-  not twice. Issue counts explain the score; they add no points and claim no recoverable amount.
+- [x] **P5-31** Rank by corrected harmed reach, and leave a row unranked and marked when a required
+  joint inclusion probability is unknown. The joint probability collapses to one draw for every
+  Safety observation, not just a signal discovered from the harm score: the finding and the
+  session's harm status both come from the one suite selection, so multiplying them would square a
+  probability that was rolled once. Exposure rows rank by harmed reach too, so an attack that
+  sometimes succeeds outranks a more common one that never does. Issue counts explain the score;
+  they add no points and claim no recoverable amount.
 
 ### Step 7: contracts, presets, and documentation
 
@@ -1220,9 +1231,10 @@ flagger provisioning backfill: both launch slugs already exist on every project.
   two-call suite into the dominant flagger cost line? The reference-run transform needs an examined
   population in the thousands before the point estimate stops being effectively binary, which points
   at near-census examination on the projects that can afford it.
-- Is Agent Score deliberately a high-traffic-project feature? Under the fixed settings, a project
-  that barely reaches the 1,000-session target cannot produce a Safety lower bound above 5 even with
-  a perfect record, and the all-five gate withholds every other dimension with it.
+- Is Agent Score deliberately a high-traffic-project feature? At the 100-session horizon a clean
+  window reaches a lower bound of 74 once a thousand sessions are examined, so the question is now
+  whether projects reach that examined population at the chosen suite sampling rate, not whether the
+  formula can express the result.
 - What share of rate-limited hinted sessions makes the hinted stratum's missingness ignorable, and
   what is the right policy when it is exceeded?
 - Does the structured jailbreaking verdict agree with human review on compliance often enough to be
