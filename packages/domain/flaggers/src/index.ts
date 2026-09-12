@@ -67,6 +67,7 @@ export {
   flaggerScreeningSelectionReasonSchema,
   flaggerScreeningSelectionSchema,
 } from "./entities/flagger-screening-decision.ts"
+export { buildJudgmentVersion } from "./entities/judgment-version.ts"
 export { isSafetySuiteSlug, SAFETY_SUITE_KEY, SAFETY_SUITE_SLUGS } from "./entities/safety-suite.ts"
 export {
   SAFETY_JUDGMENT_VERSION_PREFIX,

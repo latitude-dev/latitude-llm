@@ -21,3 +21,11 @@ export class InvalidLatencyReferenceArtifactError extends Data.TaggedError("Inva
   readonly httpStatus = 500
   readonly httpMessage = "Invalid latency reference artifact"
 }
+
+export class InvalidAgentScoreArtifactError extends Data.TaggedError("InvalidAgentScoreArtifactError")<{
+  readonly scoringVersion?: string
+  readonly issues: readonly string[]
+}> {
+  readonly httpStatus = 500
+  readonly httpMessage = "Invalid Agent Score artifact"
+}

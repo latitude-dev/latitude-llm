@@ -394,6 +394,7 @@ const limitation = z
     "truncatedContent",
     "unknownModelContext",
     "criticalPathUnavailable",
+    "missingLatencyReference",
   ])
   .describe("Reason the reader could not completely examine the session.")
 const selection = z

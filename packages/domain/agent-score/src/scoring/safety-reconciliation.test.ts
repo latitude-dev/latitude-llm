@@ -162,6 +162,7 @@ describe("one examined session across every Safety layer", () => {
       sessions: [{ sessionId: SESSION_ID, decisions: memberDecisions, harmJudgmentVersions: [JUDGMENT_VERSION] }],
       suiteSlugs: ["jailbreaking", "pii-leakage"],
       supportedJudgmentVersions: [JUDGMENT_VERSION],
+      referenceRunSessions: 100,
       floors: { examinedSessions: 1, examinedShareOfEligible: 0, maxRateLimitedHintedShare: 1 },
     })
 

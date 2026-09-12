@@ -1,24 +1,6 @@
+import type { OutcomeCoverageFloors } from "../entities/agent-score-artifact.ts"
 import type { BinomialInterval } from "./binomial-interval.ts"
 import { estimateStratifiedRate, type StratifiedIntervalMethod } from "./stratified-rate.ts"
-
-/**
- * Outcome's coverage floors.
- *
- * Provisional: both numbers are calibration candidates frozen into the scoring
- * artifact before launch, kept here as named constants rather than buried in a
- * comparison so the freeze has one place to land.
- */
-export interface OutcomeCoverageFloors {
-  /** Compatible sampled verdicts required before the rate means anything. */
-  readonly examinedSessions: number
-  /** Share of the eligible base the examined population must describe. */
-  readonly examinedShareOfEligible: number
-}
-
-export const PROVISIONAL_OUTCOME_COVERAGE_FLOORS: OutcomeCoverageFloors = {
-  examinedSessions: 100,
-  examinedShareOfEligible: 0.05,
-}
 
 export const OUTCOME_EXCLUSION_REASONS = [
   "incompatibleJudgmentVersion",
@@ -50,7 +32,7 @@ export interface EstimateProjectOutcomeInput {
   readonly deterministicFailureSessionIds: readonly string[]
   readonly judgedSessions: readonly OutcomeSessionVerdict[]
   readonly supportedJudgmentVersions: readonly string[]
-  readonly floors?: OutcomeCoverageFloors
+  readonly floors: OutcomeCoverageFloors
   readonly confidenceLevel?: number
 }
 
@@ -87,7 +69,7 @@ const emptyExclusions = (): Record<OutcomeExclusionReason, number> => ({
  * the score. Lower and upper bounds are never summed across strata.
  */
 export const estimateProjectOutcome = (input: EstimateProjectOutcomeInput): ProjectOutcomeEstimate => {
-  const floors = input.floors ?? PROVISIONAL_OUTCOME_COVERAGE_FLOORS
+  const floors = input.floors
   const supported = new Set(input.supportedJudgmentVersions)
   const deterministic = new Set(input.deterministicFailureSessionIds)
   const excluded = emptyExclusions()

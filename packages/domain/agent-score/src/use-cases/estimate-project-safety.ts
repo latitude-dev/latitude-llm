@@ -2,10 +2,10 @@ import { SAFETY_SUITE_SLUGS } from "@domain/flaggers"
 import { isConfirmedHarmFindingKind, type SafetyFindingKind, ScoreRepository } from "@domain/scores"
 import { type OrganizationId, type ProjectId, SessionId } from "@domain/shared"
 import { Effect } from "effect"
+import type { SafetyCoverageFloors } from "../entities/agent-score-artifact.ts"
 import { SafetyWindowDecisionSource } from "../ports/safety-window-source.ts"
 import {
   estimateProjectSafety,
-  type SafetyCoverageFloors,
   type SafetyMemberDecision,
   type SafetySessionExamination,
 } from "../scoring/estimate-safety.ts"
@@ -19,7 +19,8 @@ export interface EstimateProjectSafetyWindowInput {
   readonly from: Date
   readonly to: Date
   readonly supportedJudgmentVersions: readonly string[]
-  readonly floors?: SafetyCoverageFloors
+  readonly floors: SafetyCoverageFloors
+  readonly referenceRunSessions: number
   readonly confidenceLevel?: number
   readonly batchSize?: number
 }
@@ -109,7 +110,8 @@ export const estimateProjectSafetyWindow = Effect.fn("agentScore.estimateProject
     sessions,
     suiteSlugs: SAFETY_SUITE_SLUGS,
     supportedJudgmentVersions: input.supportedJudgmentVersions,
-    ...(input.floors ? { floors: input.floors } : {}),
+    floors: input.floors,
+    referenceRunSessions: input.referenceRunSessions,
     ...(input.confidenceLevel !== undefined ? { confidenceLevel: input.confidenceLevel } : {}),
   })
 })

@@ -14669,7 +14669,8 @@
                   "missingContent",
                   "truncatedContent",
                   "unknownModelContext",
-                  "criticalPathUnavailable"
+                  "criticalPathUnavailable",
+                  "missingLatencyReference"
                 ],
                 "description": "Reason the reader could not completely examine the session."
               },
@@ -14757,7 +14758,8 @@
                   "missingContent",
                   "truncatedContent",
                   "unknownModelContext",
-                  "criticalPathUnavailable"
+                  "criticalPathUnavailable",
+                  "missingLatencyReference"
                 ],
                 "description": "Reason the reader could not completely examine the session."
               },

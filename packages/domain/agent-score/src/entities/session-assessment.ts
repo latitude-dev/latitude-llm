@@ -272,6 +272,7 @@ export const sessionCoverageLimitationSchema = z.enum([
   "truncatedContent",
   "unknownModelContext",
   "criticalPathUnavailable",
+  "missingLatencyReference",
 ])
 export type SessionCoverageLimitation = z.infer<typeof sessionCoverageLimitationSchema>
 

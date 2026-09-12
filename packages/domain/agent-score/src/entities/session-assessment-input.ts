@@ -109,6 +109,7 @@ export interface AssessmentReaderFact {
     | "truncatedContent"
     | "unknownModelContext"
     | "criticalPathUnavailable"
+    | "missingLatencyReference"
 }
 
 /**

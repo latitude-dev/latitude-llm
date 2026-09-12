@@ -1,4 +1,53 @@
+export {
+  buildLatencyReferenceArtifact,
+  LATENCY_SAMPLE_REJECTIONS,
+  type LatencyCohortSample,
+  type LatencyReferenceBuildReport,
+  type LatencySampleRejection,
+} from "./artifacts/build-latency-reference.ts"
+export { LAUNCH_AGENT_SCORE_ARTIFACT, LAUNCH_SCORING_VERSION } from "./artifacts/launch-agent-score-artifact.ts"
+export {
+  type LaunchArtifacts,
+  type ResolvedLaunchArtifacts,
+  resolveLaunchArtifacts,
+  validateLaunchArtifacts,
+} from "./artifacts/launch-artifacts.ts"
+export { LAUNCH_COST_ARTIFACT_VERSION, LAUNCH_COST_SCORING_ARTIFACT } from "./artifacts/launch-cost-scoring-artifact.ts"
+export {
+  LAUNCH_LATENCY_ARTIFACT_VERSION,
+  LAUNCH_LATENCY_MINIMUM_ORGANIZATION_COUNT,
+  LAUNCH_LATENCY_MINIMUM_SAMPLE_COUNT,
+  LAUNCH_LATENCY_REFERENCE_ARTIFACT,
+} from "./artifacts/launch-latency-reference-artifact.ts"
 export { SESSION_ASSESSMENT_CONTENT_BUDGET, SESSION_ASSESSMENT_RESOLVER_CONCURRENCY } from "./constants.ts"
+export {
+  type AgentScoreArtifact,
+  agentScoreArtifactSchema,
+  type CompositePolicyCap,
+  type CostCoverageFloors,
+  compositePolicyCapSchema,
+  compositeWeightOf,
+  costCoverageFloorsSchema,
+  type DimensionCoverageFloors,
+  dimensionCoverageFloorsSchema,
+  LOCAL_SCORING_VERSION_PREFIX,
+  loadAgentScoreArtifact,
+  type OutcomeCoverageFloors,
+  outcomeCoverageFloorsSchema,
+  type ReliabilityCoverageFloors,
+  type ResolvedScoringVersion,
+  reliabilityCoverageFloorsSchema,
+  resolveScoringVersion,
+  type SafetyCoverageFloors,
+  type ScoreWindowSettings,
+  type ScoringJudge,
+  type SpeedCoverageFloors,
+  type SupportedJudgmentVersions,
+  safetyCoverageFloorsSchema,
+  scoreWindowSettingsSchema,
+  speedCoverageFloorsSchema,
+  supportedJudgmentVersionsSchema,
+} from "./entities/agent-score-artifact.ts"
 export {
   COST_ESTIMATOR_CHANNEL,
   COST_FAMILIES,
@@ -154,6 +203,7 @@ export type {
   NormalizedSessionCostEvidence,
 } from "./entities/session-assessment-input.ts"
 export {
+  InvalidAgentScoreArtifactError,
   InvalidCostMetricCatalogError,
   InvalidCostScoringArtifactError,
   InvalidLatencyReferenceArtifactError,
@@ -321,12 +371,10 @@ export {
   type EstimateProjectOutcomeInput,
   estimateProjectOutcome,
   OUTCOME_EXCLUSION_REASONS,
-  type OutcomeCoverageFloors,
   type OutcomeExclusionReason,
   type OutcomeIntervalMethod,
   type OutcomeSessionVerdict,
   type OutcomeUnmeasuredReason,
-  PROVISIONAL_OUTCOME_COVERAGE_FLOORS,
   type ProjectOutcomeEstimate,
 } from "./scoring/estimate-outcome.ts"
 export type {
@@ -344,11 +392,8 @@ export {
 export {
   type EstimateProjectSafetyInput,
   estimateProjectSafety,
-  PROVISIONAL_SAFETY_COVERAGE_FLOORS,
   type ProjectSafetyEstimate,
   SAFETY_EXCLUSION_REASONS,
-  SAFETY_REFERENCE_RUN_SESSIONS,
-  type SafetyCoverageFloors,
   type SafetyExclusionReason,
   type SafetyMemberDecision,
   type SafetySessionExamination,

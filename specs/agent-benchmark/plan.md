@@ -1438,38 +1438,41 @@ Each row is a gate the previous checklist asserted and the code does not current
 
 ### Step 1: the scoring version and its frozen artifacts
 
-- [ ] **P6-1** Define `AgentScoreArtifact` under `@domain/agent-score` as the single versioned
+- [x] **P6-1** Define `AgentScoreArtifact` under `@domain/agent-score` as the single versioned
   container from D2: scoring version, composite weights validated to sum to one, per-dimension
   coverage floors, the Reliability and Safety reference-run horizons, pinned Cost and latency
   artifact versions, supported judgment versions per judge, and the optional composite policy cap.
   Zod-first, validated at load through `loadAgentScoreArtifact`, rejecting unknown dimensions,
   weights that do not sum to one, and floors outside their bounds.
-- [ ] **P6-2** Fold `PROVISIONAL_OUTCOME_COVERAGE_FLOORS`, `PROVISIONAL_SAFETY_COVERAGE_FLOORS`, and
+- [x] **P6-2** Fold `PROVISIONAL_OUTCOME_COVERAGE_FLOORS`, `PROVISIONAL_SAFETY_COVERAGE_FLOORS`, and
   `SAFETY_REFERENCE_RUN_SESSIONS` into the artifact as its initial values. Keep the estimator
   signatures taking floors as input so they stay pure and testable; remove the provisional constants
   as a second source of truth once the artifact supplies them.
-- [ ] **P6-3** Produce the initial Cost scoring artifact as a versioned bundle loaded through
+- [x] **P6-3** Produce the initial Cost scoring artifact as a versioned bundle loaded through
   `loadCostScoringArtifact`, containing family weights, metric curve points, metric and family caps,
   required-family coverage floors, the residual-signal cap, and the tokenizer policy. The numbers
   come from Step 8; this item is the bundle, its loader, and its wiring. Never inline a launch
   constant in a reader or a component.
-- [ ] **P6-4** Add the fleet latency reference builder from D4: a use-case that reads
+- [x] **P6-4** Add the fleet latency reference builder from D4: a use-case that reads
   `FleetLatencyReferenceRepository` TTFT and throughput cohort samples, applies the minimum sample and
   organization counts that make a cohort publishable, inspects the aggregation for tenant leakage,
   and emits a `LatencyReferenceArtifact` with its fallback behaviour and version pinned.
-- [ ] **P6-5** Commit the built latency reference as a versioned bundle and load it in both
+- [~] **P6-5** Commit the latency reference as a versioned bundle and load it in both
   `readSessionAssessmentInputBatch` callers: the window job and `getSessionAssessment`. The
-  interactive path currently passes no artifact, so the session panel and the benchmark disagree
-  about Speed today.
-- [ ] **P6-6** Register `spans.ttft` and `spans.throughput` in `DETERMINISTIC_READERS` with their
-  Speed dimension mapping, and make `latencyClaims` report a reader fact with a named limitation when
-  the artifact is absent instead of returning an empty claim list. Cover the case with a test that
-  asserts a session read without an artifact is `notExamined` for those readers and not clean.
-- [ ] **P6-7** Implement D3's judgment-version resolution: the bundled supported list, the local
+  interactive path passed no artifact, so the session panel and the benchmark disagreed about Speed.
+  The bundle and the wiring ship now; it carries no cohorts until P6-54 runs the builder against
+  production traffic, which makes TTFT and throughput unmeasured rather than clean in the meantime.
+- [x] **P6-6** Give `spans.ttft` and `spans.throughput` reader facts of their own. They are not
+  flagger strategies, so they belong with the Cost evidence reader's other coverage facts rather than
+  in `DETERMINISTIC_READERS`: `readLatencyEvidence` returns coverage beside its claims, and an absent
+  or non-covering reference reports `missingLatencyReference` instead of contributing an empty claim
+  list. A non-streaming call is not applicable rather than unreadable, because first-token timing
+  collapses into total duration and there was nothing to measure.
+- [x] **P6-7** Implement D3's judgment-version resolution: the bundled supported list, the local
   scoring-version derivation from the resolved `FLAGGER_CLASSIFIER` generation config, and the digest
   fallback. Reuse `buildJudgmentVersion` rather than re-deriving the string format. Test that a
   substituted model yields a distinct scoring version whose supported list contains only itself.
-- [ ] **P6-8** Load the same artifacts on hosted and self-hosted deployments through one loader with
+- [x] **P6-8** Load the same artifacts on hosted and self-hosted deployments through one loader with
   no environment-conditional formulas. A self-hosted deployment differs only in which judge it
   resolves, which D3 already expresses as a version.
 

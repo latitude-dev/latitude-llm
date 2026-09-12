@@ -328,7 +328,9 @@ describe("readSessionAssessmentSources", () => {
     expect(
       result.findings.some((finding) => finding.kind === "providerError" || finding.kind === "finishFailure"),
     ).toBe(false)
-    expect(result.readers.filter((reader) => reader.readerId.startsWith("spans."))).toEqual([
+    expect(
+      result.readers.filter((reader) => ["spans.finish_failure", "spans.provider_error"].includes(reader.readerId)),
+    ).toEqual([
       expect.objectContaining({ readerId: "spans.finish_failure", limitation: "unmappedTelemetry", readableCount: 0 }),
       expect.objectContaining({ readerId: "spans.provider_error", limitation: "unmappedTelemetry", readableCount: 0 }),
     ])
