@@ -63,16 +63,18 @@ const readerCoverageSchema = z.object({
 const costWindowGateSchema = z.object({
   coverage: z.enum(["measured", "unmeasured"]),
   unmeasuredReason: z.enum(["requiredFamilyUnreadable", "publishableSessionFloor", "noReadableSessions"]).optional(),
-  families: z.array(
-    z.object({
-      family: z.enum(COST_FAMILIES),
-      required: z.boolean(),
-      applicableReadings: z.number(),
-      readableReadings: z.number(),
-      coverage: z.number(),
-      meetsCoverageFloor: z.boolean(),
-    }),
-  ).readonly(),
+  families: z
+    .array(
+      z.object({
+        family: z.enum(COST_FAMILIES),
+        required: z.boolean(),
+        applicableReadings: z.number(),
+        readableReadings: z.number(),
+        coverage: z.number(),
+        meetsCoverageFloor: z.boolean(),
+      }),
+    )
+    .readonly(),
   publishableSessionCount: z.number(),
   withheldSessionCount: z.number(),
   publishableSessionShare: z.number(),
