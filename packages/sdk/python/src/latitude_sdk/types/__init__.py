@@ -15,6 +15,26 @@ if typing.TYPE_CHECKING:
     from .active_member import ActiveMember
     from .active_member_role import ActiveMemberRole
     from .active_member_status import ActiveMemberStatus
+    from .agent_score_cause_row import AgentScoreCauseRow
+    from .agent_score_cause_row_destination import AgentScoreCauseRowDestination
+    from .agent_score_cause_row_evidence import AgentScoreCauseRowEvidence
+    from .agent_score_cause_row_native_effect import AgentScoreCauseRowNativeEffect
+    from .agent_score_causes import AgentScoreCauses
+    from .agent_score_causes_status import AgentScoreCausesStatus
+    from .agent_score_dimension import AgentScoreDimension
+    from .agent_score_dimension_attribution import AgentScoreDimensionAttribution
+    from .agent_score_dimension_attribution_method import AgentScoreDimensionAttributionMethod
+    from .agent_score_dimension_attribution_score_dimension import AgentScoreDimensionAttributionScoreDimension
+    from .agent_score_dimensions import AgentScoreDimensions
+    from .agent_score_dimensions_cost import AgentScoreDimensionsCost
+    from .agent_score_dimensions_reliability import AgentScoreDimensionsReliability
+    from .agent_score_dimensions_safety import AgentScoreDimensionsSafety
+    from .agent_score_dimensions_speed import AgentScoreDimensionsSpeed
+    from .agent_score_explanation import AgentScoreExplanation
+    from .agent_score_history import AgentScoreHistory
+    from .agent_score_interval import AgentScoreInterval
+    from .agent_score_issue_row import AgentScoreIssueRow
+    from .agent_score_snapshot import AgentScoreSnapshot
     from .alert_baseline import AlertBaseline
     from .alert_baseline_kind import AlertBaselineKind
     from .alert_condition import AlertCondition, AlertCondition_Escalating, AlertCondition_Threshold
@@ -460,6 +480,8 @@ if typing.TYPE_CHECKING:
     from .create_monitor_body_threshold_target_type import CreateMonitorBodyThresholdTargetType
     from .create_score_body import CreateScoreBody
     from .create_signal_response import CreateSignalResponse
+    from .current_agent_score import CurrentAgentScore
+    from .current_agent_score_snapshot import CurrentAgentScoreSnapshot
     from .custom_score_response import CustomScoreResponse
     from .dataset import Dataset
     from .dataset_column import DatasetColumn
@@ -1136,6 +1158,26 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ActiveMember": ".active_member",
     "ActiveMemberRole": ".active_member_role",
     "ActiveMemberStatus": ".active_member_status",
+    "AgentScoreCauseRow": ".agent_score_cause_row",
+    "AgentScoreCauseRowDestination": ".agent_score_cause_row_destination",
+    "AgentScoreCauseRowEvidence": ".agent_score_cause_row_evidence",
+    "AgentScoreCauseRowNativeEffect": ".agent_score_cause_row_native_effect",
+    "AgentScoreCauses": ".agent_score_causes",
+    "AgentScoreCausesStatus": ".agent_score_causes_status",
+    "AgentScoreDimension": ".agent_score_dimension",
+    "AgentScoreDimensionAttribution": ".agent_score_dimension_attribution",
+    "AgentScoreDimensionAttributionMethod": ".agent_score_dimension_attribution_method",
+    "AgentScoreDimensionAttributionScoreDimension": ".agent_score_dimension_attribution_score_dimension",
+    "AgentScoreDimensions": ".agent_score_dimensions",
+    "AgentScoreDimensionsCost": ".agent_score_dimensions_cost",
+    "AgentScoreDimensionsReliability": ".agent_score_dimensions_reliability",
+    "AgentScoreDimensionsSafety": ".agent_score_dimensions_safety",
+    "AgentScoreDimensionsSpeed": ".agent_score_dimensions_speed",
+    "AgentScoreExplanation": ".agent_score_explanation",
+    "AgentScoreHistory": ".agent_score_history",
+    "AgentScoreInterval": ".agent_score_interval",
+    "AgentScoreIssueRow": ".agent_score_issue_row",
+    "AgentScoreSnapshot": ".agent_score_snapshot",
     "AlertBaseline": ".alert_baseline",
     "AlertBaselineKind": ".alert_baseline_kind",
     "AlertCondition": ".alert_condition",
@@ -1536,6 +1578,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateMonitorBody_Threshold": ".create_monitor_body",
     "CreateScoreBody": ".create_score_body",
     "CreateSignalResponse": ".create_signal_response",
+    "CurrentAgentScore": ".current_agent_score",
+    "CurrentAgentScoreSnapshot": ".current_agent_score_snapshot",
     "CustomScoreResponse": ".custom_score_response",
     "Dataset": ".dataset",
     "DatasetColumn": ".dataset_column",
@@ -2140,6 +2184,26 @@ __all__ = [
     "ActiveMember",
     "ActiveMemberRole",
     "ActiveMemberStatus",
+    "AgentScoreCauseRow",
+    "AgentScoreCauseRowDestination",
+    "AgentScoreCauseRowEvidence",
+    "AgentScoreCauseRowNativeEffect",
+    "AgentScoreCauses",
+    "AgentScoreCausesStatus",
+    "AgentScoreDimension",
+    "AgentScoreDimensionAttribution",
+    "AgentScoreDimensionAttributionMethod",
+    "AgentScoreDimensionAttributionScoreDimension",
+    "AgentScoreDimensions",
+    "AgentScoreDimensionsCost",
+    "AgentScoreDimensionsReliability",
+    "AgentScoreDimensionsSafety",
+    "AgentScoreDimensionsSpeed",
+    "AgentScoreExplanation",
+    "AgentScoreHistory",
+    "AgentScoreInterval",
+    "AgentScoreIssueRow",
+    "AgentScoreSnapshot",
     "AlertBaseline",
     "AlertBaselineKind",
     "AlertCondition",
@@ -2540,6 +2604,8 @@ __all__ = [
     "CreateMonitorBody_Threshold",
     "CreateScoreBody",
     "CreateSignalResponse",
+    "CurrentAgentScore",
+    "CurrentAgentScoreSnapshot",
     "CustomScoreResponse",
     "Dataset",
     "DatasetColumn",

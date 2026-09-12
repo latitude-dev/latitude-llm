@@ -28253,7 +28253,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "format": "date",
               "description": "Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`."
             },
             "required": false,
@@ -28264,7 +28264,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "format": "date",
               "description": "Inclusive end date as `YYYY-MM-DD`. Defaults to today."
             },
             "required": false,

@@ -5,6 +5,7 @@ Full command reference for `latitude`.
 ## Commands
 
 - [`latitude account`](#latitude-account)
+- [`latitude agent-score`](#latitude-agent-score)
 - [`latitude analytics`](#latitude-analytics)
 - [`latitude annotations`](#latitude-annotations)
 - [`latitude api-keys`](#latitude-api-keys)
@@ -46,6 +47,42 @@ Creates a temporary organization with an API key and a project, and returns a li
 Returns the caller's account snapshot: the organization the request is scoped to, plus the user record and their role when the request was made by a real user (OAuth). API-key callers receive `user: null` and `role: null` because API keys aren't tied to a specific user.
 
 `GET /v1/account`
+
+---
+
+### `latitude agent-score`
+
+#### `latitude agent-score causes`
+
+Returns what explains the project's current Agent Score: ranked causes per dimension, and where Outcome failures and Safety harm concentrate. This is current evidence from the live window and does not reconstruct any stored score.
+
+`GET /v1/projects/{projectSlug}/agent-score/causes`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+
+#### `latitude agent-score get`
+
+Returns the project's Agent Score for today: one number from 0 to 100 and the five dimensions behind it. A score is published only when every dimension meets its coverage and confidence floors, so a project can have no score for a day.
+
+`GET /v1/projects/{projectSlug}/agent-score`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+
+#### `latitude agent-score history`
+
+Returns the project's published Agent Scores in a date range, oldest first. Days the project did not publish are absent from the list.
+
+`GET /v1/projects/{projectSlug}/agent-score/history`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--from` | `string (date)` | No | Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`. |
+| `--to` | `string (date)` | No | Inclusive end date as `YYYY-MM-DD`. Defaults to today. |
 
 ---
 
