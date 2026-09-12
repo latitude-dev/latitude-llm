@@ -1109,6 +1109,24 @@ describe("Safety suite selection", () => {
     expect(selectionFor(screeningDecisions, "pii-leakage")).toMatchObject({ outcome: "notApplicable" })
   })
 
+  // A disabled member cannot complete the suite, but the enabled one still has
+  // its own detector to run, so it keeps screening at its own rate.
+  it("keeps the enabled member running when its partner is turned off", async () => {
+    const deps = makeDeps()
+    const { result, screeningDecisions } = await runScreening({
+      session: CLEAN_SESSION,
+      flaggers: suiteFlaggers(100, 100, { jb: true, pii: false }),
+      deps: deps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "jailbreaking")).toMatchObject({ action: "classify" })
+    expect(decisionFor(result.decisions, "pii-leakage")).toMatchObject({ action: "dropped", reason: "disabled" })
+    expect(selectionFor(screeningDecisions, "jailbreaking")).toMatchObject({
+      selected: true,
+      inclusionProbability: 1,
+    })
+  })
+
   it("reuses the generation's draw across retries instead of drawing again", async () => {
     const first = await runScreening({
       session: CLEAN_SESSION,

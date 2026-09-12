@@ -1195,34 +1195,38 @@ flagger provisioning backfill: both launch slugs already exist on every project.
 
 ### Step 7: contracts, presets, and documentation
 
-- [ ] **P5-32** Extend the session-assessment operation and generated contracts only as needed for
-  the new Safety items and coverage. The public impact already carries `findingKind` as a free
-  string; bounding it to the launch enum is the better contract and is the only change that
-  regenerates artifacts. Defer Flagger Settings and standalone Signal-detail analytics until after
+- [x] **P5-32** Extend the session-assessment operation and generated contracts only as needed for
+  the new Safety items and coverage. `findingKind` **stays a free string** rather than being bounded
+  to the launch enum as first planned: two vocabularies already share the field, because an item
+  derived from a signal's model-assigned role puts that signal's detector slug through it, and
+  narrowing the enum would either break that path or change the behaviour P5-20 deliberately froze.
+  The description names the launch kinds instead. No slug or enum changed in PR 5, so the public
+  flagger surface is untouched and the only regeneration is that description reaching OpenAPI, MCP,
+  both SDKs, and the CLI. Defer Flagger Settings and standalone Signal-detail analytics until after
   the initial Agent Score launch.
-- [ ] **P5-33** Add both launch Safety detectors to every onboarding preset per D10, and add a test
+- [x] **P5-33** Add both launch Safety detectors to every onboarding preset per D10, and add a test
   asserting that every preset enables the full launch suite, so a future preset cannot silently
   withhold the whole Agent Score.
-- [ ] **P5-34** Update [`flaggers.md`](flaggers.md#screening-decisions) and
+- [x] **P5-34** Update [`flaggers.md`](flaggers.md#screening-decisions) and
   [`score.md`](score.md#safety) to record suite-level selection, the suite inclusion probability,
   the applicability rule, the rate-limited hinted coverage limitation, and the sample-size
   publication floor from D3, D4, D5, and D9.
 
 ### Exit gate
 
-- [ ] **P5-35** Tests prove that exposure never enters confirmed harm and unexamined sessions never
+- [x] **P5-35** Tests prove that exposure never enters confirmed harm and unexamined sessions never
   become clean observations. Passed defense findings do not enter signal discovery. Sampled issue
   rows rank by corrected harm reach rather than raw overlap.
-- [ ] **P5-36** Fixtures cover refused and complied-with injections, user and assistant PII,
+- [x] **P5-36** Fixtures cover refused and complied-with injections, user and assistant PII,
   multiple detectors on one harmed session, a suite with one member rate-limited, a suite with one
   member not applicable, a suite with one member disabled, and incomplete coverage.
-- [ ] **P5-37** Interval tests prove non-degenerate bounds with zero observed harms, monotonicity in
+- [x] **P5-37** Interval tests prove non-degenerate bounds with zero observed harms, monotonicity in
   the observed harm count, correct direction through the reference-run transform, and that a
   non-uniform examined population reports its method rather than silently using the uniform path.
-- [ ] **P5-38** Inspected fixtures reconcile the structured finding, its screening decisions across
+- [x] **P5-38** Inspected fixtures reconcile the structured finding, its screening decisions across
   both suite members, the session assessment item, the project estimator input, and the issue input
   without assigning a score to the session itself.
-- [ ] **P5-39** No score snapshot, public Safety number, route, or scheduled job ships in PR 5.
+- [x] **P5-39** No score snapshot, public Safety number, route, or scheduled job ships in PR 5.
 - [ ] `pnpm typecheck` and `pnpm test` pass. Generated API artifacts are current.
 
 ### Calibration questions to close before PR 6

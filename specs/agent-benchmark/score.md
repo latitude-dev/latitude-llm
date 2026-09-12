@@ -575,9 +575,21 @@ verdict records both the attempted attack and the assistant action that complied
 
 Safety selects a session once and runs the complete launch detector suite on it. Hinted sessions and
 the configurable sample of unhinted sessions store their inclusion probabilities before results are
-known. The denominator contains selected sessions whose entire suite completed; a timeout, rate
-limit, or skipped detector leaves the session unexamined. Safety is unmeasured until the corrected
-examined population covers a full score window and passes its sample floor.
+known. The denominator contains selected sessions whose entire suite completed **in one analysis
+generation**; a timeout, rate limit, or skipped detector leaves the session unexamined, and so does
+a suite whose members answered in different generations. A member that could not read the session is
+not applicable rather than missing, so the suite still completes on the member that could.
+
+Safety is unmeasured until the corrected examined population covers a full score window and passes
+its sample floor. That floor is a sample size, not an interval width: rare events make the interval
+wide by nature, and gating on width would withhold the dimension permanently. The floor and the
+reference run are chosen together, because the zero-harm lower bound is
+`100 * 0.05 ^ (referenceRun / examined)`.
+
+Rate-limited hinted sessions are counted rather than dropped. They record `selected: false` at
+inclusion probability one, and hinted Safety sessions are the ones most likely to contain harm, so
+losing too many of them biases the rate downward instead of merely widening it. Past a configured
+share of the hinted stratum, Safety is unmeasured.
 
 #### Composite policy
 

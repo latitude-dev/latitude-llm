@@ -324,6 +324,23 @@ examined population.
 The initial Safety suite contains Jailbreaking and PII Leakage. NSFW remains contextual unless a
 later structured result contract can identify assistant-caused harm.
 
+The suite resolves its selection once per session and analysis generation, before any member is
+screened. One sampling draw on a key that omits the slug puts both members on the same side of it,
+at the lowest rate any enabled member is configured for, which is the only rate every member
+satisfies. The rate limit is checked once in a bucket the suite shares, because members screen
+concurrently: two calls against one bucket would consume two tokens and could still admit one member
+while dropping the other, spending a model call on a session the estimator must then discard.
+
+Whether a member was hinted stays that member's own fact, recorded in its own `hintKinds`. A member
+the suite carried along was still examined with certainty, so it records `uniform-sample` at
+inclusion probability one rather than an ordinary sample it never drew. Sharing hinted-ness across
+the suite would also mute detectors suppressed by a member, since a bare-slug suppressor fires on
+any hinted classification.
+
+A member that cannot read the session records `outcome: "notApplicable"` rather than a selection
+reason, so the suite still completes on the member that can. `skipped` stays reserved for the policy
+skip above.
+
 This table supports:
 
 - inverse-probability correction for signal and flagger evidence;
