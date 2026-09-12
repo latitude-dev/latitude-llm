@@ -185,11 +185,14 @@ export interface ScoreRepositoryShape {
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
   /**
    * Published flagger-authored annotations for one session, newest first,
-   * bounded by `limit`. Backs the flagger anchor dedup.
+   * bounded by `limit`. Backs the flagger dedup lookups, which pass
+   * `flaggerSlug` so a busy session's other detectors cannot push the row they
+   * are looking for past the limit.
    */
   listPublishedSystemAnnotationsBySession(input: {
     readonly projectId: ProjectId
     readonly sessionId: SessionId
+    readonly flaggerSlug?: string
     readonly limit?: number
   }): Effect.Effect<readonly Score[], RepositoryError, SqlClient>
   /**

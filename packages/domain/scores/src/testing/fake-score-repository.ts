@@ -131,7 +131,7 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
             score.draftedAt === null,
         ) ?? null,
       ),
-    listPublishedSystemAnnotationsBySession: ({ projectId, sessionId, limit = 200 }) =>
+    listPublishedSystemAnnotationsBySession: ({ projectId, sessionId, flaggerSlug, limit = 200 }) =>
       Effect.succeed(
         [...scores.values()]
           .filter(
@@ -140,7 +140,9 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
               score.sourceType === "annotation" &&
               score.sourceId === "SYSTEM" &&
               score.sessionId === sessionId &&
-              score.draftedAt === null,
+              score.draftedAt === null &&
+              (flaggerSlug === undefined ||
+                (score.metadata as { flaggerSlug?: string } | null)?.flaggerSlug === flaggerSlug),
           )
           .slice(0, limit),
       ),

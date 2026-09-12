@@ -62,6 +62,7 @@ export const findFlaggerAnnotationByAnchor = (input: {
     const published = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
       projectId: input.projectId,
       sessionId: input.sessionId as SessionId,
+      flaggerSlug: input.flaggerSlug,
     })
 
     return (
@@ -146,6 +147,7 @@ const findFlaggerVerdictByGeneration = (input: {
     const published = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
       projectId: input.projectId,
       sessionId: input.sessionId as SessionId,
+      flaggerSlug: input.flaggerSlug,
     })
 
     return (
@@ -225,6 +227,7 @@ const findSafetyFindingByKind = (input: {
     const published = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
       projectId: input.projectId,
       sessionId: input.sessionId as SessionId,
+      flaggerSlug: input.flaggerSlug,
     })
 
     return (
