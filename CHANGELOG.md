@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## v0.3.99 - 2026-09-13
+
+### Agent Score
+
+- Shipped the Agent Score: one 0-100 number per project composed from five dimensions — Reliability, Outcome, Safety, Cost and Speed — each with its own estimator, confidence interval and coverage floors. A daily sweep selects the shortest whole-week window that reaches the session target, runs the five estimators over one read of that window, and publishes an immutable snapshot in `agent_score_snapshots`. The composite is withheld entirely when any dimension is unmeasured, rather than presenting four scores beside a gap, and a day with no score is left out of the trend instead of zero-filled (ref: #4626, #4621, #4625, #4614).
+- Deficits are attributed after the fact and can never move the score: Cost, Speed and Reliability get Shapley shares in their own units plus a separate fix-gain column that must not be summed, while Outcome and Safety get issue rows carrying reach and no points. Unlinked signals can add a capped residual, with near-duplicate clusters grouped by exposure overlap so splitting one cluster cannot double its contribution (ref: #4626).
+- Added the project Agent Score page behind the `agentScore` feature flag: a vitality card with the score ring, weighted dimensions and trend, then one evidence section per dimension. Reliability always shows its one-session rate beside the twenty-session number, and coverage is presented as denominators and exclusions rather than as a score. Cause rows and coverage come from an explanation cache the daily job warms, so a miss reports "not ready" rather than empty tables (ref: #4626).
+- Public read surface: `GET /v1/projects/{projectSlug}/agent-score`, `/history` and `/causes`, reaching the MCP server (`getAgentScore`, `listAgentScoreHistory`, `getAgentScoreCauses`), the TypeScript and Python SDKs 9.13.0 and the CLI 7.13.0 (`latitude agent-score get|history|causes`). Today's score or nothing — a stale score presented as current is the one error a reader cannot detect (ref: #4626).
+- Staff can recalculate a project's score from the backoffice. A forced run refreshes the explanation cache but can never rewrite a published score (ref: #4626).
+- Added `agent-score:seed` (45 days of a billing copilot that degraded and recovered) and `agent-score:shadow`, which reports what Cost and Speed would say over a window without writing anything (ref: #4626).
+
+### Flaggers
+
+- Added the `task-failure` LLM judge, a sampled four-verdict holistic reference that can also come back positive, feeding the Outcome dimension. Verdicts persist as scores naming the judge and the session generation they judged; a successful verdict is evidence in session assessment but no longer renders as a green annotation card or inflates the positive count. A Drizzle migration provisions the flagger row on existing projects, so the dimension is not permanently unmeasured where the slug postdates the project (ref: #4621).
+- The `jailbreaking` and `pii-leakage` classifiers now answer with a structured verdict that judges the attack and the agent's response separately, resolved onto a bounded finding kind persisted in a new ClickHouse column (`00058`). A refused attack stays an annotation but no longer enters the harm numerator, and a successful defense is recorded as positive evidence. The Safety suite is selected once per session on a shared draw so its members examine the same population, and is enabled in every onboarding preset (ref: #4625).
+- Fixed the settings coverage panel, which divided a screening-decision numerator by a live 28-day session denominator and so counted every session predating the project's first decision as missing. The window now clamps to the oldest eligible session a decision exists for, reports earlier sessions separately, and drops no-reflag telemetry from the denominator (ref: #4622).
+- A sampling rate somebody edited is no longer overwritten by the score sweep: a new `sampling_source` column backs existing non-default rates up to `user` in the same migration that adds it (ref: #4626).
+- Scoped the flagger dedup lookup to its own flagger in SQL. A session accumulating more than 200 published system annotations from other detectors pushed the target row out of the page and produced duplicates (ref: #4625).
+
+### API
+
+- Fixed `apps/api/mcp.json`, which was generated in output mode and so described the parsed result rather than the request: 17 of 130 tools listed a defaulted field as required and 360 object schemas carried `additionalProperties: false`. The `/v1/mcp` transport was already correct, so only the checked-in manifest disagreed with the server (ref: #4615).
+
+### Docs
+
+- Product catch-up: added the Cost dashboard and Notifications pages and an end-to-end "Migrate to Latitude" guide, and refreshed signals (promotion gate, candidate consolidation and expiry, flagger feedback, priority scale), monitor severity, Memory analytics and grouped filters (ref: #4490).
+
 ## v0.3.98 - 2026-09-09
 
 ### Sessions
