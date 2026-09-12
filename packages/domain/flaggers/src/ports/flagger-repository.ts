@@ -55,6 +55,19 @@ export interface FlaggerRepositoryShape {
     input: UpdateFlaggerEnabledForProjectInput,
   ): Effect.Effect<readonly Flagger[], RepositoryError, SqlClient>
   update(input: UpdateFlaggerInput): Effect.Effect<Flagger | null, RepositoryError, SqlClient>
+
+  /**
+   * Applies a traffic-derived sampling rate, leaving any rate a person set alone.
+   *
+   * Separate from `update` because it is not an edit: the daily sweep recomputes what these readers
+   * have to run at for their dimension to be measurable at all, and a project that tuned its own
+   * rate has made a decision the sweep is not entitled to overwrite. Returns how many rows it
+   * actually changed, so a job can report what it did rather than what it attempted.
+   */
+  applyDerivedSampling(input: {
+    readonly projectId: ProjectId
+    readonly rates: readonly { readonly slug: FlaggerSlug; readonly sampling: number }[]
+  }): Effect.Effect<number, RepositoryError, SqlClient>
 }
 
 export class FlaggerRepository extends Context.Service<FlaggerRepository, FlaggerRepositoryShape>()(

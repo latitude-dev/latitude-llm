@@ -326,7 +326,7 @@ importers:
         version: link:../../packages/platform/testkit
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
 
   apps/design-system:
     dependencies:
@@ -738,6 +738,9 @@ importers:
       '@domain/agent-dispatch':
         specifier: workspace:*
         version: link:../../packages/domain/agent-dispatch
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../../packages/domain/agent-score
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
@@ -3217,7 +3220,7 @@ importers:
         version: 7.0.0-dev.20260705.1
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260705.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

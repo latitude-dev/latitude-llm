@@ -875,6 +875,20 @@ const _registry = {
     }
   }>(),
 
+  // Daily Agent Score. `sweep` is fired by a repeatable schedule; it resolves the projects with
+  // enough eligible traffic to publish and fans out one `snapshotProject` per project. The date is
+  // carried on the payload rather than derived at handler time so every project in one sweep is
+  // scored for the same UTC date, however long the fan-out takes to drain.
+  "agent-score": payloads<{
+    sweep: Record<string, never>
+    snapshotProject: {
+      readonly organizationId: string
+      readonly projectId: string
+      /** UTC date, `YYYY-MM-DD`. */
+      readonly date: string
+    }
+  }>(),
+
   sandboxes: payloads<{
     archiveIdle: Record<string, never>
   }>(),

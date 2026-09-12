@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."flaggers" ADD COLUMN "sampling_source" varchar(16) DEFAULT 'default' NOT NULL;

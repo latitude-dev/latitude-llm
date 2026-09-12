@@ -1637,30 +1637,34 @@ Each row is a gate the previous checklist asserted and the code does not current
 
 ### Step 6: persistence, sampling policy, and jobs
 
-- [ ] **P6-35** Add the immutable, organization-scoped `agent_score_snapshots` table with
+- [x] **P6-35** Add the immutable, organization-scoped `agent_score_snapshots` table with
   `organizationRLSPolicy`, a unique `(organization_id, project_id, date)` index for idempotency, and
   the columns D11 fixes: composite and five dimension point estimates and intervals, scoring version,
   selected window length, eligible-session count, any policy cap, and identity and creation fields.
   Nothing else.
-- [ ] **P6-36** Generate the Postgres migration through the package migration script. Ask before
+- [x] **P6-36** Generate the Postgres migration through the package migration script. Ask before
   running any migration command.
-- [ ] **P6-37** Add the repository with organization and project scoped reads for one date and for a
+- [x] **P6-37** Add the repository with organization and project scoped reads for one date and for a
   history range, plus an insert that is a no-op when the date already has a row.
-- [ ] **P6-38** Add the `agent-score` queue topic with a `sweep` task carrying no payload and a
+- [x] **P6-38** Add the `agent-score` queue topic with a `sweep` task carrying no payload and a
   `snapshotProject` task carrying organization id, project id, and the UTC date. Register the daily
   repeatable schedule in `apps/workers/src/server.ts` beside the existing crons.
-- [ ] **P6-39** Add the daily worker: the sweep resolves projects under the system organization
+- [x] **P6-39** Add the daily worker: the sweep resolves projects under the system organization
   sentinel and fans out with a bounded concurrency; the per-project task runs under the organization's
   SqlClient so row-level security scopes every read; a failed or unavailable calculation writes
   nothing and logs the failing floor.
-- [ ] **P6-40** Implement D6's traffic-aware sampling policy. The sweep already computes each
+- [x] **P6-40** Implement D6's traffic-aware sampling policy. The sweep already computes each
   project's eligible volume; derive the Outcome judge's rate and the Safety suite's rate from a target
   examined count per window, clamped to a minimum and to one, and publish them so screening reads
   them. The rate is recorded as the inclusion probability on the screening decision exactly as today,
   so a mid-window change produces sub-strata the estimators already correct for.
-- [ ] **P6-41** Respect an explicit project override. A project that has deliberately turned a judge
+- [x] **P6-41** Respect an explicit project override. A project that has deliberately turned a judge
   off or retuned its sampling keeps that choice, the way the PR 4 backfill does; the derived rate
-  applies to projects still on the default.
+  applies to projects still on the default. A `sampling_source` column records who last set the rate
+  and the sweep skips every `user` row. It is deliberately a Postgres column and not a `Flagger`
+  field: nothing in the product shows it, only the sweep's own write reads it, and putting it on the
+  entity forced the field through every flagger fixture in five packages for no benefit. Screening is
+  untouched and still reads `sampling`, so Settings always shows the rate that actually runs.
 
 ### Step 7: public and web surfaces
 

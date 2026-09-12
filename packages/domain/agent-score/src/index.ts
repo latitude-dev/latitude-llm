@@ -56,6 +56,16 @@ export {
   supportedJudgmentVersionsSchema,
 } from "./entities/agent-score-artifact.ts"
 export {
+  type AgentScoreSnapshot,
+  type AgentScoreSnapshotIdentity,
+  agentScoreSnapshotSchema,
+  type DimensionSnapshot,
+  dimensionSnapshotSchema,
+  type ScoreInterval,
+  scoreIntervalSchema,
+  utcDateOf,
+} from "./entities/agent-score-snapshot.ts"
+export {
   COST_ESTIMATOR_CHANNEL,
   COST_FAMILIES,
   COST_FAMILY_CANONICAL_UNIT,
@@ -221,6 +231,11 @@ export {
   encodeSessionAssessmentCursor,
   type SessionAssessmentPageCursor,
 } from "./pagination/session-assessment-cursor.ts"
+export {
+  type AgentScoreSnapshotHistoryScope,
+  AgentScoreSnapshotRepository,
+  type AgentScoreSnapshotRepositoryShape,
+} from "./ports/agent-score-snapshot-repository.ts"
 export {
   type OutcomeWindowDecision,
   OutcomeWindowDecisionSource,
@@ -427,6 +442,12 @@ export type {
   SpeedCounterfactual,
 } from "./scoring/compose-speed-counterfactual.ts"
 export { composeSpeedCounterfactual, SPEED_CLAIM_DROP_REASONS } from "./scoring/compose-speed-counterfactual.ts"
+export {
+  type DerivedSamplingRates,
+  deriveSamplingRates,
+  PROVISIONAL_SAMPLING_TARGETS,
+  type SamplingTargets,
+} from "./scoring/derive-sampling-rates.ts"
 export {
   type EstimateProjectOutcomeInput,
   estimateProjectOutcome,

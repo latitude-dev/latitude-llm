@@ -24,6 +24,7 @@
     "@hono/node-server": "catalog:",
     "hono": "catalog:",
     "@domain/agent-dispatch": "workspace:*",
+    "@domain/agent-score": "workspace:*",
     "@domain/ai": "workspace:*",
     "@domain/incidents": "workspace:*",
     "@domain/annotations": "workspace:*",
