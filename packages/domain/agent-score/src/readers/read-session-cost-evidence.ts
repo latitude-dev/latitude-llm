@@ -5,6 +5,7 @@ import {
   CACHE_MIN_CACHEABLE_INPUT_TOKENS,
   cacheCeilingRate,
   isLlmCompletionOperation,
+  latencyInputBucket,
   latencyInputTokens,
   latencyOutputTokens,
   marginalCriticalPathNs,
@@ -61,6 +62,8 @@ export interface SessionCostEvidenceInput {
 
 export interface SessionCostEvidence {
   readonly readings: readonly CostMetricReading[]
+  /** The session's comparable-workload key, which is the matched signal estimator's match key. */
+  readonly workloadStratum: string
   readonly denominators: CostFamilyDenominators
   readonly spendCoverage: SessionSpendCoverage
   readonly ledger: SessionContentLedger
@@ -119,6 +122,37 @@ const redundantAtomClaims = ({
 export const SESSION_CACHE_LIFETIME_SECONDS = 300
 
 const usageOperations: ReadonlySet<string> = new Set(USAGE_OPERATIONS)
+
+/**
+ * The session's comparable-workload key.
+ *
+ * The dominant provider and model rather than every one of them: a session that called a small model
+ * once mid-way is still the same kind of work, and a key that changed with every incidental call
+ * would put every session in a stratum of its own and leave the matched estimator nothing to compare.
+ * A session with no readable generation gets an explicit unknown key rather than an empty one, so it
+ * only ever matches other unknowns.
+ */
+const workloadStratumOf = (generations: readonly SessionGenerationFact[]): string => {
+  const completions = generations.filter((generation) => isLlmCompletionOperation(generation.operation))
+  if (completions.length === 0) return "unknown"
+
+  const byCalls = new Map<string, number>()
+  let inputTokens = 0
+  let streaming = 0
+  for (const generation of completions) {
+    const pair = `${generation.provider}/${generation.model}`
+    byCalls.set(pair, (byCalls.get(pair) ?? 0) + 1)
+    inputTokens += latencyInputTokens(generation.tokens)
+    if (generation.isStreaming) streaming += 1
+  }
+  const dominant = [...byCalls.entries()].sort(
+    (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+  )[0]
+  const bucket = latencyInputBucket(Math.round(inputTokens / completions.length))
+  const mode = streaming * 2 >= completions.length ? "streaming" : "buffered"
+  const scale = completions.length <= 2 ? "short" : completions.length <= 10 ? "medium" : "long"
+  return `${dominant?.[0] ?? "unknown"}|${bucket}|${mode}|${scale}`
+}
 
 /**
  * One generation's latency evidence, and whether the frozen reference could speak to it.
@@ -395,6 +429,7 @@ export const readSessionCostEvidence = (input: SessionCostEvidenceInput): Sessio
 
   return {
     readings,
+    workloadStratum: workloadStratumOf(input.generations),
     denominators: {
       spend: spendCoverage.pricedMicrocents,
       context: ledger.readableInputTokens,

@@ -57,7 +57,10 @@ export interface ComposeAgentScoreInput {
   readonly speed: { readonly gate: SpeedWindowGate }
   /** Whole sessions, which is the resampling unit for the Cost and Speed sides of the composite. */
   readonly contributions: readonly SessionWindowContribution[]
+  /** Share of Cost the window's unlinked signals add, already inside the artifact's residual cap. */
   readonly residualSignalPenalty?: number
+  /** Critical-path nanoseconds the window's unlinked signals add, in Speed's own unit. */
+  readonly residualAvoidableNs?: number
   readonly replicates?: number
   readonly seed?: number
   readonly confidenceLevel?: number
@@ -267,6 +270,7 @@ const bootstrapComposite = (input: ComposeAgentScoreInput): BinomialInterval => 
     safety: safetyModel(input.safety, input.artifact.referenceRuns.safety),
   }
   const residualSignalPenalty = input.residualSignalPenalty ?? 0
+  const residualAvoidableNs = input.residualAvoidableNs ?? 0
   const composites: number[] = []
 
   for (let replicate = 0; replicate < replicates; replicate += 1) {
@@ -288,7 +292,7 @@ const bootstrapComposite = (input: ComposeAgentScoreInput): BinomialInterval => 
             artifact: input.costArtifact,
             residualSignalPenalty,
           }).cost,
-          speed: aggregateWindowSpeed(resampled).speed,
+          speed: aggregateWindowSpeed(resampled, residualAvoidableNs).speed,
           safety: models.safety.scoreAt(drawAdverseRate({ model: models.safety, random })),
         },
       }),
@@ -316,7 +320,7 @@ export const composeAgentScore = (input: ComposeAgentScoreInput): AgentScoreComp
       artifact: input.costArtifact,
       ...(input.residualSignalPenalty !== undefined ? { residualSignalPenalty: input.residualSignalPenalty } : {}),
     }),
-    speed: aggregateWindowSpeed(input.contributions),
+    speed: aggregateWindowSpeed(input.contributions, input.residualAvoidableNs ?? 0),
   }
   const dimensions = buildDimensions(input, aggregates)
   const unmeasuredDimensions = dimensions

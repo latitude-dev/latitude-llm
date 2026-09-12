@@ -11,6 +11,11 @@ import { ScoreWindowSource } from "../ports/score-window-source.ts"
 import { readSessionAssessmentInputBatch } from "../readers/read-session-assessment-batch.ts"
 import { EMPTY_COST_FAMILY_DENOMINATORS } from "../scoring/aggregate-session-cost.ts"
 import { aggregateWindowSpeed } from "../scoring/bootstrap-window.ts"
+import {
+  buildWindowSignalEffects,
+  readSessionSignalEvidence,
+  type SessionSignalEvidence,
+} from "../scoring/build-window-signal-effects.ts"
 import { composeAgentScore } from "../scoring/compose-agent-score.ts"
 import { estimateProjectReliability } from "../scoring/estimate-reliability.ts"
 import { EMPTY_WINDOW_FOLD, foldWindowBatch, type WindowFold } from "../scoring/fold-window-contributions.ts"
@@ -64,6 +69,7 @@ interface WindowPass {
   readonly reliabilityEndpoints: readonly ReliabilitySessionEndpoint[]
   readonly deterministicOutcomeFailures: readonly string[]
   readonly readers: ReadonlyMap<string, WindowReaderCoverage>
+  readonly signalEvidence: readonly SessionSignalEvidence[]
   readonly readSessionCount: number
 }
 
@@ -88,6 +94,7 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
   const reliabilityEndpoints: ReliabilitySessionEndpoint[] = []
   const deterministicOutcomeFailures: string[] = []
   let readers: ReadonlyMap<string, WindowReaderCoverage> = new Map()
+  const signalEvidence: SessionSignalEvidence[] = []
   let readSessionCount = 0
 
   for (const sessionIds of batched(input.sessionIds, input.batchSize)) {
@@ -109,6 +116,7 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
     reliabilityEndpoints.push(...selectReliabilityEndpoints(sessions))
     deterministicOutcomeFailures.push(...selectDeterministicOutcomeFailures(sessions))
     readers = tallyWindowReaderCoverage(sessions, readers)
+    signalEvidence.push(...sessions.map(readSessionSignalEvidence))
   }
 
   return {
@@ -116,6 +124,7 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
     reliabilityEndpoints,
     deterministicOutcomeFailures,
     readers,
+    signalEvidence,
     readSessionCount,
   } satisfies WindowPass
 })
@@ -203,6 +212,10 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     referenceRunSessions: input.artifact.referenceRuns.reliability,
   })
 
+  const signalEffects = buildWindowSignalEffects({
+    evidence: pass.signalEvidence,
+    artifact: input.costArtifact,
+  })
   const cost = {
     gate: gateCostWindow({
       fold: pass.fold,
@@ -212,7 +225,7 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
   }
   const speed = {
     gate: gateSpeedWindow({
-      speed: aggregateWindowSpeed(pass.fold.contributions),
+      speed: aggregateWindowSpeed(pass.fold.contributions, signalEffects.avoidableNs),
       eligibleSessionCount: selection.eligibleSessionCount,
       floors: input.artifact.dimensionFloors.speed,
     }),
@@ -227,6 +240,8 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     cost,
     speed,
     contributions: pass.fold.contributions,
+    residualSignalPenalty: signalEffects.costPenalty,
+    residualAvoidableNs: signalEffects.avoidableNs,
     ...(input.replicates !== undefined ? { replicates: input.replicates } : {}),
     ...(input.seed !== undefined ? { seed: input.seed } : {}),
   })
@@ -263,7 +278,7 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
         costCatalog: input.catalog.catalogVersion,
         latency: input.latencyArtifact.artifactVersion,
       },
-      unmeasuredSignalEffects: 0,
+      unmeasuredSignalEffects: signalEffects.gaps.length,
     },
     native: { cost: composition.cost, speed: composition.speed },
   }

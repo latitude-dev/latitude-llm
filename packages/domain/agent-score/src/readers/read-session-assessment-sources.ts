@@ -758,6 +758,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       screeningDecisions: input.screeningDecisions,
       costEvidence: {
         readings: costEvidence.readings,
+        workloadStratum: costEvidence.workloadStratum,
         denominators: costEvidence.denominators,
         observedCriticalPathNs: costEvidence.criticalPath.observedNs,
         criticalPathComplete: costEvidence.criticalPath.completeness === "complete",

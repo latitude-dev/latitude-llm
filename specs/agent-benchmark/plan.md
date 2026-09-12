@@ -1554,12 +1554,20 @@ Each row is a gate the previous checklist asserted and the code does not current
   across the window, not per session, and withhold Cost when a required family applies and cannot be
   read. `foldWindowBatch`'s `withheldSessionCount` becomes an input to that decision rather than a
   reported statistic.
-- [ ] **P6-24** Wire the signal residuals from D9. Link occurrences to deterministic source atoms
+- [~] **P6-24** Wire the signal residuals from D9. Link occurrences to deterministic source atoms
   first through `linkSignalOccurrences`, group near-duplicates, build matched clean-session sets over
   the covariates in [`signals.md`](signals.md#cost-and-speed), pass stored inclusion probabilities,
   apply the artifact's residual cap, and feed the result to `aggregateWindowCost` as
   `residualSignalPenalty` and to the Speed counterfactual in nanoseconds. Keep the two unit systems
-  separate throughout.
+  separate throughout. The match key is a new `workloadStratum` on the session's Cost evidence,
+  computed where provider, model, prompt size and streaming mode are actually visible, because the
+  normalized assessment input carries none of them. **Near-duplicate grouping is not implemented**:
+  nothing at window scale says which clusters are near-duplicates, since the assessment carries
+  signal ids and not the merge or similarity relationships that would justify pooling two of them.
+  Each signal is fitted as its own group, which is the conservative direction rather than the
+  complete one — the artifact's total residual cap still bounds what all of them together can claim,
+  and a weak comparison still shrinks toward zero. Close this once a merge or similarity input
+  reaches this layer.
 - [x] **P6-25** Compute intervals per dimension: seeded whole-session bootstrap for Cost and Speed
   through `bootstrapWindow`, and boundary-aware endpoint intervals for Outcome, Reliability, and
   Safety. The composite's bootstrap replicates draw each endpoint probability from its fitted
