@@ -131,40 +131,99 @@ export const readSessionSignalEvidence = (session: NormalizedSessionAssessmentIn
   }
 }
 
-const toMatchedSessions = (
-  evidence: readonly SessionSignalEvidence[],
-  outcomeOf: (session: SessionSignalEvidence) => number,
-): MatchedSession[] =>
+const toMatchedSessions = ({
+  evidence,
+  outcomeOf,
+  groupOf,
+}: {
+  readonly evidence: readonly SessionSignalEvidence[]
+  readonly outcomeOf: (session: SessionSignalEvidence) => number
+  readonly groupOf: ReadonlyMap<string, string>
+}): MatchedSession[] =>
   evidence.map((session) => ({
     sessionId: session.sessionId,
     stratum: session.stratum,
     outcome: outcomeOf(session),
     inclusionProbability: session.inclusionProbability,
-    exposedGroupIds: session.unlinkedSignalIds,
+    // The group is the treatment, so a session carrying three members of one group is exposed once.
+    exposedGroupIds: [...new Set(session.unlinkedSignalIds.flatMap((id) => groupOf.get(id) ?? []))],
     fold: session.fold,
   }))
 
 /**
- * One group per signal.
+ * How alike two signals' occurrence sets must be before they are fitted as one treatment.
  *
- * The specification asks for near-duplicate clusters to be fitted together, and nothing available at
- * window scale says which clusters are near-duplicates: the assessment carries signal ids, not the
- * similarity or merge relationships that would justify pooling two of them. Fitting each separately
- * is the conservative direction rather than the complete one, because the artifact's total residual
- * cap still bounds what all of them together can claim, and a weak comparison still shrinks toward
- * zero. Grouping becomes possible once a merge or similarity input reaches this layer.
+ * Jaccard rather than equality, so a cluster that split into children covering almost the same
+ * sessions still groups. High, because grouping two genuinely different signals hides one of them
+ * behind the other, and that error is harder to see than the one it prevents.
+ */
+const SIGNAL_GROUPING_SIMILARITY = 0.8
+
+/** Beyond this many unlinked signals the pairwise comparison stops being worth its cost. */
+const MAX_PAIRWISE_SIGNALS = 200
+
+const jaccard = (left: ReadonlySet<string>, right: ReadonlySet<string>): number => {
+  if (left.size === 0 || right.size === 0) return 0
+  let shared = 0
+  for (const value of left) if (right.has(value)) shared += 1
+  return shared / (left.size + right.size - shared)
+}
+
+/**
+ * Signals fitted together, grouped by the sessions they actually occurred on.
+ *
+ * Two signals present on the same sessions are indistinguishable to a matched estimator: fitting
+ * each against the same clean comparison measures one difference twice, so a cluster somebody split
+ * in two would contribute double until the residual cap bound it. `signals.md` requires the opposite
+ * — splitting a cluster into equivalent children must not multiply its effect — and the occurrence
+ * sets are what identify the duplication, without needing a merge pointer or a similarity model.
+ *
+ * Single-linkage, so a chain of near-duplicates collapses into one group rather than into pairs.
  */
 const groupsFor = (evidence: readonly SessionSignalEvidence[]): SignalResidualGroup[] => {
-  const occurrences = new Map<string, number>()
+  const sessionsBySignal = new Map<string, Set<string>>()
   for (const session of evidence) {
     for (const signalId of session.unlinkedSignalIds) {
-      occurrences.set(signalId, (occurrences.get(signalId) ?? 0) + 1)
+      const sessions = sessionsBySignal.get(signalId) ?? new Set<string>()
+      sessions.add(session.sessionId)
+      sessionsBySignal.set(signalId, sessions)
     }
   }
-  return [...occurrences.entries()].map(([signalId, count]) => ({
-    groupId: signalId,
-    signalIds: [signalId],
-    occurrencesBySignal: new Map([[signalId, count]]),
+
+  const signalIds = [...sessionsBySignal.keys()].sort()
+  const parent = new Map(signalIds.map((signalId) => [signalId, signalId]))
+  const find = (signalId: string): string => {
+    let root = signalId
+    while (parent.get(root) !== root) root = parent.get(root) as string
+    return root
+  }
+
+  if (signalIds.length <= MAX_PAIRWISE_SIGNALS) {
+    for (let left = 0; left < signalIds.length; left += 1) {
+      for (let right = left + 1; right < signalIds.length; right += 1) {
+        const first = signalIds[left] as string
+        const second = signalIds[right] as string
+        const similarity = jaccard(
+          sessionsBySignal.get(first) as Set<string>,
+          sessionsBySignal.get(second) as Set<string>,
+        )
+        if (similarity >= SIGNAL_GROUPING_SIMILARITY) parent.set(find(second), find(first))
+      }
+    }
+  }
+
+  const members = new Map<string, string[]>()
+  for (const signalId of signalIds) {
+    const root = find(signalId)
+    members.set(root, [...(members.get(root) ?? []), signalId])
+  }
+
+  return [...members.entries()].map(([groupId, grouped]) => ({
+    groupId,
+    signalIds: grouped,
+    occurrencesBySignal: new Map(
+      grouped.map((signalId) => [signalId, (sessionsBySignal.get(signalId) as Set<string>).size]),
+    ),
   }))
 }
 
@@ -192,10 +251,11 @@ export const buildWindowSignalEffects = ({
     }
   }
 
+  const groupOf = new Map(groups.flatMap((group) => group.signalIds.map((id) => [id, group.groupId] as const)))
   const sessionsByFamily = new Map<CostFamily, readonly MatchedSession[]>(
     COST_FAMILIES.map((family) => [
       family,
-      toMatchedSessions(evidence, (session) => session.familyPenaltyShare[family]),
+      toMatchedSessions({ evidence, groupOf, outcomeOf: (session) => session.familyPenaltyShare[family] }),
     ]),
   )
   const cost = estimateCostSignalResiduals({
@@ -205,7 +265,7 @@ export const buildWindowSignalEffects = ({
     ...(floors ? { floors } : {}),
   })
   const speed = estimateSpeedSignalResiduals({
-    sessions: toMatchedSessions(evidence, (session) => session.avoidableNs),
+    sessions: toMatchedSessions({ evidence, groupOf, outcomeOf: (session) => session.avoidableNs }),
     groups,
     ...(floors ? { floors } : {}),
   })

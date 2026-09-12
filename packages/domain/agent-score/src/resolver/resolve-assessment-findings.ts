@@ -49,7 +49,17 @@ const incidentEffects = (input: {
   readonly sameSubjectRecovered?: boolean
   readonly observedMicrocents?: number
   readonly observedNs?: number
+  /**
+   * The session made no successful progress afterwards.
+   *
+   * An incident and a completion outcome are different facts, and a terminal incident is both: the
+   * retry evidence still belongs to Cost and Speed, and the session still could not complete. Only
+   * carrying the incident would leave the panel calling a session undetermined that the score counts
+   * as a terminal failure.
+   */
+  readonly terminal?: boolean
 }): SessionDimensionEffect[] => [
+  ...(input.terminal ? completionEffects("terminalFailure") : []),
   {
     scoreDimension: "reliability",
     role: "operationalIncident",
@@ -235,6 +245,7 @@ export const resolveAssessmentFindingEffects = (finding: AssessmentFinding): Ses
     case "toolFailure":
       return incidentEffects({
         recovered: finding.recovered,
+        ...(finding.terminal ? { terminal: true } : {}),
         ...(finding.sameSubjectRecovered !== undefined ? { sameSubjectRecovered: finding.sameSubjectRecovered } : {}),
       })
     case "toolStructuralDefect":
@@ -284,6 +295,7 @@ export const resolveAssessmentFindingEffects = (finding: AssessmentFinding): Ses
     case "providerError":
       return incidentEffects({
         recovered: finding.recovered,
+        ...(finding.terminal ? { terminal: true } : {}),
         sameSubjectRecovered: finding.sameSubjectRecovered,
         observedMicrocents: finding.observedMicrocents,
         observedNs: finding.observedNs,

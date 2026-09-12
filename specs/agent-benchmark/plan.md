@@ -1769,27 +1769,44 @@ release carrying those PRs has been out for a window.
 
 The exit gate is what merging PR 6 requires. It does not require production traffic.
 
-- [ ] **P6-58** Pure tests cover every formula boundary, all-five publication, unavailable scores,
+- [x] **P6-58** Pure tests cover every formula boundary, all-five publication, unavailable scores,
   zero-event endpoint intervals, the Reliability transform in both directions, dynamic attribution
   closure, policy-cap separation, window selection and hysteresis including the no-previous-snapshot
   case, and a scoring-version change.
-- [ ] **P6-59** Invariance tests prove, at window scale, that duplicating a detector over the same
+- [x] **P6-59** Invariance tests prove, at window scale, that duplicating a detector over the same
   sessions leaves every dimension unchanged, that splitting one signal cluster into equivalent child
   clusters leaves the dimension unchanged within estimation error, that merging correlated signals
   does not erase a measured outcome, and that duplicated traffic preserves scores. The session-level
   equivalents already exist; these are the window-level statements
   [`signals.md`](signals.md#avoiding-detector-and-cluster-inflation) makes and nothing currently
-  tests.
-- [ ] **P6-60** Coverage tests prove every reader reports a coverage state and a missing-evidence
+  tests. Writing them found the split-cluster invariant broken: one group per signal meant a cluster
+  split in two was fitted twice against the same clean comparison and contributed double until the
+  residual cap bound it. This also closes **P6-29** properly, which Step 5 left open for want of a
+  way to identify near-duplicates — the occurrence sets identify them, and no merge pointer or
+  similarity model is needed. Signals whose exposed sessions overlap above a Jaccard threshold are
+  fitted as one treatment, by single linkage so a chain collapses into one group rather than pairs;
+  disjoint exposure still fits separately, because grouping two genuinely different signals hides one
+  behind the other and that error is harder to see than the one it prevents.
+- [x] **P6-60** Coverage tests prove every reader reports a coverage state and a missing-evidence
   reason, including the artifact-dependent readers from D5, and that no absent artifact, disabled
-  detector, or unreadable family can raise a score.
+  detector, or unreadable family can raise a score. `coverage-never-helps.test.ts` states rule 7 at
+  window scale: an unreadable required family withholds Cost rather than scoring the readable
+  minority, twenty reconstructable critical paths out of ten thousand withhold Speed rather than
+  reporting a perfect one, unreadable sessions leave Reliability's denominator instead of joining its
+  numerator, and a cohort the frozen reference does not cover reads as unmeasured rather than as a
+  generation that was exactly on time.
 - [ ] **P6-61** Integration tests cover snapshot row-level security in both organization and project
   scope, insert idempotency on a repeated date, queue payload scope, bulk evidence reads, rendering
   the headline and history from frozen snapshot data, and dynamic cause queries that are never
   presented as historical decomposition.
-- [ ] **P6-62** End-to-end fixtures cover every metric, signal role, overlap case, missing-coverage
+- [~] **P6-62** End-to-end fixtures cover every metric, signal role, overlap case, missing-coverage
   case, and destination, and reconcile the session assessment, the window estimator input, the cause
-  row, and the snapshot for one inspected window.
+  row, and the snapshot for one inspected window. `window-reconciliation.test.ts` follows one window
+  through the panel, the estimator and the attribution, and found them disagreeing: a session ended
+  by a provider error or a failed tool call showed `completion: "undetermined"` on its Scores panel
+  while the score counted it a terminal failure, because those findings carried an incident effect
+  and never a completion one. A terminal incident is both, and now emits both. Destination coverage
+  waits on P6-49; the snapshot leg is covered by the repository and route tests rather than here.
 - [ ] **P6-63** Single-session and bulk parity still holds on the same fixtures after the latency
   artifact reaches the interactive path.
 - [ ] `pnpm typecheck` and `pnpm test` pass. Generated contracts and schemas are current.
