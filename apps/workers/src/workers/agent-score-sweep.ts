@@ -8,6 +8,7 @@ type SnapshotProjectPublish = (payload: {
   readonly organizationId: string
   readonly projectId: string
   readonly date: string
+  readonly to: string
 }) => Effect.Effect<void, unknown>
 
 type SweepResult =
@@ -17,9 +18,10 @@ type SweepResult =
 /**
  * Decides which projects get a snapshot task today.
  *
- * The date is resolved once, here, and carried on every payload rather than being derived when each
- * task runs: a fan-out that drains across midnight would otherwise score half the fleet for one day
- * and half for the next, and the two halves would not be comparable.
+ * The date and the window's end instant are both resolved once, here, and carried on every payload
+ * rather than being derived when each task runs: a fan-out that drains across midnight would
+ * otherwise score half the fleet for one day and half for the next, and a handler that resolved its
+ * own cutoff would score a window other than the one this eligibility read was taken over.
  *
  * Projects below the session floor are not published to at all. They could not produce a score under
  * any window, so a task for them would read a window, compute five estimators and withhold.
@@ -43,6 +45,7 @@ export const fanOutAgentScoreSweep =
             organizationId: project.organizationId as string,
             projectId: project.projectId as string,
             date: input.date,
+            to: input.to.toISOString(),
           }),
         { concurrency: PUBLISH_CONCURRENCY, discard: true },
       )

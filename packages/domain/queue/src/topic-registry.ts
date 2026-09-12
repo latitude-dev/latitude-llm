@@ -887,6 +887,15 @@ const _registry = {
       /** UTC date, `YYYY-MM-DD`. */
       readonly date: string
       /**
+       * ISO instant the window ends, resolved once by the sweep alongside the date.
+       *
+       * Carried for the same reason the date is: the sweep decides a project is eligible by reading
+       * a window that ends here, and a handler that resolved its own cutoff would score a window
+       * that had moved on since. Absent on a manually triggered run, which falls back to the end of
+       * the date or now, whichever is earlier.
+       */
+      readonly to?: string
+      /**
        * Recompute even when the date already has a snapshot, to refresh the cached explanation.
        *
        * Never rewrites the score: the insert is conditional on the date being absent, so a forced

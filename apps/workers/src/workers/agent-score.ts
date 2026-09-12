@@ -93,6 +93,7 @@ export const createAgentScoreWorker = ({
         organizationId,
         projectId,
         date: payload.date,
+        ...(payload.to ? { to: new Date(payload.to) } : {}),
         ...(payload.force ? { force: true } : {}),
         artifact: artifacts.agentScore,
         costArtifact: artifacts.cost,

@@ -12,7 +12,7 @@ const TO = new Date("2026-09-29T04:00:00.000Z")
 const run = (
   projects: readonly { organizationId: OrganizationId; projectId: ProjectId; eligibleSessions: number }[],
 ) => {
-  const published: { organizationId: string; projectId: string; date: string }[] = []
+  const published: { organizationId: string; projectId: string; date: string; to: string }[] = []
   const scopes: { sessionFloor: number; maxStepDays: number }[] = []
 
   const layer = Layer.mergeAll(
@@ -54,6 +54,15 @@ describe("fanOutAgentScoreSweep", () => {
     ])
 
     expect(new Set(published.map((payload) => payload.date))).toEqual(new Set(["2026-09-29"]))
+  })
+
+  it("carries the instant the eligibility read ended, so scoring cannot use a different window", async () => {
+    const { published } = await run([
+      { organizationId: ORG, projectId: PROJECT, eligibleSessions: 900 },
+      { organizationId: ORG, projectId: ProjectId("q".repeat(24)), eligibleSessions: 400 },
+    ])
+
+    expect(new Set(published.map((payload) => payload.to))).toEqual(new Set([TO.toISOString()]))
   })
 
   it("asks only for projects that could publish under some window", async () => {

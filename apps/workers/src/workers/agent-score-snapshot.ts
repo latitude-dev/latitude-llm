@@ -22,6 +22,8 @@ interface SnapshotProjectInput {
   readonly projectId: ProjectId
   /** UTC date the sweep resolved, so every project in one run scores the same day. */
   readonly date: string
+  /** Instant the window ends, resolved by the sweep. Falls back to the date's own cutoff. */
+  readonly to?: Date
   readonly artifact: AgentScoreArtifact
   readonly costArtifact: CostScoringArtifact
   readonly catalog: CostMetricCatalog
@@ -37,23 +39,25 @@ type SnapshotProjectResult =
   | { readonly status: "refreshed"; readonly score: number }
   | { readonly status: "withheld"; readonly reason: string }
 
-/**
- * Turns the day's cutoff into the instant the window ends.
- *
- * Midnight at the end of the date, so a snapshot dated the 29th covers the 29th. Scoring to the
- * start of the date would publish a number for a day that had not happened.
- */
 const DAY_MS = 86_400_000
 
 const startOfUtcDay = (date: string): number => new Date(`${date}T00:00:00.000Z`).getTime()
 
 /**
- * The instant the window ends.
+ * The instant the window ends, which is the end of the date but never later than now.
  *
- * The end of the date rather than its start, so a snapshot dated the 29th covers the 29th. Scoring
- * to the start would publish a number for a day that had not happened yet.
+ * The end of the date rather than its start, so a snapshot dated the 29th covers the 29th; scoring
+ * to the start would publish a number for a day that had not happened yet. Clamped because the
+ * sweep runs inside the day it labels: an unclamped cutoff would end the window in hours that hold
+ * no data, and a rolling window ending there drops an equal stretch of real traffic off its oldest
+ * end while still reporting its full length. It would also score a different window than the one
+ * the sweep read to decide the project was eligible, so a project could be selected and then
+ * withheld for a floor it had actually met.
+ *
+ * Exported for tests.
  */
-const cutoffOf = (date: string): Date => new Date(startOfUtcDay(date) + DAY_MS)
+export const resolveScoringCutoff = (date: string, now: Date): Date =>
+  new Date(Math.min(startOfUtcDay(date) + DAY_MS, now.getTime()))
 
 const previousUtcDate = (date: string): string => new Date(startOfUtcDay(date) - DAY_MS).toISOString().slice(0, 10)
 
@@ -80,7 +84,7 @@ const withheldReason = (result: AgentScoreResult): string => {
 export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")(function* (
   input: SnapshotProjectInput,
 ) {
-  const to = cutoffOf(input.date)
+  const to = input.to ?? resolveScoringCutoff(input.date, new Date())
   const snapshots = yield* AgentScoreSnapshotRepository
   const existing = yield* snapshots.findByDate({
     organizationId: input.organizationId,
