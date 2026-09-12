@@ -141,6 +141,7 @@ export { type SavedSearchSignalDraft, savedSearchSignalDraft } from "./saved-sea
 export {
   isSignalEligibleForScoring,
   type SignalScoringEligibility,
+  scoringEligibleSignalIds,
 } from "./score-eligibility.ts"
 export {
   findDominantMappedSignalFlaggerSlug,

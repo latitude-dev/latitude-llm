@@ -66,6 +66,7 @@ const session = ({
     findings,
     readers: [],
     screeningDecisions: [],
+    scoringEligibleSignalIds: [],
     costEvidence: {
       readings,
       workloadStratum: stratum,

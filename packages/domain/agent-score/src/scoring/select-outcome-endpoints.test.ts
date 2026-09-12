@@ -43,6 +43,7 @@ const session = (
     findings,
     readers: [],
     screeningDecisions: [],
+    scoringEligibleSignalIds: [],
   }) satisfies NormalizedSessionAssessmentInput
 
 describe("hasDeterministicOutcomeFailure", () => {

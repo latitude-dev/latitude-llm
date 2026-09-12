@@ -91,6 +91,7 @@ const run = (harness: Harness = {}) => {
             memoryEvents: [],
             moments: { moments: [], labels: [] },
             screeningDecisions: [],
+            scoringEligibleSignalIds: [],
           })),
         )
       },
@@ -214,6 +215,13 @@ describe("computeAgentScore", () => {
 
     expect(result.scoringVersion).not.toBe(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion)
     expect(result.scoringVersion.startsWith(`${LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion}+local`)).toBe(true)
+  })
+
+  it("builds issue tables from the same pass, without a second read", async () => {
+    const { result, telemetryReads } = await run({ sessionCount: 4 })
+
+    expect(result.issues).toEqual({ outcome: [], safety: { confirmedHarm: [], exposure: [] } })
+    expect(telemetryReads).toEqual([2, 2])
   })
 
   it("reads Reliability off the same pass, without a window source of its own", async () => {

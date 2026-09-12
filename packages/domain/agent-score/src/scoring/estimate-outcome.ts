@@ -59,6 +59,16 @@ export interface ProjectOutcomeEstimate {
   readonly excluded: Readonly<Record<OutcomeExclusionReason, number>>
   readonly coverage: "measured" | "unmeasured"
   readonly unmeasuredReason?: OutcomeUnmeasuredReason
+  /**
+   * The sessions that entered the rate, with what the judge said and the draw that selected them.
+   *
+   * Returned rather than discarded because the issue rows explain this exact population: a row that
+   * ranked failures the estimator excluded would be describing a different denominator than the
+   * score above it.
+   */
+  readonly judgedSessions: readonly OutcomeSessionVerdict[]
+  /** Sessions a deterministic reader proved failed. Certain, so they carry no selection draw. */
+  readonly deterministicFailureSessionIds: readonly string[]
 }
 
 const emptyExclusions = (): Record<OutcomeExclusionReason, number> => ({
@@ -111,6 +121,8 @@ export const estimateProjectOutcome = (input: EstimateProjectOutcomeInput): Proj
     sampledWeight: eligible.reduce((total, verdict) => total + 1 / verdict.inclusionProbability, 0),
     censusWeight: deterministic.size,
     excluded,
+    judgedSessions: eligible,
+    deterministicFailureSessionIds: [...deterministic],
   }
 
   const examinedShare = input.eligibleSessionCount > 0 ? base.examinedSessionCount / input.eligibleSessionCount : 0

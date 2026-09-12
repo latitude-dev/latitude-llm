@@ -1618,14 +1618,17 @@ Each row is a gate the previous checklist asserted and the code does not current
 - [x] **P6-32** Attribute Cost in family-native units before translating into score points and Speed
   in time before applying its ratio, per [`score.md`](score.md#dynamic-attribution-after-scoring).
   Reliability attributes terminal endpoints directly.
-- [ ] **P6-33** Use the smaller issue contract for Outcome and Safety by calling the builders PRs 4
+- [x] **P6-33** Use the smaller issue contract for Outcome and Safety by calling the builders PRs 4
   and 5 already produced. These rows receive no Shapley share and no fix gain, rank by corrected
   adverse reach, and stay visible but unranked when a required joint inclusion probability is unknown.
-  Needs three threads that do not exist yet: the normalized session input carries no signal lifecycle,
-  so window-level scoring eligibility cannot be decided; the issue readers take `SignalWithLifecycle`
-  where the window has only ids; and both estimators return aggregates where the row builder needs
-  the per-session verdict and harm status they computed internally. Land it as its own change rather
-  than widening three contracts inside the attribution commit.
+  Three contracts were widened to make it possible: the normalized session input records the signals
+  eligible for scoring, because only the reader that sees lifecycle can decide it and workflow state
+  must not move a score's explanation by being invisible to the window; the two issue readers take
+  eligible ids rather than whole signals, with `scoringEligibleSignalIds` beside the predicate so no
+  caller filters by hand; and both estimators return the per-session verdicts and harm statuses they
+  resolved, so a row describes the population its own score was computed over. The verdict's score id
+  comes off the session's own findings, which is what stops a signal discovered from the verdict
+  having its draw squared and reporting an order of magnitude too much reach.
 - [x] **P6-34** Label every row as measured or associated, and carry the interval, raw examined count,
   and independent observation count. A signal row says "associated effect" unless the observation
   itself identifies avoidable work or a terminal failure. Every row attribution produces today is

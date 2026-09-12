@@ -106,6 +106,7 @@ describe("readSessionAssessmentBatch", () => {
             memoryEvents: [],
             moments: { moments: [], labels: [] },
             screeningDecisions: [],
+            scoringEligibleSignalIds: [],
           })),
         )
       },
@@ -186,6 +187,7 @@ describe("readSessionAssessmentBatch", () => {
               memoryEvents: [],
               moments: { moments: [], labels: [] },
               screeningDecisions: [],
+              scoringEligibleSignalIds: [],
             })),
         ),
     })

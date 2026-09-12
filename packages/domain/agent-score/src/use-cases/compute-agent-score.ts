@@ -18,6 +18,11 @@ import {
 } from "../scoring/attribute-dimensions.ts"
 import { aggregateWindowSpeed } from "../scoring/bootstrap-window.ts"
 import {
+  buildWindowIssues,
+  readSessionIssueEvidence,
+  type SessionIssueEvidence,
+} from "../scoring/build-window-issues.ts"
+import {
   buildWindowSignalEffects,
   readSessionSignalEvidence,
   type SessionSignalEvidence,
@@ -76,6 +81,7 @@ interface WindowPass {
   readonly deterministicOutcomeFailures: readonly string[]
   readonly readers: ReadonlyMap<string, WindowReaderCoverage>
   readonly signalEvidence: readonly SessionSignalEvidence[]
+  readonly issueEvidence: readonly SessionIssueEvidence[]
   readonly readSessionCount: number
 }
 
@@ -101,6 +107,7 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
   const deterministicOutcomeFailures: string[] = []
   let readers: ReadonlyMap<string, WindowReaderCoverage> = new Map()
   const signalEvidence: SessionSignalEvidence[] = []
+  const issueEvidence: SessionIssueEvidence[] = []
   let readSessionCount = 0
 
   for (const sessionIds of batched(input.sessionIds, input.batchSize)) {
@@ -123,6 +130,7 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
     deterministicOutcomeFailures.push(...selectDeterministicOutcomeFailures(sessions))
     readers = tallyWindowReaderCoverage(sessions, readers)
     signalEvidence.push(...sessions.map(readSessionSignalEvidence))
+    issueEvidence.push(...sessions.map(readSessionIssueEvidence))
   }
 
   return {
@@ -131,6 +139,7 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
     deterministicOutcomeFailures,
     readers,
     signalEvidence,
+    issueEvidence,
     readSessionCount,
   } satisfies WindowPass
 })
@@ -282,6 +291,8 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
       ]
     : []
 
+  const issues = buildWindowIssues({ evidence: pass.issueEvidence, outcome, safety })
+
   yield* Effect.annotateCurrentSpan("agentScore.stepDays", selection.stepDays)
   yield* Effect.annotateCurrentSpan("agentScore.unmeasured", composition.unmeasuredDimensions.join(",") || "none")
 
@@ -318,6 +329,7 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     },
     native: { cost: composition.cost, speed: composition.speed },
     attribution,
+    issues,
   }
   return result
 })

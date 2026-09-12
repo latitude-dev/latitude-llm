@@ -1,4 +1,5 @@
 import type { SignalWithLifecycle } from "@domain/signals"
+import { scoringEligibleSignalIds } from "@domain/signals"
 import { describe, expect, it } from "vitest"
 import type { SessionAssessmentItem, SessionDimensionEffect } from "../entities/session-assessment.ts"
 import { readOutcomeIssueObservations } from "./read-outcome-issue-observations.ts"
@@ -44,7 +45,7 @@ describe("readOutcomeIssueObservations", () => {
   it("takes the item's group key, which already collapses a signal with its source score", () => {
     const observations = readOutcomeIssueObservations({
       items: [item({ groupKey: "signal:refund-loop", signalIds: ["refund-loop"], label: "Refund-flow loop" })],
-      signals: [signal("refund-loop")],
+      eligibleSignalIds: scoringEligibleSignalIds([signal("refund-loop")]),
     })
 
     expect(observations).toEqual([
@@ -57,7 +58,7 @@ describe("readOutcomeIssueObservations", () => {
   it("leaves the verdict itself out of the issue list", () => {
     const observations = readOutcomeIssueObservations({
       items: [item({ metricId: "sessions.task_success", label: "Task failure" })],
-      signals: [],
+      eligibleSignalIds: new Set(),
     })
 
     expect(observations).toEqual([])
@@ -69,7 +70,7 @@ describe("readOutcomeIssueObservations", () => {
         item({ effects: [outcomeEffect("positive")] }),
         item({ effects: [{ ...outcomeEffect("negative"), scoreDimension: "cost", role: "spendEfficiency" }] }),
       ],
-      signals: [],
+      eligibleSignalIds: new Set(),
     })
 
     expect(observations).toEqual([])
@@ -84,7 +85,7 @@ describe("readOutcomeIssueObservations", () => {
   ])("drops a signal item that is %s", (_label, overrides) => {
     const observations = readOutcomeIssueObservations({
       items: [item({ groupKey: "signal:s1", signalIds: ["s1"] })],
-      signals: [signal("s1", overrides as Partial<SignalWithLifecycle>)],
+      eligibleSignalIds: scoringEligibleSignalIds([signal("s1", overrides as Partial<SignalWithLifecycle>)]),
     })
 
     expect(observations).toEqual([])
@@ -93,7 +94,7 @@ describe("readOutcomeIssueObservations", () => {
   it("marks an item discovered from the verdict score as sharing its selection", () => {
     const observations = readOutcomeIssueObservations({
       items: [item({ groupKey: "signal:s1", signalIds: ["s1"], scoreIds: ["verdict-score"] })],
-      signals: [signal("s1")],
+      eligibleSignalIds: scoringEligibleSignalIds([signal("s1")]),
       verdictScoreIds: ["verdict-score"],
       observationProbability: 0.1,
     })
@@ -102,7 +103,7 @@ describe("readOutcomeIssueObservations", () => {
   })
 
   it("leaves the probability absent when the reader's selection is unrecorded", () => {
-    const observations = readOutcomeIssueObservations({ items: [item()], signals: [] })
+    const observations = readOutcomeIssueObservations({ items: [item()], eligibleSignalIds: new Set() })
 
     expect(observations[0]).not.toHaveProperty("observationProbability")
   })

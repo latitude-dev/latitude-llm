@@ -399,6 +399,13 @@ export {
 } from "./scoring/build-issue-rows.ts"
 export { buildSafetyIssues, type SafetyIssueSession, type SafetyIssues } from "./scoring/build-safety-issues.ts"
 export {
+  buildWindowIssues,
+  EMPTY_WINDOW_ISSUES,
+  readSessionIssueEvidence,
+  type SessionIssueEvidence,
+  type WindowIssues,
+} from "./scoring/build-window-issues.ts"
+export {
   buildWindowSignalEffects,
   EMPTY_WINDOW_SIGNAL_EFFECTS,
   readSessionSignalEvidence,

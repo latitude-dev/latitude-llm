@@ -78,6 +78,7 @@ const session = (
     findings,
     readers,
     screeningDecisions: [],
+    scoringEligibleSignalIds: [],
   }) as NormalizedSessionAssessmentInput
 
 describe("selectReliabilityEndpoint", () => {

@@ -1,6 +1,7 @@
 import type { OrganizationId, ProjectId } from "@domain/shared"
 import type { DimensionAttribution } from "../scoring/attribute-dimensions.ts"
 import type { WindowCostAggregate, WindowSpeedAggregate } from "../scoring/bootstrap-window.ts"
+import type { WindowIssues } from "../scoring/build-window-issues.ts"
 import type { AgentScoreComposite, DimensionResult } from "../scoring/compose-agent-score.ts"
 import type { ProjectOutcomeEstimate } from "../scoring/estimate-outcome.ts"
 import type { ProjectReliabilityEstimate } from "../scoring/estimate-reliability.ts"
@@ -71,6 +72,14 @@ export interface AgentScoreResult {
    * history of a number. Outcome and Safety are absent here and use the smaller issue contract.
    */
   readonly attribution?: readonly DimensionAttribution[]
+  /**
+   * Where Outcome failures and Safety harm concentrate.
+   *
+   * The smaller contract: reach and corrected adverse reach, no Shapley share and no fix gain,
+   * because these dimensions come from a holistic verdict and a confirmed-harm union rather than
+   * from adding up defects.
+   */
+  readonly issues?: WindowIssues
   /** Why nothing was published: the session floor, or the dimensions that could not be measured. */
   readonly withheldReason?: "sessionFloor" | "unmeasuredDimensions"
 }

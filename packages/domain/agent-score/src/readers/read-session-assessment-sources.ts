@@ -17,7 +17,7 @@ import type { MemoryEvent } from "@domain/memories"
 import { countTokens } from "@domain/memories"
 import { isConfirmedHarmFindingKind, type Score } from "@domain/scores"
 import type { ScoreDimension } from "@domain/shared"
-import type { SignalWithLifecycle } from "@domain/signals"
+import { type SignalWithLifecycle, scoringEligibleSignalIds } from "@domain/signals"
 import {
   classifySpanEndpoint,
   hasUsableAssistantCompletion,
@@ -765,6 +765,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       findings,
       readers: [...deterministic.readers, ...spanFindings.readers, ...costEvidence.readers],
       screeningDecisions: input.screeningDecisions,
+      scoringEligibleSignalIds: [...scoringEligibleSignalIds(input.signals)],
       costEvidence: {
         readings: costEvidence.readings,
         workloadStratum: costEvidence.workloadStratum,

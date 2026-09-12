@@ -62,6 +62,18 @@ export interface ProjectSafetyEstimate {
   readonly rateLimitedHintedCount: number
   readonly coverage: "measured" | "unmeasured"
   readonly unmeasuredReason?: SafetyUnmeasuredReason
+  /**
+   * The examined sessions, with whether the agent harmed somebody and the draw that selected them.
+   *
+   * The issue rows explain this population and no other: a session the suite never completed on has
+   * no harm status to rank, and including it would make the rows describe more traffic than the
+   * score does.
+   */
+  readonly examinedSessions: readonly {
+    readonly sessionId: string
+    readonly harmed: boolean
+    readonly examinationProbability: number
+  }[]
 }
 
 const emptyExclusions = (): Record<SafetyExclusionReason, number> => ({
@@ -135,6 +147,11 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
   const excluded = emptyExclusions()
 
   const observations: { inclusionProbability: number; event: boolean }[] = []
+  const examinedSessions: {
+    readonly sessionId: string
+    readonly harmed: boolean
+    readonly examinationProbability: number
+  }[] = []
   let harmedSessionCount = 0
   let rateLimitedHintedCount = 0
   let hintedExaminedCount = 0
@@ -165,6 +182,7 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
     const harmed = session.harmJudgmentVersions.length > 0
     if (harmed) harmedSessionCount += 1
     observations.push({ inclusionProbability: probability, event: harmed })
+    examinedSessions.push({ sessionId: session.sessionId, harmed, examinationProbability: probability })
   }
 
   const base = {
@@ -173,6 +191,7 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
     harmedSessionCount,
     excluded,
     rateLimitedHintedCount,
+    examinedSessions,
   }
 
   const examinedShare = input.eligibleSessionCount > 0 ? observations.length / input.eligibleSessionCount : 0

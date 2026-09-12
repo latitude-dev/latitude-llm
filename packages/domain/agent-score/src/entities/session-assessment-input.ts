@@ -155,5 +155,13 @@ export interface NormalizedSessionAssessmentInput {
   readonly findings: readonly AssessmentFinding[]
   readonly readers: readonly AssessmentReaderFact[]
   readonly screeningDecisions: readonly FlaggerScreeningDecision[]
+  /**
+   * Signals on this session whose occurrences may inform a score.
+   *
+   * Recorded here because only this reader sees signal lifecycle: the window job receives ids and
+   * could not otherwise tell an ignored cluster from a live one, and workflow state must not be
+   * able to move a score's explanation by being invisible to it.
+   */
+  readonly scoringEligibleSignalIds: readonly string[]
   readonly costEvidence?: NormalizedSessionCostEvidence
 }

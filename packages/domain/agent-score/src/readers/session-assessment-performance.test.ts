@@ -67,6 +67,7 @@ describe("session assessment representative load", () => {
       findings: Array.from({ length: largeFindingCount }, (_, index) => finding(index)),
       readers: [],
       screeningDecisions: [],
+      scoringEligibleSignalIds: [],
     }
     const before = process.memoryUsage().heapUsed
 
@@ -95,6 +96,7 @@ describe("session assessment representative load", () => {
               memoryEvents: [],
               moments: { moments: [], labels: [] },
               screeningDecisions: [],
+              scoringEligibleSignalIds: [],
             })),
           )
         },

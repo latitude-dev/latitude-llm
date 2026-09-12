@@ -109,6 +109,7 @@ const assessmentInput: NormalizedSessionAssessmentInput = {
   observedDurationNs: 0,
   findings: [harmFinding],
   readers: [],
+  scoringEligibleSignalIds: [],
   screeningDecisions,
 }
 
@@ -181,7 +182,7 @@ describe("one examined session across every Safety layer", () => {
           examinationProbability: INCLUSION_PROBABILITY,
           observations: readSafetyIssueObservations({
             items: assessment.items,
-            signals: [],
+            eligibleSignalIds: new Set(),
             observationProbability: INCLUSION_PROBABILITY,
           }),
         },
