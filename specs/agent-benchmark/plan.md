@@ -1478,30 +1478,34 @@ Each row is a gate the previous checklist asserted and the code does not current
 
 ### Step 2: the Reliability estimator
 
-- [ ] **P6-9** Add `selectReliabilityEndpoints` under `@domain/agent-score/src/scoring`, a pure
+- [x] **P6-9** Add `selectReliabilityEndpoints` under `@domain/agent-score/src/scoring`, a pure
   selector over `NormalizedSessionAssessmentInput` mirroring `select-outcome-endpoints.ts`. A session
   fails operationally on a terminal `providerError`, a terminal `toolFailure`, a terminal
   `toolStructuralDefect`, a `noOutput` finding of kind `blank` or `confirmedUnusablePattern`, or a
   final-position `finishFailure` with output damage. Recovered incidents are never a fractional
   failure.
-- [ ] **P6-10** Derive readability from reader facts rather than assuming it. A session is readable
+- [x] **P6-10** Derive readability from reader facts rather than assuming it. A session is readable
   for Reliability only when the output and error readers examined it; an unmapped provider error or an
   unmapped finish reason lowers coverage rather than resolving to success.
-- [ ] **P6-11** Implement `estimateProjectReliability`: `p` as weighted terminally successful over
+- [x] **P6-11** Implement `estimateProjectReliability`: `p` as weighted terminally successful over
   weighted readable sessions at census weight one, `100 * p ^ referenceRun` with the horizon from the
   artifact, and the interval transformed through the monotone map so the lower bound on `p` produces
   the lower bound on Reliability. Reuse `estimateStratifiedRate`, which already yields the exact
   binomial path at inclusion probability one.
-- [ ] **P6-12** Return `p` on the result alongside the score, because `page.md` requires the
+- [x] **P6-12** Return `p` on the result alongside the score, because `page.md` requires the
   one-session success rate beside the 20-session value in the card, the section, the tooltip, and the
   public representation. It is explanatory context, not a second dimension score.
-- [ ] **P6-13** Implement the Reliability signal union from
+- [x] **P6-13** Implement the Reliability signal union from
   [`signals.md`](signals.md#reliability): an occurrence enters the terminal set only when its metadata
   proves the session ended without recovery. A signal that describes a failure mode without proving
-  terminal impact can attribute an observed failure but cannot create one.
-- [ ] **P6-14** Return coverage state, the failing floor by name, readable and eligible counts, and
+  terminal impact can attribute an observed failure but cannot create one. No occurrence can prove it
+  today: a classified finding carries a dimension and a role and no assistant-side assertion that the
+  session ended unrecovered, which is the boundary PR 5's P5-20 already froze for confirmed harm. The
+  union is therefore idempotent over signals, which is also what makes a split cluster unable to move
+  the rate, and the test pins both directions so the two paths cannot cross.
+- [x] **P6-14** Return coverage state, the failing floor by name, readable and eligible counts, and
   exclusion counts by reason. Never return 0, 100, or a midpoint for an unmeasured dimension.
-- [ ] **P6-15** Fold Reliability from the same bulk pass as Cost and Speed. It needs no window source
+- [x] **P6-15** Fold Reliability from the same bulk pass as Cost and Speed. It needs no window source
   of its own: the endpoints are already in the findings the batch reader returns, and adding a second
   read would put the two paths at risk of disagreeing.
 

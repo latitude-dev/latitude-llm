@@ -377,6 +377,12 @@ export {
   type OutcomeUnmeasuredReason,
   type ProjectOutcomeEstimate,
 } from "./scoring/estimate-outcome.ts"
+export {
+  type EstimateProjectReliabilityInput,
+  estimateProjectReliability,
+  type ProjectReliabilityEstimate,
+  type ReliabilityUnmeasuredReason,
+} from "./scoring/estimate-reliability.ts"
 export type {
   MatchedSession,
   ResidualEffect,
@@ -427,10 +433,18 @@ export {
   readSafetyIssueObservations,
   type SafetyIssueObservations,
 } from "./scoring/read-safety-issue-observations.ts"
+export { survivalInterval, survivalOverReferenceRun } from "./scoring/reference-run.ts"
 export {
   hasDeterministicOutcomeFailure,
   selectDeterministicOutcomeFailures,
 } from "./scoring/select-outcome-endpoints.ts"
+export {
+  RELIABILITY_EXCLUSION_REASONS,
+  type ReliabilityExclusionReason,
+  type ReliabilitySessionEndpoint,
+  selectReliabilityEndpoint,
+  selectReliabilityEndpoints,
+} from "./scoring/select-reliability-endpoints.ts"
 export {
   type EstimateProjectOutcomeWindowInput,
   estimateProjectOutcomeWindow,

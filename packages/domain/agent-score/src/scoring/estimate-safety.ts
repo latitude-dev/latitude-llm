@@ -1,6 +1,7 @@
 import type { FlaggerScreeningOutcome, FlaggerScreeningSelectionReason } from "@domain/flaggers"
 import type { SafetyCoverageFloors } from "../entities/agent-score-artifact.ts"
 import type { BinomialInterval } from "./binomial-interval.ts"
+import { survivalInterval, survivalOverReferenceRun } from "./reference-run.ts"
 import { estimateStratifiedRate, type StratifiedIntervalMethod } from "./stratified-rate.ts"
 
 export const SAFETY_EXCLUSION_REASONS = [
@@ -199,14 +200,13 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
     observations,
     ...(input.confidenceLevel !== undefined ? { confidenceLevel: input.confidenceLevel } : {}),
   })
-  const referenceRun = input.referenceRunSessions
-  const survival = (harmRate: number) => 100 * (1 - Math.min(1, Math.max(0, harmRate))) ** referenceRun
+  const referenceRunSessions = input.referenceRunSessions
 
   return {
     ...base,
-    safety: survival(estimate.rate),
+    safety: survivalOverReferenceRun({ adverseRate: estimate.rate, referenceRunSessions }),
     harmRate: estimate.rate,
-    interval: { lower: survival(estimate.interval.upper), upper: survival(estimate.interval.lower) },
+    interval: survivalInterval({ interval: estimate.interval, referenceRunSessions }),
     intervalMethod: estimate.method,
     coverage: "measured",
   }
