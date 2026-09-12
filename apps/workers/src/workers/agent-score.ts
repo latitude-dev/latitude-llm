@@ -1,4 +1,5 @@
 import { resolveLaunchArtifacts, utcDateOf } from "@domain/agent-score"
+import { resolveGenerationConfig } from "@domain/ai"
 import { FLAGGER_DEFAULT_CLASSIFIER_MODEL } from "@domain/flaggers"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
@@ -53,7 +54,8 @@ export const createAgentScoreWorker = ({
 }: AgentScoreWorkerDeps) => {
   // One judge for the whole run: it decides the scoring version, and a version that varied per
   // project would make two projects' numbers incomparable for a reason neither of them chose.
-  const artifacts = resolveLaunchArtifacts({ judge: FLAGGER_DEFAULT_CLASSIFIER_MODEL })
+  const judge = Effect.runSync(resolveGenerationConfig("FLAGGER_CLASSIFIER", FLAGGER_DEFAULT_CLASSIFIER_MODEL))
+  const artifacts = resolveLaunchArtifacts({ judge })
 
   consumer.subscribe("agent-score", {
     sweep: () => {
@@ -99,7 +101,7 @@ export const createAgentScoreWorker = ({
         costArtifact: artifacts.cost,
         catalog: artifacts.catalog,
         latencyArtifact: artifacts.latency,
-        judge: FLAGGER_DEFAULT_CLASSIFIER_MODEL,
+        judge,
       }).pipe(
         Effect.tap((result) =>
           Effect.sync(() => {
