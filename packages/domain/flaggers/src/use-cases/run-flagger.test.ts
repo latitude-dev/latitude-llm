@@ -2678,6 +2678,64 @@ describe("task-failure verdict classification", () => {
 
     expect(result).toMatchObject({ matched: false, verdict: "indeterminate", classificationOutcome: "indeterminate" })
   })
+
+  // Reproduces a combined primary+fallback failure as thrown by @platform/ai-vercel:
+  // both attempts are formatted into one plain `Error` whose `name` is no longer
+  // `AI_NoObjectGeneratedError`/`AI_NoOutputGeneratedError` on either side, so only
+  // the message text (still carrying each attempt's original prefix) identifies it.
+  it("marks indeterminate when the primary model returns unparseable JSON and the fallback also fails", async () => {
+    const { layer: aiLayer } = createFakeAI({
+      generate: () =>
+        Effect.fail(
+          new AIError({
+            message:
+              'AI generation failed (amazon-bedrock/minimax.minimax-m2.5): Primary model amazon-bedrock/minimax.minimax-m2.5 failed: No object generated: could not parse the response. (finishReason=stop, cause="JSON parsing failed: Unexpected non-whitespace character after JSON"); fallback model amazon-bedrock/openai.gpt-oss-120b-1:0 failed: No output generated.',
+            cause: new Error(
+              'Primary model amazon-bedrock/minimax.minimax-m2.5 failed: No object generated: could not parse the response. (finishReason=stop, cause="JSON parsing failed: Unexpected non-whitespace character after JSON"); fallback model amazon-bedrock/openai.gpt-oss-120b-1:0 failed: No output generated.',
+            ),
+          }),
+        ),
+    })
+
+    const result = await Effect.runPromise(
+      classifyConversationForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        flaggerSlug: "task-failure",
+        conversation: TASK_SUCCESS_CONVERSATION,
+        traceId: INPUT.traceId,
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toMatchObject({ matched: false, verdict: "indeterminate", classificationOutcome: "indeterminate" })
+  })
+
+  it("marks indeterminate when both the primary and fallback model produce no output at all", async () => {
+    const { layer: aiLayer } = createFakeAI({
+      generate: () =>
+        Effect.fail(
+          new AIError({
+            message:
+              "AI generation failed (amazon-bedrock/minimax.minimax-m2.5): Primary model amazon-bedrock/minimax.minimax-m2.5 failed: No output generated.; fallback model amazon-bedrock/openai.gpt-oss-120b-1:0 failed: No output generated.",
+            cause: new Error(
+              "Primary model amazon-bedrock/minimax.minimax-m2.5 failed: No output generated.; fallback model amazon-bedrock/openai.gpt-oss-120b-1:0 failed: No output generated.",
+            ),
+          }),
+        ),
+    })
+
+    const result = await Effect.runPromise(
+      classifyConversationForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        flaggerSlug: "task-failure",
+        conversation: TASK_SUCCESS_CONVERSATION,
+        traceId: INPUT.traceId,
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toMatchObject({ matched: false, verdict: "indeterminate", classificationOutcome: "indeterminate" })
+  })
 })
 
 describe("Safety verdict classification", () => {
