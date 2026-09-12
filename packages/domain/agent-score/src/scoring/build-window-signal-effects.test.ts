@@ -39,6 +39,7 @@ const signalFinding = (signalId: string, evidenceKey: string): AssessmentFinding
     anchors: [],
     destinations: [],
     independentHumanEvidence: false,
+    observationProbability: 1,
     kind: "classifiedJudgment",
     roles: [{ scoreDimension: "cost", role: "spendEfficiency" }],
     negative: true,
@@ -51,12 +52,14 @@ const session = ({
   readings = [reading()],
   stratum = "openai/gpt-5|from4kTo16k|streaming|medium",
   avoidableNs = 0,
+  scoringEligibleSignalIds,
 }: {
   readonly sessionId: string
   readonly findings?: readonly AssessmentFinding[]
   readonly readings?: readonly CostMetricReading[]
   readonly stratum?: string
   readonly avoidableNs?: number
+  readonly scoringEligibleSignalIds?: readonly string[]
 }): NormalizedSessionAssessmentInput =>
   ({
     sessionId: SessionId(sessionId),
@@ -66,7 +69,7 @@ const session = ({
     findings,
     readers: [],
     screeningDecisions: [],
-    scoringEligibleSignalIds: [],
+    scoringEligibleSignalIds: scoringEligibleSignalIds ?? findings.flatMap((finding) => finding.signalIds),
     costEvidence: {
       readings,
       workloadStratum: stratum,
@@ -97,6 +100,33 @@ describe("readSessionSignalEvidence", () => {
     )
 
     expect(evidence.unlinkedSignalIds).toEqual(["signal-2"])
+  })
+
+  it("excludes signals that are not eligible for scoring", () => {
+    const evidence = readSessionSignalEvidence(
+      session({
+        sessionId: "s1",
+        findings: [signalFinding("eligible", "one"), signalFinding("ignored", "two")],
+        scoringEligibleSignalIds: ["eligible"],
+      }),
+    )
+
+    expect(evidence.unlinkedSignalIds).toEqual(["eligible"])
+  })
+
+  it("keeps the probability of the finding that produced each signal", () => {
+    const sampledFinding = { ...signalFinding("sampled", "one"), observationProbability: 0.25 }
+    const deterministicFinding = { ...signalFinding("deterministic", "two"), observationProbability: 1 }
+    const evidence = readSessionSignalEvidence(
+      session({ sessionId: "s1", findings: [sampledFinding, deterministicFinding] }),
+    )
+
+    expect(evidence.inclusionProbabilityBySignalId).toEqual(
+      new Map([
+        ["sampled", 0.25],
+        ["deterministic", 1],
+      ]),
+    )
   })
 
   it("takes the family penalty share from the readings, which is the outcome the fit uses", () => {

@@ -401,13 +401,27 @@ const scoreAnchors = (score: Score) => {
 const flaggerLabel = (slug: string | undefined): string | undefined =>
   slug === undefined ? undefined : (FLAGGER_DISPLAY[slug as FlaggerSlug]?.name ?? slug)
 
-const readScoreFindings = (scores: readonly Score[], signals: readonly SignalWithLifecycle[]): AssessmentFinding[] => {
+const scoreObservationProbability = (
+  score: Score,
+  screeningDecisions: NormalizedSessionAssessmentInput["screeningDecisions"],
+): number | undefined => {
+  const flaggerSlug = score.sourceType === "annotation" ? score.metadata.flaggerSlug : undefined
+  if (!flaggerSlug) return 1
+  return screeningDecisions.find((decision) => decision.flaggerSlug === flaggerSlug)?.inclusionProbability
+}
+
+const readScoreFindings = (
+  scores: readonly Score[],
+  signals: readonly SignalWithLifecycle[],
+  screeningDecisions: NormalizedSessionAssessmentInput["screeningDecisions"],
+): AssessmentFinding[] => {
   const signalsById = new Map<string, SignalWithLifecycle>(signals.map((signal) => [signal.id, signal]))
   return scores.flatMap((score): AssessmentFinding[] => {
     if (score.draftedAt || score.errored) return []
     const signal = score.signalId ? signalsById.get(score.signalId) : undefined
     if (signal?.ignoredAt) return []
     const metadata = score.sourceType === "annotation" ? score.metadata : undefined
+    const observationProbability = scoreObservationProbability(score, screeningDecisions)
     const evidenceKey = metadata?.flaggerFindingKey ?? `score:${score.id}`
     const signalIds = signal ? [signal.id] : []
     const references = scoreAnchors(score)
@@ -426,6 +440,7 @@ const readScoreFindings = (scores: readonly Score[], signals: readonly SignalWit
       ...references,
       independentHumanEvidence:
         score.annotatorId !== null || (score.sourceType === "annotation" && score.sourceId !== "SYSTEM"),
+      ...(observationProbability !== undefined && observationProbability > 0 ? { observationProbability } : {}),
     }
 
     if (metadata?.flaggerSlug === "task-failure") {
@@ -737,7 +752,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
         : []),
       ...deterministic.findings,
       ...spanFindings.findings,
-      ...readScoreFindings(input.scores, input.signals),
+      ...readScoreFindings(input.scores, input.signals, input.screeningDecisions),
       ...readMomentFindings(input.moments),
     ]
 

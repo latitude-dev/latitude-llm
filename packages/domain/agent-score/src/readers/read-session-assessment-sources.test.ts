@@ -424,6 +424,36 @@ describe("readSessionAssessmentSources", () => {
     })
   })
 
+  it("attaches the producing flagger's sampling probability to a signal finding", async () => {
+    const screeningDecision = {
+      decisionId: "d".repeat(64),
+      organizationId,
+      projectId,
+      sessionId,
+      flaggerSlug: "refusal",
+      analysisHash: "a".repeat(64),
+      scoringArtifactVersion: "flagger-screening-v1",
+      attempt: 1,
+      version: 1,
+      selected: true,
+      reason: "ordinary-sample",
+      inclusionProbability: 0.25,
+      hintKinds: [],
+      outcome: "matched",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      retentionDays: 90,
+    } satisfies FlaggerScreeningDecision
+    const assessment = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
+      scores: [score("sampled-score", "sampled-signal", { flaggerSlug: "refusal" })],
+      signals: [signal("sampled-signal")],
+      screeningDecisions: [screeningDecision],
+    })
+
+    expect(assessment.findings.find((finding) => finding.scoreIds.includes("sampled-score"))).toMatchObject({
+      observationProbability: 0.25,
+    })
+  })
+
   it("attributes a recovered tool failure to the generation that completed the session", async () => {
     const failedCall = toolCall("h", "call-recovered", 0, 10, { statusCode: "error" })
     const retry = generation("i", 11, 20, { costTotalMicrocents: 325 })

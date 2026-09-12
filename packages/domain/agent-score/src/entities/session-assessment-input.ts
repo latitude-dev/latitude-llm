@@ -27,6 +27,7 @@ export interface AssessmentFindingReference {
   readonly anchors: readonly SessionEvidenceAnchor[]
   readonly destinations: readonly SessionEvidenceDestination[]
   readonly independentHumanEvidence: boolean
+  readonly observationProbability?: number
 }
 
 export type AssessmentFinding = AssessmentFindingReference &

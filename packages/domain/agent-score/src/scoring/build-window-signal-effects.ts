@@ -1,4 +1,5 @@
 import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
+import type { CostMetricReading } from "../entities/cost-metric-reading.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
 import type { NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
 import type { MatchedSession, ResidualSupportFloors } from "./estimate-residual-effect.ts"
@@ -16,12 +17,12 @@ import { linkSignalOccurrences, type SignalOccurrence } from "./link-signal-occu
 export interface SessionSignalEvidence {
   readonly sessionId: string
   readonly stratum: string
-  readonly inclusionProbability: number
   readonly fold: 0 | 1
   readonly familyPenaltyShare: Readonly<Record<CostFamily, number>>
   readonly avoidableNs: number
   /** Signals present on this session whose occurrence no charged atom already explains. */
   readonly unlinkedSignalIds: readonly string[]
+  readonly inclusionProbabilityBySignalId: ReadonlyMap<string, number>
   readonly linkedSignalIds: readonly string[]
 }
 
@@ -58,30 +59,7 @@ const foldOf = (sessionId: string): 0 | 1 => {
 const emptyShares = (): Record<CostFamily, number> =>
   Object.fromEntries(COST_FAMILIES.map((family) => [family, 0])) as Record<CostFamily, number>
 
-/**
- * The probability this session's signals could have been seen on it.
- *
- * A deterministic reader runs on everything, so its occurrences carry one. A sampled reader's draw
- * is on the screening decision, and taking the lowest of them is the conservative reading: an
- * occurrence only exists if whatever found it was selected, and understating that probability
- * understates the signal's reach rather than inventing it.
- */
-const inclusionProbabilityOf = (session: NormalizedSessionAssessmentInput): number => {
-  const probabilities = session.screeningDecisions
-    .map((decision) => decision.inclusionProbability)
-    .filter((probability): probability is number => probability !== undefined && probability > 0)
-  return probabilities.length === 0 ? 1 : Math.min(...probabilities)
-}
-
-/**
- * Splits a session's signal occurrences into the ones a family already charges and the rest.
- *
- * Linkage first, always. A signal that lands on an atom some metric already penalised is an
- * explanation of that penalty, and charging it again would bill one behaviour twice: once as a
- * metric and once as a cluster. Only what is left can enter the residual estimator.
- */
-export const readSessionSignalEvidence = (session: NormalizedSessionAssessmentInput): SessionSignalEvidence => {
-  const readings = session.costEvidence?.readings ?? []
+const readFamilyPenaltyEvidence = (readings: readonly CostMetricReading[]) => {
   const ownedAtomsByFamily = new Map<CostFamily, Set<string>>()
   const familyPenaltyShare = emptyShares()
 
@@ -102,14 +80,53 @@ export const readSessionSignalEvidence = (session: NormalizedSessionAssessmentIn
     }
   }
 
-  const occurrences: SignalOccurrence[] = []
-  const atomIdsByFindingKey = new Map<string, readonly string[]>()
-  for (const finding of session.findings) {
-    if (finding.signalIds.length === 0) continue
-    for (const signalId of finding.signalIds) {
-      occurrences.push({ signalId, sessionId: session.sessionId, findingKey: finding.evidenceKey, atomIds: [] })
-    }
+  return { ownedAtomsByFamily, familyPenaltyShare }
+}
+
+const signalOccurrences = (session: NormalizedSessionAssessmentInput): SignalOccurrence[] => {
+  const eligibleSignalIds = new Set(session.scoringEligibleSignalIds)
+  return session.findings.flatMap((finding) =>
+    finding.signalIds.flatMap((signalId): SignalOccurrence[] => {
+      if (!eligibleSignalIds.has(signalId)) return []
+      return [
+        {
+          signalId,
+          sessionId: session.sessionId,
+          findingKey: finding.evidenceKey,
+          atomIds: [],
+          ...(finding.observationProbability !== undefined
+            ? { inclusionProbability: finding.observationProbability }
+            : {}),
+        },
+      ]
+    }),
+  )
+}
+
+const inclusionProbabilitiesOf = (occurrences: readonly SignalOccurrence[]): ReadonlyMap<string, number> => {
+  const probabilities = new Map<string, number>()
+  for (const occurrence of occurrences) {
+    if (occurrence.inclusionProbability === undefined) continue
+    probabilities.set(
+      occurrence.signalId,
+      Math.max(probabilities.get(occurrence.signalId) ?? 0, occurrence.inclusionProbability),
+    )
   }
+  return probabilities
+}
+
+/**
+ * Splits a session's signal occurrences into the ones a family already charges and the rest.
+ *
+ * Linkage first, always. A signal that lands on an atom some metric already penalised is an
+ * explanation of that penalty, and charging it again would bill one behaviour twice: once as a
+ * metric and once as a cluster. Only what is left can enter the residual estimator.
+ */
+export const readSessionSignalEvidence = (session: NormalizedSessionAssessmentInput): SessionSignalEvidence => {
+  const readings = session.costEvidence?.readings ?? []
+  const { ownedAtomsByFamily, familyPenaltyShare } = readFamilyPenaltyEvidence(readings)
+  const occurrences = signalOccurrences(session)
+  const atomIdsByFindingKey = new Map<string, readonly string[]>()
   for (const reading of readings) {
     atomIdsByFindingKey.set(
       reading.metricId,
@@ -122,11 +139,11 @@ export const readSessionSignalEvidence = (session: NormalizedSessionAssessmentIn
   return {
     sessionId: session.sessionId,
     stratum: session.costEvidence?.workloadStratum ?? "unknown",
-    inclusionProbability: inclusionProbabilityOf(session),
     fold: foldOf(session.sessionId),
     familyPenaltyShare,
     avoidableNs: (session.costEvidence?.measuredAvoidableNs ?? 0) + (session.costEvidence?.estimatedAvoidableNs ?? 0),
     unlinkedSignalIds: [...new Set(linkage.unlinked.map((occurrence) => occurrence.signalId))],
+    inclusionProbabilityBySignalId: inclusionProbabilitiesOf(linkage.unlinked),
     linkedSignalIds: [...new Set(linkage.linked.map((entry) => entry.occurrence.signalId))],
   }
 }
@@ -140,15 +157,25 @@ const toMatchedSessions = ({
   readonly outcomeOf: (session: SessionSignalEvidence) => number
   readonly groupOf: ReadonlyMap<string, string>
 }): MatchedSession[] =>
-  evidence.map((session) => ({
-    sessionId: session.sessionId,
-    stratum: session.stratum,
-    outcome: outcomeOf(session),
-    inclusionProbability: session.inclusionProbability,
-    // The group is the treatment, so a session carrying three members of one group is exposed once.
-    exposedGroupIds: [...new Set(session.unlinkedSignalIds.flatMap((id) => groupOf.get(id) ?? []))],
-    fold: session.fold,
-  }))
+  evidence.map((session) => {
+    const exposedGroupIds = [...new Set(session.unlinkedSignalIds.flatMap((id) => groupOf.get(id) ?? []))]
+    const inclusionProbabilityByGroupId = new Map<string, number>()
+    for (const signalId of session.unlinkedSignalIds) {
+      const groupId = groupOf.get(signalId)
+      const probability = session.inclusionProbabilityBySignalId.get(signalId)
+      if (groupId === undefined || probability === undefined) continue
+      inclusionProbabilityByGroupId.set(groupId, Math.max(inclusionProbabilityByGroupId.get(groupId) ?? 0, probability))
+    }
+
+    return {
+      sessionId: session.sessionId,
+      stratum: session.stratum,
+      outcome: outcomeOf(session),
+      inclusionProbabilityByGroupId,
+      exposedGroupIds,
+      fold: session.fold,
+    }
+  })
 
 /**
  * How alike two signals' occurrence sets must be before they are fitted as one treatment.
