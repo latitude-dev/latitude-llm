@@ -93,6 +93,7 @@ export const createAgentScoreWorker = ({
         organizationId,
         projectId,
         date: payload.date,
+        ...(payload.force ? { force: true } : {}),
         artifact: artifacts.agentScore,
         costArtifact: artifacts.cost,
         catalog: artifacts.catalog,
@@ -101,8 +102,11 @@ export const createAgentScoreWorker = ({
       }).pipe(
         Effect.tap((result) =>
           Effect.sync(() => {
-            if (result.status === "published") {
-              logger.info(`agent-score: ${projectId} scored ${result.score.toFixed(1)} on ${payload.date}`)
+            if (result.status === "published" || result.status === "refreshed") {
+              logger.info(
+                `agent-score: ${projectId} scored ${result.score.toFixed(1)} on ${payload.date}` +
+                  (result.status === "refreshed" ? " (evidence refreshed, stored score unchanged)" : ""),
+              )
             } else if (result.status === "withheld") {
               // A withheld day is a gap in the trend, and the floor it missed is what explains it.
               logger.info(`agent-score: ${projectId} withheld on ${payload.date} (${result.reason})`)

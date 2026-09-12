@@ -27,11 +27,14 @@ interface SnapshotProjectInput {
   readonly catalog: CostMetricCatalog
   readonly latencyArtifact: LatencyReferenceArtifact
   readonly judge: ScoringJudge
+  /** Recompute a date that already has a snapshot, to refresh the cached explanation. */
+  readonly force?: boolean
 }
 
 type SnapshotProjectResult =
   | { readonly status: "published"; readonly score: number }
   | { readonly status: "already-published" }
+  | { readonly status: "refreshed"; readonly score: number }
   | { readonly status: "withheld"; readonly reason: string }
 
 /**
@@ -84,7 +87,10 @@ export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")
     projectId: input.projectId,
     date: input.date,
   })
-  if (existing) return { status: "already-published" } satisfies SnapshotProjectResult
+  // A published score is never recomputed on its own: the number is a record of what was published
+  // that day. A forced run recomputes anyway, for the cached explanation, and the conditional insert
+  // below is what keeps the score itself untouched.
+  if (existing && !input.force) return { status: "already-published" } satisfies SnapshotProjectResult
 
   // Yesterday's stored step is what makes today's window choice sticky, and the snapshot is the only
   // durable record of it.
@@ -132,7 +138,7 @@ export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")
     return { status: "withheld", reason: "missingDimensionScore" } satisfies SnapshotProjectResult
   }
 
-  yield* snapshots.insertIfAbsent({
+  const wrote = yield* snapshots.insertIfAbsent({
     organizationId: input.organizationId,
     projectId: input.projectId,
     date: input.date,
@@ -146,7 +152,11 @@ export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")
     createdAt: new Date(),
   })
 
-  return { status: "published", score: result.composite.score } satisfies SnapshotProjectResult
+  return (
+    wrote
+      ? { status: "published", score: result.composite.score }
+      : { status: "refreshed", score: result.composite.score }
+  ) satisfies SnapshotProjectResult
 })
 
 const applyDerivedSampling = ({

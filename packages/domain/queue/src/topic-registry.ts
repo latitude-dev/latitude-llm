@@ -886,6 +886,13 @@ const _registry = {
       readonly projectId: string
       /** UTC date, `YYYY-MM-DD`. */
       readonly date: string
+      /**
+       * Recompute even when the date already has a snapshot, to refresh the cached explanation.
+       *
+       * Never rewrites the score: the insert is conditional on the date being absent, so a forced
+       * run recomputes the evidence and leaves the published number exactly as it was.
+       */
+      readonly force?: boolean
     }
   }>(),
 
