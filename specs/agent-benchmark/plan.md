@@ -1715,10 +1715,35 @@ Each row is a gate the previous checklist asserted and the code does not current
 
 ### Step 8: calibration, freeze, and acceptance
 
-- [ ] **P6-51** Give `runCostSpeedShadow` an entry point so it can be run against representative
+P6-51 is code and is done. Everything after it is an execution against representative production
+traffic, and there is none: the newest production tag predates PRs 4 and 5, so no deployed
+environment has a `task-failure` verdict or a structured Safety finding in it. The instrument now
+makes each of these a command rather than a project, but the command has nothing true to read until a
+release carrying those PRs has been out for a window.
+
+- [x] **P6-51** Give `runCostSpeedShadow` an entry point so it can be run against representative
   production traffic: a backoffice-triggered job or a worker script, read-only, writing no snapshot,
   recording query count, rows and bytes read, peak heap, resolver time, family coverage, score
-  distribution, and rerun determinism.
+  distribution, and rerun determinism. `pnpm --filter @app/workers agent-score:shadow` takes an
+  organisation, a project and a window, reports all of it, and compares runs with `--runs 2`. `--full`
+  runs the whole five-dimension computation after it, which is what P6-56 needs. Rows and bytes come
+  from ClickHouse's summary header when it sends one and say "not reported" when it does not, because
+  an absent counter is not a zero.
+
+  **First measurement, against the seeded project and not production traffic.** 5,037 sessions over
+  28 days in 101 batches: 19 to 22 seconds of resolver time, 1,010 queries, 1.06 GiB peak heap, and a
+  byte-identical result across reruns. That settles what a live per-request computation would have
+  cost and confirms the explanation belongs in the cache the daily job warms. The full run publishes:
+  Outcome 93.3, Reliability 86.9, Cost 92.0, Speed 84.3, Safety 73.3, composite 88.2 on a 7-day
+  window.
+
+  Two things the same run makes visible, both for P6-52 and P6-53 to settle against real traffic
+  rather than this fixture: the `tools` family penalty is 0.352 where spend is 0.012 and context
+  0.017, and its per-session distribution has a 90th percentile of 0.63 and a maximum of 1.00, which
+  is a curve saturating on a large share of sessions rather than discriminating between them. And
+  `memory` has no applicable readings at all, so its weight currently rides on nothing. Neither is
+  acted on here: the seed's distributions are whatever its generator produced, and tuning a curve to
+  a fixture would be calibrating to the wrong population.
 - [ ] **P6-52** Execute the metric acceptance review carried over from P3-38. Review every candidate
   metric for prevalence, discrimination, correlation, applicability, missingness by provider and
   integration, and sensitivity to workload mix. Remove or make display-only any metric whose direction
