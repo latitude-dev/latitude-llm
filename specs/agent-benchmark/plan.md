@@ -1597,26 +1597,40 @@ Each row is a gate the previous checklist asserted and the code does not current
 
 ### Step 5: dynamic attribution
 
-- [ ] **P6-29** Group near-duplicate causes before attribution, so a split signal cluster and two
+- [x] **P6-29** Group near-duplicate causes before attribution, so a split signal cluster and two
   detectors describing one event resolve to one row. Reuse the residual estimator's grouping rather
-  than inventing a second notion of near-duplicate.
-- [ ] **P6-30** Implement attributed deficit as a Shapley share of the dimension's distance from its
+  than inventing a second notion of near-duplicate. Cost, Speed and Reliability causes are already
+  canonical identities — a metric id, a claim cause, a terminal finding kind — so two detectors
+  describing one event arrive as one row by construction and there is nothing to group. Signals do
+  not appear as cause rows at all: they enter as the capped residual, under the residual estimator's
+  own grouping, which is the one P6-24 records as one group per signal.
+- [x] **P6-30** Implement attributed deficit as a Shapley share of the dimension's distance from its
   healthy counterfactual: exact for 12 or fewer grouped causes, seeded deterministic permutation
   sampling above that until an error target or a computation ceiling is reached, with a residual row
   absorbing estimation error and unnamed evidence. Report the approximation error in the coverage
-  panel.
-- [ ] **P6-31** Implement fix gain as the score change when one cause is removed with other evidence
+  panel. The exact path enumerates subsets rather than orderings, since twelve causes is half a
+  billion orderings and four thousand subsets. A cause model can explain a larger deficit than the
+  estimator published when it applies caps over pooled units rather than per session; the shares are
+  scaled to fit and `explainedDeficit` keeps the gap visible instead of absorbing it.
+- [x] **P6-31** Implement fix gain as the score change when one cause is removed with other evidence
   held fixed. Fix gains overlap by construction and must never be summed; the contract returns them
   labelled so the interface cannot present them as additive.
-- [ ] **P6-32** Attribute Cost in family-native units before translating into score points and Speed
+- [x] **P6-32** Attribute Cost in family-native units before translating into score points and Speed
   in time before applying its ratio, per [`score.md`](score.md#dynamic-attribution-after-scoring).
   Reliability attributes terminal endpoints directly.
 - [ ] **P6-33** Use the smaller issue contract for Outcome and Safety by calling the builders PRs 4
   and 5 already produced. These rows receive no Shapley share and no fix gain, rank by corrected
   adverse reach, and stay visible but unranked when a required joint inclusion probability is unknown.
-- [ ] **P6-34** Label every row as measured or associated, and carry the interval, raw examined count,
+  Needs three threads that do not exist yet: the normalized session input carries no signal lifecycle,
+  so window-level scoring eligibility cannot be decided; the issue readers take `SignalWithLifecycle`
+  where the window has only ids; and both estimators return aggregates where the row builder needs
+  the per-session verdict and harm status they computed internally. Land it as its own change rather
+  than widening three contracts inside the attribution commit.
+- [x] **P6-34** Label every row as measured or associated, and carry the interval, raw examined count,
   and independent observation count. A signal row says "associated effect" unless the observation
-  itself identifies avoidable work or a terminal failure.
+  itself identifies avoidable work or a terminal failure. Every row attribution produces today is
+  `measured`, because only deterministic readers become cause rows; the `associated` label exists for
+  the signal rows P6-33 and the residual estimator feed in.
 
 ### Step 6: persistence, sampling policy, and jobs
 

@@ -9,6 +9,13 @@ export interface ReliabilitySessionEndpoint {
   readonly terminalFailure: boolean
   readonly readable: boolean
   readonly unreadableReason?: ReliabilityExclusionReason
+  /**
+   * The finding kinds that made this session terminal, for attribution.
+   *
+   * A session can carry more than one, and that is the case attribution exists for: each is
+   * individually sufficient, so removing either alone recovers nothing.
+   */
+  readonly causes: readonly string[]
 }
 
 /**
@@ -69,8 +76,9 @@ const isFullyRead = (input: NormalizedSessionAssessmentInput): ReliabilitySessio
  * observed failure counts as one.
  */
 export const selectReliabilityEndpoint = (input: NormalizedSessionAssessmentInput): ReliabilitySessionEndpoint => {
-  if (input.findings.some(isTerminalFinding)) {
-    return { sessionId: input.sessionId, terminalFailure: true, readable: true }
+  const causes = [...new Set(input.findings.filter(isTerminalFinding).map((finding) => finding.kind))]
+  if (causes.length > 0) {
+    return { sessionId: input.sessionId, terminalFailure: true, readable: true, causes }
   }
 
   const unreadableReason = isFullyRead(input)
@@ -78,6 +86,7 @@ export const selectReliabilityEndpoint = (input: NormalizedSessionAssessmentInpu
     sessionId: input.sessionId,
     terminalFailure: false,
     readable: unreadableReason === undefined,
+    causes: [],
     ...(unreadableReason ? { unreadableReason } : {}),
   }
 }

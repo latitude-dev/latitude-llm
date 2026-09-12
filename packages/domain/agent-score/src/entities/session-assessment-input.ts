@@ -138,6 +138,8 @@ export interface NormalizedSessionCostEvidence {
   readonly estimatedAvoidableNs: number
   readonly measuredAvoidableMicrocents: number
   readonly estimatedAvoidableMicrocents: number
+  /** Avoidable critical-path nanoseconds by the claim that produced them, for Speed attribution. */
+  readonly avoidableNsByCause: Readonly<Record<string, number>>
 }
 
 export interface NormalizedSessionAssessmentInput {

@@ -1,4 +1,5 @@
 import type { OrganizationId, ProjectId } from "@domain/shared"
+import type { DimensionAttribution } from "../scoring/attribute-dimensions.ts"
 import type { WindowCostAggregate, WindowSpeedAggregate } from "../scoring/bootstrap-window.ts"
 import type { AgentScoreComposite, DimensionResult } from "../scoring/compose-agent-score.ts"
 import type { ProjectOutcomeEstimate } from "../scoring/estimate-outcome.ts"
@@ -62,6 +63,14 @@ export interface AgentScoreResult {
   readonly composite?: AgentScoreComposite
   readonly coverage?: AgentScoreCoverage
   readonly native?: AgentScoreNativeInputs
+  /**
+   * Why the score is what it is, resolved from the live window.
+   *
+   * Current evidence, not a decomposition of the stored snapshot: new readings can arrive after a
+   * snapshot is written, so these rows explain present behaviour and are never presented as the
+   * history of a number. Outcome and Safety are absent here and use the smaller issue contract.
+   */
+  readonly attribution?: readonly DimensionAttribution[]
   /** Why nothing was published: the session floor, or the dimensions that could not be measured. */
   readonly withheldReason?: "sessionFloor" | "unmeasuredDimensions"
 }

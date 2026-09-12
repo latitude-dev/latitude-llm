@@ -22,6 +22,8 @@ const fold = (overrides: Partial<WindowFold> = {}): WindowFold => ({
   foldedSessionCount: 1_000,
   withheldSessionCount: 0,
   familyCoverage: familyCoverage(),
+  costCauseUnits: new Map(),
+  speedCauseNs: new Map(),
   ...overrides,
 })
 

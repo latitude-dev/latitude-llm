@@ -689,6 +689,15 @@ const toolDefinitionSurfaces = ({
   }
 }
 
+/** Applied claims only: a dropped claim was time some other claim already accounted for. */
+const avoidableNsByCause = (
+  claims: readonly { readonly cause: string; readonly removedNs: number }[],
+): Record<string, number> => {
+  const byCause: Record<string, number> = {}
+  for (const claim of claims) byCause[claim.cause] = (byCause[claim.cause] ?? 0) + claim.removedNs
+  return byCause
+}
+
 export interface ReadSessionAssessmentSourcesInput {
   readonly session: SessionDetail
   readonly spans: readonly Span[]
@@ -766,6 +775,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
         estimatedAvoidableNs: costEvidence.speed.estimatedAvoidableNs,
         measuredAvoidableMicrocents: 0,
         estimatedAvoidableMicrocents: 0,
+        avoidableNsByCause: avoidableNsByCause(costEvidence.speed.appliedClaims),
       },
     } satisfies NormalizedSessionAssessmentInput
   })

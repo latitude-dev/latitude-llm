@@ -356,6 +356,26 @@ export { aggregateSessionCost, EMPTY_COST_FAMILY_DENOMINATORS } from "./scoring/
 export type { ArbitratedReading, CostAtomArbitration } from "./scoring/arbitrate-cost-atoms.ts"
 export { arbitrateCostAtoms } from "./scoring/arbitrate-cost-atoms.ts"
 export {
+  type AttributeDeficitInput,
+  type AttributionMethod,
+  attributeDeficit,
+  type CauseAttribution,
+  DEFAULT_ATTRIBUTION_ERROR_TARGET,
+  type DeficitAttribution,
+  EXACT_ATTRIBUTION_CAUSE_LIMIT,
+  MAX_ATTRIBUTION_PERMUTATIONS,
+} from "./scoring/attribute-deficit.ts"
+export {
+  ATTRIBUTED_DIMENSIONS,
+  attributeCostWindow,
+  attributeReliabilityWindow,
+  attributeSpeedWindow,
+  type CauseEvidenceKind,
+  type DimensionAttribution,
+  type DimensionCauseRow,
+  EMPTY_DIMENSION_ATTRIBUTION,
+} from "./scoring/attribute-dimensions.ts"
+export {
   type BinomialInterval,
   clopperPearsonInterval,
   DEFAULT_CONFIDENCE_LEVEL,

@@ -10,6 +10,12 @@ import type { NormalizedSessionAssessmentInput } from "../entities/session-asses
 import { ScoreWindowSource } from "../ports/score-window-source.ts"
 import { readSessionAssessmentInputBatch } from "../readers/read-session-assessment-batch.ts"
 import { EMPTY_COST_FAMILY_DENOMINATORS } from "../scoring/aggregate-session-cost.ts"
+import {
+  attributeCostWindow,
+  attributeReliabilityWindow,
+  attributeSpeedWindow,
+  type DimensionAttribution,
+} from "../scoring/attribute-dimensions.ts"
 import { aggregateWindowSpeed } from "../scoring/bootstrap-window.ts"
 import {
   buildWindowSignalEffects,
@@ -246,6 +252,36 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     ...(input.seed !== undefined ? { seed: input.seed } : {}),
   })
 
+  // Attribution runs after the score and can never change it: the number is already fixed, and this
+  // only decides how to explain it. Withheld dimensions get no rows, because ranking the causes of a
+  // number nobody may see would be the same claim by another route.
+  const scoreOf = (dimension: string) =>
+    composition.dimensions.find((entry) => entry.scoreDimension === dimension)?.score
+  const attribution: DimensionAttribution[] = composition.composite
+    ? [
+        attributeReliabilityWindow({
+          endpoints: pass.reliabilityEndpoints,
+          referenceRunSessions: input.artifact.referenceRuns.reliability,
+          observedScore: scoreOf("reliability") ?? 100,
+          ...(input.seed !== undefined ? { seed: input.seed } : {}),
+        }),
+        attributeCostWindow({
+          fold: pass.fold,
+          artifact: input.costArtifact,
+          observedScore: scoreOf("cost") ?? 100,
+          residualSignalPenalty: signalEffects.costPenalty,
+          ...(input.seed !== undefined ? { seed: input.seed } : {}),
+        }),
+        attributeSpeedWindow({
+          fold: pass.fold,
+          observedNs: composition.speed.observedNs,
+          observedScore: scoreOf("speed") ?? 100,
+          residualAvoidableNs: signalEffects.avoidableNs,
+          ...(input.seed !== undefined ? { seed: input.seed } : {}),
+        }),
+      ]
+    : []
+
   yield* Effect.annotateCurrentSpan("agentScore.stepDays", selection.stepDays)
   yield* Effect.annotateCurrentSpan("agentScore.unmeasured", composition.unmeasuredDimensions.join(",") || "none")
 
@@ -281,6 +317,7 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
       unmeasuredSignalEffects: signalEffects.gaps.length,
     },
     native: { cost: composition.cost, speed: composition.speed },
+    attribution,
   }
   return result
 })

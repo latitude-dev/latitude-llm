@@ -76,6 +76,7 @@ const session = ({
       estimatedAvoidableNs: 0,
       measuredAvoidableMicrocents: 0,
       estimatedAvoidableMicrocents: 0,
+      avoidableNsByCause: { "latency:ttft": avoidableNs },
     },
   }) as NormalizedSessionAssessmentInput
 

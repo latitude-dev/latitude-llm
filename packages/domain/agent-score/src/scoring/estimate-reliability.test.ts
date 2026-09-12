@@ -21,16 +21,19 @@ const endpoints = ({
     sessionId: `ok-${index}`,
     terminalFailure: false,
     readable: true,
+    causes: [],
   })),
   ...Array.from({ length: failures }, (_, index) => ({
     sessionId: `bad-${index}`,
     terminalFailure: true,
     readable: true,
+    causes: ["providerError"],
   })),
   ...Array.from({ length: unreadable }, (_, index) => ({
     sessionId: `dark-${index}`,
     terminalFailure: false,
     readable: false,
+    causes: [],
     unreadableReason: "unreadableTelemetry" as const,
   })),
 ]
@@ -119,7 +122,13 @@ describe("estimateProjectReliability", () => {
     const result = estimate({
       sessions: [
         ...endpoints({ successes: 10, failures: 0 }),
-        { sessionId: "none", terminalFailure: false, readable: false, unreadableReason: "noApplicableReader" },
+        {
+          sessionId: "none",
+          terminalFailure: false,
+          readable: false,
+          causes: [],
+          unreadableReason: "noApplicableReader" as const,
+        },
       ],
       eligibleSessionCount: 11,
     })

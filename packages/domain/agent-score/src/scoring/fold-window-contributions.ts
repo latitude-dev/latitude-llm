@@ -61,6 +61,17 @@ export interface WindowFold {
    * pooled ratio over every applicable reading in it.
    */
   readonly familyCoverage: Readonly<Record<CostFamily, FamilyReadingCoverage>>
+  /**
+   * Penalized units per Cost metric and avoidable nanoseconds per Speed claim, pooled over the
+   * window.
+   *
+   * Window totals rather than a per-session breakdown: attribution asks what a cause cost the
+   * project, not what it cost each session, and keeping the breakdown resident would undo the point
+   * of folding. Reliability is absent because its causes do not add up; overlapping terminal
+   * findings need the session-level sets that `selectReliabilityEndpoint` already returns.
+   */
+  readonly costCauseUnits: ReadonlyMap<string, { readonly family: CostFamily; readonly penalizedUnits: number }>
+  readonly speedCauseNs: ReadonlyMap<string, number>
 }
 
 const emptyFamilyCoverage = (): Record<CostFamily, FamilyReadingCoverage> =>
@@ -74,6 +85,8 @@ export const EMPTY_WINDOW_FOLD: WindowFold = {
   foldedSessionCount: 0,
   withheldSessionCount: 0,
   familyCoverage: emptyFamilyCoverage(),
+  costCauseUnits: new Map(),
+  speedCauseNs: new Map(),
 }
 
 /**
@@ -97,6 +110,8 @@ export const foldWindowBatch = ({
   readonly catalog: CostMetricCatalog
 }): WindowFold => {
   const added: SessionWindowContribution[] = []
+  const costCauseUnits = new Map(fold.costCauseUnits)
+  const speedCauseNs = new Map(fold.speedCauseNs)
   const familyCoverage = emptyFamilyCoverage()
   for (const family of COST_FAMILIES) {
     familyCoverage[family] = { ...fold.familyCoverage[family] }
@@ -126,6 +141,22 @@ export const foldWindowBatch = ({
       withheld += 1
       continue
     }
+    const familyOf = new Map((session.costEvidence?.readings ?? []).map((reading) => [reading.metricId, reading]))
+    for (const [metricId, penalty] of aggregate.penaltiesByMetric) {
+      const reading = familyOf.get(metricId)
+      if (!reading) continue
+      const eligibleUnits = denominators[reading.family]
+      const existing = costCauseUnits.get(metricId)
+      costCauseUnits.set(metricId, {
+        family: reading.family,
+        penalizedUnits: (existing?.penalizedUnits ?? 0) + penalty * eligibleUnits,
+      })
+    }
+    if (session.costEvidence?.criticalPathComplete) {
+      for (const [cause, avoidableNs] of Object.entries(session.costEvidence.avoidableNsByCause)) {
+        speedCauseNs.set(cause, (speedCauseNs.get(cause) ?? 0) + avoidableNs)
+      }
+    }
     added.push(foldSessionContribution({ session, denominators, artifact, catalog }))
   }
 
@@ -134,5 +165,7 @@ export const foldWindowBatch = ({
     foldedSessionCount: fold.foldedSessionCount + added.length,
     withheldSessionCount: fold.withheldSessionCount + withheld,
     familyCoverage,
+    costCauseUnits,
+    speedCauseNs,
   }
 }
