@@ -1,5 +1,5 @@
 import type { FlaggerScreeningDecision } from "@domain/flaggers"
-import type { ScoreSourceType } from "@domain/scores"
+import type { SafetyFindingKind, ScoreSourceType } from "@domain/scores"
 import type { ScoreEvidenceContract, SessionId, SignalOrigin } from "@domain/shared"
 import type { CostFamilyDenominators } from "../scoring/aggregate-session-cost.ts"
 import type { CostMetricReading } from "./cost-metric-reading.ts"
@@ -72,6 +72,7 @@ export type AssessmentFinding = AssessmentFindingReference &
         readonly observedNs: number
       }
     | { readonly kind: "taskOutcome"; readonly verdict: "success" | "failure" }
+    | { readonly kind: "safetyFinding"; readonly findingKind: SafetyFindingKind }
     | {
         readonly kind: "classifiedJudgment"
         readonly roles: readonly ScoreEvidenceContract[]

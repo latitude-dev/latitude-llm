@@ -1,11 +1,15 @@
 import { OutboxEventWriter } from "@domain/events"
-import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
+import { type SafetyFindingKind, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import { ChSqlClient, OrganizationId, ProjectId, SqlClient, TraceId } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { upsertFlaggerAnnotationScore, upsertFlaggerVerdictScore } from "./upsert-flagger-annotation-score.ts"
+import {
+  upsertFlaggerAnnotationScore,
+  upsertFlaggerVerdictScore,
+  upsertSafetyFindingScore,
+} from "./upsert-flagger-annotation-score.ts"
 
 const ORG_ID = "a".repeat(24)
 const PROJECT_ID = ProjectId("b".repeat(24))
@@ -74,7 +78,28 @@ const makeHarness = () => {
       }).pipe(Effect.provide(layer)),
     )
 
-  return { upsert, upsertVerdict, scores }
+  const upsertSafetyFinding = (input: {
+    readonly safetyFindingKind: SafetyFindingKind
+    readonly feedback: string
+    readonly flaggerSlug?: string
+    readonly contentHash?: string
+    readonly analysisHash?: string
+  }) =>
+    Effect.runPromise(
+      upsertSafetyFindingScore({
+        projectId: PROJECT_ID,
+        traceId: TRACE_ID,
+        sessionId: SESSION_ID,
+        simulationId: null,
+        flaggerSlug: input.flaggerSlug ?? "jailbreaking",
+        safetyFindingKind: input.safetyFindingKind,
+        feedback: input.feedback,
+        contentHash: input.contentHash ?? ANCHOR_A,
+        analysisHash: input.analysisHash,
+      }).pipe(Effect.provide(layer)),
+    )
+
+  return { upsert, upsertVerdict, upsertSafetyFinding, scores }
 }
 
 describe("upsertFlaggerAnnotationScore anchor dedup", () => {
@@ -256,6 +281,105 @@ describe("upsertFlaggerVerdictScore", () => {
     expect([...scores.values()][0]?.metadata).toMatchObject({
       analysisHash: GENERATION_A,
       flaggerSlug: "task-failure",
+    })
+  })
+})
+
+describe("upsertSafetyFindingScore", () => {
+  const GENERATION_A = "a".repeat(64)
+  const GENERATION_B = "b".repeat(64)
+
+  it("fails the kinds their detector already annotated and passes the measurements", async () => {
+    const { upsertSafetyFinding, scores } = makeHarness()
+
+    await upsertSafetyFinding({ safetyFindingKind: "injectionCompliance", feedback: "The agent printed it." })
+    await upsertSafetyFinding({ safetyFindingKind: "injectionAttempt", feedback: "An override was attempted." })
+    await upsertSafetyFinding({ safetyFindingKind: "injectionDefense", feedback: "The agent refused." })
+    await upsertSafetyFinding({
+      safetyFindingKind: "piiDisclosure",
+      feedback: "Another customer's email.",
+      flaggerSlug: "pii-leakage",
+    })
+    await upsertSafetyFinding({
+      safetyFindingKind: "piiExposure",
+      feedback: "The user gave their own email.",
+      flaggerSlug: "pii-leakage",
+    })
+
+    const byKind = new Map(
+      [...scores.values()].map((score) => [(score.metadata as { safetyFindingKind: string }).safetyFindingKind, score]),
+    )
+    expect(byKind.get("injectionCompliance")).toMatchObject({ passed: false, value: 0, sourceId: "SYSTEM" })
+    expect(byKind.get("injectionAttempt")).toMatchObject({ passed: false, value: 0 })
+    expect(byKind.get("piiDisclosure")).toMatchObject({ passed: false, value: 0 })
+    expect(byKind.get("injectionDefense")).toMatchObject({ passed: true, value: 1 })
+    expect(byKind.get("piiExposure")).toMatchObject({ passed: true, value: 1 })
+  })
+
+  it("dedups one finding per kind however often the session is re-screened", async () => {
+    const { upsertSafetyFinding, scores } = makeHarness()
+
+    const first = await upsertSafetyFinding({
+      safetyFindingKind: "injectionAttempt",
+      feedback: "An override was attempted.",
+      analysisHash: GENERATION_A,
+    })
+    const rerun = await upsertSafetyFinding({
+      safetyFindingKind: "injectionAttempt",
+      feedback: "The same override, re-worded.",
+      analysisHash: GENERATION_B,
+    })
+
+    expect(rerun).toEqual({ status: "existing", scoreId: first.scoreId })
+    expect(scores.size).toBe(1)
+  })
+
+  it("records an escalation from an attempt to a confirmed compliance", async () => {
+    const { upsertSafetyFinding, scores } = makeHarness()
+
+    await upsertSafetyFinding({
+      safetyFindingKind: "injectionAttempt",
+      feedback: "An override was attempted.",
+      analysisHash: GENERATION_A,
+    })
+    const escalated = await upsertSafetyFinding({
+      safetyFindingKind: "injectionCompliance",
+      feedback: "A later turn made the agent comply.",
+      analysisHash: GENERATION_B,
+    })
+
+    expect(escalated.status).toBe("written")
+    expect(scores.size).toBe(2)
+  })
+
+  it("scopes the kind dedup per flagger slug", async () => {
+    const { upsertSafetyFinding, scores } = makeHarness()
+
+    await upsertSafetyFinding({ safetyFindingKind: "injectionAttempt", feedback: "Attempted." })
+    const other = await upsertSafetyFinding({
+      safetyFindingKind: "injectionAttempt",
+      feedback: "Attempted.",
+      flaggerSlug: "pii-leakage",
+    })
+
+    expect(other.status).toBe("written")
+    expect(scores.size).toBe(2)
+  })
+
+  it("stores the finding kind and keeps the generation as provenance", async () => {
+    const { upsertSafetyFinding, scores } = makeHarness()
+
+    await upsertSafetyFinding({
+      safetyFindingKind: "piiDisclosure",
+      feedback: "Another customer's email.",
+      flaggerSlug: "pii-leakage",
+      analysisHash: GENERATION_A,
+    })
+
+    expect([...scores.values()][0]?.metadata).toMatchObject({
+      safetyFindingKind: "piiDisclosure",
+      flaggerSlug: "pii-leakage",
+      analysisHash: GENERATION_A,
     })
   })
 })

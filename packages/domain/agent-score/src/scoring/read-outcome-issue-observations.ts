@@ -1,6 +1,6 @@
 import { isSignalEligibleForScoring, type SignalWithLifecycle } from "@domain/signals"
 import type { SessionAssessmentItem } from "../entities/session-assessment.ts"
-import type { OutcomeIssueObservation } from "./build-outcome-issues.ts"
+import type { IssueObservation } from "./build-issue-rows.ts"
 
 /** The verdict is Outcome's endpoint, so it explains nothing; it is the thing the issues explain. */
 const TASK_OUTCOME_METRIC_ID = "sessions.task_success"
@@ -26,13 +26,13 @@ export const readOutcomeIssueObservations = (input: {
   /** Probability the sampled readers behind these items ran, by flagger-derived metric id. */
   readonly observationProbability?: number
   readonly verdictScoreIds?: readonly string[]
-}): readonly OutcomeIssueObservation[] => {
+}): readonly IssueObservation[] => {
   const eligibleSignalIds = new Set(
     input.signals.filter(isSignalEligibleForScoring).map((signal) => signal.id as string),
   )
   const verdictScoreIds = new Set(input.verdictScoreIds ?? [])
 
-  return input.items.filter(explainsOutcomeFailure).flatMap((item): OutcomeIssueObservation[] => {
+  return input.items.filter(explainsOutcomeFailure).flatMap((item): IssueObservation[] => {
     const signalId = item.signalIds.find((id) => eligibleSignalIds.has(id))
     if (item.signalIds.length > 0 && signalId === undefined) return []
 
@@ -44,7 +44,7 @@ export const readOutcomeIssueObservations = (input: {
         ...(input.observationProbability !== undefined ? { observationProbability: input.observationProbability } : {}),
         // A signal built from the verdict score rode the same selection draw,
         // so its joint probability with the outcome is that draw, not a product.
-        ...(item.scoreIds.some((scoreId) => verdictScoreIds.has(scoreId)) ? { sharesOutcomeSelection: true } : {}),
+        ...(item.scoreIds.some((scoreId) => verdictScoreIds.has(scoreId)) ? { sharesEndpointSelection: true } : {}),
       },
     ]
   })

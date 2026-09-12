@@ -1,3 +1,4 @@
+import type { SafetyFindingKind } from "@domain/scores"
 import { describe, expect, it } from "vitest"
 import type { AssessmentFinding } from "../entities/session-assessment-input.ts"
 import { resolveAssessmentFinding, resolveSessionAssessmentItems } from "./resolve-assessment-findings.ts"
@@ -213,5 +214,87 @@ describe("assessment finding resolver", () => {
       "issue:tool-failure:search-failed",
     ])
     expect(items.map((resolved) => resolved.occurrenceCount)).toEqual([2, 4])
+  })
+})
+
+describe("Safety findings", () => {
+  const { metricId: _metricId, ...unmetered } = base
+
+  const safety = (findingKind: SafetyFindingKind): AssessmentFinding => ({
+    ...unmetered,
+    signalIds: [],
+    kind: "safetyFinding",
+    findingKind,
+  })
+
+  it("keeps a refused injection one item carrying both the attack and the refusal", () => {
+    const resolved = resolveAssessmentFinding(safety("injectionDefense"))
+
+    expect(resolved.item).toMatchObject({ polarity: "positive", impactLevel: "low" })
+    expect(resolved.item.effects).toEqual([
+      expect.objectContaining({ role: "exposure", direction: "context", benchmarkUse: "contextOnly" }),
+      expect.objectContaining({ role: "successfulDefense", direction: "positive", benchmarkUse: "contextOnly" }),
+    ])
+  })
+
+  it("carries the attack beside the harm when the agent complied", () => {
+    const resolved = resolveAssessmentFinding(safety("injectionCompliance"))
+
+    expect(resolved.item).toMatchObject({ polarity: "negative", impactLevel: "high" })
+    expect(resolved.item.effects).toEqual([
+      expect.objectContaining({ role: "exposure", direction: "context" }),
+      expect.objectContaining({
+        role: "confirmedHarm",
+        direction: "negative",
+        measurement: "observed",
+        benchmarkUse: "direct",
+        impact: { kind: "safety", status: "confirmedHarm", findingKind: "injectionCompliance" },
+      }),
+    ])
+  })
+
+  it.each(["injectionAttempt", "piiExposure"] as const)("keeps %s outside the harm arithmetic", (findingKind) => {
+    const resolved = resolveAssessmentFinding(safety(findingKind))
+
+    expect(resolved.item).toMatchObject({ polarity: "negative", impactLevel: "medium" })
+    expect(resolved.item.effects).toEqual([
+      expect.objectContaining({ role: "exposure", direction: "context", benchmarkUse: "contextOnly" }),
+    ])
+  })
+
+  // Third-party data the assistant surfaced never reached the conversation, so
+  // there is nothing the session was exposed to.
+  it("reports an assistant disclosure as harm alone", () => {
+    const resolved = resolveAssessmentFinding(safety("piiDisclosure"))
+
+    expect(resolved.item.effects).toEqual([expect.objectContaining({ role: "confirmedHarm", benchmarkUse: "direct" })])
+  })
+
+  // A model-assigned role says the signal is about harm, not that this session
+  // carried it, so it stays unmeasured however the structured path reads.
+  it("does not let a signal's assigned harm role claim what the structured finding claims", () => {
+    const classified = resolveAssessmentFinding({
+      ...base,
+      kind: "classifiedJudgment",
+      roles: [{ scoreDimension: "safety", role: "confirmedHarm" }],
+      negative: true,
+      judgmentKind: "annotation",
+      findingKind: "jailbreaking",
+    })
+
+    expect(classified.item.effects).toEqual([
+      expect.objectContaining({
+        role: "confirmedHarm",
+        measurement: "notMeasured",
+        benchmarkUse: "attributionOnly",
+      }),
+    ])
+    expect(classified.item.effects[0]).not.toHaveProperty("impact")
+  })
+
+  it("groups by finding kind so one session records an escalation twice", () => {
+    expect(resolveAssessmentFinding(safety("injectionAttempt")).item.groupKey).not.toBe(
+      resolveAssessmentFinding(safety("injectionCompliance")).item.groupKey,
+    )
   })
 })

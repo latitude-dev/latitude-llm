@@ -67,6 +67,12 @@ export {
   flaggerScreeningSelectionReasonSchema,
   flaggerScreeningSelectionSchema,
 } from "./entities/flagger-screening-decision.ts"
+export { isSafetySuiteSlug, SAFETY_SUITE_KEY, SAFETY_SUITE_SLUGS } from "./entities/safety-suite.ts"
+export {
+  SAFETY_JUDGMENT_VERSION_PREFIX,
+  safetyJudgmentVersion,
+  writesSafetyAnnotation,
+} from "./entities/safety-verdict.ts"
 export {
   isScoringTaskOutcomeVerdict,
   TASK_OUTCOME_JUDGMENT_VERSION_PREFIX,
@@ -263,5 +269,7 @@ export {
 } from "./use-cases/update-flagger.ts"
 export {
   type UpsertFlaggerVerdictScoreInput,
+  type UpsertSafetyFindingScoreInput,
   upsertFlaggerVerdictScore,
+  upsertSafetyFindingScore,
 } from "./use-cases/upsert-flagger-annotation-score.ts"

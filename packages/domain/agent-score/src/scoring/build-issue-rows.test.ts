@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest"
-import { buildOutcomeIssues, type OutcomeIssueSession } from "./build-outcome-issues.ts"
+import { buildIssueRows, type IssueSession } from "./build-issue-rows.ts"
 
 const session = (
   sessionId: string,
-  failed: boolean,
-  observations: OutcomeIssueSession["observations"],
-  outcomeInclusionProbability = 0.1,
-): OutcomeIssueSession => ({ sessionId, failed, outcomeInclusionProbability, observations })
+  adverse: boolean,
+  observations: IssueSession["observations"],
+  endpointInclusionProbability = 0.1,
+): IssueSession => ({ sessionId, adverse, endpointInclusionProbability, observations })
 
 const moment = { issueKey: "moment:correction", label: "Users corrected or abandoned", observationProbability: 1 }
 const noOutput = { issueKey: "issue:no-output:blank", label: "No usable final output", observationProbability: 1 }
 
-describe("buildOutcomeIssues", () => {
+describe("buildIssueRows", () => {
   it("corrects reach and failed reach for the probability each was observed at", () => {
-    const rows = buildOutcomeIssues({
+    const rows = buildIssueRows({
       sessions: [session("a", true, [moment]), session("b", true, [moment]), session("c", false, [moment])],
     })
 
@@ -22,9 +22,9 @@ describe("buildOutcomeIssues", () => {
     expect(rows[0]).toMatchObject({
       label: "Users corrected or abandoned",
       estimatedReach: 3,
-      estimatedFailedReach: 20,
+      estimatedAdverseReach: 20,
       examinedSessions: 3,
-      examinedFailedSessions: 2,
+      examinedAdverseSessions: 2,
       ranked: true,
     })
   })
@@ -32,7 +32,7 @@ describe("buildOutcomeIssues", () => {
   // A split cluster or several matching moments on one session would otherwise
   // make an issue look twice as widespread as it is.
   it("counts a session once per issue however many detectors saw it", () => {
-    const rows = buildOutcomeIssues({
+    const rows = buildIssueRows({
       sessions: [session("a", true, [moment, { ...moment, label: "A second detector" }, noOutput])],
     })
 
@@ -43,11 +43,11 @@ describe("buildOutcomeIssues", () => {
 
   it("weights a sampled observation by its own probability", () => {
     const sampled = { issueKey: "signal:laziness", label: "Shallow answers", observationProbability: 0.2 }
-    const rows = buildOutcomeIssues({ sessions: [session("a", true, [sampled])] })
+    const rows = buildIssueRows({ sessions: [session("a", true, [sampled])] })
 
     expect(rows[0]!.estimatedReach).toBeCloseTo(5, 10)
     // Independent draws: seeing both the issue and the verdict is 0.2 * 0.1.
-    expect(rows[0]!.estimatedFailedReach).toBeCloseTo(50, 10)
+    expect(rows[0]!.estimatedAdverseReach).toBeCloseTo(50, 10)
   })
 
   // The signal was discovered from the verdict score, so the draw happened once.
@@ -56,18 +56,18 @@ describe("buildOutcomeIssues", () => {
       issueKey: "signal:refund-loop",
       label: "Refund-flow loop signal",
       observationProbability: 0.1,
-      sharesOutcomeSelection: true,
+      sharesEndpointSelection: true,
     }
-    const rows = buildOutcomeIssues({ sessions: [session("a", true, [shared])] })
+    const rows = buildIssueRows({ sessions: [session("a", true, [shared])] })
 
-    expect(rows[0]!.estimatedFailedReach).toBeCloseTo(10, 10)
+    expect(rows[0]!.estimatedAdverseReach).toBeCloseTo(10, 10)
   })
 
   it("ranks by corrected failed reach, not by raw overlap", () => {
     const common = { issueKey: "common", label: "Seen often, rarely fatal", observationProbability: 1 }
     const rare = { issueKey: "rare", label: "Seen rarely, always fatal", observationProbability: 0.05 }
 
-    const rows = buildOutcomeIssues({
+    const rows = buildIssueRows({
       sessions: [
         session("a", false, [common]),
         session("b", false, [common]),
@@ -85,16 +85,16 @@ describe("buildOutcomeIssues", () => {
     const unknown = { issueKey: "unknown", label: "Reader with no recorded selection" }
 
     it("leaves the row unranked instead of guessing", () => {
-      const rows = buildOutcomeIssues({ sessions: [session("a", true, [unknown])] })
+      const rows = buildIssueRows({ sessions: [session("a", true, [unknown])] })
 
-      expect(rows[0]).toMatchObject({ ranked: false, examinedFailedSessions: 1 })
-      expect(rows[0]!.estimatedFailedReach).toBeUndefined()
+      expect(rows[0]).toMatchObject({ ranked: false, examinedAdverseSessions: 1 })
+      expect(rows[0]!.estimatedAdverseReach).toBeUndefined()
     })
 
     // An uncorrected raw count is not a reach estimate: a reader sampling at
     // 10% would report a tenth of the sessions it stands for.
     it("reports no reach estimate either, rather than an uncorrected count", () => {
-      const rows = buildOutcomeIssues({
+      const rows = buildIssueRows({
         sessions: [session("a", false, [unknown]), session("b", false, [unknown])],
       })
 
@@ -103,7 +103,7 @@ describe("buildOutcomeIssues", () => {
     })
 
     it("drops the estimate for the whole issue when only some sessions lack a probability", () => {
-      const rows = buildOutcomeIssues({
+      const rows = buildIssueRows({
         sessions: [session("a", false, [{ ...unknown, observationProbability: 1 }]), session("b", false, [unknown])],
       })
 
@@ -113,7 +113,7 @@ describe("buildOutcomeIssues", () => {
 
     it("orders unranked rows by the raw count they do have", () => {
       const other = { issueKey: "other-unknown", label: "Another unrecorded reader" }
-      const rows = buildOutcomeIssues({
+      const rows = buildIssueRows({
         sessions: [session("a", true, [unknown]), session("b", true, [unknown]), session("c", true, [other])],
       })
 
@@ -121,7 +121,7 @@ describe("buildOutcomeIssues", () => {
     })
 
     it("still reports the issue, below the rows that earned a position", () => {
-      const rows = buildOutcomeIssues({
+      const rows = buildIssueRows({
         sessions: [session("a", true, [unknown]), session("b", true, [moment])],
       })
 
@@ -130,7 +130,7 @@ describe("buildOutcomeIssues", () => {
   })
 
   it("bounds the list so the tail cannot crowd out the explanation", () => {
-    const rows = buildOutcomeIssues({
+    const rows = buildIssueRows({
       sessions: Array.from({ length: 50 }, (_, index) =>
         session(`session-${index}`, true, [
           { issueKey: `issue-${index}`, label: `Issue ${index}`, observationProbability: 1 },
@@ -143,6 +143,6 @@ describe("buildOutcomeIssues", () => {
   })
 
   it("returns nothing when no session carried an issue", () => {
-    expect(buildOutcomeIssues({ sessions: [session("a", true, [])] })).toEqual([])
+    expect(buildIssueRows({ sessions: [session("a", true, [])] })).toEqual([])
   })
 })

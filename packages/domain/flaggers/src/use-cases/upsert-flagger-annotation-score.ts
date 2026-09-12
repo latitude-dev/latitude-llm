@@ -1,6 +1,7 @@
 import {
   type FlaggerFindingKey,
   type FlaggerPath,
+  type SafetyFindingKind,
   ScoreRepository,
   type ScoringArtifactVersion,
   writeScoreUseCase,
@@ -8,6 +9,7 @@ import {
 import type { ProjectId, ScoreId, SessionId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import { FLAGGER_DRAFT_DEFAULTS } from "../constants.ts"
+import { writesSafetyAnnotation } from "../entities/safety-verdict.ts"
 
 interface FlaggerScoreInput {
   readonly id?: ScoreId
@@ -26,6 +28,7 @@ interface FlaggerScoreInput {
   readonly analysisHash?: string | undefined
   /** Absent for deterministic detections and cached generations — neither leaves a trace to grade. */
   readonly flaggerTraceId?: string | undefined
+  readonly safetyFindingKind?: SafetyFindingKind | undefined
 }
 
 const flaggerScoreMetadata = (input: FlaggerScoreInput) => ({
@@ -38,6 +41,7 @@ const flaggerScoreMetadata = (input: FlaggerScoreInput) => ({
   ...(input.flaggerPath !== undefined ? { flaggerPath: input.flaggerPath } : {}),
   ...(input.scoringArtifactVersion !== undefined ? { scoringArtifactVersion: input.scoringArtifactVersion } : {}),
   ...(input.analysisHash !== undefined ? { analysisHash: input.analysisHash } : {}),
+  ...(input.safetyFindingKind !== undefined ? { safetyFindingKind: input.safetyFindingKind } : {}),
 })
 
 type FlaggerScoreResult =
@@ -58,6 +62,7 @@ export const findFlaggerAnnotationByAnchor = (input: {
     const published = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
       projectId: input.projectId,
       sessionId: input.sessionId as SessionId,
+      flaggerSlug: input.flaggerSlug,
     })
 
     return (
@@ -142,6 +147,7 @@ const findFlaggerVerdictByGeneration = (input: {
     const published = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
       projectId: input.projectId,
       sessionId: input.sessionId as SessionId,
+      flaggerSlug: input.flaggerSlug,
     })
 
     return (
@@ -177,6 +183,89 @@ export const upsertFlaggerVerdictScore = (input: UpsertFlaggerVerdictScoreInput)
     }
 
     const passed = input.verdict === "success"
+    const written = yield* writeScoreUseCase({
+      projectId: input.projectId,
+      sourceType: "annotation",
+      sourceId: "SYSTEM",
+      sessionId: input.sessionId,
+      traceId: input.traceId,
+      spanId: null,
+      simulationId: input.simulationId,
+      signalId: null,
+      annotatorId: null,
+      value: passed ? 1 : 0,
+      passed,
+      feedback: input.feedback,
+      metadata: flaggerScoreMetadata(input),
+      error: null,
+      draftedAt: null,
+    })
+
+    return { status: "written", scoreId: written.id } satisfies FlaggerScoreResult
+  })
+
+/**
+ * One Safety score per project, session, flagger, and finding kind.
+ *
+ * Neither existing rule fits. The anchor rule survives re-screens, so a session
+ * whose finding escalated from an attempt to a confirmed compliance would keep
+ * only the attempt. The per-generation rule would write the same jailbreak
+ * attempt again every time the session is re-analysed, duplicating the card and
+ * the signal occurrence. The finding kind is the fact, it is monotone within a
+ * session, and an escalation is genuinely new information, so it is the
+ * identity. `analysisHash` stays on the score as provenance rather than as the
+ * key.
+ */
+const findSafetyFindingByKind = (input: {
+  readonly projectId: ProjectId
+  readonly sessionId: string
+  readonly flaggerSlug: string
+  readonly safetyFindingKind: SafetyFindingKind
+}) =>
+  Effect.gen(function* () {
+    const scoreRepository = yield* ScoreRepository
+    const published = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
+      projectId: input.projectId,
+      sessionId: input.sessionId as SessionId,
+      flaggerSlug: input.flaggerSlug,
+    })
+
+    return (
+      published.find((score) => {
+        const metadata = score.metadata as { flaggerSlug?: string; safetyFindingKind?: string } | null
+        return metadata?.flaggerSlug === input.flaggerSlug && metadata?.safetyFindingKind === input.safetyFindingKind
+      }) ?? null
+    )
+  })
+
+export interface UpsertSafetyFindingScoreInput extends FlaggerScoreInput {
+  readonly sessionId: string
+  readonly safetyFindingKind: SafetyFindingKind
+}
+
+/**
+ * Writes a Safety detector's structured finding.
+ *
+ * The finding kind decides the polarity: exposure the detector already
+ * annotated and confirmed harm fail, while a successful defense and
+ * user-authored personal data pass. A passed score is already rejected by
+ * signal discovery and excluded from the annotation list, so neither opens a
+ * signal nor shows up as a card nobody wrote.
+ */
+export const upsertSafetyFindingScore = (input: UpsertSafetyFindingScoreInput) =>
+  Effect.gen(function* () {
+    const existing = yield* findSafetyFindingByKind({
+      projectId: input.projectId,
+      sessionId: input.sessionId,
+      flaggerSlug: input.flaggerSlug,
+      safetyFindingKind: input.safetyFindingKind,
+    })
+
+    if (existing !== null) {
+      return { status: "existing", scoreId: existing.id } satisfies FlaggerScoreResult
+    }
+
+    const passed = !writesSafetyAnnotation(input.safetyFindingKind)
     const written = yield* writeScoreUseCase({
       projectId: input.projectId,
       sourceType: "annotation",

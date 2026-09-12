@@ -91,7 +91,7 @@ export namespace SessionAssessmentEvidenceImpact {
         kind: "safety";
         /** Observed safety result. */
         status: SessionAssessmentEvidenceImpactSafety.Status;
-        /** Machine-readable safety finding category. */
+        /** Machine-readable safety finding category. A structured detector result is one of injectionAttempt, injectionDefense, injectionCompliance, piiExposure, or piiDisclosure; an item derived from a signal's assigned role instead names that signal's detector. */
         findingKind: string;
     }
 

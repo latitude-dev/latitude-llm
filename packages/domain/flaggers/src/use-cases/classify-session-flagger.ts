@@ -1,3 +1,4 @@
+import type { SafetyFindingKind } from "@domain/scores"
 import { NotFoundError, OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { SessionRepository, SpanRepository } from "@domain/spans"
 import { Effect } from "effect"
@@ -40,6 +41,8 @@ export interface JudgedSessionAnchors {
   readonly simulationId: string | null
   readonly scoringArtifactVersion: string
   readonly analysisHash?: string | undefined
+  /** Present for Safety detectors; it decides both the score's polarity and its identity. */
+  readonly safetyFindingKind?: SafetyFindingKind | undefined
 }
 
 /**
@@ -148,14 +151,15 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     hints: input.hints,
   })
 
-  // A verdict flagger's `success` needs the same anchors as a match: it
-  // persists a passed score. `indeterminate` and `notApplicable` persist
-  // nothing and stay coverage decisions.
+  // A verdict flagger's `success` and a Safety detector's non-negative finding
+  // need the same anchors as a match: both persist a passed score.
+  // `indeterminate` and `notApplicable` persist nothing and stay coverage
+  // decisions.
   if (result.verdict === "indeterminate" || result.verdict === "notApplicable") {
     return { matched: false, outcome: result.verdict } satisfies ClassifySessionFlaggerResult
   }
 
-  if (!result.matched && result.verdict === undefined) {
+  if (!result.matched && result.verdict === undefined && result.safetyFindingKind === undefined) {
     return {
       matched: false,
       outcome: result.classificationOutcome ?? "unmatched",
@@ -176,9 +180,12 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     // the one classification artifact version.
     scoringArtifactVersion: result.judgmentVersion ?? FLAGGER_SCORING_ARTIFACT_VERSION,
     ...(input.analysisHash !== undefined ? { analysisHash: input.analysisHash } : {}),
+    ...(result.safetyFindingKind !== undefined ? { safetyFindingKind: result.safetyFindingKind } : {}),
   } satisfies JudgedSessionAnchors
 
-  if (result.verdict === "success") {
+  // A defense and user-authored exposure are measurements: examined, persisted,
+  // and not an annotation anyone has to act on.
+  if (result.verdict === "success" || (result.safetyFindingKind !== undefined && !result.matched)) {
     return { matched: false, outcome: "success", ...anchors } satisfies ClassifySessionFlaggerResult
   }
 

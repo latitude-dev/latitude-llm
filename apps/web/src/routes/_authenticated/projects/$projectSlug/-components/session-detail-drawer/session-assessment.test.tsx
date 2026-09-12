@@ -328,4 +328,19 @@ describe("SessionAssessmentContent", () => {
     expect(screen.queryByText("Positive evidence")).toBeNull()
     expect(screen.queryByText("No harm observed")).toBeNull()
   })
+
+  it("shows hostile exposure under needs attention beside confirmed harm", () => {
+    const exposed = {
+      ...assessment,
+      dimensions: assessment.dimensions.map((summary) => {
+        if (summary.scoreDimension !== "safety") return summary
+        return { ...summary, exposureCount: 2, confirmedHarmCount: 1, successfulDefenseCount: 0 }
+      }),
+    }
+
+    render(<SessionAssessmentContent assessment={exposed} />)
+
+    expect(screen.getByText("Confirmed harm")).toBeTruthy()
+    expect(screen.getByText("Hostile exposure")).toBeTruthy()
+  })
 })

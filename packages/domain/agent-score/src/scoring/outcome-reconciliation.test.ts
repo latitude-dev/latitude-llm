@@ -4,7 +4,7 @@ import { OrganizationId, ProjectId, ScoreId, SessionId, TraceId } from "@domain/
 import { describe, expect, it } from "vitest"
 import type { AssessmentFinding, NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
 import { resolveSessionAssessment } from "../resolver/resolve-session-assessment.ts"
-import { buildOutcomeIssues, type OutcomeIssueSession } from "./build-outcome-issues.ts"
+import { buildIssueRows, type IssueSession } from "./build-issue-rows.ts"
 import { estimateProjectOutcome, type OutcomeSessionVerdict } from "./estimate-outcome.ts"
 import { readOutcomeIssueObservations } from "./read-outcome-issue-observations.ts"
 import { selectDeterministicOutcomeFailures } from "./select-outcome-endpoints.ts"
@@ -176,21 +176,21 @@ describe("one judged session across every Outcome layer", () => {
       observationProbability: 1,
     })
 
-    const issueSession: OutcomeIssueSession = {
+    const issueSession: IssueSession = {
       sessionId: SESSION_ID,
-      failed: true,
-      outcomeInclusionProbability: INCLUSION_PROBABILITY,
+      adverse: true,
+      endpointInclusionProbability: INCLUSION_PROBABILITY,
       observations,
     }
-    const rows = buildOutcomeIssues({ sessions: [issueSession] })
+    const rows = buildIssueRows({ sessions: [issueSession] })
 
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({
       label: "Users corrected or abandoned",
       examinedSessions: 1,
-      examinedFailedSessions: 1,
+      examinedAdverseSessions: 1,
       estimatedReach: 1,
-      estimatedFailedReach: 1 / INCLUSION_PROBABILITY,
+      estimatedAdverseReach: 1 / INCLUSION_PROBABILITY,
       ranked: true,
     })
     expect(rows.some((row) => row.issueKey === verdictItem?.groupKey)).toBe(false)

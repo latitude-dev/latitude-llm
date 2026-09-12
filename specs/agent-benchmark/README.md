@@ -203,14 +203,14 @@ Read them in this order:
 | Session target | 1,000 eligible sessions |
 | Session floor | 200 eligible sessions |
 | Reliability reference run | 20 sessions |
-| Safety reference run | 1,000 sessions |
+| Safety reference run | 100 sessions |
 | Composite weights | Outcome 0.35, Reliability 0.25, Cost 0.15, Speed 0.15, Safety 0.10 |
 | Cost families | spend, context, tools, memory, recovery |
 | Fleet latency reference | frozen provider, model, input-size, and streaming cohorts |
 | Publication gate | all five dimensions pass their traffic, coverage, and confidence floors |
 
 The horizons express product expectations. Reliability asks whether the next 20 sessions can all
-complete. Safety asks whether confirmed harm remains absent over 1,000 sessions. They do not allocate
+complete. Safety asks whether confirmed harm remains absent over 100 sessions. They do not allocate
 influence among causes.
 
 ## Required launch artifacts

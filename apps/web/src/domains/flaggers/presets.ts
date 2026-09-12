@@ -44,6 +44,8 @@ export const FLAGGER_USE_CASE_PRESETS = [
       "output-schema-validation",
       "frustration",
       "low-cache-hit-rate",
+      "jailbreaking",
+      "pii-leakage",
     ],
   },
   {
@@ -59,6 +61,7 @@ export const FLAGGER_USE_CASE_PRESETS = [
       "empty-response",
       "jailbreaking",
       "nsfw",
+      "pii-leakage",
     ],
   },
   {
@@ -75,6 +78,8 @@ export const FLAGGER_USE_CASE_PRESETS = [
       "empty-response",
       "laziness",
       "low-cache-hit-rate",
+      "jailbreaking",
+      "pii-leakage",
     ],
   },
   {
@@ -90,13 +95,23 @@ export const FLAGGER_USE_CASE_PRESETS = [
       "frustration",
       "laziness",
       "low-cache-hit-rate",
+      "jailbreaking",
+      "pii-leakage",
     ],
   },
   {
     id: "structured-extraction-agent",
     label: "Structured extraction",
     description: "Extraction and classification agents that return machine-readable output.",
-    enabledSlugs: ["task-failure", "output-schema-validation", "empty-response", "tool-call-errors", "laziness"],
+    enabledSlugs: [
+      "task-failure",
+      "output-schema-validation",
+      "empty-response",
+      "tool-call-errors",
+      "laziness",
+      "jailbreaking",
+      "pii-leakage",
+    ],
   },
   {
     id: "safety-agent",

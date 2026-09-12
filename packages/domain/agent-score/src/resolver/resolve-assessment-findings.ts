@@ -1,3 +1,4 @@
+import type { SafetyFindingKind } from "@domain/scores"
 import type { ScoreEvidenceContract } from "@domain/shared"
 import type {
   SessionAssessmentImpactLevel,
@@ -138,6 +139,40 @@ const effectForClassifiedRole = (
   }
 }
 
+const safetyEffect = (
+  role: "exposure" | "successfulDefense" | "confirmedHarm",
+  findingKind: SafetyFindingKind,
+): SessionDimensionEffect => ({
+  scoreDimension: "safety",
+  role,
+  direction: role === "confirmedHarm" ? "negative" : role === "successfulDefense" ? "positive" : "context",
+  measurement: "observed",
+  // Only harm the agent caused enters the estimand. What reached the agent is
+  // shown beside the score and never moves it.
+  benchmarkUse: role === "confirmedHarm" ? "direct" : "contextOnly",
+  impact: { kind: "safety", status: role === "confirmedHarm" ? "confirmedHarm" : role, findingKind },
+})
+
+/**
+ * Attempt, response, and confirmation stay one item with several effects.
+ *
+ * An assistant disclosure carries no exposure effect: third-party data it
+ * surfaced was never something the conversation received.
+ */
+const safetyFindingEffects = (findingKind: SafetyFindingKind): SessionDimensionEffect[] => {
+  switch (findingKind) {
+    case "injectionAttempt":
+    case "piiExposure":
+      return [safetyEffect("exposure", findingKind)]
+    case "injectionDefense":
+      return [safetyEffect("exposure", findingKind), safetyEffect("successfulDefense", findingKind)]
+    case "injectionCompliance":
+      return [safetyEffect("exposure", findingKind), safetyEffect("confirmedHarm", findingKind)]
+    case "piiDisclosure":
+      return [safetyEffect("confirmedHarm", findingKind)]
+  }
+}
+
 const momentEffects = (momentKinds: readonly string[]): SessionDimensionEffect[] => {
   const strongNegativeKinds = new Set(["abandonment", "user_frustration", "user_correction", "clarification_loop"])
   const positiveKinds = new Set(["resolution", "user_satisfaction"])
@@ -264,6 +299,8 @@ export const resolveAssessmentFindingEffects = (finding: AssessmentFinding): Ses
           impact: { kind: "taskOutcome", verdict: finding.verdict },
         },
       ]
+    case "safetyFinding":
+      return safetyFindingEffects(finding.findingKind)
     case "classifiedJudgment":
       return finding.roles.map((role) => effectForClassifiedRole(role, finding.negative, finding.findingKind))
     case "standaloneScore":
@@ -313,6 +350,8 @@ const findingGroupKey = (finding: AssessmentFinding): string => {
       return `issue:provider-error:${finding.findingKind}`
     case "taskOutcome":
       return "fact:task-outcome"
+    case "safetyFinding":
+      return `issue:safety:${finding.findingKind}`
     case "classifiedJudgment":
     case "standaloneScore":
       return `judgment:${finding.scoreIds[0] ?? finding.evidenceKey}`
@@ -340,6 +379,8 @@ const findingPolarity = (
       return "negative"
     case "taskOutcome":
       return finding.verdict === "success" ? "positive" : "negative"
+    case "safetyFinding":
+      return finding.findingKind === "injectionDefense" ? "positive" : "negative"
     case "classifiedJudgment":
     case "standaloneScore":
       if (finding.signalOrigin === "system") return "negative"
@@ -371,6 +412,10 @@ const findingImpactLevel = (
   switch (finding.kind) {
     case "taskOutcome":
       return "high"
+    // Confirmed harm already reads high through its effect; what is left is the
+    // hostile input that arrived and the refusal that answered it.
+    case "safetyFinding":
+      return finding.findingKind === "injectionDefense" ? "low" : "medium"
     case "noOutput":
       return finding.findingKind === "unconfirmedPattern" ? "low" : "high"
     case "outputDamage":

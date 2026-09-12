@@ -757,6 +757,48 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(countsByTraceId.has(TraceId("cccccccccccccccccccccccccccccccc"))).toBe(false)
   })
 
+  // The flagger dedup helpers page this lookup at 200 newest-first. Without the
+  // slug filter a busy session's other detectors push the row a helper is
+  // looking for out of that window, and it writes a duplicate.
+  it("finds one flagger's published annotation past a page filled by another's", async () => {
+    const organizationId = "ffffffffffffffffffffbbbb"
+    const traceId = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaac")
+    const projectId = ProjectId("ffffffffffffffffffffbbbb")
+    const sessionId = SessionId("busy-session")
+
+    const write = (flaggerSlug: string, feedback: string) =>
+      Effect.runPromise(
+        writeScoreUseCase({
+          projectId,
+          sourceType: "annotation",
+          sourceId: "SYSTEM",
+          sessionId,
+          traceId,
+          value: 0,
+          passed: false,
+          feedback,
+          metadata: { rawFeedback: feedback, flaggerSlug, flaggerPath: "sampled" },
+        }).pipe(createWriteProvider(database, organizationId)),
+      )
+
+    await write("jailbreaking", "An instruction-override attempt arrived.")
+    for (const index of [0, 1, 2]) await write("tool-call-errors", `Tool failure ${index}`)
+
+    const listed = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.listPublishedSystemAnnotationsBySession({
+          projectId,
+          sessionId,
+          flaggerSlug: "jailbreaking",
+          limit: 2,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(listed.map((score) => score.feedback)).toEqual(["An instruction-override attempt arrived."])
+  })
+
   it("omits a flagger's positive reference verdict from a listing that asks for it", async () => {
     const organizationId = "ffffffffffffffffffffcccc"
     const traceId = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
@@ -786,6 +828,9 @@ describe("ScoreRepositoryLive + score use cases", () => {
 
     await write({ sourceId: "SYSTEM", passed: true, feedback: "Task completed", flaggerSlug: "task-failure" })
     await write({ sourceId: "SYSTEM", passed: false, feedback: "Task not completed", flaggerSlug: "task-failure" })
+    // A Safety measurement is the same kind of row: persisted because the score
+    // needs it, not because a reviewer has anything to act on.
+    await write({ sourceId: "SYSTEM", passed: true, feedback: "The agent refused", flaggerSlug: "jailbreaking" })
     await write({ sourceId: "UI", passed: true, feedback: "A reviewer liked this" })
 
     const listed = await Effect.runPromise(

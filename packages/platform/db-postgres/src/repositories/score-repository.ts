@@ -709,10 +709,12 @@ export const ScoreRepositoryLive = Layer.effect(
       listPublishedSystemAnnotationsBySession: ({
         projectId,
         sessionId,
+        flaggerSlug,
         limit = 200,
       }: {
         readonly projectId: ProjectId
         readonly sessionId: SessionId
+        readonly flaggerSlug?: string
         readonly limit?: number
       }) =>
         Effect.gen(function* () {
@@ -730,6 +732,7 @@ export const ScoreRepositoryLive = Layer.effect(
                     eq(scores.sourceId, "SYSTEM"),
                     eq(scores.sessionId, sessionId as string),
                     isNull(scores.draftedAt),
+                    ...(flaggerSlug === undefined ? [] : [sql`${scores.metadata}->>'flaggerSlug' = ${flaggerSlug}`]),
                   ),
                 )
                 .orderBy(desc(scores.createdAt))

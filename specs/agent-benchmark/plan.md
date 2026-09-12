@@ -26,11 +26,11 @@ data definitions live in the other benchmark specifications:
 | 5. Safety assurance | Safety evidence reaches session Scores and supports a project Safety score and issue list | 1, 2, 3 |
 | 6. Agent Score benchmark | the five proven estimators become snapshots and a project benchmark | 1 through 5 |
 
-PRs 4 and 5 can run in parallel after PR 3. They share a small additive structured-flagger-result
-contract: both widen `RunFlaggerResult` and `ClassifySessionFlaggerResult` so a non-negative
-classifier outcome can carry feedback and anchors, and both add a slug to `FLAGGER_STRATEGY_SLUGS`,
-which is a public enum. The second branch to merge must rebase before regenerating shared API
-artifacts.
+PRs 4 and 5 can run in parallel after PR 3. They share one small additive structured-flagger-result
+contract: the widened `RunFlaggerResult` and `ClassifySessionFlaggerResult` that let a non-negative
+classifier outcome carry feedback and anchors. PR 4 landed that widening, and PR 5's launch suite
+reuses two registered detectors, so PR 5 adds no `FLAGGER_STRATEGY_SLUGS` member and the two
+branches do not contend over the public flagger enum or its generated artifacts.
 
 PRs 1 through 5 each ship a user-facing feature without requiring the benchmark page. PR 6 does not
 introduce new evidence semantics. It composes the behavior already exercised by those features.
@@ -888,50 +888,364 @@ The launch suite contains Jailbreaking and PII Leakage. NSFW remains contextual 
 contract identifies assistant-caused harm. PR 5 does not redesign Flagger Settings or build
 standalone Safety analytics on Signal detail.
 
-### Safety findings
+PR 5 publishes no score. The estimator and the issue inputs are pure domain use-cases with tests, in
+the same position `estimateProjectOutcomeWindow` holds after PR 4: no route, no snapshot, no public
+operation, no scheduled job.
 
-- [ ] **P5-1** Separate injection attempt from assistant compliance as specified in
-  [`flaggers.md`](flaggers.md#injection-attempt-and-compliance).
-- [ ] **P5-2** Separate user-authored PII exposure from assistant disclosure.
-- [ ] **P5-3** Persist a bounded structured finding kind, judgment version, evidence anchor, and
-  selection provenance through score metadata and the ClickHouse projection. Historical rows remain
-  unknown. Passed defense findings must not enter signal discovery.
+The work is not the arithmetic. `jailbreaking` and `pii-leakage` today collapse "an attack arrived"
+and "the agent misbehaved" into one boolean `matched`, and most matches are attacks the agent
+correctly refused. That boolean cannot feed a harmed-session numerator, and two independently
+sampled detectors cannot state which sessions the suite examined. PR 5 splits the flat detection
+into a structured verdict and makes the examined population knowable, so `q` has a denominator at
+all.
 
-### Examination and estimation
+### What PRs 1 through 4 already built
 
-- [ ] **P5-4** Add suite-level Safety selection on the screening infrastructure from PR 2. Selected
-  sessions run Jailbreaking and PII Leakage with one stored inclusion probability.
-- [ ] **P5-5** Implement the examined population, confirmed-harm union, selection correction, and
-  coverage gates defined in [`score.md`](score.md#safety).
-- [ ] **P5-6** Implement Safety interval and reference-run estimation as a reusable domain result.
-- [ ] **P5-7** Keep exposure outside confirmed-harm arithmetic and report successful defense as
-  positive session evidence. Treat the structured jailbreaking verdict as confirmation when it
-  includes the assistant action that complied.
+Most of Safety's consumption side already exists. PR 5 supplies the structured producer, the
+suite-level examined population, and the window arithmetic. Do not rebuild these:
 
-### Session and project evidence
+| Already in place | Location |
+| --- | --- |
+| `safety` dimension with `confirmedHarm`, `exposure`, and `successfulDefense` roles | `packages/domain/shared/src/score-evidence.ts` |
+| Static signal evidence roles for `jailbreaking`, `pii-leakage`, and `nsfw` | `packages/domain/signals/src/score-evidence.ts` |
+| Safety reader dimension mapping for coverage | `packages/domain/agent-score/src/resolver/build-assessment-coverage.ts` |
+| `SessionEvidenceImpact` member `{ kind: "safety", status, findingKind }` | `packages/domain/agent-score/src/entities/session-assessment.ts` |
+| Safety dimension summary carrying exposure, defense, and confirmed-harm counts | `packages/domain/agent-score/src/resolver/build-dimension-summaries.ts` |
+| Confirmed harm already raising an item to high impact | `resolve-assessment-findings.ts` (`hasHighImpact`) |
+| Scores panel rendering "Confirmed harm" and "Successful defenses" | `session-detail-drawer/session-assessment.tsx` |
+| Safety impact and Safety summary in OpenAPI, MCP, and both SDKs | `packages/operations/src/openapi/entities/session-assessment.ts` |
+| Screening decisions with selection reason, inclusion probability, and generation collapse | `packages/domain/flaggers/src/entities/flagger-screening-decision.ts`, migration `00057` |
+| Screening coverage mapping for `notSelected`, `rateLimited`, `pending`, and `executionFailed` | `packages/domain/flaggers/src/entities/flagger-screening-coverage.ts` |
+| Verdict-shaped classifier branch: flat Bedrock-safe generation schema, lenient parser, output contract | `packages/domain/flaggers/src/use-cases/run-flagger.ts` |
+| Non-negative persisted judgement write path, one score per analysis generation | `upsertFlaggerVerdictScore` in `upsert-flagger-annotation-score.ts` |
+| Passed SYSTEM flagger scores excluded from the annotation list in SQL | `omitFlaggerReferenceVerdicts` in `db-postgres/src/repositories/score-repository.ts` |
+| Passed scores rejected by signal discovery | `packages/domain/signals/src/use-cases/check-eligibility.ts` |
+| `analysisHash` threaded from screening selection to the written score | `annotationScoreMetadataSchema` in `@domain/scores` |
+| Clopper-Pearson interval and regularized incomplete beta | `packages/domain/agent-score/src/scoring/binomial-interval.ts` |
+| Sub-stratum grouping and pooled bound transform over inclusion probabilities | `packages/domain/agent-score/src/scoring/estimate-outcome.ts` |
+| Window source shape: eligible sessions, newest-generation collapse, bounded Postgres score batches | `db-clickhouse/src/repositories/outcome-window-decision-source.ts`, `use-cases/estimate-project-outcome.ts` |
+| Issue rows with selection correction, shared-draw joint probability, and unranked rows | `packages/domain/agent-score/src/scoring/build-outcome-issues.ts` |
 
-- [ ] **P5-8** Add Safety findings and examination coverage to session assessment. Render confirmed
-  harm and exposure under needs attention, successful defense under positive evidence, and never
-  treat an examined session with no finding as positive evidence.
-- [ ] **P5-9** Produce bounded project issue inputs from confirmed-harm findings and eligible Safety
-  signal occurrences. Union harm once per session, deduplicate shared source evidence, and report
-  selection-corrected exposure and harm reach with raw examined counts for coverage. Rank by
-  corrected harmed reach and leave rows unranked when a required joint inclusion probability is
-  unknown. Issue counts explain the score but do not create extra points.
-- [ ] **P5-10** Extend the session-assessment operation, generated contracts, and Scores UI only as
-  needed for the new Safety items and coverage. Defer Flagger Settings and standalone Signal-detail
-  analytics until after the initial Agent Score launch.
+PR 5 therefore needs no new numeric primitive, no new UI shell, no Postgres migration, and no
+flagger provisioning backfill: both launch slugs already exist on every project.
+
+### Decisions fixed for this PR
+
+- **D1. Each finding kind keeps the triage polarity its detector already has.** Structured Safety
+  results must not silently re-aim two shipped detectors, so the split decides what enters `q` and
+  nothing else. `injectionAttempt` is annotated today and is what the Jailbreaking signal collects,
+  so it stays a failed score and only loses the harm claim. `piiExposure` is the opposite: the
+  PII prompt explicitly excludes the user's own echoed data today, so recording it as exposure must
+  not turn every session whose user typed their own email into an annotation and a signal, and it
+  becomes a passed measurement. `injectionDefense` is a passed measurement because the
+  specification requires it: a defense is positive session evidence and must not open a signal.
+  `injectionCompliance` and `piiDisclosure` stay failed scores and are the only confirmed harm. The
+  one accepted regression is that a Jailbreaking signal stops accumulating the attempts the agent
+  defended, which were never agent defects.
+- **D2. One primary finding kind per session, slug, and analysis generation, resolved by severity.**
+  `injectionCompliance` outranks `injectionDefense`, which outranks `injectionAttempt`;
+  `piiDisclosure` outranks `piiExposure`. One bounded string therefore carries the result, the
+  ClickHouse projection stays one nullable column, and the assessment keeps the specified shape of
+  one item with several effects rather than two items describing one event.
+- **D3. Suite-level selection replaces two independent draws.** Screening today draws a separate
+  sample per slug and checks a separate rate-limit bucket per slug, so the joint examined population
+  of two detectors at 10% is 1%, and either member being dropped leaves a session that can never be
+  examined after an LLM call was already spent on the other. The suite draws once per session on a
+  key that omits the slug, checks one rate-limit bucket, and records the same inclusion probability
+  on both members' screening decisions. The suite probability is the minimum sampling across enabled
+  members, which is the only value both members actually satisfy. A disabled member makes the suite
+  incomplete and leaves Safety unmeasured for that project, which is what the denominator
+  definition already requires.
+- **D4. The hinted stratum stays, and rate-limited hinted sessions become a named coverage
+  limitation.** Outcome removed hints in PR 4 because a rate-limited hinted session records
+  `selected: false` with inclusion probability one, which is informative missingness. Safety cannot
+  take the same exit: the pattern gatherers are the only affordable prefilter for a rare event, and
+  score.md keeps a hinted stratum for Safety deliberately. The hazard is worse here, because hinted
+  Safety sessions are exactly the ones that can contain harm, so the estimator counts rate-limited
+  hinted sessions explicitly and reports Safety as unmeasured once they exceed a configured share of
+  the hinted stratum. Silently dropping them would bias the harm rate downward.
+- **D5. Suite completion is judged over applicable members.** `jailbreaking` requires a user
+  message and `pii-leakage` requires an assistant message. A session that fails a member's
+  `hasRequiredContext` makes that member not applicable rather than the suite incomplete, otherwise
+  sessions that could never have been judged would permanently depress coverage.
+- **D6. NSFW stays a Safety reader but leaves the examined population.** `FLAGGER_DIMENSIONS` keeps
+  mapping `nsfw` to Safety, because unsafe user content is real exposure context on the session
+  page. It is not part of the launch suite, so it does not participate in suite completion; leaving
+  it in would push every unsampled session's Safety coverage to partial for a detector that cannot
+  contribute a harmed session.
+- **D7. No new flagger slug.** Both launch detectors are registered, provisioned on every project,
+  and public enum members already. The earlier sequencing note that PRs 4 and 5 each add a slug was
+  written before the launch suite narrowed to the two existing detectors. The shared additive
+  contract with PR 4 is only the widened `RunFlaggerResult` and `ClassifySessionFlaggerResult`,
+  which PR 4 has already landed, so PR 5 does not regenerate the public flagger enum and the two
+  branches no longer contend over generated artifacts.
+- **D8. The judgment version identifies the judge.** Persisted Safety scores carry
+  `scoringArtifactVersion = "safety-v1:<provider>/<model>"` built from the resolved
+  `FLAGGER_CLASSIFIER` generation config, with the same over-length digest fallback as the
+  task-outcome version. A substituted judge model produces a distinct version and the estimator
+  treats it as its own population. The shared builder is extracted from
+  `taskOutcomeJudgmentVersion` rather than copied.
+- **D9. Safety's publication floor is a sample-size floor, not an interval-width floor, and its
+  reference run is 100 sessions.** A 1,000-session horizon saturates: on a window that just reaches
+  the session target at the default 10% sampling, roughly 100 sessions are examined, and
+  `(1 - q) ^ 1000` reads 100 with no harm and approximately 0.004 with one, with nothing in
+  between. The horizon is therefore 100 sessions, which is shorter than the score's session target
+  on purpose: it is the range over which a readable examined population can actually distinguish
+  harm rates. One confirmed failure in 100 examined sessions reads near 37 and one in 1,000 reads
+  near 90. The zero-harm 95% lower bound is `100 * 0.05 ^ (100 / examined)`, which is 5 at 100
+  examined and 74 at 1,000, so the examined floor and the horizon have to be chosen together.
+  Safety still gates on examined population and suite completeness rather than interval width, and
+  page.md accepts the wide interval as the honest presentation of a rare event. The floor constants
+  ship as `PROVISIONAL_SAFETY_COVERAGE_FLOORS` and are frozen in PR 6.
+- **D10. The launch Safety detectors join every onboarding preset.** Onboarding disables every slug
+  its chosen preset omits, and four of the seven presets omit both launch detectors. Those projects
+  could never complete the suite, so Safety would be permanently unmeasured and the all-five
+  publication gate would withhold the entire Agent Score, including the four dimensions that were
+  measured. `presets.ts` has a compile-time exhaustiveness assertion over the slug union but not
+  over preset membership, so nothing would have caught this. This is the same class of defect as
+  PR 4's flagger backfill.
+
+### Step 1: the structured Safety verdict contract
+
+- [x] **P5-1** Define the Safety verdict contract in `@domain/flaggers` as a Zod-first entity beside
+  `task-outcome-verdict.ts`. It carries the bounded `SafetyFindingKind` union from
+  [`flaggers.md`](flaggers.md#injection-attempt-and-compliance) plus, for jailbreaking, the separate
+  attempt, compliance, and compliance-action fields that make the verdict a confirmation rather than
+  a category.
+- [x] **P5-2** Separate injection attempt from assistant compliance as specified in
+  [`flaggers.md`](flaggers.md#injection-attempt-and-compliance). One model call judges both sides.
+  `injectionCompliance` requires an attempt, compliance, and the named assistant action.
+  `injectionDefense` requires a confirmed attempt and an assistant response that resisted it;
+  failing to find compliance is not a defense. Everything else with a confirmed attempt is
+  `injectionAttempt`.
+- [x] **P5-3** Separate user-authored PII exposure from assistant disclosure. The existing prompt
+  already judges assistant output only; the contract now records which side authored the personal
+  data, so `piiExposure` and `piiDisclosure` are distinguishable rather than inferred from feedback
+  text.
+- [x] **P5-4** Build the generation schema per call as a flat object. Bedrock's structured-output
+  subset rejects `oneOf`, which is why the task-outcome generation schema is flat with one
+  `explanation` slot, and a constrained decoder at temperature zero omits any field the schema lets
+  it omit. Reuse the `messageIndex` enum bound from `buildProviderFlaggerOutputSchema` so the anchor
+  stays a finite enum of real transcript indices. Keep a lenient parsing schema separate from the
+  strict generation schema.
+- [x] **P5-5** Widen `strategy.verdictContract` from the single `"taskOutcome"` literal to a union
+  and branch `classifyConversationForFlaggerUseCase` on the Safety contract rather than forking it.
+  Reuse the inspected-agent context, reflag suppression tags, telemetry metadata, and the existing
+  mapping of schema mismatch, prompt-too-long, and grammar-compilation timeout to an unexamined
+  result. Run the adversarial annotation review on the finding kinds that still write an annotation;
+  a defense proposes no annotation to review.
+- [x] **P5-6** Enforce the structural gates in the finding-kind resolver rather than in
+  `strategy.validateMatch`, which only sees feedback and a message index and so cannot read the
+  structured fields the gates are about. A compliance claim with no named assistant action is
+  downgraded to `injectionAttempt`, a defense claim with no confirmed attempt is discarded, and a
+  disclosure claim that names nothing disclosed is not harm. Prompt guidance alone cannot guarantee
+  any of them, and a model-assigned confirmation without assistant-side evidence is exactly what
+  [`signals.md`](signals.md#safety) forbids from entering the numerator.
+- [x] **P5-7** Add the Safety judgment version from D8 by extracting the shared builder from
+  `taskOutcomeJudgmentVersion`, with a test proving the default judge configuration produces a
+  readable version under `FLAGGER_SCORING_ARTIFACT_VERSION_MAX_LENGTH` and that a different resolved
+  model produces a different version.
+
+### Step 2: persistence and the workflow branch
+
+- [x] **P5-8** Add the bounded finding kind to `annotationScoreMetadataSchema`. It is jsonb, so no
+  Postgres migration is required. The kind list itself belongs to `@domain/scores` beside the other
+  flagger provenance fields, because the metadata schema cannot depend on `@domain/flaggers` without
+  inverting the existing dependency.
+- [x] **P5-9** Add one nullable ClickHouse column for the structured finding kind and project it in
+  the score analytics repository. Name it generically rather than for Safety, so the next structured
+  detector reuses the column instead of adding a sibling. Create the migration only with
+  `pnpm --filter @platform/db-clickhouse ch:create`. The migration is forward-only: historical rows
+  stay null, which means unknown, never clean or absent-and-therefore-safe. The chdb test schema is
+  a dump of the development database, so it needs `ch:up` and `ch:schema:dump` against a running
+  ClickHouse to be authoritative.
+- [x] **P5-10** Write one Safety score per project, session, flagger, and **finding kind**, as a
+  third sibling of the annotation and verdict write paths rather than a reuse of either. Neither
+  existing rule fits, which is why the identity is new: the anchor key survives re-screens, so a
+  session whose finding escalated from an attempt to a confirmed compliance would keep only the
+  attempt, while the verdict's per-generation key would re-write the same jailbreak attempt on every
+  re-analysis and duplicate both the card and the signal occurrence. The finding kind is the fact,
+  it is monotone within a session, and an escalation is genuinely new information. `analysisHash`
+  stays on the score as provenance rather than as the key. Derive `passed` from the finding kind per
+  D1, and persist the evidence anchor and selection provenance the existing metadata builder already
+  carries.
+- [x] **P5-11** Branch the flagger classification workflow so **every** Safety finding writes
+  directly and skips the draft step, exposure and confirmed harm included, not only the defense as
+  first planned. The judge always returns its own explanation, so the draft step's annotator
+  fallback never fires, and its anchor dedup is the wrong identity for all five kinds by P5-10. No
+  `patched()` is required: a replaying execution restores a classify result written before
+  `safetyFindingKind` existed, so the guard is false and the recorded command sequence still
+  matches.
+- [x] **P5-12** Map the terminal screening outcome for Safety results so a defense is not recorded
+  as `unmatched`. An unexamined session and an examined session with a positive result must stay
+  distinguishable in the screening decision, because the estimator reads that field for the examined
+  denominator. The existing `success` member carries it: the coverage resolver already treats it as
+  examined with a finding, so no screening enum or ClickHouse column changes.
+- [x] **P5-13** Confirm and test that a defense score never creates a signal. The existing
+  eligibility predicate already rejects passed scores, so this is a regression test plus an
+  assertion that a confirmed-harm finding does reach `signalDiscoveryWorkflow`.
+
+### Step 3: suite-level examination
+
+- [x] **P5-14** Declare the launch Safety suite in `@domain/flaggers` as a named constant, and add
+  suite-level selection to the screening pass from PR 2. One `deterministicSampling` draw per
+  session on a key that omits the slug, so both members share the draw, with the suite inclusion
+  probability from D3 recorded on both members' screening decisions. The suite resolves **before**
+  any member is screened rather than inside each member's unmatched path, because the rate limit
+  below has to answer once and a per-member call cannot.
+- [x] **P5-15** Check the suite's rate limit once, in its own bucket, so both members are allowed or
+  neither. The per-slug check today can admit one member and drop the other, which spends a model
+  call on a session the estimator must then discard as unexamined. Members screen concurrently, so
+  two calls against one shared bucket would also consume two tokens and could split on the second.
+- [x] **P5-16** Apply the applicability rule from D5 so a member whose `hasRequiredContext` fails is
+  not applicable rather than missing, and the suite can still complete. Express it as
+  `outcome: "notApplicable"` on the screening decision rather than a new selection reason:
+  [`flaggers.md`](flaggers.md#screening-decisions) reserves `skipped` for a policy skip and its
+  reason list has no applicability member, so the outcome is where the distinction belongs.
+- [x] **P5-17** Verify with tests that the screening decisions written before classification carry
+  the shared probability on both members, that a sampled-out session records the same probability
+  with `selected: false`, that a hinted session records inclusion probability one, and that a
+  retried execution reuses the generation's draw instead of drawing again. Cover the suppression
+  hazard the shared selection creates: whether a member was hinted stays that member's own fact, or
+  a session hinted only for personal data would make the jailbreaking decision look
+  injection-hinted and mute the refusal detector, whose suppressor fires on any hinted classify. A
+  member the suite carried along records `uniform-sample`, which is what the vocabulary already
+  calls an examination that happened with certainty.
+
+### Step 4: session evidence
+
+- [x] **P5-18** Add a Safety finding to the assessment finding union and produce it from score
+  metadata in `readScoreFindings`, branching on the structured finding kind before the existing
+  classified-judgment and standalone-score fallbacks, the way the task-outcome verdict already does.
+- [x] **P5-19** Resolve the finding into effects, keeping attempt, response, and confirmation as one
+  item with several effects. `injectionDefense` carries exposure as context and successful defense
+  as positive, and reads as positive evidence. `injectionCompliance` carries exposure as context and
+  confirmed harm as an observed, direct negative effect. `injectionAttempt` and `piiExposure` carry
+  exposure alone and read under needs attention. `piiDisclosure` carries confirmed harm **alone**:
+  third-party data the assistant surfaced never reached the conversation, so there is no exposure to
+  pair it with. Only the confirmed-harm effect is `direct`; exposure and defense are `contextOnly`,
+  which is what keeps them visible without moving the score.
+- [x] **P5-20** Leave the existing model-assigned Safety role mapping untouched. A signal whose
+  `confirmedHarm` role came from classification stays not-measured and attribution-only, because
+  [`signals.md`](signals.md#safety) requires an assistant-side confirmation field on the occurrence.
+  Only the structured finding is observed and direct. Test that the two paths cannot cross.
+- [x] **P5-21** Add the exposure count to the Scores panel beside the confirmed-harm and successful
+  defense counts it already renders, and prove that an examined session with no Safety finding
+  produces no item and appears only through reader coverage. An unexamined session is never a clean
+  observation.
+- [x] **P5-22** Prove single-session and bulk parity for a session carrying a Safety finding,
+  reusing the existing parity fixtures. Like the task-outcome verdict, this is an assessment input
+  that does not come from telemetry, so it is one the two paths could most easily disagree on.
+
+### Step 5: the project Safety estimator
+
+- [x] **P5-23** Extract the sub-stratum grouping and pooled bound transform from the Outcome
+  estimator into a shared helper under `@domain/agent-score/src/scoring`, and have both dimensions
+  call it. The arithmetic is dimension-agnostic, and PR 6 composes both; two copies would drift.
+- [x] **P5-24** Implement the examined population, confirmed-harm union, selection correction, and
+  coverage gates defined in [`score.md`](score.md#safety). Several detectors on one session produce
+  one harmed session. A session counts as examined only when every applicable launch detector
+  completed in the same analysis generation.
+- [x] **P5-25** Implement Safety interval and reference-run estimation as a reusable domain result.
+  The Clopper-Pearson bounds on the harm count transform through the monotone decreasing
+  `(1 - q) ^ 100` map, so the upper bound on `q` produces the lower bound on Safety. Keep the
+  interval non-degenerate with zero observed harms.
+- [x] **P5-26** Return a result carrying the 0 through 100 score, the interval and its method, the
+  examined count, the harmed count, the eligible count, the excluded counts by reason including
+  rate-limited hinted sessions from D4, and a coverage state of measured or unmeasured with the
+  failing floor named. Never return 0, 100, or a midpoint for an unmeasured dimension. The
+  provisional examined floor is **1,000** rather than Outcome's 100, because the transform in P5-25
+  needs a population to resolve against: the zero-harm lower bound is
+  `100 * 0.05 ^ (referenceRun / examined)`, which is 5 at a hundred examined sessions and 74 at a
+  thousand.
+- [x] **P5-27** Add the Safety window source port with its ClickHouse and Postgres implementation.
+  The ClickHouse side reuses the eligible-session definition and the newest-generation collapse from
+  the Outcome window source and reads both launch slugs, collapsing **per member** rather than
+  forcing one generation across the suite: a session whose members answered in different generations
+  then arrives with two analysis hashes and the estimator can reject it as incomplete, instead of
+  the query silently pooling halves of two runs. The Postgres side reads the Safety scores for that
+  bounded session list through `scores_session_lookup_idx`. Both reads are organization and project
+  scoped and must not be per-session queries.
+- [x] **P5-28** Compose the estimator and the sources into a use-case that mirrors
+  `estimateProjectOutcomeWindow`: deterministic bounded batches, no snapshot write, no public
+  surface.
+
+### Step 6: project issue inputs
+
+- [x] **P5-29** Generalize the Outcome issue builder into one shared issue-row builder over a named
+  adverse axis, and produce Safety rows from confirmed-harm findings and eligible Safety signal
+  occurrences through the shared `isSignalEligibleForScoring` predicate. The two builders differ
+  only in which session predicate counts, so a second copy would be 150 duplicated lines of
+  selection-correction arithmetic. Outcome adopts the neutral vocabulary rather than keeping its own
+  behind a translation layer, so PR 6 reads one set of row fields for both dimensions. Safety
+  returns **two** tables, because the page lists confirmed harm separately from exposure: a session
+  the agent harmed lands in the harm table only, which is what makes the second one exposure-only
+  rather than a double count.
+- [x] **P5-30** Union harm once per session and deduplicate shared source evidence before counting.
+  A signal and the score it was discovered from are one issue's evidence, not two. Report
+  selection-corrected exposure reach and harmed reach alongside the raw examined counts, which are
+  coverage context and never a ranking key.
+- [x] **P5-31** Rank by corrected harmed reach, and leave a row unranked and marked when a required
+  joint inclusion probability is unknown. The joint probability collapses to one draw for every
+  Safety observation, not just a signal discovered from the harm score: the finding and the
+  session's harm status both come from the one suite selection, so multiplying them would square a
+  probability that was rolled once. Exposure rows rank by harmed reach too, so an attack that
+  sometimes succeeds outranks a more common one that never does. Issue counts explain the score;
+  they add no points and claim no recoverable amount.
+
+### Step 7: contracts, presets, and documentation
+
+- [x] **P5-32** Extend the session-assessment operation and generated contracts only as needed for
+  the new Safety items and coverage. `findingKind` **stays a free string** rather than being bounded
+  to the launch enum as first planned: two vocabularies already share the field, because an item
+  derived from a signal's model-assigned role puts that signal's detector slug through it, and
+  narrowing the enum would either break that path or change the behaviour P5-20 deliberately froze.
+  The description names the launch kinds instead. No slug or enum changed in PR 5, so the public
+  flagger surface is untouched and the only regeneration is that description reaching OpenAPI, MCP,
+  both SDKs, and the CLI. Defer Flagger Settings and standalone Signal-detail analytics until after
+  the initial Agent Score launch.
+- [x] **P5-33** Add both launch Safety detectors to every onboarding preset per D10, and add a test
+  asserting that every preset enables the full launch suite, so a future preset cannot silently
+  withhold the whole Agent Score.
+- [x] **P5-34** Update [`flaggers.md`](flaggers.md#screening-decisions) and
+  [`score.md`](score.md#safety) to record suite-level selection, the suite inclusion probability,
+  the applicability rule, the rate-limited hinted coverage limitation, and the sample-size
+  publication floor from D3, D4, D5, and D9.
 
 ### Exit gate
 
-- [ ] **P5-11** Tests prove that exposure never enters confirmed harm and unexamined sessions never
+- [x] **P5-35** Tests prove that exposure never enters confirmed harm and unexamined sessions never
   become clean observations. Passed defense findings do not enter signal discovery. Sampled issue
   rows rank by corrected harm reach rather than raw overlap.
-- [ ] **P5-12** Fixtures cover refused and complied-with injections, user and assistant PII, multiple
-  detectors on one harmed session, and incomplete coverage.
-- [ ] **P5-13** Inspected fixtures reconcile the structured finding, session assessment item,
-  project estimator input, and issue input without assigning a score to the session itself.
-- [ ] `pnpm typecheck` and `pnpm test` pass.
+- [x] **P5-36** Fixtures cover refused and complied-with injections, user and assistant PII,
+  multiple detectors on one harmed session, a suite with one member rate-limited, a suite with one
+  member not applicable, a suite with one member disabled, and incomplete coverage.
+- [x] **P5-37** Interval tests prove non-degenerate bounds with zero observed harms, monotonicity in
+  the observed harm count, correct direction through the reference-run transform, and that a
+  non-uniform examined population reports its method rather than silently using the uniform path.
+- [x] **P5-38** Inspected fixtures reconcile the structured finding, its screening decisions across
+  both suite members, the session assessment item, the project estimator input, and the issue input
+  without assigning a score to the session itself.
+- [x] **P5-39** No score snapshot, public Safety number, route, or scheduled job ships in PR 5.
+- [ ] `pnpm typecheck` and `pnpm test` pass. Generated API artifacts are current.
+
+### Calibration questions to close before PR 6
+
+- What suite sampling rate and examined-session floor make Safety measurable without turning the
+  two-call suite into the dominant flagger cost line? The reference-run transform needs an examined
+  population in the thousands before the point estimate stops being effectively binary, which points
+  at near-census examination on the projects that can afford it.
+- Is Agent Score deliberately a high-traffic-project feature? At the 100-session horizon a clean
+  window reaches a lower bound of 74 once a thousand sessions are examined, so the question is now
+  whether projects reach that examined population at the chosen suite sampling rate, not whether the
+  formula can express the result.
+- What share of rate-limited hinted sessions makes the hinted stratum's missingness ignorable, and
+  what is the right policy when it is exceeded?
+- Does the structured jailbreaking verdict agree with human review on compliance often enough to be
+  the confirmation contract without a second reviewer, and does it stay stable across re-judgment of
+  the same transcript?
+- Which judge configurations belong in the supported-version list, and what happens to a window that
+  spans a version change?
 
 ## Requirements before PR 6
 
@@ -948,7 +1262,10 @@ PR 6 starts only when all of these gates pass:
 - [ ] Outcome uses compatible sampled task-outcome verdicts with known inclusion probabilities and
   passes its examined-population coverage floor. The provisioning migration has deployed, so the
   slug is not silently inert on projects that predate it.
-- [ ] Safety uses a full-window examined population and confirmed-harm definition.
+- [ ] Safety uses a full-window examined population and confirmed-harm definition. The complete
+  launch suite is selected once per session with a known inclusion probability, every onboarding
+  preset enables it, and the sample-size floor is large enough that the reference-run transform
+  produces a point estimate between its endpoints.
 - [ ] Duplicate detectors and split signals pass invariance tests.
 - [ ] Every reader exposes coverage and missing-evidence reasons.
 - [ ] Frozen fleet references and model identifiers are ready for a scoring version.

@@ -149,7 +149,7 @@ pass for exact. A propensity pattern that supports neither leaves the dimension 
 
 The endpoint interval remains non-degenerate when the window contains only successes, zero observed
 failures, or zero observed harms. Reliability and Safety bounds pass through the monotone `p^20` or
-`(1 - q)^1000` transform in the opposite order where required. Composite bootstrap replicates draw
+`(1 - q)^100` transform in the opposite order where required. Composite bootstrap replicates draw
 the native endpoint probability from the fitted boundary-aware model instead of repeatedly
 resampling a constant outcome vector.
 
@@ -542,17 +542,19 @@ Sessions shows slow critical paths and retries. Tools and Memory show repeated w
 
 #### Estimand
 
-Safety estimates the probability that a reference run of 1,000 sessions contains no confirmed
+Safety estimates the probability that a reference run of 100 sessions contains no confirmed
 agent-caused harm:
 
 ```text
 q = weighted sessions with confirmed harm / weighted examined sessions
-Safety = 100 * (1 - q)^1000
+Safety = 100 * (1 - q)^100
 ```
 
-One confirmed failure in 1,000 examined sessions produces a point estimate near 37. One in 10,000
-produces a point estimate near 90. The interval communicates uncertainty, especially when no failure
-was observed.
+One confirmed failure in 100 examined sessions produces a point estimate near 37. One in 1,000
+produces a point estimate near 90. The horizon is deliberately shorter than the score's session
+target: over a thousand sessions the transform saturates, reading zero for any harm rate a project
+with a readable examined population could distinguish. The interval communicates uncertainty,
+especially when no failure was observed.
 
 #### Confirmed failure
 
@@ -573,9 +575,27 @@ verdict records both the attempted attack and the assistant action that complied
 
 Safety selects a session once and runs the complete launch detector suite on it. Hinted sessions and
 the configurable sample of unhinted sessions store their inclusion probabilities before results are
-known. The denominator contains selected sessions whose entire suite completed; a timeout, rate
-limit, or skipped detector leaves the session unexamined. Safety is unmeasured until the corrected
-examined population covers a full score window and passes its sample floor.
+known. The denominator contains selected sessions whose entire suite completed **in one analysis
+generation**; a timeout, rate limit, or skipped detector leaves the session unexamined, and so does
+a suite whose members answered in different generations. A member that could not read the session is
+not applicable rather than missing, so the suite still completes on the member that could.
+
+Safety is unmeasured until the corrected examined population covers a full score window and passes
+its sample floor. That floor is a sample size, not an interval width: rare events make the interval
+wide by nature, and gating on width would withhold the dimension permanently. The floor and the
+reference run are chosen together, because the zero-harm lower bound is
+`100 * 0.05 ^ (referenceRun / examined)`.
+
+Rate-limited hinted sessions are never examined, so they enter neither the numerator nor the
+denominator, but they are tallied rather than ignored. They record `selected: false` at inclusion
+probability one, and hinted Safety sessions are the ones most likely to contain harm, so losing too
+many of them biases the rate downward instead of merely widening it. Past a configured share of the
+hinted stratum, Safety is unmeasured.
+
+An unsupported judgment version withholds the whole window rather than excluding the sessions that
+carry it. A clean examination persists no score and so names no judge, so the same judge's clean
+sessions cannot be filtered out alongside its harms; dropping only the harms would deflate the rate.
+Outcome can exclude per session because every examined session there carries a verdict score.
 
 #### Composite policy
 

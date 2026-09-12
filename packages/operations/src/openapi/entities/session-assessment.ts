@@ -114,7 +114,11 @@ const EvidenceImpactSchema = z
     z.object({
       kind: z.literal("safety"),
       status: z.enum(["exposure", "successfulDefense", "confirmedHarm"]).describe("Observed safety result."),
-      findingKind: z.string().describe("Machine-readable safety finding category."),
+      findingKind: z
+        .string()
+        .describe(
+          "Machine-readable safety finding category. A structured detector result is one of injectionAttempt, injectionDefense, injectionCompliance, piiExposure, or piiDisclosure; an item derived from a signal's assigned role instead names that signal's detector.",
+        ),
     }),
     z.object({
       kind: z.literal("observation"),

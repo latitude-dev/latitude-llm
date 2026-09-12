@@ -172,6 +172,13 @@ export {
   type OutcomeWindowScope,
 } from "./ports/outcome-window-source.ts"
 export {
+  type SafetyWindowDecision,
+  SafetyWindowDecisionSource,
+  type SafetyWindowDecisionSourceShape,
+  type SafetyWindowDecisions,
+  type SafetyWindowScope,
+} from "./ports/safety-window-source.ts"
+export {
   type SessionAssessmentBulkJudgmentScope,
   SessionAssessmentBulkJudgmentSource,
   type SessionAssessmentBulkJudgmentSourceShape,
@@ -297,12 +304,13 @@ export type {
 } from "./scoring/bootstrap-window.ts"
 export { aggregateWindowCost, aggregateWindowSpeed, bootstrapWindow } from "./scoring/bootstrap-window.ts"
 export {
-  buildOutcomeIssues,
-  OUTCOME_ISSUE_ROW_LIMIT,
-  type OutcomeIssueObservation,
-  type OutcomeIssueRow,
-  type OutcomeIssueSession,
-} from "./scoring/build-outcome-issues.ts"
+  buildIssueRows,
+  ISSUE_ROW_LIMIT,
+  type IssueObservation,
+  type IssueRow,
+  type IssueSession,
+} from "./scoring/build-issue-rows.ts"
+export { buildSafetyIssues, type SafetyIssueSession, type SafetyIssues } from "./scoring/build-safety-issues.ts"
 export type {
   SpeedAvoidableClaim,
   SpeedClaimDropReason,
@@ -333,6 +341,19 @@ export {
   estimateResidualEffect,
   RESIDUAL_GAP_REASONS,
 } from "./scoring/estimate-residual-effect.ts"
+export {
+  type EstimateProjectSafetyInput,
+  estimateProjectSafety,
+  PROVISIONAL_SAFETY_COVERAGE_FLOORS,
+  type ProjectSafetyEstimate,
+  SAFETY_EXCLUSION_REASONS,
+  SAFETY_REFERENCE_RUN_SESSIONS,
+  type SafetyCoverageFloors,
+  type SafetyExclusionReason,
+  type SafetyMemberDecision,
+  type SafetySessionExamination,
+  type SafetyUnmeasuredReason,
+} from "./scoring/estimate-safety.ts"
 export type {
   CostSignalResidual,
   SignalResidualGap,
@@ -358,6 +379,10 @@ export type { LinkedSignalOccurrence, SignalLinkage, SignalOccurrence } from "./
 export { linkSignalOccurrences } from "./scoring/link-signal-occurrences.ts"
 export { readOutcomeIssueObservations } from "./scoring/read-outcome-issue-observations.ts"
 export {
+  readSafetyIssueObservations,
+  type SafetyIssueObservations,
+} from "./scoring/read-safety-issue-observations.ts"
+export {
   hasDeterministicOutcomeFailure,
   selectDeterministicOutcomeFailures,
 } from "./scoring/select-outcome-endpoints.ts"
@@ -366,6 +391,11 @@ export {
   estimateProjectOutcomeWindow,
   OUTCOME_VERDICT_BATCH_SIZE,
 } from "./use-cases/estimate-project-outcome.ts"
+export {
+  type EstimateProjectSafetyWindowInput,
+  estimateProjectSafetyWindow,
+  SAFETY_FINDING_BATCH_SIZE,
+} from "./use-cases/estimate-project-safety.ts"
 export {
   type GetSessionAssessmentInput,
   getSessionAssessment,

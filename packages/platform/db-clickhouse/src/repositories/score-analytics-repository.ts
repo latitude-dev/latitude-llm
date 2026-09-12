@@ -90,6 +90,7 @@ const toAnalyticsRow = (score: Score) => {
     scoring_artifact_version: flaggerMetadata?.scoringArtifactVersion ?? null,
     flagger_finding_key: flaggerMetadata?.flaggerFindingKey ?? null,
     flagger_path: flaggerMetadata?.flaggerPath ?? null,
+    flagger_finding_kind: flaggerMetadata?.safetyFindingKind ?? null,
     annotator_id: score.annotatorId ?? "",
     simulation_id: score.simulationId ?? "",
     signal_id: score.signalId ?? "",

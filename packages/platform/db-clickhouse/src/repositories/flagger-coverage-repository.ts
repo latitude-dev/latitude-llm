@@ -8,39 +8,14 @@ import {
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { formatCHDate, normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
-
-const SESSION_END_DEBOUNCE_SECONDS = 5 * 60
-
-// `screenSessionFlaggersUseCase` exits on no-reflag sessions before writing any decision.
-const eligibleSessionsSubquery = `
-  SELECT
-    session_id,
-    sum(tokens_total) AS tokens_total,
-    groupUniqArrayIfMerge(models) AS models,
-    argMaxIfMerge(simulation_id) AS simulation_id,
-    groupUniqArrayArray(tags) AS tags,
-    if(
-      max(max_start_time) >= min(min_start_time),
-      max(max_start_time),
-      max(max_end_time)
-    ) AS last_activity_time
-  FROM sessions
-  WHERE organization_id = {organizationId:String}
-    AND project_id = {projectId:String}
-  GROUP BY session_id
-  HAVING last_activity_time >= {from:DateTime64(9, 'UTC')}
-    AND last_activity_time <= subtractSeconds({to:DateTime64(9, 'UTC')}, {debounceSeconds:UInt32})
-    AND (tokens_total > 0 OR length(models) > 0)
-    AND simulation_id = ''
-    AND NOT has(tags, {noReflagTag:String})
-`
+import { ELIGIBLE_SESSIONS_SUBQUERY, SESSION_END_DEBOUNCE_SECONDS } from "./eligible-sessions.ts"
 
 // Not `min(created_at)`: decisions are written after a session settles, past the sessions they cover.
 const recordingSinceQuery = `
   SELECT
     count() AS decided_sessions,
     toUnixTimestamp64Milli(min(last_activity_time)) AS recording_since_ms
-  FROM (${eligibleSessionsSubquery})
+  FROM (${ELIGIBLE_SESSIONS_SUBQUERY})
   WHERE session_id IN (
     SELECT session_id
     FROM flagger_screening_decisions
@@ -54,13 +29,13 @@ const coverageWindowQuery = `
   SELECT
     countIf(last_activity_time >= {windowStart:DateTime64(9, 'UTC')}) AS eligible_sessions,
     countIf(last_activity_time < {windowStart:DateTime64(9, 'UTC')}) AS sessions_before_recording
-  FROM (${eligibleSessionsSubquery})
+  FROM (${ELIGIBLE_SESSIONS_SUBQUERY})
 `
 
 const coverageRowsQuery = `
   WITH eligible_sessions AS (
     SELECT session_id
-    FROM (${eligibleSessionsSubquery})
+    FROM (${ELIGIBLE_SESSIONS_SUBQUERY})
     WHERE last_activity_time >= {windowStart:DateTime64(9, 'UTC')}
   ),
   newest_decisions AS (

@@ -29,6 +29,22 @@ export type FlaggerFindingKey = z.infer<typeof flaggerFindingKeySchema>
 export const flaggerPathSchema = z.enum(["deterministic", "sampled"])
 export type FlaggerPath = z.infer<typeof flaggerPathSchema>
 
+export const SAFETY_FINDING_KINDS = [
+  "injectionAttempt",
+  "injectionDefense",
+  "injectionCompliance",
+  "piiExposure",
+  "piiDisclosure",
+] as const
+
+export const safetyFindingKindSchema = z.enum(SAFETY_FINDING_KINDS)
+export type SafetyFindingKind = z.infer<typeof safetyFindingKindSchema>
+
+const CONFIRMED_HARM_FINDING_KINDS: ReadonlySet<SafetyFindingKind> = new Set(["injectionCompliance", "piiDisclosure"])
+
+/** The kinds where the agent itself caused the harm. Exposure and defense describe what reached it. */
+export const isConfirmedHarmFindingKind = (kind: SafetyFindingKind): boolean => CONFIRMED_HARM_FINDING_KINDS.has(kind)
+
 export const scoringArtifactVersionSchema = z.string().min(1).max(FLAGGER_SCORING_ARTIFACT_VERSION_MAX_LENGTH)
 export type ScoringArtifactVersion = z.infer<typeof scoringArtifactVersionSchema>
 
@@ -110,6 +126,7 @@ export const annotationScoreMetadataSchema = baseScoreMetadataSchema
     flaggerFindingKey: flaggerFindingKeySchema.optional(), // stable calculated finding selected for deterministic discovery
     scoringArtifactVersion: scoringArtifactVersionSchema.optional(), // prompt, judge configuration, and result-schema version for persisted model evidence
     flaggerPath: flaggerPathSchema.optional(), // whether the persisted result came from a deterministic reader or sampled model call
+    safetyFindingKind: safetyFindingKindSchema.optional(), // structured Safety result; exposure, defense, and confirmed harm are distinguished here rather than re-read from feedback text
     analysisHash: z.string().optional(), // session analysis generation this judgement belongs to; window readers accept only the newest generation's verdict and never fall back to an older one
     ...annotationAnchorFields,
   })
