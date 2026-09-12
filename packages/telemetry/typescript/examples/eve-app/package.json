@@ -18,7 +18,7 @@
     "@opentelemetry/exporter-trace-otlp-http": "0.213.0",
     "@vercel/connect": "0.2.2",
     "@vercel/otel": "2.1.3",
-    "ai": "7.0.0-beta.178",
+    "ai": "7.0.93",
     "eve": "^0.11.5",
     "zod": "4.5.4"
   },
@@ -27,10 +27,10 @@
     "@typescript/native-preview": "7.0.0-dev.20260705.1"
   },
   "overrides": {
-    "ai": "7.0.0-beta.178"
+    "ai": "7.0.93"
   },
   "resolutions": {
-    "ai": "7.0.0-beta.178"
+    "ai": "7.0.93"
   },
   "engines": {
     "node": "24.x"
