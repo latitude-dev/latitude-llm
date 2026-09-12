@@ -1679,32 +1679,35 @@ Each row is a gate the previous checklist asserted and the code does not current
   rather than by date, and it carries its own `computedAt` so the page says when the evidence was
   read instead of implying it explains the stored number. A miss reports `notComputed` rather than
   blocking a request for the length of a window read.
-- [ ] **P6-43** Add an `agentScore` entry to the feature-flag registry and the project section first
+- [x] **P6-43** Add an `agentScore` entry to the feature-flag registry and the project section first
   in the Observe group, above Sessions, gated on that flag.
-- [ ] **P6-44** Build level one from [`page.md`](page.md#level-one): score and interval, snapshot date,
+- [x] **P6-44** Build level one from [`page.md`](page.md#level-one): score and interval, snapshot date,
   selected window and eligible-session count, scoring version, any policy cap, and raw cost per
   session and TTFT labelled as context and not scored directly. Reliability's card shows the
   one-session rate beside the 20-session value.
-- [ ] **P6-45** Build the five dimension sections: score, interval, one-sentence meaning, formula
+- [x] **P6-45** Build the five dimension sections: score, interval, one-sentence meaning, formula
   definition with current native inputs, coverage and missing evidence, causes or issues, contextual
   observations that do not lower the dimension, and destinations. Cost always shows all five families
   with their fixed weights, raw values, healthy/watch/poor labels, readable and applicable units, and
   missing-evidence reasons, keeping not-applicable and unmeasured distinct.
-- [ ] **P6-46** Build the cause rows with the fields [`page.md`](page.md#cause-rows) fixes, label
+- [x] **P6-46** Build the cause rows with the fields [`page.md`](page.md#cause-rows) fixes, label
   attributed deficits as additive and fix gains as not, and mark native inputs and causes as current
   evidence from the live window rather than a decomposition of the stored snapshot.
-- [ ] **P6-47** Build the expandable coverage panel and the unavailable-score behaviour. When the
+- [x] **P6-47** Build the expandable coverage panel and the unavailable-score behaviour. When the
   score is withheld the page still shows session and finding counts, actual cost and duration,
   confirmed safety findings and exposure, exact deterministic waste, progress toward each reader's
   floor, and links to affected sessions. No candidate or partial dimension number appears.
-- [ ] **P6-48** Build the trend from stored snapshots alone, marking scoring-version changes,
+- [x] **P6-48** Build the trend from stored snapshots alone, marking scoring-version changes,
   window-length changes, policy caps, and unpublished dates as gaps. The tooltip shows only what the
   snapshot stores.
-- [ ] **P6-49** Link every cause to the destinations session assessment already uses: Sessions, Tools,
+- [~] **P6-49** Link every cause to the destinations session assessment already uses: Sessions, Tools,
   Memory, Cost, Signals, Behaviors, and Settings. A signal row links to its signal page, which already
   owns examples, lifecycle, and resolution; the benchmark ranks consequence and does not duplicate the
-  workflow.
-- [ ] **P6-50** Enforce the prohibitions in
+  workflow. The rows render with their evidence and effects; the links are not wired yet, because the
+  cause identities the window carries are metric ids, claim causes and finding kinds rather than the
+  anchored destinations a session-level finding has. Deriving a destination from a metric id is the
+  work left, and a wrong link is worse than none.
+- [x] **P6-50** Enforce the prohibitions in
   [`page.md`](page.md#statements-the-page-must-avoid) in the components, not only in copy review:
   no uncorrected sampled share presented as a defect rate, no causal language on an associated effect,
   no summed fix gains, no exposure counted as Safety failure, and no missing evidence rendered as
