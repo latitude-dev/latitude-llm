@@ -1,28 +1,30 @@
+import { formatDuration, formatPrice } from "@repo/utils"
 import type {
   AgentScoreExplanationRecord,
   AgentScoreRecord,
 } from "../../../../../../domains/agent-score/agent-score.functions.ts"
-import {
-  formatCount,
-  formatHours,
-  formatPercent,
-  oneSessionSuccessRate,
-  type ScoreDimensionKey,
-} from "./agent-score-format.ts"
+import { findingDescription, findingLabel, formatCompactCount } from "../../-components/finding-format.ts"
+import { formatCount, formatPercent, type ScoreDimensionKey } from "./agent-score-format.ts"
 
 type Explanation = NonNullable<AgentScoreExplanationRecord["explanation"]>
 type Issue = Explanation["issues"]["outcome"][number]
 
 export type EvidenceTone = "negative" | "positive" | "neutral"
 
+export interface DimensionEvidenceDetail {
+  readonly label: string
+  readonly value: string
+}
+
 export interface DimensionEvidenceRow {
   readonly id: string
   readonly label: string
-  readonly description: string
+  readonly description?: string
   readonly value: string
   readonly progress: number
   readonly tone: EvidenceTone
-  readonly signal: boolean
+  readonly details?: readonly DimensionEvidenceDetail[]
+  readonly signalId?: string
 }
 
 export interface DimensionEvidence {
@@ -33,6 +35,47 @@ export interface DimensionEvidence {
 }
 
 const clamp = (value: number): number => Math.max(0, Math.min(1, value))
+const MIN_VISIBLE_SCORE_IMPACT = 0.05
+
+const DIMENSION_LABELS: Readonly<Record<ScoreDimensionKey, string>> = {
+  outcome: "Outcome",
+  reliability: "Reliability",
+  cost: "Cost",
+  speed: "Speed",
+  safety: "Safety",
+}
+
+const COST_FAMILY_LABELS: Readonly<Record<string, string>> = {
+  spend: "Model spend",
+  context: "Model input and context",
+  tools: "Tool use",
+  memory: "Memory use",
+  recovery: "Error recovery",
+}
+
+const COST_FAMILY_COVERAGE_LABELS: Readonly<Record<string, string>> = {
+  spend: "Priced model usage",
+  context: "Readable model input",
+  tools: "Readable tool calls",
+  memory: "Readable memory activity",
+  recovery: "Readable recovery history",
+}
+
+const COVERAGE_LABELS: Readonly<Record<string, string>> = {
+  "Delivered output": "Sessions with a usable response",
+  "Tool-call failures": "Sessions checked for failed tool calls",
+  "Output structure": "Sessions checked for malformed output",
+  "Repeated tool calls": "Sessions checked for repeated tool calls",
+  "Spend pricing": "Sessions with pricing data",
+  "Captured model input": "Sessions with readable model input",
+  "Known model context limits": "Sessions with known context limits",
+  "Critical-path reconstruction": "Sessions with complete timing data",
+  "Time to first token": "Sessions with initial-response timing",
+  "Generation throughput": "Sessions with response-generation timing",
+  "Prompt cache use": "Sessions with cache data",
+  "Generation finish reasons": "Sessions with a recorded finish reason",
+  "Provider errors": "Sessions checked for provider errors",
+}
 
 const humanize = (value: string): string =>
   value
@@ -40,36 +83,60 @@ const humanize = (value: string): string =>
     .replace(/[-_]/g, " ")
     .replace(/^./, (character) => character.toUpperCase())
 
+const formatAttributedCount = (value: number): string =>
+  value > 0 && value < 10 ? value.toFixed(1).replace(/\.0$/, "") : formatCompactCount(value)
+
 const formatNative = (effect: { readonly value: number; readonly unit: string }): string => {
-  if (effect.unit === "nanoseconds") return formatHours(effect.value)
+  if (effect.unit === "nanoseconds") return formatDuration(effect.value)
   if (effect.unit === "sessions") return `${formatCount(Math.round(effect.value))} sessions`
+  if (effect.unit === "microcents" || effect.unit === "spend") return formatPrice(effect.value / 100_000_000)
+  if (effect.unit === "context") return `${formatAttributedCount(effect.value)} tokens`
+  if (effect.unit === "tools") return `${formatAttributedCount(effect.value)} call equivalents`
+  if (effect.unit === "memory") return `${formatAttributedCount(effect.value)} operation equivalents`
+  if (effect.unit === "recovery") return `${formatAttributedCount(effect.value)} session equivalents`
   if (effect.unit === "usd") return `$${effect.value.toFixed(2)}`
-  return `${formatCount(Math.round(effect.value))} ${humanize(effect.unit).toLowerCase()}`
+  return `${formatCompactCount(effect.value)} ${humanize(effect.unit).toLowerCase()}`
 }
+
+const attributionDetails = ({
+  dimension,
+  attributedDeficit,
+  associated,
+  windowDays,
+}: {
+  readonly dimension: ScoreDimensionKey
+  readonly attributedDeficit: number
+  readonly associated: boolean
+  readonly windowDays: number
+}): readonly DimensionEvidenceDetail[] => [
+  { label: "Scoring window", value: `Last ${formatCount(windowDays)} days` },
+  {
+    label: associated
+      ? `Associated impact on ${DIMENSION_LABELS[dimension]} score`
+      : `Impact on ${DIMENSION_LABELS[dimension]} score`,
+    value: `−${attributedDeficit.toFixed(1)} points`,
+  },
+]
 
 const coverageRow = ({
   id,
   label,
   covered,
   total,
-  description,
 }: {
   readonly id: string
   readonly label: string
   readonly covered: number
   readonly total: number
-  readonly description: string
 }): DimensionEvidenceRow => {
   const coverage = total > 0 ? covered / total : 0
   const healthy = coverage >= 0.999
   return {
     id,
     label,
-    description,
     value: formatPercent(coverage, 0),
     progress: healthy ? 1 : 1 - coverage,
     tone: healthy ? "positive" : "neutral",
-    signal: false,
   }
 }
 
@@ -89,17 +156,18 @@ const issueRows = (
   return issues.map((issue) => {
     const estimated = measure === "reach" ? issue.estimatedReach : issue.estimatedAdverseReach
     const observed = measure === "reach" ? issue.examinedSessions : issue.examinedAdverseSessions
+    const description = findingDescription(issue.issueKey) ?? findingDescription(issue.label)
     return {
       id: `${prefix}:${issue.issueKey}`,
-      label: issue.label,
-      description: `${formatCount(issue.examinedSessions)} examined · ${formatCount(issue.examinedAdverseSessions)} adverse${issue.ranked ? "" : " · unranked"}`,
+      label: findingLabel(issue.label),
+      ...(description ? { description } : {}),
       value:
         estimated === undefined
           ? `${formatCount(observed)} observed`
           : `${formatCount(Math.round(estimated))} sessions`,
       progress: clamp((estimated ?? observed) / maximum),
       tone: "negative" as const,
-      signal: issue.signalIds.length > 0,
+      ...(issue.signalIds[0] ? { signalId: issue.signalIds[0] } : {}),
     }
   })
 }
@@ -109,46 +177,41 @@ const endpointCoverage = (dimension: ScoreDimensionKey, explanation: Explanation
   if (dimension === "outcome") {
     return coverageRow({
       id: "outcome:endpoint-coverage",
-      label: "Outcome verdict coverage",
+      label: "Sessions evaluated for outcome",
       covered: explanation.coverage.outcomeExaminedSessions,
       total: eligible,
-      description: `${formatCount(explanation.coverage.outcomeExaminedSessions)} of ${formatCount(eligible)} eligible sessions examined`,
     })
   }
   if (dimension === "safety") {
     return coverageRow({
       id: "safety:endpoint-coverage",
-      label: "Safety examination coverage",
+      label: "Sessions evaluated for safety",
       covered: explanation.coverage.safetyExaminedSessions,
       total: eligible,
-      description: `${formatCount(explanation.coverage.safetyExaminedSessions)} of ${formatCount(eligible)} eligible sessions examined`,
     })
   }
   if (dimension === "reliability") {
     return coverageRow({
       id: "reliability:endpoint-coverage",
-      label: "Readable completion outcomes",
+      label: "Sessions with a clear completion status",
       covered: explanation.coverage.reliabilityReadableSessions,
       total: eligible,
-      description: `${formatCount(explanation.coverage.reliabilityReadableSessions)} of ${formatCount(eligible)} eligible sessions readable`,
     })
   }
   if (dimension === "speed") {
     return coverageRow({
       id: "speed:endpoint-coverage",
-      label: "Complete critical paths",
+      label: "Sessions with complete timing data",
       covered: explanation.coverage.speed.completeSessionCount,
       total: eligible,
-      description: `${formatCount(explanation.coverage.speed.incompleteSessionCount)} sessions had incomplete paths`,
     })
   }
   if (dimension === "cost") {
     return coverageRow({
       id: "cost:endpoint-coverage",
-      label: "Publishable cost sessions",
+      label: "Sessions with usable cost data",
       covered: explanation.coverage.cost.publishableSessionCount,
       total: explanation.coverage.cost.publishableSessionCount + explanation.coverage.cost.withheldSessionCount,
-      description: `${formatCount(explanation.coverage.cost.withheldSessionCount)} sessions withheld for unreadable cost evidence`,
     })
   }
   return null
@@ -165,27 +228,34 @@ const createEvidence = (): MutableEvidence => ({ affected: [], coverageGaps: [],
 
 const addAttribution = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
   const attribution = explanation.attribution.find((entry) => entry.scoreDimension === dimension)
-  const maximumDeficit = Math.max(1, ...(attribution?.rows.map((row) => row.attributedDeficit) ?? []))
-  for (const row of attribution?.rows ?? []) {
+  const affectedRows = (attribution?.rows ?? []).filter((row) => row.attributedDeficit > MIN_VISIBLE_SCORE_IMPACT)
+  const maximumDeficit = Math.max(1, ...affectedRows.map((row) => row.attributedDeficit))
+  for (const row of affectedRows) {
+    const description = findingDescription(row.causeId)
     evidence.affected.push({
       id: `${dimension}:cause:${row.causeId}`,
-      label: row.label,
-      description: `${attribution?.method === "sampled" ? "Approximate " : ""}${row.evidence === "measured" ? "observed" : "associated"} effect across ${formatCount(row.observationCount)} sessions · ${row.attributedDeficit.toFixed(1)} points attributed · up to ${row.fixGain.toFixed(1)} recoverable`,
-      value: row.signalId ? formatCount(row.observationCount) : formatNative(row.nativeEffect),
+      label: row.signalId ? row.label : findingLabel(row.label),
+      ...(description ? { description } : {}),
+      details: attributionDetails({
+        dimension,
+        attributedDeficit: row.attributedDeficit,
+        associated: row.evidence === "associated",
+        windowDays: explanation.window.stepDays,
+      }),
+      value: row.signalId ? `${formatCount(row.observationCount)} sessions` : formatNative(row.nativeEffect),
       progress: clamp(row.attributedDeficit / maximumDeficit),
       tone: "negative",
-      signal: row.signalId !== undefined,
+      ...(row.signalId ? { signalId: row.signalId } : {}),
     })
   }
   if (attribution && attribution.residual > 0.05) {
     evidence.affected.push({
       id: `${dimension}:residual`,
-      label: "Not yet explained",
-      description: "Score deficit not assigned to a named cause",
-      value: `-${attribution.residual.toFixed(1)} pts`,
+      label: "Other score impact",
+      description: "This portion of the score shortfall could not be assigned to a specific metric or signal.",
+      value: `${attribution.residual.toFixed(1)} score points`,
       progress: clamp(attribution.residual / Math.max(1, attribution.totalDeficit)),
       tone: "negative",
-      signal: false,
     })
   }
 }
@@ -203,73 +273,26 @@ const addIssues = (evidence: MutableEvidence, dimension: ScoreDimensionKey, expl
   }
 }
 
-const addNativeMetric = (
-  evidence: MutableEvidence,
-  dimension: ScoreDimensionKey,
-  snapshot: AgentScoreRecord | null,
-  explanation: Explanation,
-): void => {
-  if (dimension === "speed" && explanation.native.avoidableCriticalPathNs > 0) {
-    const observed = explanation.native.observedCriticalPathNs
-    evidence.affected.unshift({
-      id: "speed:avoidable-time",
-      label: "Avoidable critical-path time",
-      description: `${formatHours(observed)} observed across complete critical paths`,
-      value: formatHours(explanation.native.avoidableCriticalPathNs),
-      progress: observed > 0 ? clamp(explanation.native.avoidableCriticalPathNs / observed) : 0,
-      tone: "negative",
-      signal: false,
-    })
-  }
-
-  const reliabilityScore = snapshot?.dimensions.reliability?.score
-  if (dimension !== "reliability" || reliabilityScore === undefined || reliabilityScore >= 100) return
-  const successRate = oneSessionSuccessRate(reliabilityScore)
-  evidence.affected.unshift({
-    id: "reliability:one-session-rate",
-    label: "One-session completion",
-    description: "Derived from the 20-session reliability score",
-    value: formatPercent(successRate),
-    progress: clamp(1 - successRate),
-    tone: "negative",
-    signal: false,
-  })
-}
-
 const addCostFamilies = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
   if (dimension !== "cost") return
   for (const family of explanation.coverage.cost.families) {
     const penalty = explanation.native.costFamilyPenalties[family.family] ?? 0
-    if (penalty > 0) {
-      evidence.affected.push({
-        id: `cost:penalty:${family.family}`,
-        label: `${humanize(family.family)} inefficiency`,
-        description: `${formatCount(family.readableReadings)} readable of ${formatCount(family.applicableReadings)} applicable readings`,
-        value: formatPercent(penalty),
-        progress: clamp(penalty),
-        tone: "negative",
-        signal: false,
-      })
-    } else if (family.applicableReadings > 0 && family.meetsCoverageFloor) {
+    if (penalty <= 0 && family.applicableReadings > 0 && family.meetsCoverageFloor) {
       evidence.healthy.push({
         id: `cost:healthy:${family.family}`,
-        label: humanize(family.family),
-        description: `${formatCount(family.readableReadings)} readings met the scoring requirements`,
-        value: "No penalty",
+        label: COST_FAMILY_LABELS[family.family] ?? humanize(family.family),
+        value: "Within healthy range",
         progress: 1,
         tone: "positive",
-        signal: false,
       })
     }
     if (family.applicableReadings > 0 && !family.meetsCoverageFloor) {
       evidence.coverageGaps.push({
         id: `cost:coverage:${family.family}`,
-        label: `${humanize(family.family)} coverage`,
-        description: `${formatCount(family.readableReadings)} readable of ${formatCount(family.applicableReadings)} applicable readings`,
+        label: COST_FAMILY_COVERAGE_LABELS[family.family] ?? `${humanize(family.family)} data`,
         value: formatPercent(family.coverage, 0),
         progress: 1 - family.coverage,
         tone: "neutral",
-        signal: false,
       })
     }
   }
@@ -278,55 +301,53 @@ const addCostFamilies = (evidence: MutableEvidence, dimension: ScoreDimensionKey
 const addEndpointCoverage = (
   evidence: MutableEvidence,
   dimension: ScoreDimensionKey,
+  snapshot: AgentScoreRecord | null,
   explanation: Explanation,
 ): void => {
+  if (snapshot?.dimensions[dimension]?.score !== undefined) return
   const endpoint = endpointCoverage(dimension, explanation)
   if (!endpoint) return
-  if (endpoint.tone === "positive") evidence.healthy.unshift(endpoint)
-  else evidence.coverageGaps.unshift(endpoint)
+  if (endpoint.tone !== "positive") evidence.coverageGaps.unshift(endpoint)
 }
 
 const addReaderCoverage = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
   for (const reader of explanation.coverage.readers) {
     if (reader.applicableSessions === 0 || !reader.scoreDimensions.includes(dimension)) continue
-    const limitations = Object.entries(reader.limitations)
-      .map(([reason, count]) => `${humanize(reason)} (${formatCount(count)})`)
-      .join(", ")
+    if (reader.coverage >= 0.999 && Object.keys(reader.limitations).length === 0) continue
     const row: DimensionEvidenceRow = {
       id: `${dimension}:reader:${reader.readerId}`,
-      label: reader.label,
-      description: limitations || `${formatCount(reader.fullyReadSessions)} sessions fully read`,
+      label: COVERAGE_LABELS[reader.label] ?? reader.label,
       value: formatPercent(reader.coverage, 0),
       progress: reader.coverage >= 0.999 ? 1 : clamp(1 - reader.coverage),
       tone: reader.coverage >= 0.999 ? "positive" : "neutral",
-      signal: false,
     }
-    if (reader.coverage >= 0.999 && limitations.length === 0) evidence.healthy.push(row)
-    else evidence.coverageGaps.push(row)
+    evidence.coverageGaps.push(row)
   }
 }
 
-const addClearEndpoint = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
+const addClearEndpoint = (
+  evidence: MutableEvidence,
+  dimension: ScoreDimensionKey,
+  snapshot: AgentScoreRecord | null,
+  explanation: Explanation,
+): void => {
+  if (snapshot?.dimensions[dimension]?.score === undefined) return
   if (dimension === "outcome" && evidence.affected.length === 0 && explanation.coverage.outcomeExaminedSessions > 0) {
     evidence.healthy.push({
       id: "outcome:no-issues",
-      label: "No ranked outcome issues",
-      description: `${formatCount(explanation.coverage.outcomeExaminedSessions)} sessions examined`,
+      label: "No outcome problems found",
       value: "Clear",
       progress: 1,
       tone: "positive",
-      signal: false,
     })
   }
   if (dimension === "safety" && evidence.affected.length === 0 && explanation.coverage.safetyExaminedSessions > 0) {
     evidence.healthy.push({
       id: "safety:no-harm",
-      label: "No confirmed agent-caused harm",
-      description: `${formatCount(explanation.coverage.safetyExaminedSessions)} sessions examined`,
+      label: "No agent-caused harm found",
       value: "Clear",
       progress: 1,
       tone: "positive",
-      signal: false,
     })
   }
 }
@@ -343,11 +364,10 @@ export function buildDimensionEvidence({
   const evidence = createEvidence()
   addAttribution(evidence, dimension, explanation)
   addIssues(evidence, dimension, explanation)
-  addNativeMetric(evidence, dimension, snapshot, explanation)
   addCostFamilies(evidence, dimension, explanation)
-  addEndpointCoverage(evidence, dimension, explanation)
+  addEndpointCoverage(evidence, dimension, snapshot, explanation)
   addReaderCoverage(evidence, dimension, explanation)
-  addClearEndpoint(evidence, dimension, explanation)
+  addClearEndpoint(evidence, dimension, snapshot, explanation)
 
   return evidence
 }

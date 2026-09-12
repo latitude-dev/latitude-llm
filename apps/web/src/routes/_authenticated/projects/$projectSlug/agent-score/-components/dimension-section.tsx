@@ -1,46 +1,143 @@
-import { Icon, Skeleton, Text } from "@repo/ui"
-import { ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon, HashIcon } from "lucide-react"
+import { Button, cn, Icon, Skeleton, Text } from "@repo/ui"
+import { Link } from "@tanstack/react-router"
+import {
+  ArrowUpRightIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CircleAlertIcon,
+  CircleCheckIcon,
+  CircleHelpIcon,
+} from "lucide-react"
 import { useState } from "react"
-import type { DimensionEvidenceRow, EvidenceTone } from "./dimension-evidence.ts"
+import { useSignal } from "../../../../../../domains/signals/signals.collection.ts"
+import { FindingRow } from "../../-components/finding-row.tsx"
+import type { DimensionEvidenceDetail, DimensionEvidenceRow, EvidenceTone } from "./dimension-evidence.ts"
 import { DimensionScoreRing } from "./score-ring.tsx"
 
-const toneClasses: Record<EvidenceTone, { readonly text: string; readonly bar: string }> = {
-  negative: { text: "text-destructive-muted-foreground", bar: "bg-destructive-muted-foreground" },
-  positive: { text: "text-success-muted-foreground", bar: "bg-success-muted-foreground" },
-  neutral: { text: "text-muted-foreground", bar: "bg-muted-foreground" },
+const toneClasses: Record<EvidenceTone, string> = {
+  negative: "text-destructive-muted-foreground",
+  positive: "text-success-muted-foreground",
+  neutral: "text-muted-foreground",
 }
 
-function EvidenceRow({ row }: { readonly row: DimensionEvidenceRow }) {
-  const colors = toneClasses[row.tone]
+const toneIcon = (tone: EvidenceTone) =>
+  tone === "negative" ? CircleAlertIcon : tone === "positive" ? CircleCheckIcon : CircleHelpIcon
+
+const toneIconColor = (tone: EvidenceTone) =>
+  tone === "negative"
+    ? ("destructiveMutedForeground" as const)
+    : tone === "positive"
+      ? ("successMutedForeground" as const)
+      : ("foregroundMuted" as const)
+
+function SignalEvidenceDetails({
+  row,
+  projectId,
+  projectSlug,
+}: {
+  readonly row: DimensionEvidenceRow & { readonly signalId: string }
+  readonly projectId: string
+  readonly projectSlug: string
+}) {
+  const { data: signal, isLoading } = useSignal({ projectId, signalId: row.signalId })
+  const title = signal?.name?.trim() || row.label
+  const descriptions = [signal?.description?.trim(), row.description].filter(
+    (description, index, values): description is string =>
+      Boolean(description) && values.indexOf(description) === index,
+  )
+  const signalSlug = signal?.slug ?? row.signalId
+
   return (
-    <div
-      className="grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 py-2 transition-colors hover:bg-muted/60 @max-[38rem]:grid-cols-1"
-      title={row.description}
-    >
-      <div className="flex min-w-0 flex-row items-center gap-3">
-        <span className="text-muted-foreground">
-          <Icon icon={row.signal ? ExternalLinkIcon : HashIcon} size="sm" />
-        </span>
-        <Text.H6 color="foregroundMuted" className="truncate">
-          {row.label}
-        </Text.H6>
-      </div>
-      <div className="flex min-w-40 flex-row items-center justify-end gap-3 @max-[38rem]:pl-7">
-        <Text.H6M
-          color={row.signal ? "foregroundMuted" : "inherit"}
-          className={`min-w-16 text-right tabular-nums ${row.signal ? "" : colors.text}`}
-        >
-          {row.value}
-        </Text.H6M>
-        {row.signal ? (
-          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-            <div
-              className={`h-full rounded-full ${colors.bar}`}
-              style={{ width: `${Math.max(4, Math.round(row.progress * 100))}%` }}
-            />
+    <div className="flex min-w-0 items-start gap-4 px-4 py-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <Text.H6B>{title}</Text.H6B>
+        {isLoading ? (
+          <div className="flex flex-col gap-1 py-1">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-2/3" />
           </div>
-        ) : null}
+        ) : (
+          descriptions.map((description) => (
+            <Text.H6 key={description} color="foregroundMuted" className="whitespace-pre-wrap">
+              {description}
+            </Text.H6>
+          ))
+        )}
       </div>
+      <Button asChild variant="link" size="sm" className="h-auto shrink-0 px-0 py-0">
+        <Link
+          to="/projects/$projectSlug/signals/$signalSlug"
+          params={{ projectSlug, signalSlug }}
+          aria-label={`Open signal ${title}`}
+        >
+          View signal
+          <Icon icon={ArrowUpRightIcon} size="xs" />
+        </Link>
+      </Button>
+    </div>
+  )
+}
+
+function EvidenceDetails({ details }: { readonly details: readonly DimensionEvidenceDetail[] }) {
+  return (
+    <div className="flex flex-col divide-y divide-border">
+      {details.map((detail) => (
+        <div key={detail.label} className="flex min-w-0 items-center justify-between gap-4 px-4 py-2.5">
+          <Text.H7 color="foregroundMuted">{detail.label}</Text.H7>
+          <Text.H7 className="shrink-0 tabular-nums">{detail.value}</Text.H7>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function EvidenceRow({
+  row,
+  projectId,
+  projectSlug,
+}: {
+  readonly row: DimensionEvidenceRow
+  readonly projectId: string
+  readonly projectSlug: string
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const expandable = row.signalId !== undefined || row.description !== undefined || row.details !== undefined
+  const leading = row.signalId ? (
+    <Icon icon={ArrowUpRightIcon} size="xs" color="foregroundMuted" />
+  ) : (
+    <Icon icon={toneIcon(row.tone)} size="xs" color={toneIconColor(row.tone)} />
+  )
+
+  return (
+    <div className="flex w-full flex-col">
+      <FindingRow
+        label={row.label}
+        leading={leading}
+        trailing={
+          <Text.H6 className={cn("shrink-0 tabular-nums", toneClasses[row.tone])} noWrap>
+            {row.value}
+          </Text.H6>
+        }
+        expanded={expandable && expanded}
+        onToggle={expandable ? () => setExpanded((value) => !value) : undefined}
+        className={cn({ "hover:bg-muted/60": expandable, "bg-muted/40": expandable && expanded })}
+      />
+      {expandable && expanded ? (
+        <div className="divide-y divide-border border-t border-border bg-background pl-6">
+          {row.signalId ? (
+            <SignalEvidenceDetails
+              row={{ ...row, signalId: row.signalId }}
+              projectId={projectId}
+              projectSlug={projectSlug}
+            />
+          ) : row.description ? (
+            <div className="px-4 py-3">
+              <Text.H6 color="foregroundMuted">{row.description}</Text.H6>
+            </div>
+          ) : null}
+          {row.details ? <EvidenceDetails details={row.details} /> : null}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -49,12 +146,16 @@ function EvidenceGroup({
   id,
   label,
   rows,
+  projectId,
+  projectSlug,
   initiallyOpen,
   emptyMessage,
 }: {
   readonly id: string
   readonly label: string
   readonly rows: readonly DimensionEvidenceRow[]
+  readonly projectId: string
+  readonly projectSlug: string
   readonly initiallyOpen: boolean
   readonly emptyMessage?: string
 }) {
@@ -78,11 +179,15 @@ function EvidenceGroup({
         </span>
       </button>
       {open ? (
-        <div id={id} className="divide-y divide-border border-t border-border">
+        <div id={id} className="flex border-t border-border">
           {rows.length > 0 ? (
-            rows.map((row) => <EvidenceRow key={row.id} row={row} />)
+            <div className="flex w-full flex-col divide-y divide-border">
+              {rows.map((row) => (
+                <EvidenceRow key={row.id} row={row} projectId={projectId} projectSlug={projectSlug} />
+              ))}
+            </div>
           ) : (
-            <div className="px-6 py-4">
+            <div className="w-full px-4 py-4">
               <Text.H6 color="foregroundMuted">{emptyMessage}</Text.H6>
             </div>
           )}
@@ -97,16 +202,24 @@ export function DimensionSection({
   title,
   description,
   score,
+  projectId,
+  projectSlug,
   affected,
   healthy,
-  emptyAffectedMessage = "No contributing causes were identified in the current evidence.",
+  context,
+  coverage,
+  emptyAffectedMessage = "No material issues affected this score in the current window.",
 }: {
   readonly id: string
   readonly title: string
   readonly description: string
   readonly score: number | null
+  readonly projectId: string
+  readonly projectSlug: string
   readonly affected: readonly DimensionEvidenceRow[]
   readonly healthy: readonly DimensionEvidenceRow[]
+  readonly context: readonly DimensionEvidenceRow[]
+  readonly coverage: readonly DimensionEvidenceRow[]
   readonly emptyAffectedMessage?: string
 }) {
   const [open, setOpen] = useState(true)
@@ -134,10 +247,35 @@ export function DimensionSection({
             id={`${id}-affected`}
             label="Affected by"
             rows={affected}
+            projectId={projectId}
+            projectSlug={projectSlug}
             initiallyOpen
             emptyMessage={emptyAffectedMessage}
           />
-          <EvidenceGroup id={`${id}-healthy`} label="Healthy" rows={healthy} initiallyOpen={false} />
+          <EvidenceGroup
+            id={`${id}-healthy`}
+            label="Healthy"
+            rows={healthy}
+            projectId={projectId}
+            projectSlug={projectSlug}
+            initiallyOpen={false}
+          />
+          <EvidenceGroup
+            id={`${id}-context`}
+            label="Observed but not scored"
+            rows={context}
+            projectId={projectId}
+            projectSlug={projectSlug}
+            initiallyOpen={false}
+          />
+          <EvidenceGroup
+            id={`${id}-coverage`}
+            label="Data coverage"
+            rows={coverage}
+            projectId={projectId}
+            projectSlug={projectSlug}
+            initiallyOpen={false}
+          />
         </div>
       ) : null}
     </section>

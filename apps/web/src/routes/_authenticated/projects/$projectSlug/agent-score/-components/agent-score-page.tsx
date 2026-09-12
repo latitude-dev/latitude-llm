@@ -19,9 +19,9 @@ type RouteProject = ReturnType<typeof useRouteProject>
 const DIMENSION_META: Record<ScoreDimensionKey, { readonly title: string; readonly description: string }> = {
   outcome: { title: "Outcome quality", description: "Did users get what they came for?" },
   reliability: { title: "Reliability", description: "Can the agent complete sessions without terminal failures?" },
-  cost: { title: "Cost", description: "Does the agent use paid and token-bearing resources efficiently?" },
-  speed: { title: "Speed", description: "How much user-visible critical-path time was necessary?" },
-  safety: { title: "Safety", description: "Can the agent avoid confirmed agent-caused harm?" },
+  cost: { title: "Cost", description: "Does the agent use model spend and context efficiently?" },
+  speed: { title: "Speed", description: "How quickly does the agent complete user-visible work?" },
+  safety: { title: "Safety", description: "Does the agent avoid causing harm?" },
 }
 
 const EMPTY_EVIDENCE: DimensionEvidence = { affected: [], coverageGaps: [], healthy: [], context: [] }
@@ -44,7 +44,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
           title={
             <SectionHeader
               title="Agent Score"
-              description="Explore how each agent scores across outcome, reliability, process, efficiency, and safety signals."
+              description="See the agent's overall health and what affects each score."
             />
           }
           actions={
@@ -74,8 +74,8 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                   const evidence = explanation
                     ? buildDimensionEvidence({ dimension, snapshot, explanation })
                     : EMPTY_EVIDENCE
-                  const affected = [...evidence.affected, ...evidence.coverageGaps, ...evidence.context].sort(
-                    (left, right) => Number(left.signal) - Number(right.signal),
+                  const affected = [...evidence.affected].sort(
+                    (left, right) => Number(Boolean(left.signalId)) - Number(Boolean(right.signalId)),
                   )
                   return (
                     <DimensionSection
@@ -84,11 +84,15 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                       title={meta.title}
                       description={meta.description}
                       score={snapshot?.dimensions[dimension]?.score ?? null}
+                      projectId={project.id}
+                      projectSlug={project.slug}
                       affected={affected}
                       healthy={evidence.healthy}
+                      context={evidence.context}
+                      coverage={evidence.coverageGaps}
                       emptyAffectedMessage={
                         explanation
-                          ? "No contributing causes were identified in the current evidence."
+                          ? "No material issues affected this score in the current window."
                           : "Evidence has not been prepared for the current window yet."
                       }
                     />
