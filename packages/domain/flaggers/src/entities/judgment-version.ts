@@ -9,18 +9,7 @@ const fnv1a32 = (value: string): string => {
   return hash.toString(16).padStart(8, "0")
 }
 
-/**
- * Identifies the prompt, result schema, and judge configuration behind a
- * persisted model judgement.
- *
- * The judge is part of the version because a deployment that points
- * `FLAGGER_CLASSIFIER` at another model is producing a different measurement:
- * the window estimators treat each version as its own population rather than
- * pooling judgements from two judges. The provider and model are spelled out so
- * the version is readable in the score row; an identity that would overflow the
- * persisted version column collapses to a digest instead, since truncating it
- * would let two judges share a label.
- */
+// Digest rather than truncate: a cut-off identity would let two judges share a label.
 export const buildJudgmentVersion = (
   prefix: string,
   judge: { readonly provider: string; readonly model: string },
