@@ -563,6 +563,12 @@ export {
   SAFETY_FINDING_BATCH_SIZE,
 } from "./use-cases/estimate-project-safety.ts"
 export {
+  AGENT_SCORE_HISTORY_DEFAULT_DAYS,
+  type CurrentAgentScore,
+  getCurrentAgentScore,
+  listAgentScoreHistory,
+} from "./use-cases/get-agent-score.ts"
+export {
   type GetSessionAssessmentInput,
   getSessionAssessment,
 } from "./use-cases/get-session-assessment.ts"
