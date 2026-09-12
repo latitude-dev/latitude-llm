@@ -28,7 +28,7 @@ import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyObservationRepository } from "../testing/fake-taxonomy-observation-repository.ts"
-import { nameClusterUseCase } from "./name-taxonomy.ts"
+import { nameClusterUseCase, readableObservationSummaryForTesting } from "./name-taxonomy.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -702,5 +702,30 @@ describe("nameClusterUseCase", () => {
     expect(prompts.join("\n")).not.toContain("- Order Status")
     expect(prompts).toHaveLength(2)
     expect(clusters.clusters.get(clusterId)?.name).toBe("Order Status")
+  })
+})
+
+describe("readableObservationSummary", () => {
+  const LONE_SURROGATE_PATTERN = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+
+  it("strips a lone high surrogate so it never reaches the naming prompt", () => {
+    const summary = readableObservationSummaryForTesting("User asked about \uD800 their order.")
+    expect(summary).not.toBeNull()
+    expect(summary).not.toMatch(LONE_SURROGATE_PATTERN)
+  })
+
+  it("strips a lone low surrogate so it never reaches the naming prompt", () => {
+    const summary = readableObservationSummaryForTesting("User asked about \uDC00 their order.")
+    expect(summary).not.toBeNull()
+    expect(summary).not.toMatch(LONE_SURROGATE_PATTERN)
+  })
+
+  it("leaves a well-formed surrogate pair (e.g. an emoji) untouched", () => {
+    expect(readableObservationSummaryForTesting("Order status 😀 check")).toBe("Order status 😀 check")
+  })
+
+  it("returns null for non-string or blank values, as before", () => {
+    expect(readableObservationSummaryForTesting(null)).toBeNull()
+    expect(readableObservationSummaryForTesting("   ")).toBeNull()
   })
 })

@@ -1360,4 +1360,14 @@ describe("middleTruncate", () => {
     const value = "😀".repeat(10)
     expect(middleTruncateForTesting(value, value.length)).toBe(value)
   })
+
+  it("strips a lone surrogate already present in text short enough to skip truncation", () => {
+    const loneHighSurrogate = "hello \uD800 world"
+    expect(middleTruncateForTesting(loneHighSurrogate, loneHighSurrogate.length)).not.toMatch(LONE_SURROGATE_PATTERN)
+
+    const loneLowSurrogate = "hello \uDC00 world"
+    expect(middleTruncateForTesting(loneLowSurrogate, loneLowSurrogate.length + 100)).not.toMatch(
+      LONE_SURROGATE_PATTERN,
+    )
+  })
 })
