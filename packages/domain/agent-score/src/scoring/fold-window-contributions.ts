@@ -1,3 +1,4 @@
+import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostMetricCatalog } from "../entities/cost-metric-catalog.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
 import type { NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
@@ -45,16 +46,34 @@ export const foldSessionContribution = ({
   }
 }
 
+/** Applicable and readable metric readings for one family, pooled across the window's sessions. */
+export interface FamilyReadingCoverage {
+  readonly applicable: number
+  readonly readable: number
+}
+
 export interface WindowFold {
   readonly contributions: readonly SessionWindowContribution[]
   readonly foldedSessionCount: number
   readonly withheldSessionCount: number
+  /**
+   * Counted rather than averaged: a coverage share cannot be added, so the window's coverage is the
+   * pooled ratio over every applicable reading in it.
+   */
+  readonly familyCoverage: Readonly<Record<CostFamily, FamilyReadingCoverage>>
 }
+
+const emptyFamilyCoverage = (): Record<CostFamily, FamilyReadingCoverage> =>
+  Object.fromEntries(COST_FAMILIES.map((family) => [family, { applicable: 0, readable: 0 }])) as Record<
+    CostFamily,
+    FamilyReadingCoverage
+  >
 
 export const EMPTY_WINDOW_FOLD: WindowFold = {
   contributions: [],
   foldedSessionCount: 0,
   withheldSessionCount: 0,
+  familyCoverage: emptyFamilyCoverage(),
 }
 
 /**
@@ -78,9 +97,24 @@ export const foldWindowBatch = ({
   readonly catalog: CostMetricCatalog
 }): WindowFold => {
   const added: SessionWindowContribution[] = []
+  const familyCoverage = emptyFamilyCoverage()
+  for (const family of COST_FAMILIES) {
+    familyCoverage[family] = { ...fold.familyCoverage[family] }
+  }
   let withheld = 0
 
   for (const session of sessions) {
+    // Coverage counts every session's readings, including a session whose required family could not
+    // be read: that session is precisely what the window-level gate is measuring.
+    for (const reading of session.costEvidence?.readings ?? []) {
+      if (reading.applicability !== "applicable") continue
+      const family = familyCoverage[reading.family]
+      familyCoverage[reading.family] = {
+        applicable: family.applicable + 1,
+        readable: family.readable + (reading.readability === "readable" ? 1 : 0),
+      }
+    }
+
     const denominators = denominatorsFor(session)
     const aggregate = aggregateSessionCost({
       readings: session.costEvidence?.readings ?? [],
@@ -99,5 +133,6 @@ export const foldWindowBatch = ({
     contributions: [...fold.contributions, ...added],
     foldedSessionCount: fold.foldedSessionCount + added.length,
     withheldSessionCount: fold.withheldSessionCount + withheld,
+    familyCoverage,
   }
 }

@@ -1542,15 +1542,15 @@ Each row is a gate the previous checklist asserted and the code does not current
 
 ### Step 4: composition, coverage, and the publication gate
 
-- [ ] **P6-21** Add one `computeAgentScore` use-case that makes a single bounded bulk pass over the
+- [x] **P6-21** Add one `computeAgentScore` use-case that makes a single bounded bulk pass over the
   window and folds, as each batch lands: Cost and Speed contributions, Reliability endpoints and
   readability, Outcome's deterministic census through `selectDeterministicOutcomeFailures`, signal
   occurrences, and every coverage tally. Batches are released before the next one starts; a
   thousand-session window is never resident.
-- [ ] **P6-22** Compose the five estimators over that fold. Do not add metric-specific arithmetic
+- [x] **P6-22** Compose the five estimators over that fold. Do not add metric-specific arithmetic
   outside the PR 3 catalog and evaluators, and do not re-read telemetry any dimension already has.
   Outcome and Safety take their judgment reads from the window sources PRs 4 and 5 built.
-- [ ] **P6-23** Implement D8's window-level Cost coverage gate. Evaluate required-family coverage
+- [x] **P6-23** Implement D8's window-level Cost coverage gate. Evaluate required-family coverage
   across the window, not per session, and withhold Cost when a required family applies and cannot be
   read. `foldWindowBatch`'s `withheldSessionCount` becomes an input to that decision rather than a
   reported statistic.
@@ -1560,22 +1560,29 @@ Each row is a gate the previous checklist asserted and the code does not current
   apply the artifact's residual cap, and feed the result to `aggregateWindowCost` as
   `residualSignalPenalty` and to the Speed counterfactual in nanoseconds. Keep the two unit systems
   separate throughout.
-- [ ] **P6-25** Compute intervals per dimension: seeded whole-session bootstrap for Cost and Speed
+- [x] **P6-25** Compute intervals per dimension: seeded whole-session bootstrap for Cost and Speed
   through `bootstrapWindow`, and boundary-aware endpoint intervals for Outcome, Reliability, and
   Safety. The composite's bootstrap replicates draw each endpoint probability from its fitted
   boundary-aware model rather than resampling a constant outcome vector, so a window with zero
-  observed failures does not produce a degenerate composite interval.
-- [ ] **P6-26** Implement the all-five publication gate, the fixed composite, and the optional policy
+  observed failures does not produce a degenerate composite interval. The composer computes the Cost
+  and Speed point estimates from the same contributions its replicates resample rather than accepting
+  them as input: a caller that supplied an aggregate built from a different session set produced an
+  interval that did not contain its own point estimate, and no type said so.
+- [x] **P6-26** Implement the all-five publication gate, the fixed composite, and the optional policy
   cap. Weights never redistribute. If one dimension is unmeasured, no composite and no dimension
   number is produced, and the failing floor is named per dimension. A policy cap is applied and
   reported separately from the weighted mean so the page can attribute capped points to the rule
   rather than to a cause.
-- [ ] **P6-27** Produce the full coverage report [`score.md`](score.md#confidence) lists: readable and
+- [~] **P6-27** Produce the full coverage report [`score.md`](score.md#confidence) lists: readable and
   eligible counts per dimension and reader, analysis and pricing and critical-path and
   safety-examination coverage, per-flagger examined share and selection mechanism, corrected sampling
   shares, unmapped finish reasons and provider errors, disabled or archived detectors, signals waiting
-  for independent observations, and the count of causes whose consequence remains unestimated.
-- [ ] **P6-28** Implement scoring-version boundary behaviour: the run labels its result with the
+  for independent observations, and the count of causes whose consequence remains unestimated. Every
+  reader's examined share and its limitations now come from a window-level tally of the same reader
+  facts the session panel shows, and the loaded artifact versions ride along so a snapshot can be
+  traced to what produced it. Signals waiting for independent observations arrive with P6-24 and the
+  attribution approximation error with Step 5.
+- [x] **P6-28** Implement scoring-version boundary behaviour: the run labels its result with the
   resolved version, never pools incompatible sampled evidence under one label, re-evaluates retained
   inputs against the target artifact where supported, and treats what cannot be re-evaluated as
   unreadable for that reader.

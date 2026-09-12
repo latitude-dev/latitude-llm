@@ -20,6 +20,13 @@ export {
   LAUNCH_LATENCY_REFERENCE_ARTIFACT,
 } from "./artifacts/launch-latency-reference-artifact.ts"
 export { SESSION_ASSESSMENT_CONTENT_BUDGET, SESSION_ASSESSMENT_RESOLVER_CONCURRENCY } from "./constants.ts"
+export type {
+  AgentScoreCoverage,
+  AgentScoreNativeInputs,
+  AgentScoreResult,
+  AgentScoreStatus,
+  AgentScoreWindow,
+} from "./entities/agent-score.ts"
 export {
   type AgentScoreArtifact,
   agentScoreArtifactSchema,
@@ -371,6 +378,15 @@ export {
   type IssueSession,
 } from "./scoring/build-issue-rows.ts"
 export { buildSafetyIssues, type SafetyIssueSession, type SafetyIssues } from "./scoring/build-safety-issues.ts"
+export {
+  type AgentScoreComposite,
+  type AgentScoreComposition,
+  type ComposeAgentScoreInput,
+  type CompositePolicyCapResult,
+  composeAgentScore,
+  DEFAULT_COMPOSITE_REPLICATES,
+  type DimensionResult,
+} from "./scoring/compose-agent-score.ts"
 export type {
   SpeedAvoidableClaim,
   SpeedClaimDropReason,
@@ -430,7 +446,7 @@ export {
   evaluateCostMetric,
   interpolateCostPenalty,
 } from "./scoring/evaluate-cost-curve.ts"
-export type { WindowFold } from "./scoring/fold-window-contributions.ts"
+export type { FamilyReadingCoverage, WindowFold } from "./scoring/fold-window-contributions.ts"
 export {
   EMPTY_WINDOW_FOLD,
   foldSessionContribution,
@@ -462,6 +478,25 @@ export {
   type ScoreWindowStepCount,
   selectScoreWindow,
 } from "./scoring/select-score-window.ts"
+export {
+  type ReaderLimitation,
+  tallyWindowReaderCoverage,
+  type WindowReaderCoverage,
+} from "./scoring/tally-reader-coverage.ts"
+export {
+  type CostFamilyWindowCoverage,
+  type CostUnmeasuredReason,
+  type CostWindowGate,
+  gateCostWindow,
+  gateSpeedWindow,
+  type SpeedUnmeasuredReason,
+  type SpeedWindowGate,
+} from "./scoring/window-gates.ts"
+export {
+  AGENT_SCORE_BATCH_SIZE,
+  type ComputeAgentScoreInput,
+  computeAgentScore,
+} from "./use-cases/compute-agent-score.ts"
 export {
   type EstimateProjectOutcomeWindowInput,
   estimateProjectOutcomeWindow,

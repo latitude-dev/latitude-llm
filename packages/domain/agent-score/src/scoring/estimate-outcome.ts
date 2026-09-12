@@ -45,6 +45,17 @@ export interface ProjectOutcomeEstimate {
   readonly examinedSessionCount: number
   readonly deterministicSessionCount: number
   readonly sampledSessionCount: number
+  /** Judged sessions the judge called a failure. Coverage context, and the composite's endpoint count. */
+  readonly sampledFailureCount: number
+  /**
+   * Selection-corrected weight behind each stratum.
+   *
+   * The census is certain, so it weighs one per session; the sample stands for the traffic it was
+   * drawn from. Both are reported because the pooled rate is a ratio between them, and a composite
+   * replicate has to redraw the sampled side while the census stays fixed.
+   */
+  readonly sampledWeight: number
+  readonly censusWeight: number
   readonly excluded: Readonly<Record<OutcomeExclusionReason, number>>
   readonly coverage: "measured" | "unmeasured"
   readonly unmeasuredReason?: OutcomeUnmeasuredReason
@@ -96,6 +107,9 @@ export const estimateProjectOutcome = (input: EstimateProjectOutcomeInput): Proj
     examinedSessionCount: deterministic.size + eligible.length,
     deterministicSessionCount: deterministic.size,
     sampledSessionCount: eligible.length,
+    sampledFailureCount: eligible.filter((verdict) => !verdict.succeeded).length,
+    sampledWeight: eligible.reduce((total, verdict) => total + 1 / verdict.inclusionProbability, 0),
+    censusWeight: deterministic.size,
     excluded,
   }
 
