@@ -16266,6 +16266,259 @@
         ],
         "description": "Share of comparable sessions expected to accomplish the user's task."
       },
+      "AgentScoreCauses": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "notComputed"
+            ],
+            "description": "`notComputed` when the explanation has not been prepared yet; the scores are still valid."
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/AgentScoreExplanation"
+          }
+        },
+        "required": [
+          "status",
+          "explanation"
+        ]
+      },
+      "AgentScoreExplanation": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "computedAt": {
+            "type": "string",
+            "description": "When this evidence was read, as an ISO-8601 timestamp. It explains present behaviour, not the stored score."
+          },
+          "scoringVersion": {
+            "type": "string",
+            "description": "Scoring version the evidence was read under."
+          },
+          "windowDays": {
+            "type": "integer",
+            "description": "Length in days of the window the evidence covers."
+          },
+          "eligibleSessionCount": {
+            "type": "integer",
+            "description": "Production sessions in that window."
+          },
+          "attribution": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentScoreDimensionAttribution"
+            },
+            "description": "Per-dimension cause rows for the dimensions that support a counterfactual."
+          },
+          "outcomeIssues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentScoreIssueRow"
+            },
+            "description": "Where task failures concentrate. Reach only; these rows carry no share of the score."
+          },
+          "safetyConfirmedHarm": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentScoreIssueRow"
+            },
+            "description": "Issues where the agent caused confirmed harm."
+          },
+          "safetyExposure": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentScoreIssueRow"
+            },
+            "description": "Hostile or sensitive content the agent received. Exposure is context and never lowers Safety."
+          }
+        },
+        "required": [
+          "computedAt",
+          "scoringVersion",
+          "windowDays",
+          "eligibleSessionCount",
+          "attribution",
+          "outcomeIssues",
+          "safetyConfirmedHarm",
+          "safetyExposure"
+        ],
+        "description": "The evidence, or `null` when it is not ready."
+      },
+      "AgentScoreDimensionAttribution": {
+        "type": "object",
+        "properties": {
+          "scoreDimension": {
+            "type": "string",
+            "enum": [
+              "outcome",
+              "reliability",
+              "cost",
+              "speed",
+              "safety"
+            ],
+            "description": "Dimension explained."
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentScoreCauseRow"
+            },
+            "description": "Causes, most responsible first."
+          },
+          "residual": {
+            "type": "number",
+            "description": "Points of the deficit no named cause accounts for, including estimation error."
+          },
+          "totalDeficit": {
+            "type": "number",
+            "description": "The dimension's whole distance from healthy, in points."
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "sampled"
+            ],
+            "description": "`sampled` when there were too many causes to attribute exactly."
+          },
+          "approximationError": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Standard error of the sampled shares in points, or `null` when attribution was exact."
+          }
+        },
+        "required": [
+          "scoreDimension",
+          "rows",
+          "residual",
+          "totalDeficit",
+          "method",
+          "approximationError"
+        ]
+      },
+      "AgentScoreCauseRow": {
+        "type": "object",
+        "properties": {
+          "causeId": {
+            "type": "string",
+            "description": "Stable identifier of the metric, claim or finding kind behind this row."
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable name for the cause."
+          },
+          "attributedDeficit": {
+            "type": "number",
+            "description": "Points of the dimension's deficit attributed to this cause. Attributed deficits across a dimension add up; they are not a prediction of what fixing it returns."
+          },
+          "fixGain": {
+            "type": "number",
+            "description": "Points the dimension would recover if this cause alone disappeared. Fix gains overlap between causes and must never be summed."
+          },
+          "evidence": {
+            "type": "string",
+            "enum": [
+              "measured",
+              "associated"
+            ],
+            "description": "`measured` when the reader observed the effect directly; `associated` when it was estimated from matched comparison sessions and no causal claim is made."
+          },
+          "nativeEffect": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "number",
+                "description": "Size of the effect in its own unit, before it became score points."
+              },
+              "unit": {
+                "type": "string",
+                "description": "Unit the value is in, such as nanoseconds, sessions, or a Cost family."
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ],
+            "description": "The effect in the dimension's own terms, which is what the row shows beside the points."
+          },
+          "observationCount": {
+            "type": "integer",
+            "description": "Independent observations behind the row. Coverage context, not a score."
+          }
+        },
+        "required": [
+          "causeId",
+          "label",
+          "attributedDeficit",
+          "fixGain",
+          "evidence",
+          "nativeEffect",
+          "observationCount"
+        ]
+      },
+      "AgentScoreIssueRow": {
+        "type": "object",
+        "properties": {
+          "issueKey": {
+            "type": "string",
+            "description": "Stable identifier for the issue."
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable name for the issue."
+          },
+          "signalIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Signals this issue was observed through, if any."
+          },
+          "estimatedReach": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Sessions the issue touched, corrected for how often it could be observed. `null` when the correction is unknown."
+          },
+          "estimatedAdverseReach": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Sessions it touched that went badly, corrected the same way. `null` when unknown."
+          },
+          "examinedSessions": {
+            "type": "integer",
+            "description": "Raw sessions examined. Coverage context, never a ranking key."
+          },
+          "examinedAdverseSessions": {
+            "type": "integer",
+            "description": "Raw examined sessions that went badly."
+          },
+          "ranked": {
+            "type": "boolean",
+            "description": "`false` when a required joint observation probability was unknown, so the row explains without claiming a position."
+          }
+        },
+        "required": [
+          "issueKey",
+          "label",
+          "signalIds",
+          "estimatedReach",
+          "estimatedAdverseReach",
+          "examinedSessions",
+          "examinedAdverseSessions",
+          "ranked"
+        ]
+      },
       "CurrentAgentScore": {
         "type": "object",
         "properties": {
@@ -28011,6 +28264,77 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AgentScoreHistory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/agent-score/causes": {
+      "get": {
+        "tags": [
+          "Agent Score"
+        ],
+        "x-fern-sdk-group-name": "agentScore",
+        "x-fern-sdk-method-name": "causes",
+        "summary": "Get Agent Score causes",
+        "description": "Returns what explains the project's current Agent Score: ranked causes per dimension, and where Outcome failures and Safety harm concentrate. This is current evidence from the live window and does not reconstruct any stored score.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getAgentScoreCauses",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current cause rows, or an explicit absence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentScoreCauses"
                 }
               }
             }

@@ -225,4 +225,22 @@ describe("Agent Score Routes Integration", () => {
 
     expect(response.status).toBe(404)
   })
+
+  it<ApiTestContext>("says the explanation is not ready rather than returning an empty one", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Uncomputed Project")
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}/agent-score/causes`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    // Empty cause tables would read as "nothing is wrong"; the scores stay valid either way.
+    expect(await response.json()).toEqual({ status: "notComputed", explanation: null })
+  })
 })

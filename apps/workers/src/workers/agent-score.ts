@@ -2,6 +2,8 @@ import { resolveLaunchArtifacts, utcDateOf } from "@domain/agent-score"
 import { FLAGGER_DEFAULT_CLASSIFIER_MODEL } from "@domain/flaggers"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
+import type { RedisClient } from "@platform/cache-redis"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import {
   FlaggerScreeningDecisionRepositoryLive,
@@ -39,6 +41,7 @@ interface AgentScoreWorkerDeps {
   readonly publisher: QueuePublisherShape
   readonly postgresClient: PostgresClient
   readonly clickhouseClient: ClickHouseClient
+  readonly redisClient: RedisClient
 }
 
 export const createAgentScoreWorker = ({
@@ -46,6 +49,7 @@ export const createAgentScoreWorker = ({
   publisher,
   postgresClient,
   clickhouseClient,
+  redisClient,
 }: AgentScoreWorkerDeps) => {
   // One judge for the whole run: it decides the scoring version, and a version that varied per
   // project would make two projects' numbers incomparable for a reason neither of them chose.
@@ -143,6 +147,7 @@ export const createAgentScoreWorker = ({
           clickhouseClient,
           organizationId,
         ),
+        Effect.provide(RedisCacheStoreLive(redisClient)),
         withTracing,
         Effect.asVoid,
       )

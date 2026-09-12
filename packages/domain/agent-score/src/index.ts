@@ -56,6 +56,12 @@ export {
   supportedJudgmentVersionsSchema,
 } from "./entities/agent-score-artifact.ts"
 export {
+  AGENT_SCORE_EXPLANATION_TTL_SECONDS,
+  type AgentScoreExplanation,
+  agentScoreExplanationCacheKey,
+  toAgentScoreExplanation,
+} from "./entities/agent-score-explanation.ts"
+export {
   type AgentScoreSnapshot,
   type AgentScoreSnapshotIdentity,
   agentScoreSnapshotSchema,
@@ -568,6 +574,11 @@ export {
   getCurrentAgentScore,
   listAgentScoreHistory,
 } from "./use-cases/get-agent-score.ts"
+export {
+  type AgentScoreExplanationResult,
+  cacheAgentScoreExplanation,
+  getAgentScoreExplanation,
+} from "./use-cases/get-agent-score-explanation.ts"
 export {
   type GetSessionAssessmentInput,
   getSessionAssessment,

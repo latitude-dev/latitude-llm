@@ -1668,10 +1668,17 @@ Each row is a gate the previous checklist asserted and the code does not current
 
 ### Step 7: public and web surfaces
 
-- [ ] **P6-42** Expose the current UTC date's snapshot and the history through `@repo/operations`,
+- [x] **P6-42** Expose the current UTC date's snapshot and the history through `@repo/operations`,
   HTTP, OpenAPI, MCP, both SDKs, the CLI, and in-process agent tools. Follow the repository's
   generated-artifact and package-version conventions. Implement D12's explicit unavailable state; do
-  not substitute an older snapshot and do not return a bare 404.
+  not substitute an older snapshot and do not return a bare 404. A third operation serves the cause
+  rows, which the snapshot deliberately does not contain. It reads a cache the daily job warms rather
+  than recomputing per request: the explanation costs a window read of every session with its
+  generation content, which is daily-job work, and doing it per viewer would multiply it by however
+  many people opened the page. The cache is not a snapshot — it expires, it is keyed by project
+  rather than by date, and it carries its own `computedAt` so the page says when the evidence was
+  read instead of implying it explains the stored number. A miss reports `notComputed` rather than
+  blocking a request for the length of a window read.
 - [ ] **P6-43** Add an `agentScore` entry to the feature-flag registry and the project section first
   in the Observe group, above Sessions, gated on that flag.
 - [ ] **P6-44** Build level one from [`page.md`](page.md#level-one): score and interval, snapshot date,

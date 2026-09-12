@@ -287,6 +287,7 @@ const bootstrap = async () => {
       publisher: ctx.publisher,
       postgresClient: ctx.postgresClient,
       clickhouseClient: ctx.clickhouseClient,
+      redisClient: ctx.redisClient,
     })
     createSandboxesWorker({
       consumer: ctx.consumer,
