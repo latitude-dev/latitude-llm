@@ -1,4 +1,5 @@
-import { Skeleton, Text } from "@repo/ui"
+import { Button, Icon, Text } from "@repo/ui"
+import { RotateCwIcon } from "lucide-react"
 import {
   useProjectAgentScore,
   useProjectAgentScoreExplanation,
@@ -7,76 +8,111 @@ import {
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { SectionHeader } from "../../-components/section-header.tsx"
 import type { useRouteProject } from "../../-route-data.ts"
-import { AgentScoreHeadline } from "./agent-score-header.tsx"
-import { AgentScoreUnavailable } from "./agent-score-unavailable.tsx"
-import { CauseRows } from "./cause-rows.tsx"
-import { CoveragePanel } from "./coverage-panel.tsx"
-import { DimensionStrip } from "./dimension-strip.tsx"
+import { formatCount, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
+import { AgentVitality } from "./agent-vitality.tsx"
+import { buildDimensionEvidence, type DimensionEvidence } from "./dimension-evidence.ts"
+import { DimensionSection, DimensionSectionSkeleton } from "./dimension-section.tsx"
 import { ScoreTrend } from "./score-trend.tsx"
 
 type RouteProject = ReturnType<typeof useRouteProject>
 
-function Block({ label, children }: { readonly label: string; readonly children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <Text.H6 color="foregroundMuted">{label}</Text.H6>
-      {children}
-    </div>
-  )
+const DIMENSION_META: Record<ScoreDimensionKey, { readonly title: string; readonly description: string }> = {
+  outcome: { title: "Outcome quality", description: "Did users get what they came for?" },
+  reliability: { title: "Reliability", description: "Can the agent complete sessions without terminal failures?" },
+  cost: { title: "Cost", description: "Does the agent use paid and token-bearing resources efficiently?" },
+  speed: { title: "Speed", description: "How much user-visible critical-path time was necessary?" },
+  safety: { title: "Safety", description: "Can the agent avoid confirmed agent-caused harm?" },
 }
 
-/**
- * The project's Agent Score.
- *
- * Three reads, deliberately separate. The score and the trend come from stored snapshots and paint
- * immediately; the explanation comes from a cache the daily job warms and arrives when it arrives,
- * because computing one means reading every session in the window. A page that waited on that would
- * look broken, and a page that hid its scores until it finished would be worse.
- */
-export function AgentScorePage({ project }: { readonly project: RouteProject }) {
-  const { data: current, isLoading: scoreLoading } = useProjectAgentScore(project.id)
-  const { data: history, isLoading: historyLoading } = useProjectAgentScoreHistory(project.id)
-  const { data: explanation, isLoading: explanationLoading } = useProjectAgentScoreExplanation(project.id)
+const EMPTY_EVIDENCE: DimensionEvidence = { affected: [], coverageGaps: [], healthy: [], context: [] }
 
+export function AgentScorePage({ project }: { readonly project: RouteProject }) {
+  const scoreQuery = useProjectAgentScore(project.id)
+  const historyQuery = useProjectAgentScoreHistory(project.id)
+  const explanationQuery = useProjectAgentScoreExplanation(project.id)
+  const current = scoreQuery.data
   const snapshot = current?.snapshot ?? null
+  const explanation = explanationQuery.data?.explanation ?? null
+  const date = current?.date ?? new Date().toISOString().slice(0, 10)
+  const isRefreshing = scoreQuery.isRefetching || historyQuery.isRefetching || explanationQuery.isRefetching
+  const refresh = () => Promise.all([scoreQuery.refetch(), historyQuery.refetch(), explanationQuery.refetch()])
 
   return (
-    <Layout className="overflow-y-auto gap-6">
+    <Layout className="overflow-y-auto gap-12">
       <Layout.Content>
         <Layout.Header
           title={
             <SectionHeader
               title="Agent Score"
-              description="One number for how this agent is doing in production, from a rolling window of real sessions. It is published only when all five dimensions can be measured."
+              description="Explore how each agent scores across outcome, reliability, process, efficiency, and safety signals."
             />
           }
+          actions={
+            <Button type="button" variant="outline" size="sm" isLoading={isRefreshing} onClick={() => void refresh()}>
+              <Icon icon={RotateCwIcon} size="sm" />
+              Refresh
+            </Button>
+          }
         />
-        <div className="flex flex-col gap-8 px-6 pb-6">
-          {scoreLoading ? (
-            <Skeleton className="h-24 w-full rounded-lg" />
-          ) : snapshot ? (
-            <div className="flex flex-col gap-6">
-              <AgentScoreHeadline snapshot={snapshot} />
-              <DimensionStrip snapshot={snapshot} />
-            </div>
-          ) : (
-            <AgentScoreUnavailable
-              date={current?.date ?? new Date().toISOString().slice(0, 10)}
-              hasHistory={(history?.length ?? 0) > 0}
+        <div className="flex flex-col gap-6 px-6 pb-6">
+          <div className="flex flex-row gap-3 @max-[64rem]:flex-col">
+            <AgentVitality
+              date={date}
+              snapshot={snapshot}
+              history={historyQuery.data}
+              dimensionWeights={current?.dimensionWeights}
+              isLoading={scoreQuery.isLoading}
             />
-          )}
+            <ScoreTrend endDate={date} history={historyQuery.data} isLoading={historyQuery.isLoading} />
+          </div>
 
-          <Block label="Trend">
-            <ScoreTrend history={history} isLoading={historyLoading} />
-          </Block>
+          <div className="flex flex-col gap-3">
+            {explanationQuery.isLoading
+              ? SCORE_DIMENSION_ORDER.map((dimension) => <DimensionSectionSkeleton key={dimension} />)
+              : SCORE_DIMENSION_ORDER.map((dimension) => {
+                  const meta = DIMENSION_META[dimension]
+                  const evidence = explanation
+                    ? buildDimensionEvidence({ dimension, snapshot, explanation })
+                    : EMPTY_EVIDENCE
+                  const affected = [...evidence.affected, ...evidence.coverageGaps, ...evidence.context].sort(
+                    (left, right) => Number(left.signal) - Number(right.signal),
+                  )
+                  return (
+                    <DimensionSection
+                      key={dimension}
+                      id={dimension}
+                      title={meta.title}
+                      description={meta.description}
+                      score={snapshot?.dimensions[dimension]?.score ?? null}
+                      affected={affected}
+                      healthy={evidence.healthy}
+                      emptyAffectedMessage={
+                        explanation
+                          ? "No contributing causes were identified in the current evidence."
+                          : "Evidence has not been prepared for the current window yet."
+                      }
+                    />
+                  )
+                })}
+          </div>
 
-          <Block label="What explains it">
-            <CauseRows explanation={explanation} isLoading={explanationLoading} />
-          </Block>
-
-          <Block label="Coverage">
-            <CoveragePanel explanation={explanation} />
-          </Block>
+          {explanation ? (
+            <div className="flex flex-row flex-wrap items-center gap-x-3 gap-y-1 px-1">
+              <Text.H7 color="foregroundMuted">
+                Evidence updated {new Date(explanation.computedAt).toLocaleString()}
+              </Text.H7>
+              <Text.H7 color="foregroundMuted">·</Text.H7>
+              <Text.H7 color="foregroundMuted">{formatCount(explanation.readSessionCount)} sessions read</Text.H7>
+              {explanation.coverage.unmeasuredSignalEffects > 0 ? (
+                <>
+                  <Text.H7 color="foregroundMuted">·</Text.H7>
+                  <Text.H7 color="foregroundMuted">
+                    {formatCount(explanation.coverage.unmeasuredSignalEffects)} signal effects remain unmeasured
+                  </Text.H7>
+                </>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </Layout.Content>
     </Layout>

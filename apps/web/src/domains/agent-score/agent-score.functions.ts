@@ -3,9 +3,10 @@ import {
   type AgentScoreSnapshot,
   getAgentScoreExplanation,
   getCurrentAgentScore,
+  LAUNCH_AGENT_SCORE_ARTIFACT,
   listAgentScoreHistory,
 } from "@domain/agent-score"
-import { ProjectId } from "@domain/shared"
+import { ProjectId, type ScoreDimension } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AgentScoreSnapshotRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -31,6 +32,7 @@ interface CurrentAgentScoreRecord {
   readonly available: boolean
   readonly date: string
   readonly snapshot: AgentScoreRecord | null
+  readonly dimensionWeights: Readonly<Record<ScoreDimension, number>>
 }
 
 const toRecord = (snapshot: AgentScoreSnapshot): AgentScoreRecord => ({
@@ -61,6 +63,7 @@ export const getProjectAgentScore = createServerFn({ method: "GET" })
       available: current.available,
       date: current.date,
       snapshot: current.available ? toRecord(current.snapshot) : null,
+      dimensionWeights: LAUNCH_AGENT_SCORE_ARTIFACT.compositeWeights,
     }
   })
 

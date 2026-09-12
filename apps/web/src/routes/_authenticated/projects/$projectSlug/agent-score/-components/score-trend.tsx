@@ -1,99 +1,92 @@
-import { Chart, type ChartSeries, Skeleton, Text } from "@repo/ui"
+import { Chart, type ChartSeries, Skeleton, Tabs, Text } from "@repo/ui"
+import { useState } from "react"
 import type { AgentScoreRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
-import { DIMENSION_LABEL, formatDate, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
+import { formatDate } from "./agent-score-format.ts"
 
-const COMPOSITE_COLOR = "hsl(217 91% 60%)"
-const DIMENSION_COLORS: Record<ScoreDimensionKey, string> = {
-  outcome: "hsl(152 55% 45%)",
-  reliability: "hsl(35 90% 55%)",
-  cost: "hsl(262 60% 62%)",
-  speed: "hsl(199 75% 50%)",
-  safety: "hsl(0 65% 58%)",
+const SCORE_COLOR = "hsl(var(--viz-red))"
+const DAY_MS = 86_400_000
+
+type TrendRange = "7d" | "30d"
+
+const RANGE_OPTIONS = [
+  { id: "7d", label: "7d" },
+  { id: "30d", label: "30d" },
+] as const
+
+export const calendarEndingOn = (date: string, dayCount: number): string[] => {
+  const end = new Date(`${date}T00:00:00.000Z`).getTime()
+  return Array.from({ length: dayCount }, (_, index) =>
+    new Date(end - (dayCount - index - 1) * DAY_MS).toISOString().slice(0, 10),
+  )
 }
 
-/**
- * Every UTC date between the first and last published score.
- *
- * Built from the calendar rather than from the rows, so a day the project did not publish leaves a
- * hole in the line instead of being closed over. A continuous line across a gap would say the score
- * held steady through a day nobody measured.
- */
-const calendarBetween = (first: string, last: string): string[] => {
-  const dates: string[] = []
-  for (
-    let time = new Date(`${first}T00:00:00.000Z`).getTime();
-    time <= new Date(`${last}T00:00:00.000Z`).getTime();
-    time += 86_400_000
-  ) {
-    dates.push(new Date(time).toISOString().slice(0, 10))
-  }
-  return dates
+const chartLabel = (date: string, range: TrendRange): string => {
+  const value = new Date(`${date}T00:00:00.000Z`)
+  return range === "7d"
+    ? value.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" })
+    : value.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })
 }
 
 export function ScoreTrend({
+  endDate,
   history,
   isLoading,
 }: {
+  readonly endDate: string
   readonly history: readonly AgentScoreRecord[] | undefined
   readonly isLoading: boolean
 }) {
-  if (isLoading) return <Skeleton className="h-[220px] w-full rounded-lg" />
-  if (!history || history.length === 0) {
-    return (
-      <div className="flex flex-col gap-1 rounded-lg border border-border p-4">
-        <Text.H6B>No published history yet</Text.H6B>
-        <Text.H6 color="foregroundMuted">
-          The trend appears once this project has published a score on at least one day.
-        </Text.H6>
-      </div>
-    )
-  }
-
-  const first = history[0]?.date as string
-  const last = history[history.length - 1]?.date as string
-  const dates = calendarBetween(first, last)
-  const byDate = new Map(history.map((entry) => [entry.date, entry]))
-
-  // `NaN` rather than zero for a day with no score: echarts breaks the line there, and a zero would
-  // draw an agent that scored nothing rather than one that could not be measured.
-  const valuesFor = (pick: (entry: AgentScoreRecord) => number | undefined): number[] =>
-    dates.map((date) => {
-      const entry = byDate.get(date)
-      const value = entry ? pick(entry) : undefined
-      return value === undefined ? Number.NaN : value
-    })
-
-  const series: ChartSeries[] = [
-    { kind: "line", name: "Agent Score", values: valuesFor((entry) => entry.score), color: COMPOSITE_COLOR },
-    ...SCORE_DIMENSION_ORDER.map(
-      (dimension): ChartSeries => ({
-        kind: "line",
-        name: DIMENSION_LABEL[dimension],
-        values: valuesFor((entry) => entry.dimensions[dimension]?.score),
-        color: DIMENSION_COLORS[dimension],
-      }),
-    ),
+  const [range, setRange] = useState<TrendRange>("7d")
+  const dayCount = range === "7d" ? 7 : 30
+  const dates = calendarEndingOn(endDate, dayCount)
+  const byDate = new Map(history?.map((entry) => [entry.date, entry]))
+  const values = dates.map((date) => byDate.get(date)?.score ?? Number.NaN)
+  const hasScores = values.some(Number.isFinite)
+  const selectedHistory = dates.flatMap((date) => {
+    const entry = byDate.get(date)
+    return entry ? [entry] : []
+  })
+  const versions = new Set(selectedHistory.map((entry) => entry.scoringVersion))
+  const windows = new Set(selectedHistory.map((entry) => entry.windowDays))
+  const series: readonly ChartSeries[] = [
+    { kind: "line", name: "Agent vitality", values, color: SCORE_COLOR, area: true, smooth: true },
   ]
 
-  const versions = new Set(history.map((entry) => entry.scoringVersion))
-  const windows = new Set(history.map((entry) => entry.windowDays))
-
   return (
-    <div className="flex flex-col gap-3">
-      <Chart
-        categories={dates.map(formatDate)}
-        series={series}
-        height={220}
-        ariaLabel="Agent Score over time"
-        primaryAxis={{ name: "Score", formatValue: (value) => value.toFixed(0) }}
-      />
-      {versions.size > 1 || windows.size > 1 ? (
-        <Text.H6 color="foregroundMuted">
-          {versions.size > 1
-            ? "This range spans more than one scoring version. Points on either side of the change are not a continuous measurement."
-            : "This range spans more than one window length, so each point summarizes a different amount of traffic."}
-        </Text.H6>
-      ) : null}
+    <div className="flex min-h-[296px] min-w-0 flex-1 flex-col gap-4 rounded-xl bg-secondary p-6">
+      <div className="flex flex-row items-center justify-between gap-3">
+        <Text.H6 color="foregroundMuted">Score evolution</Text.H6>
+        <Tabs options={RANGE_OPTIONS} active={range} onSelect={setRange} variant="bordered" size="sm" />
+      </div>
+      {isLoading ? (
+        <Skeleton className="min-h-[200px] w-full flex-1 rounded-lg" />
+      ) : hasScores ? (
+        <div className="flex min-h-0 flex-1 flex-col justify-end gap-2">
+          <Chart
+            categories={dates.map((date) => chartLabel(date, range))}
+            series={series}
+            height={200}
+            ariaLabel={`Agent vitality over the last ${dayCount} days`}
+            hideLegend
+            primaryAxis={{ show: false, min: 0, max: 100, formatValue: (value) => value.toFixed(1) }}
+            tooltipTitle={(_, index) => formatDate(dates[index] ?? endDate)}
+          />
+          {versions.size > 1 || windows.size > 1 ? (
+            <Text.H7 color="foregroundMuted">
+              {versions.size > 1
+                ? "This range crosses scoring versions, so the line is not a continuous measurement."
+                : "This range includes scores calculated over different window lengths."}
+            </Text.H7>
+          ) : null}
+        </div>
+      ) : (
+        <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
+          <Text.H6B>No published scores in the last {dayCount} days</Text.H6B>
+          <Text.H6 color="foregroundMuted">
+            The graph fills in when all five dimensions can be measured on the same day.
+          </Text.H6>
+        </div>
+      )}
     </div>
   )
 }
