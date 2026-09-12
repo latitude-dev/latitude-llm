@@ -35,6 +35,13 @@ branches do not contend over the public flagger enum or its generated artifacts.
 PRs 1 through 5 each ship a user-facing feature without requiring the benchmark page. PR 6 does not
 introduce new evidence semantics. It composes the behavior already exercised by those features.
 
+PR 6 also absorbs the readiness checklist this file used to keep between PR 5 and PR 6. An audit of
+the merged code found gates that no earlier PR could close: Reliability was never given an estimator,
+neither the Cost scoring artifact nor the fleet latency reference was ever built, and two gates
+depend on production traffic that a release has not yet carried. Those items now live inside PR 6 as
+numbered steps and a separate launch gate, so nothing is tracked as a precondition that no pull
+request owns.
+
 ## PR 1: dimension-aware signals
 
 **Product result**: every promoted signal says which Agent Score dimensions it informs. Users can
@@ -517,12 +524,12 @@ performance validation; PR 6 publishes the benchmark and snapshots.
   representative thousand-session population without writing score snapshots. Process it in
   deterministic bounded batches and record query count, rows and bytes read, peak memory, resolver
   time, family coverage, score distribution, and rerun determinism.
-- [ ] **P3-38 (required before PR 6)** Review every candidate metric against representative shadow
+- [ ] **P3-38 (moved into PR 6, Step 8, as P6-52)** Review every candidate metric against representative shadow
   data for prevalence, discrimination, correlation, applicability, missingness by provider and
   integration, and sensitivity to workload mix. Remove or keep display-only any metric whose
   direction is not defensible, especially raw context utilization, generic zero-hit rate, and
   unproven repeated polling. Record the acceptance decision for every launch metric.
-- [ ] **P3-39 (required before PR 6)** Calibrate and freeze the initial project benchmark's family
+- [ ] **P3-39 (moved into PR 6, Step 8, as P6-53)** Calibrate and freeze the initial project benchmark's family
   weights, piecewise curves, caps, coverage floors, tokenizer bounds, and residual-signal policy.
   Publish the calibration report and artifact version. Later production recalibration requires a
   new scoring version. Session findings continue to show raw measurements without calibrated
@@ -546,9 +553,10 @@ performance validation; PR 6 publishes the benchmark and snapshots.
   reads, memory-event projection, no N-plus-one path, and parity between one-session and batch reads.
 - [x] Invariance tests prove duplicate detectors, repeated/thrashing overlap, linked signals, and
   split signal clusters cannot multiply a family or Speed deficit.
-- [ ] **Required before PR 6:** shadow runs on representative traffic handle thousands of sessions
+- [ ] **Moved into PR 6, Step 8:** shadow runs on representative traffic handle thousands of sessions
   within agreed resource targets, reproduce the same result from the same inputs and artifact, and
-  satisfy the recorded metric and calibration acceptance criteria.
+  satisfy the recorded metric and calibration acceptance criteria. The shadow runner exists and has
+  never had an entry point; P6-51 gives it one and P6-56 runs it.
 - [x] No score snapshot or public Agent Score number ships in PR 3. Existing pages and session
   assessment expose the evidence; PR 6 owns publication.
 - [x] `pnpm typecheck` and `pnpm test` pass. Generated contracts and schemas are current.
@@ -1247,89 +1255,488 @@ flagger provisioning backfill: both launch slugs already exist on every project.
 - Which judge configurations belong in the supported-version list, and what happens to a window that
   spans a version change?
 
-## Requirements before PR 6
-
-PR 6 starts only when all of these gates pass:
-
-- [ ] Every promoted signal has stable evidence roles or is explicitly diagnostic.
-- [ ] Session assessment resolves the same source facts in single-session and bulk mode.
-- [ ] Structured findings distinguish recovery, terminal failure, exposure, defense, and harm.
-- [ ] Sampled evidence has a known examined population or remains unmeasured.
-- [ ] Cost family metrics, curves, weights, caps, coverage floors, and residual-signal policy have an
-  audited, calibrated, and frozen initial artifact backed by representative shadow data. Production
-  recalibration and cross-surface expansion are later follow-ups.
-- [ ] Cost native impacts and Speed counterfactuals are bounded and visible on existing pages.
-- [ ] Outcome uses compatible sampled task-outcome verdicts with known inclusion probabilities and
-  passes its examined-population coverage floor. The provisioning migration has deployed, so the
-  slug is not silently inert on projects that predate it.
-- [ ] Safety uses a full-window examined population and confirmed-harm definition. The complete
-  launch suite is selected once per session with a known inclusion probability, every onboarding
-  preset enables it, and the sample-size floor is large enough that the reference-run transform
-  produces a point estimate between its endpoints.
-- [ ] Duplicate detectors and split signals pass invariance tests.
-- [ ] Every reader exposes coverage and missing-evidence reasons.
-- [ ] Frozen fleet references and model identifiers are ready for a scoring version.
-- [ ] All five dimensions pass their publication floors together on representative traffic; no
-  partial dimension or composite number is exposed when one fails.
-
 ## PR 6: Agent Score benchmark
 
-**Product result**: a complete benchmark page and public score history combine the five estimators
-already exercised elsewhere in the product.
+**Product result**: a complete benchmark page and public score history combine five proven
+estimators into one project score, published only when all five pass their traffic, coverage, and
+confidence floors.
 
-### Score engine
+### Scope boundary
 
-- [ ] **P6-1** Add window selection, session eligibility, and applicability gates from
-  [`score.md`](score.md#eligible-sessions) and [`score.md`](score.md#the-window).
-- [ ] **P6-2** Implement all five window estimators by composing bulk session evidence and the frozen
-  Cost scoring artifact. Do not add metric-specific arithmetic outside the PR 3 catalog and
-  evaluators.
-- [ ] **P6-3** Implement complete-session bootstrap intervals, boundary-aware endpoint intervals,
-  the all-five-dimensions publication gate, the fixed composite, optional policy cap, and
-  scoring-version boundaries from [`score.md`](score.md).
-- [ ] **P6-4** Implement dynamic cause rows from
-  [`score.md`](score.md#dynamic-attribution-after-scoring). Use attributed deficit, fix gain,
-  residual, and bounded Shapley approximation where a counterfactual supports them. Outcome and
-  Safety use their smaller selection-corrected issue-overlap contracts.
+PR 6 absorbs what this file previously tracked as a separate "Requirements before PR 6" checklist.
+That list assumed every gate could be closed by PRs 1 through 5. An audit of the merged code found
+that three of them cannot be: Reliability has no window estimator because no PR ever owned it,
+neither the Cost scoring artifact nor the fleet latency reference has ever been built, and two
+coverage and invariance gates are only partly satisfied. Folding the list into PR 6 makes this the
+pull request that finishes the benchmark rather than the one that assumes it was finished.
 
-### Persistence and jobs
+PR 6 still introduces no new evidence semantics. Every reader, finding contract, session-level
+deduplication rule, and selection-correction rule comes from PRs 1 through 5 unchanged. What PR 6
+adds is the fifth estimator, the frozen constants those estimators were always written to take as
+input, the window that runs them together, the gate that decides whether anybody sees the result,
+and the surfaces that show it.
 
-- [ ] **P6-5** Add the immutable, organization-scoped `agent_score_snapshots` Postgres table and
-  repository.
-- [ ] **P6-6** Register project sweep and snapshot queue tasks with organization and project ids.
-- [ ] **P6-7** Add the daily worker, bounded project fan-out, idempotent snapshot write, and largest
-  project performance measurement.
-- [ ] **P6-8** Store only the composite and five dimension point estimates and intervals, scoring
-  version, selected window, eligible-session count, date, and identity fields required by
-  [`score.md`](score.md#the-daily-snapshot). Write nothing when the publication gate fails.
+Two gates cannot be closed by code at all and are tracked below under **Launch gate**. PRs 4 and 5
+are merged but unreleased: the newest production tag predates both, so no production session has
+been judged by `task-failure` or examined by the Safety suite, and neither dimension's
+examined-population floor can be evaluated until a release has been out for a full score window. The
+code therefore lands behind a feature flag on evidence that is structurally complete but
+operationally empty, and the flag comes off against real traffic.
 
-### Public and web surfaces
+### Suggested landing order
 
-- [ ] **P6-9** Expose the current UTC date's snapshot and history through `@repo/operations`, HTTP,
-  OpenAPI, MCP, SDKs, CLI, and in-process agent tools. Do not substitute an older snapshot when the
-  current score is unavailable.
-- [ ] **P6-10** Add the feature-flagged Agent Score route first in the Observe group.
-- [ ] **P6-11** Build level one, dimension sections, dynamic cause rows, coverage, unavailable-score
-  behavior, and trend exactly as specified in [`page.md`](page.md).
-- [ ] **P6-12** Link benchmark causes back to the same session, signal, tool, memory, Cost, Behavior,
-  and Settings destinations used by session assessment.
-- [ ] **P6-13** Run one complete 28-day shadow window, validate deterministic reruns, coverage,
-  calibration, hosted and self-hosted artifact loading, and all-five publication on representative
-  traffic before removing the feature flag.
+PR 6 is large enough that landing it as one commit range would make review impossible. The steps are
+written so they can ship as a stack, each independently reviewable and each leaving the repository
+green:
+
+| Slice | Steps | Ships |
+| --- | --- | --- |
+| 6a | Step 2 | the Reliability estimator, pure domain, no surface |
+| 6b | Step 1 | the scoring version and its three frozen artifacts |
+| 6c | Steps 3 and 4 | window selection, five-dimension composition, publication gate, composite |
+| 6d | Step 6 and the operation half of Step 7 | snapshots, jobs, public API |
+| 6e | Step 5 and the page half of Step 7 | attribution and the benchmark page |
+
+6a and 6b are independent and can run in parallel. Step 8 runs against 6b and 6c and must complete
+before the flag comes off. 6e is the only slice that can be descoped: without it the page falls back
+to inverse-probability-corrected issue rows for all five dimensions, which Outcome and Safety already
+produce, and no dimension is lost.
+
+### What PRs 1 through 5 already built
+
+PR 6 composes these. Do not rebuild them:
+
+| Already in place | Location |
+| --- | --- |
+| Bulk session evidence, bounded and byte-identical to the single-session path | `readSessionAssessmentInputBatch`, `NormalizedSessionAssessmentInput` |
+| Eligible-session definition, debounce, and traffic predicate, shared by every window reader | `db-clickhouse/src/repositories/eligible-sessions.ts` |
+| Cost window aggregate, family pooling, and fixed weights | `scoring/bootstrap-window.ts` (`aggregateWindowCost`) |
+| Speed window aggregate over reconstructable critical paths | `aggregateWindowSpeed` |
+| Session-to-window fold that keeps a thousand-session window off the heap | `scoring/fold-window-contributions.ts` |
+| Seeded whole-session bootstrap interval | `bootstrapWindow` |
+| Outcome estimator, deterministic census, sub-strata, coverage floors | `scoring/estimate-outcome.ts`, `use-cases/estimate-project-outcome.ts` |
+| Safety estimator, suite examination, reference-run transform, coverage floors | `scoring/estimate-safety.ts`, `use-cases/estimate-project-safety.ts` |
+| Exact binomial and stratified-rate primitives with monotone bound transforms | `scoring/binomial-interval.ts`, `scoring/stratified-rate.ts` |
+| Selection-corrected issue rows with shared-draw joint probability and unranked rows | `scoring/build-issue-rows.ts`, `build-safety-issues.ts` |
+| Cost and Speed signal residual estimators, grouping, shrinkage, and caps | `scoring/estimate-signal-residuals.ts`, `estimate-residual-effect.ts`, `link-signal-occurrences.ts` |
+| Session-level source-atom arbitration, family caps, and overlap groups | `scoring/arbitrate-cost-atoms.ts`, `aggregate-session-cost.ts` |
+| Signal scoring eligibility, excluding ignored and unpromoted signals | `@domain/signals/src/score-eligibility.ts` |
+| Read-only shadow runner with deterministic batching and resource probes | `use-cases/run-cost-speed-shadow.ts` |
+| Session-level completion status and recovered/unrecovered incident counts | `resolver/build-dimension-summaries.ts` |
+| Judgment-version builders identifying the resolved judge | `@domain/flaggers/src/entities/judgment-version.ts` |
+
+### Audit findings this PR closes
+
+Each row is a gate the previous checklist asserted and the code does not currently meet:
+
+| Finding | Evidence | Closed by |
+| --- | --- | --- |
+| Reliability has no window estimator, no floors, and no signal union | no `estimate-reliability.ts`; only session-level `completion` exists | Step 2 |
+| No Cost scoring artifact instance exists anywhere outside tests | `loadCostScoringArtifact` has no production caller; no family weights, curves, or caps are defined | Step 1, Step 8 |
+| No frozen fleet latency reference, and no builder for one | `FleetLatencyReferenceRepository` has no caller outside its own test | Step 1, Step 8 |
+| `supportedJudgmentVersions` is required by both sampled estimators and produced by nothing | eight references, all consumers | Step 1 |
+| TTFT and throughput report nothing rather than unmeasured when the artifact is absent | `read-session-cost-evidence.ts` returns no claims and records no limitation; neither reader appears in `DETERMINISTIC_READERS` | Step 1 |
+| Signal residuals are never wired into a window | `aggregateWindowCost` defaults `residualSignalPenalty` to zero and no caller passes it | Step 4 |
+| An unreadable required Cost family shrinks the denominator instead of withholding Cost | `foldWindowBatch` drops the session and counts it, and the window still produces a number | Step 4 |
+| No attribution machinery exists for Cost, Speed, or Reliability | no Shapley, attributed deficit, or fix gain anywhere in the repository | Step 5 |
+| No cross-organization source for the project sweep | `ELIGIBLE_SESSION_*_QUERY` are project-scoped | Step 3 |
+| Split-signal-cluster equivalence is asserted in the specification and not tested | session-level dedup is covered; cluster splitting is not | Exit gate |
+| Safety's examined floor is unreachable at the score window's session target | 1,000 examined required against a 1,000 eligible-session target at roughly 10% suite sampling | D6, Step 6 |
+
+### Decisions fixed for this PR
+
+- **D1. Reliability is a first-class estimator built here, not a fold of existing code.** No PR owned
+  it: PR 2 produced the session-level `completion` status and PR 3 separated recovered from terminal
+  incidents, but nothing turns those into `p` or `100 * p^20`. It is written in the same shape as
+  Outcome and Safety, with its own selector, floors, unmeasured reasons, and interval, because it
+  carries 0.25 of the composite and a dimension at that weight cannot be a side effect of another
+  dimension's plumbing. It is cheap relative to the others: the endpoints are already in the finding
+  union, the population is a census at weight one, and `estimateStratifiedRate` with inclusion
+  probability one is already the exact binomial path.
+- **D2. One scoring version pins everything, in one artifact.** `score.md` lists ten things that
+  change the scoring version. Spreading them across reader constants would make a version bump a
+  search-and-replace. `AgentScoreArtifact` holds the composite weights, every dimension's coverage
+  floors, both reference-run horizons, the pinned Cost and latency artifact versions, the supported
+  judgment versions per judge, and the optional composite policy cap. It is validated at load, and
+  the provisional floors that PRs 4 and 5 exported as named constants become its initial values
+  rather than a second source of truth.
+- **D3. A substituted judge derives its own local scoring version rather than failing closed.** The
+  bundled artifact lists the judge versions the hosted deployment supports. A deployment whose
+  resolved `FLAGGER_CLASSIFIER` produces a version outside that list runs under
+  `<scoringVersion>+local:<digest>`, whose supported list contains exactly its own judge. This is
+  what the launch artifact requirement asks for: the same formulas everywhere, a distinct version
+  where the judge differs, and no claim that the two are comparable. A deployment with no supported
+  judge configuration at all cannot pass the Outcome or Safety gate, which is the existing behaviour.
+- **D4. The fleet latency reference is built from the repository that already samples it, then
+  frozen.** `FleetLatencyReferenceRepository` reads cohort medians across organizations and has never
+  been called. PR 6 adds the builder that turns its samples into a `LatencyReferenceArtifact`,
+  inspects the aggregation for tenant leakage as P3-14 required, commits the result as a versioned
+  bundle, and loads it in both the window job and the interactive session assessment. Until it is
+  loaded, Speed silently scores TTFT and throughput as clean, which is the exact failure rule 7
+  forbids.
+- **D5. A missing artifact is unmeasured, never healthy.** Every reader whose output depends on a
+  frozen artifact registers a reader fact and reports `notExamined` with a named limitation when the
+  artifact is absent. This is the general form of the TTFT finding and it is the rule the coverage
+  requirement was always asserting.
+- **D6. Safety's examined population is reconciled by making sampling traffic-aware, not by lowering
+  the floor.** A fixed sampling rate cannot satisfy a fixed examined-count floor across projects of
+  different sizes: at roughly a tenth, a project sitting on the window's 1,000-session target
+  examines about 100 sessions against a floor of 1,000. Lowering the floor is rejected because PR 5
+  D9 already established that the zero-harm lower bound at 100 examined is 5, an interval spanning
+  almost the whole scale that would dominate the composite's. Instead the Outcome judge and the
+  Safety suite each target a **fixed examined count per window** and derive their rate from the
+  project's recent eligible volume, so a small project examines nearly everything and a large one
+  examines a bounded sample. Cost is bounded at both ends, and the daily sweep already computes the
+  eligible counts the rate needs. A rate that changes mid-window produces sub-strata, which
+  `estimateStratifiedRate` already handles and already labels.
+- **D7. The score window is chosen once per project per day and stored on the snapshot, which is
+  also where hysteresis reads from.** Hysteresis is stateful and the snapshot is the only durable
+  record of the previous step. A project with no previous snapshot, or whose previous day was
+  withheld, takes the shortest step that reaches the target with no hysteresis applied. The
+  alternative, a separate state row, would add a table whose only content is one integer that the
+  snapshot already has to store.
+- **D8. An unreadable required Cost family withholds Cost for the window.** Today a session whose
+  required family cannot be read is dropped from the fold and counted, and the window still publishes
+  a number over the sessions that remain. That converts missing evidence into a smaller denominator,
+  which reads as healthy. The window gate evaluates required-family coverage across the window and
+  withholds Cost, which withholds the composite, which is what "coverage is never success" means at
+  window scale.
+- **D9. Signal residuals enter the window or they say they did not.** The estimators exist and are
+  tested; nothing assembles their inputs. PR 6 builds the assembly: eligible occurrences through the
+  shared predicate, linkage to deterministic source atoms first, near-duplicate grouping, matched
+  clean sessions over the covariates `signals.md` names, stored inclusion probabilities, and the
+  artifact's residual cap. A linked signal explains an existing penalty and adds nothing. An unlinked
+  signal without support returns "effect not yet measured", which is a first-class result and not a
+  failure of the run.
+- **D10. Attribution is a second pass that cannot change a score.** The dimension number is computed
+  before any cause receives credit. Cost, Speed, and Reliability get attributed deficit and fix gain
+  where a counterfactual supports them; Outcome and Safety reuse the smaller issue contract PRs 4 and
+  5 already built, which ranks by selection-corrected adverse reach and assigns no shares. Exact
+  Shapley runs for 12 or fewer grouped causes and a seeded permutation sample above that, bounded by
+  an error target and a computation ceiling. A residual row absorbs what is left. Explanation limits
+  never remove evidence from the estimator.
+- **D11. The snapshot stores scores and nothing else, and a withheld day writes no row.** Causes,
+  coverage, native inputs, and attribution are resolved dynamically from the live window and labelled
+  as current evidence. A snapshot that stored them would invite the page to present a frozen
+  decomposition that new evidence has already invalidated. Re-running a date that has a snapshot is a
+  no-op rather than an update, which is what makes the row immutable in practice and not only by
+  intent.
+- **D12. The page never substitutes an older snapshot.** If today's snapshot was not published, the
+  current score is unavailable and says which floor blocked it. Older snapshots stay in the trend.
+  The public operation behaves the same way: an explicit unavailable state, not a 404 and not the
+  most recent row.
+- **D13. PR 6 ships behind a feature flag and the flag is a separate decision from the merge.** The
+  two remaining gates need production traffic that does not exist yet. Holding the code back until it
+  does would mean a month of drift against a moving codebase for no review benefit. The flag comes
+  off under the Launch gate below, once a release carrying PRs 4 and 5 has accumulated a full window.
+- **D14. Provisional constants become artifact values through the shadow run, not through a
+  judgement call.** P3-38 and P3-39 move into Step 8 unchanged in substance: every launch metric gets
+  a recorded acceptance decision against representative shadow data, and the family weights, curves,
+  caps, coverage floors, tokenizer bounds, and residual policy are frozen with a published
+  calibration report. The shadow runner exists and has never been run against real traffic; Step 8 is
+  where it acquires an entry point and is used for what it was built for.
+
+### Step 1: the scoring version and its frozen artifacts
+
+- [ ] **P6-1** Define `AgentScoreArtifact` under `@domain/agent-score` as the single versioned
+  container from D2: scoring version, composite weights validated to sum to one, per-dimension
+  coverage floors, the Reliability and Safety reference-run horizons, pinned Cost and latency
+  artifact versions, supported judgment versions per judge, and the optional composite policy cap.
+  Zod-first, validated at load through `loadAgentScoreArtifact`, rejecting unknown dimensions,
+  weights that do not sum to one, and floors outside their bounds.
+- [ ] **P6-2** Fold `PROVISIONAL_OUTCOME_COVERAGE_FLOORS`, `PROVISIONAL_SAFETY_COVERAGE_FLOORS`, and
+  `SAFETY_REFERENCE_RUN_SESSIONS` into the artifact as its initial values. Keep the estimator
+  signatures taking floors as input so they stay pure and testable; remove the provisional constants
+  as a second source of truth once the artifact supplies them.
+- [ ] **P6-3** Produce the initial Cost scoring artifact as a versioned bundle loaded through
+  `loadCostScoringArtifact`, containing family weights, metric curve points, metric and family caps,
+  required-family coverage floors, the residual-signal cap, and the tokenizer policy. The numbers
+  come from Step 8; this item is the bundle, its loader, and its wiring. Never inline a launch
+  constant in a reader or a component.
+- [ ] **P6-4** Add the fleet latency reference builder from D4: a use-case that reads
+  `FleetLatencyReferenceRepository` TTFT and throughput cohort samples, applies the minimum sample and
+  organization counts that make a cohort publishable, inspects the aggregation for tenant leakage,
+  and emits a `LatencyReferenceArtifact` with its fallback behaviour and version pinned.
+- [ ] **P6-5** Commit the built latency reference as a versioned bundle and load it in both
+  `readSessionAssessmentInputBatch` callers: the window job and `getSessionAssessment`. The
+  interactive path currently passes no artifact, so the session panel and the benchmark disagree
+  about Speed today.
+- [ ] **P6-6** Register `spans.ttft` and `spans.throughput` in `DETERMINISTIC_READERS` with their
+  Speed dimension mapping, and make `latencyClaims` report a reader fact with a named limitation when
+  the artifact is absent instead of returning an empty claim list. Cover the case with a test that
+  asserts a session read without an artifact is `notExamined` for those readers and not clean.
+- [ ] **P6-7** Implement D3's judgment-version resolution: the bundled supported list, the local
+  scoring-version derivation from the resolved `FLAGGER_CLASSIFIER` generation config, and the digest
+  fallback. Reuse `buildJudgmentVersion` rather than re-deriving the string format. Test that a
+  substituted model yields a distinct scoring version whose supported list contains only itself.
+- [ ] **P6-8** Load the same artifacts on hosted and self-hosted deployments through one loader with
+  no environment-conditional formulas. A self-hosted deployment differs only in which judge it
+  resolves, which D3 already expresses as a version.
+
+### Step 2: the Reliability estimator
+
+- [ ] **P6-9** Add `selectReliabilityEndpoints` under `@domain/agent-score/src/scoring`, a pure
+  selector over `NormalizedSessionAssessmentInput` mirroring `select-outcome-endpoints.ts`. A session
+  fails operationally on a terminal `providerError`, a terminal `toolFailure`, a terminal
+  `toolStructuralDefect`, a `noOutput` finding of kind `blank` or `confirmedUnusablePattern`, or a
+  final-position `finishFailure` with output damage. Recovered incidents are never a fractional
+  failure.
+- [ ] **P6-10** Derive readability from reader facts rather than assuming it. A session is readable
+  for Reliability only when the output and error readers examined it; an unmapped provider error or an
+  unmapped finish reason lowers coverage rather than resolving to success.
+- [ ] **P6-11** Implement `estimateProjectReliability`: `p` as weighted terminally successful over
+  weighted readable sessions at census weight one, `100 * p ^ referenceRun` with the horizon from the
+  artifact, and the interval transformed through the monotone map so the lower bound on `p` produces
+  the lower bound on Reliability. Reuse `estimateStratifiedRate`, which already yields the exact
+  binomial path at inclusion probability one.
+- [ ] **P6-12** Return `p` on the result alongside the score, because `page.md` requires the
+  one-session success rate beside the 20-session value in the card, the section, the tooltip, and the
+  public representation. It is explanatory context, not a second dimension score.
+- [ ] **P6-13** Implement the Reliability signal union from
+  [`signals.md`](signals.md#reliability): an occurrence enters the terminal set only when its metadata
+  proves the session ended without recovery. A signal that describes a failure mode without proving
+  terminal impact can attribute an observed failure but cannot create one.
+- [ ] **P6-14** Return coverage state, the failing floor by name, readable and eligible counts, and
+  exclusion counts by reason. Never return 0, 100, or a midpoint for an unmeasured dimension.
+- [ ] **P6-15** Fold Reliability from the same bulk pass as Cost and Speed. It needs no window source
+  of its own: the endpoints are already in the findings the batch reader returns, and adding a second
+  read would put the two paths at risk of disagreeing.
+
+### Step 3: window selection and the eligible population
+
+- [ ] **P6-16** Add `selectScoreWindow` as a pure function: the shortest of 7, 14, 21, or 28 days
+  reaching 1,000 eligible sessions, withheld below 200, and 28 days once a project passes the floor
+  without reaching the target. Return the chosen step and the reason it was chosen.
+- [ ] **P6-17** Implement D7's hysteresis against the previous snapshot's stored step: do not shorten
+  until the shorter step exceeds the target by 10%, do not lengthen until the current step falls 10%
+  below it. With no previous snapshot or after a withheld day, choose without hysteresis.
+- [ ] **P6-18** Add the eligible-count-per-step read as one ClickHouse query with conditional counts
+  over `ELIGIBLE_SESSIONS_SUBQUERY`, then the session id list for the chosen step. Do not issue four
+  queries, and do not select ids for steps that were not chosen.
+- [ ] **P6-19** Add the cross-organization project sweep source: projects with at least the session
+  floor of eligible sessions in the longest step. Read it under the system organization sentinel the
+  way `wrapped-fan-out.ts` does, and return organization and project ids together so the fan-out
+  payload carries both.
+- [ ] **P6-20** Apply the applicability gates from [`score.md`](score.md#eligible-sessions) once, at
+  the population boundary, so every dimension narrows the same base rather than each re-deriving it.
+
+### Step 4: composition, coverage, and the publication gate
+
+- [ ] **P6-21** Add one `computeAgentScore` use-case that makes a single bounded bulk pass over the
+  window and folds, as each batch lands: Cost and Speed contributions, Reliability endpoints and
+  readability, Outcome's deterministic census through `selectDeterministicOutcomeFailures`, signal
+  occurrences, and every coverage tally. Batches are released before the next one starts; a
+  thousand-session window is never resident.
+- [ ] **P6-22** Compose the five estimators over that fold. Do not add metric-specific arithmetic
+  outside the PR 3 catalog and evaluators, and do not re-read telemetry any dimension already has.
+  Outcome and Safety take their judgment reads from the window sources PRs 4 and 5 built.
+- [ ] **P6-23** Implement D8's window-level Cost coverage gate. Evaluate required-family coverage
+  across the window, not per session, and withhold Cost when a required family applies and cannot be
+  read. `foldWindowBatch`'s `withheldSessionCount` becomes an input to that decision rather than a
+  reported statistic.
+- [ ] **P6-24** Wire the signal residuals from D9. Link occurrences to deterministic source atoms
+  first through `linkSignalOccurrences`, group near-duplicates, build matched clean-session sets over
+  the covariates in [`signals.md`](signals.md#cost-and-speed), pass stored inclusion probabilities,
+  apply the artifact's residual cap, and feed the result to `aggregateWindowCost` as
+  `residualSignalPenalty` and to the Speed counterfactual in nanoseconds. Keep the two unit systems
+  separate throughout.
+- [ ] **P6-25** Compute intervals per dimension: seeded whole-session bootstrap for Cost and Speed
+  through `bootstrapWindow`, and boundary-aware endpoint intervals for Outcome, Reliability, and
+  Safety. The composite's bootstrap replicates draw each endpoint probability from its fitted
+  boundary-aware model rather than resampling a constant outcome vector, so a window with zero
+  observed failures does not produce a degenerate composite interval.
+- [ ] **P6-26** Implement the all-five publication gate, the fixed composite, and the optional policy
+  cap. Weights never redistribute. If one dimension is unmeasured, no composite and no dimension
+  number is produced, and the failing floor is named per dimension. A policy cap is applied and
+  reported separately from the weighted mean so the page can attribute capped points to the rule
+  rather than to a cause.
+- [ ] **P6-27** Produce the full coverage report [`score.md`](score.md#confidence) lists: readable and
+  eligible counts per dimension and reader, analysis and pricing and critical-path and
+  safety-examination coverage, per-flagger examined share and selection mechanism, corrected sampling
+  shares, unmapped finish reasons and provider errors, disabled or archived detectors, signals waiting
+  for independent observations, and the count of causes whose consequence remains unestimated.
+- [ ] **P6-28** Implement scoring-version boundary behaviour: the run labels its result with the
+  resolved version, never pools incompatible sampled evidence under one label, re-evaluates retained
+  inputs against the target artifact where supported, and treats what cannot be re-evaluated as
+  unreadable for that reader.
+
+### Step 5: dynamic attribution
+
+- [ ] **P6-29** Group near-duplicate causes before attribution, so a split signal cluster and two
+  detectors describing one event resolve to one row. Reuse the residual estimator's grouping rather
+  than inventing a second notion of near-duplicate.
+- [ ] **P6-30** Implement attributed deficit as a Shapley share of the dimension's distance from its
+  healthy counterfactual: exact for 12 or fewer grouped causes, seeded deterministic permutation
+  sampling above that until an error target or a computation ceiling is reached, with a residual row
+  absorbing estimation error and unnamed evidence. Report the approximation error in the coverage
+  panel.
+- [ ] **P6-31** Implement fix gain as the score change when one cause is removed with other evidence
+  held fixed. Fix gains overlap by construction and must never be summed; the contract returns them
+  labelled so the interface cannot present them as additive.
+- [ ] **P6-32** Attribute Cost in family-native units before translating into score points and Speed
+  in time before applying its ratio, per [`score.md`](score.md#dynamic-attribution-after-scoring).
+  Reliability attributes terminal endpoints directly.
+- [ ] **P6-33** Use the smaller issue contract for Outcome and Safety by calling the builders PRs 4
+  and 5 already produced. These rows receive no Shapley share and no fix gain, rank by corrected
+  adverse reach, and stay visible but unranked when a required joint inclusion probability is unknown.
+- [ ] **P6-34** Label every row as measured or associated, and carry the interval, raw examined count,
+  and independent observation count. A signal row says "associated effect" unless the observation
+  itself identifies avoidable work or a terminal failure.
+
+### Step 6: persistence, sampling policy, and jobs
+
+- [ ] **P6-35** Add the immutable, organization-scoped `agent_score_snapshots` table with
+  `organizationRLSPolicy`, a unique `(organization_id, project_id, date)` index for idempotency, and
+  the columns D11 fixes: composite and five dimension point estimates and intervals, scoring version,
+  selected window length, eligible-session count, any policy cap, and identity and creation fields.
+  Nothing else.
+- [ ] **P6-36** Generate the Postgres migration through the package migration script. Ask before
+  running any migration command.
+- [ ] **P6-37** Add the repository with organization and project scoped reads for one date and for a
+  history range, plus an insert that is a no-op when the date already has a row.
+- [ ] **P6-38** Add the `agent-score` queue topic with a `sweep` task carrying no payload and a
+  `snapshotProject` task carrying organization id, project id, and the UTC date. Register the daily
+  repeatable schedule in `apps/workers/src/server.ts` beside the existing crons.
+- [ ] **P6-39** Add the daily worker: the sweep resolves projects under the system organization
+  sentinel and fans out with a bounded concurrency; the per-project task runs under the organization's
+  SqlClient so row-level security scopes every read; a failed or unavailable calculation writes
+  nothing and logs the failing floor.
+- [ ] **P6-40** Implement D6's traffic-aware sampling policy. The sweep already computes each
+  project's eligible volume; derive the Outcome judge's rate and the Safety suite's rate from a target
+  examined count per window, clamped to a minimum and to one, and publish them so screening reads
+  them. The rate is recorded as the inclusion probability on the screening decision exactly as today,
+  so a mid-window change produces sub-strata the estimators already correct for.
+- [ ] **P6-41** Respect an explicit project override. A project that has deliberately turned a judge
+  off or retuned its sampling keeps that choice, the way the PR 4 backfill does; the derived rate
+  applies to projects still on the default.
+
+### Step 7: public and web surfaces
+
+- [ ] **P6-42** Expose the current UTC date's snapshot and the history through `@repo/operations`,
+  HTTP, OpenAPI, MCP, both SDKs, the CLI, and in-process agent tools. Follow the repository's
+  generated-artifact and package-version conventions. Implement D12's explicit unavailable state; do
+  not substitute an older snapshot and do not return a bare 404.
+- [ ] **P6-43** Add an `agentScore` entry to the feature-flag registry and the project section first
+  in the Observe group, above Sessions, gated on that flag.
+- [ ] **P6-44** Build level one from [`page.md`](page.md#level-one): score and interval, snapshot date,
+  selected window and eligible-session count, scoring version, any policy cap, and raw cost per
+  session and TTFT labelled as context and not scored directly. Reliability's card shows the
+  one-session rate beside the 20-session value.
+- [ ] **P6-45** Build the five dimension sections: score, interval, one-sentence meaning, formula
+  definition with current native inputs, coverage and missing evidence, causes or issues, contextual
+  observations that do not lower the dimension, and destinations. Cost always shows all five families
+  with their fixed weights, raw values, healthy/watch/poor labels, readable and applicable units, and
+  missing-evidence reasons, keeping not-applicable and unmeasured distinct.
+- [ ] **P6-46** Build the cause rows with the fields [`page.md`](page.md#cause-rows) fixes, label
+  attributed deficits as additive and fix gains as not, and mark native inputs and causes as current
+  evidence from the live window rather than a decomposition of the stored snapshot.
+- [ ] **P6-47** Build the expandable coverage panel and the unavailable-score behaviour. When the
+  score is withheld the page still shows session and finding counts, actual cost and duration,
+  confirmed safety findings and exposure, exact deterministic waste, progress toward each reader's
+  floor, and links to affected sessions. No candidate or partial dimension number appears.
+- [ ] **P6-48** Build the trend from stored snapshots alone, marking scoring-version changes,
+  window-length changes, policy caps, and unpublished dates as gaps. The tooltip shows only what the
+  snapshot stores.
+- [ ] **P6-49** Link every cause to the destinations session assessment already uses: Sessions, Tools,
+  Memory, Cost, Signals, Behaviors, and Settings. A signal row links to its signal page, which already
+  owns examples, lifecycle, and resolution; the benchmark ranks consequence and does not duplicate the
+  workflow.
+- [ ] **P6-50** Enforce the prohibitions in
+  [`page.md`](page.md#statements-the-page-must-avoid) in the components, not only in copy review:
+  no uncorrected sampled share presented as a defect rate, no causal language on an associated effect,
+  no summed fix gains, no exposure counted as Safety failure, and no missing evidence rendered as
+  healthy.
+
+### Step 8: calibration, freeze, and acceptance
+
+- [ ] **P6-51** Give `runCostSpeedShadow` an entry point so it can be run against representative
+  production traffic: a backoffice-triggered job or a worker script, read-only, writing no snapshot,
+  recording query count, rows and bytes read, peak heap, resolver time, family coverage, score
+  distribution, and rerun determinism.
+- [ ] **P6-52** Execute the metric acceptance review carried over from P3-38. Review every candidate
+  metric for prevalence, discrimination, correlation, applicability, missingness by provider and
+  integration, and sensitivity to workload mix. Remove or make display-only any metric whose direction
+  is not defensible, especially raw context utilization, generic zero-hit rate, and unproven repeated
+  polling. Record the decision for every launch metric.
+- [ ] **P6-53** Execute the calibration carried over from P3-39 and freeze the Cost artifact from
+  P6-3: family weights, piecewise curves, caps, coverage floors, tokenizer bounds, and residual-signal
+  policy. Publish the calibration report and pin the artifact version. Later production recalibration
+  requires a new scoring version.
+- [ ] **P6-54** Build, inspect, and freeze the latency reference from P6-4, and record its cohort
+  coverage and fallback rate. A cohort that cannot be published falls back explicitly and lowers Speed
+  coverage rather than silently using a neighbouring cohort's expectation.
+- [ ] **P6-55** Close D6's open number: choose the target examined count per window for the Outcome
+  judge and the Safety suite against measured traffic and measured flagger cost, and record the
+  resulting rate distribution across representative projects.
+- [ ] **P6-56** Run one complete 28-day window end to end and validate deterministic reruns from the
+  same inputs and artifacts, coverage, calibration, hosted and self-hosted artifact loading, and
+  all-five publication.
+- [ ] **P6-57** Measure one full run on the largest project against the agreed query, worker,
+  snapshot-size, and page-load performance targets.
 
 ### Exit gate
 
-- [ ] **P6-14** Pure tests cover every formula boundary, all-five publication, unavailable scores,
-  zero-event endpoint intervals, dynamic attribution closure, policy-cap separation, and
-  scoring-version change.
-- [ ] **P6-15** Integration tests cover snapshot RLS, idempotency, queue payload scope, bulk evidence,
-  rendering headline and history from frozen snapshot data, and dynamic current-native-input and
-  cause queries that are never presented as historical decomposition.
-- [ ] **P6-16** End-to-end fixtures cover every metric, signal role, overlap case, missing-coverage
-  case, and destination.
-- [ ] **P6-17** One full run on the largest project meets the agreed query, worker, snapshot-size,
-  and page-load performance targets.
+The exit gate is what merging PR 6 requires. It does not require production traffic.
+
+- [ ] **P6-58** Pure tests cover every formula boundary, all-five publication, unavailable scores,
+  zero-event endpoint intervals, the Reliability transform in both directions, dynamic attribution
+  closure, policy-cap separation, window selection and hysteresis including the no-previous-snapshot
+  case, and a scoring-version change.
+- [ ] **P6-59** Invariance tests prove, at window scale, that duplicating a detector over the same
+  sessions leaves every dimension unchanged, that splitting one signal cluster into equivalent child
+  clusters leaves the dimension unchanged within estimation error, that merging correlated signals
+  does not erase a measured outcome, and that duplicated traffic preserves scores. The session-level
+  equivalents already exist; these are the window-level statements
+  [`signals.md`](signals.md#avoiding-detector-and-cluster-inflation) makes and nothing currently
+  tests.
+- [ ] **P6-60** Coverage tests prove every reader reports a coverage state and a missing-evidence
+  reason, including the artifact-dependent readers from D5, and that no absent artifact, disabled
+  detector, or unreadable family can raise a score.
+- [ ] **P6-61** Integration tests cover snapshot row-level security in both organization and project
+  scope, insert idempotency on a repeated date, queue payload scope, bulk evidence reads, rendering
+  the headline and history from frozen snapshot data, and dynamic cause queries that are never
+  presented as historical decomposition.
+- [ ] **P6-62** End-to-end fixtures cover every metric, signal role, overlap case, missing-coverage
+  case, and destination, and reconcile the session assessment, the window estimator input, the cause
+  row, and the snapshot for one inspected window.
+- [ ] **P6-63** Single-session and bulk parity still holds on the same fixtures after the latency
+  artifact reaches the interactive path.
 - [ ] `pnpm typecheck` and `pnpm test` pass. Generated contracts and schemas are current.
+
+### Launch gate
+
+These close after the merge, against production traffic, and gate removing the feature flag. They are
+separated because no amount of code closes them: the newest production release predates PRs 4 and 5,
+so no production session has been judged by `task-failure` or examined by the Safety suite.
+
+- [ ] **P6-64** A release carrying PRs 4, 5, and 6 is deployed, and the `task-failure` provisioning
+  migration has run, so the slug is not inert on projects that predate it.
+- [ ] **P6-65** Outcome passes its examined-population coverage floor on representative traffic with
+  compatible verdicts and known inclusion probabilities, over a full score window.
+- [ ] **P6-66** Safety passes its examined-population floor over a full score window at the rate
+  chosen in P6-55, with suite completion and the rate-limited hinted share inside their limits.
+- [ ] **P6-67** All five dimensions pass their publication floors together on representative traffic.
+  No partial dimension and no composite number is exposed while one fails.
+- [ ] **P6-68** Judge agreement is checked before Outcome publishes: the holistic verdict is stable
+  across re-judgment of the same transcript and agrees with human review often enough to stand as the
+  reference endpoint.
+- [ ] **P6-69** The feature flag is removed and the page ships.
+
+### Calibration questions to close before the flag comes off
+
+- What target examined count per window, for the Outcome judge and for the Safety suite, keeps both
+  dimensions measurable without making them the dominant flagger cost line? The Safety transform needs
+  an examined population in the thousands before its point estimate stops being effectively binary,
+  which on a project at the window's session target means near-census examination.
+- Is Agent Score deliberately a high-traffic-project feature, or does the traffic-aware rate make it
+  work at the 200-session floor as well?
+- Which judge configurations belong in the bundled supported-version list, and what does a window that
+  spans a version change display?
+- What attribution approximation error is acceptable before a cause row is shown, and what computation
+  ceiling does the largest project's cause set imply?
+- Does the composite policy cap ship in the first version, and if so at what confirmed-harm threshold?
+- What share of rate-limited hinted Safety sessions makes the hinted stratum's missingness ignorable,
+  and what is the right policy when it is exceeded?
 
 ## Verification rules
 
