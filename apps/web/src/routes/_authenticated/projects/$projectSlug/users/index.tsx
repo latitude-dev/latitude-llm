@@ -1,7 +1,8 @@
-import { Button, Icon, Input, Text, useValueWithDefault } from "@repo/ui"
+import { Input, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { ExternalLinkIcon, SearchIcon, UsersRoundIcon } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { BlankSlate } from "../../../../../components/blank-slate.tsx"
 import { TimeFilterDropdown } from "../../../../../components/time-filter-dropdown.tsx"
 import { useProjectUsers, useUsersOverview } from "../../../../../domains/end-users/end-users.collection.ts"
 import { allUsersMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
@@ -51,23 +52,14 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/user
 
 function UsersEmptyState() {
   return (
-    <div className="flex h-full min-h-[400px] flex-col items-center justify-center gap-6 p-8 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted">
-        <Icon icon={UsersRoundIcon} size="lg" color="foregroundMuted" />
-      </div>
-      <div className="flex max-w-md flex-col items-center gap-2">
-        <Text.H3 centered>No users yet</Text.H3>
-        <Text.H5 color="foregroundMuted" centered>
-          Attach user IDs to traces to understand each customer's activity, sessions, and errors.
-        </Text.H5>
-      </div>
-      <a href="https://docs.latitude.so/observability/users" target="_blank" rel="noopener noreferrer">
-        <Button>
-          <Icon size="sm" icon={ExternalLinkIcon} />
-          Read the docs
-        </Button>
-      </a>
-    </div>
+    <BlankSlate
+      icon={UsersRoundIcon}
+      title="No users yet"
+      description="Attach user IDs to traces to understand each customer's activity, sessions, and errors."
+      actions={[
+        { label: "Read the docs", icon: ExternalLinkIcon, href: "https://docs.latitude.so/observability/users" },
+      ]}
+    />
   )
 }
 

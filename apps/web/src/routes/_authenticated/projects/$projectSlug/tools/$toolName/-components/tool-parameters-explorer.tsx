@@ -1,6 +1,6 @@
-import { CopyableText, Skeleton, Status, Text, Tooltip } from "@repo/ui"
+import { CopyableText, EmptyState, Skeleton, Status, Text, Tooltip } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { ChevronRightIcon, InfoIcon } from "lucide-react"
+import { ChevronRightIcon, InfoIcon, SlidersHorizontalIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { type ToolsTimeRange, useToolParameterStats } from "../../../../../../../domains/tools/tools.collection.ts"
 import { TOOL_DETAIL_PANEL_MAX_HEIGHT } from "../../-components/tool-formatters.ts"
@@ -202,11 +202,10 @@ export function ToolParametersExplorer({
           <Skeleton className="h-5 w-1/2" />
         </div>
       ) : parameters.length === 0 ? (
-        <div className="flex min-h-[120px] items-center justify-center">
-          <Text.H6 color="foregroundMuted">
-            {errorsOnly ? "No parameters recorded on failed calls" : "No parameters defined or recorded"}
-          </Text.H6>
-        </div>
+        <EmptyState
+          icon={SlidersHorizontalIcon}
+          message={errorsOnly ? "No parameters recorded on failed calls" : "No parameters defined or recorded"}
+        />
       ) : single ? (
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           <div className="flex flex-row items-center gap-1.5">

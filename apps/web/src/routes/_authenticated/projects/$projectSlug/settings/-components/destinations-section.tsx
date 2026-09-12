@@ -1,6 +1,6 @@
 import { Button, Icon } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
-import { Plus, Share2Icon } from "lucide-react"
+import { ExternalLinkIcon, Plus, Share2Icon } from "lucide-react"
 import { useState } from "react"
 import { BlankSlate } from "../../../../../../components/blank-slate.tsx"
 import { listDestinations } from "../../../../../../domains/destinations/destinations.functions.ts"
@@ -36,12 +36,14 @@ export function DestinationsSection({
           icon={Share2Icon}
           title="No destinations yet"
           description="Connect a destination to stream new spans, traces, and sessions into a customer-owned system."
-          action={{
-            label: "Add destination",
-            icon: Plus,
-            onClick: () => setCreating(true),
-          }}
-          docsHref="https://docs.latitude.so/more/data-destinations/overview"
+          actions={[
+            { label: "Add destination", icon: Plus, onClick: () => setCreating(true) },
+            {
+              label: "Read the docs",
+              icon: ExternalLinkIcon,
+              href: "https://docs.latitude.so/more/data-destinations/overview",
+            },
+          ]}
         />
       ) : (
         <>

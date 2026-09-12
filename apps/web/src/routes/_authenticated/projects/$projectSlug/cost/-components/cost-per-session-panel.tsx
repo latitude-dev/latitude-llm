@@ -4,14 +4,20 @@ import {
   type SessionCostContribution,
   type SessionCostFactor,
 } from "@domain/spans"
-import { Badge, type BadgeProps, cn, Skeleton, Text, Tooltip } from "@repo/ui"
+import { Badge, type BadgeProps, cn, EmptyState, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatChartWindowCaption, formatCount, formatPercentage, formatPrice } from "@repo/utils"
-import { ArrowDownIcon, ArrowUpIcon, GitCompareIcon, type LucideIcon, MinusIcon } from "lucide-react"
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CircleDollarSignIcon,
+  GitCompareIcon,
+  type LucideIcon,
+  MinusIcon,
+} from "lucide-react"
 import type { ReactNode } from "react"
 import type { CostPerSessionRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import { microcentsToUsd } from "./cost-formatters.ts"
-import { EmptyState } from "./empty-state.tsx"
 import { SessionSparkline } from "./session-sparkline.tsx"
 import { SplitValue } from "./split-value.tsx"
 
@@ -304,6 +310,10 @@ function SessionHeadlineCard({
   readonly sessionsChangePct: number | null
   readonly boundaryIndex: number | undefined
 }) {
+  if (record.volume.currentSessions === 0) {
+    return <EmptyState icon={CircleDollarSignIcon} message="No spend recorded in this time window" />
+  }
+
   return (
     <div className="flex flex-1 flex-col rounded-lg bg-secondary">
       <div className="p-4">

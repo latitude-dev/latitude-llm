@@ -1,5 +1,5 @@
-import { Button, Icon, Text } from "@repo/ui"
 import { ExternalLinkIcon, Loader2Icon, PlusIcon, TagsIcon } from "lucide-react"
+import { BlankSlate } from "../../../../../../components/blank-slate.tsx"
 import type { useRouteProject } from "../../-route-data.ts"
 
 type RouteProject = ReturnType<typeof useRouteProject>
@@ -25,39 +25,26 @@ export function GlobalEmptyState({
   readonly isDemoProject: boolean
   readonly onNewBehavior?: () => void
 }) {
+  if (isDemoProject) {
+    return (
+      <BlankSlate
+        icon={Loader2Icon}
+        iconClassName="animate-spin"
+        title="Sample behaviors are loading"
+        description="We found the sample traces and signals. The behavior taxonomy is still being prepared, so check back in about a minute."
+      />
+    )
+  }
+
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted">
-        {isDemoProject ? (
-          <Icon icon={Loader2Icon} size="md" color="foregroundMuted" className="animate-spin" />
-        ) : (
-          <TagsIcon className="h-6 w-6 text-muted-foreground" />
-        )}
-      </div>
-      <div className="flex flex-col items-center gap-2">
-        <Text.H3>{isDemoProject ? "Sample behaviors are loading" : "No behaviors yet"}</Text.H3>
-        <Text.H5 color="foregroundMuted" centered className="max-w-md">
-          {isDemoProject
-            ? "We found the sample traces and signals. The behavior taxonomy is still being prepared, so check back in about a minute."
-            : "Live taxonomy behaviors will appear here after sessions have been clustered."}
-        </Text.H5>
-      </div>
-      {isDemoProject ? null : (
-        <div className="flex flex-row items-center gap-2">
-          <Button asChild variant={onNewBehavior ? "outline" : "default"}>
-            <a href="https://docs.latitude.so/search/behaviours" target="_blank" rel="noopener noreferrer">
-              <Icon size="sm" icon={ExternalLinkIcon} />
-              Read the docs
-            </a>
-          </Button>
-          {onNewBehavior ? (
-            <Button onClick={onNewBehavior}>
-              <Icon size="sm" icon={PlusIcon} />
-              Behavior
-            </Button>
-          ) : null}
-        </div>
-      )}
-    </div>
+    <BlankSlate
+      icon={TagsIcon}
+      title="No behaviors yet"
+      description="Live taxonomy behaviors will appear here after sessions have been clustered."
+      actions={[
+        ...(onNewBehavior ? [{ label: "Behavior", icon: PlusIcon, onClick: onNewBehavior }] : []),
+        { label: "Read the docs", icon: ExternalLinkIcon, href: "https://docs.latitude.so/search/behaviours" },
+      ]}
+    />
   )
 }

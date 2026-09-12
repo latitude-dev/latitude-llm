@@ -1,5 +1,5 @@
 import type { CostSeriesMetric } from "@domain/spans"
-import { Chart, type ChartSeries, HistogramSkeleton, Tabs, useChartCssTheme } from "@repo/ui"
+import { Chart, type ChartSeries, EmptyState, HistogramSkeleton, Tabs, useChartCssTheme } from "@repo/ui"
 import { formatPrice } from "@repo/utils"
 import { CircleDollarSignIcon } from "lucide-react"
 import type { CostSeriesBucketRecord } from "../../../../../../domains/cost/cost.functions.ts"
@@ -12,7 +12,6 @@ import {
   microcentsToUsd,
 } from "./cost-formatters.ts"
 import { modelColorAt, trendColor } from "./cost-series-colors.ts"
-import { EmptyState } from "./empty-state.tsx"
 
 const CHART_HEIGHT = 220
 

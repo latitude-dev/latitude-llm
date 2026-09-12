@@ -1,4 +1,4 @@
-import { cn, Skeleton, Text } from "@repo/ui"
+import { cn, EmptyState, Skeleton, Text } from "@repo/ui"
 import { useState } from "react"
 import { ValueBar } from "./value-bar.tsx"
 
@@ -44,9 +44,7 @@ export function StoreInsightList({
           <Skeleton className="h-5 w-1/2" />
         </div>
       ) : items.length === 0 ? (
-        <div className="flex min-h-[120px] items-center justify-center">
-          <Text.H6 color="foregroundMuted">{emptyText}</Text.H6>
-        </div>
+        <EmptyState message={emptyText} />
       ) : (
         <>
           <div className={cn("flex min-h-0 flex-col gap-2", expanded && "max-h-72 overflow-y-auto")}>
