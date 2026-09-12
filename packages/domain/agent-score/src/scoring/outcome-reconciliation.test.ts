@@ -119,6 +119,7 @@ const assessmentInput: NormalizedSessionAssessmentInput = {
   findings: [verdictFinding, momentFinding],
   readers: [],
   screeningDecisions: [screeningDecision],
+  scoringEligibleSignalIds: [],
 }
 
 describe("one judged session across every Outcome layer", () => {
@@ -172,7 +173,7 @@ describe("one judged session across every Outcome layer", () => {
   it("explains the failure through the moment, not through the verdict itself", () => {
     const observations = readOutcomeIssueObservations({
       items: assessment.items,
-      signals: [],
+      eligibleSignalIds: new Set(),
       observationProbability: 1,
     })
 

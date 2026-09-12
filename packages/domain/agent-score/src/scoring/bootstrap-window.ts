@@ -79,12 +79,17 @@ export const aggregateWindowCost = ({
  * incomplete session stays visible on that session, but letting it into the window would divide by
  * time nobody could measure — which would read as necessary.
  */
-export const aggregateWindowSpeed = (contributions: readonly SessionWindowContribution[]): WindowSpeedAggregate => {
+export const aggregateWindowSpeed = (
+  contributions: readonly SessionWindowContribution[],
+  residualAvoidableNs = 0,
+): WindowSpeedAggregate => {
   const included = contributions.filter((contribution) => contribution.speed.usableForDenominator)
   const observedNs = included.reduce((total, contribution) => total + contribution.speed.observedNs, 0)
+  // Clamped to observed time, which is what stops a modelled signal effect claiming time nobody spent.
   const avoidableNs = Math.min(
     observedNs,
-    included.reduce((total, contribution) => total + contribution.speed.avoidableNs, 0),
+    included.reduce((total, contribution) => total + contribution.speed.avoidableNs, 0) +
+      Math.max(0, residualAvoidableNs),
   )
 
   return {

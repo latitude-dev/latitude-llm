@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { LAUNCH_AGENT_SCORE_ARTIFACT } from "../artifacts/launch-agent-score-artifact.ts"
 import {
   type EstimateProjectOutcomeInput,
   estimateProjectOutcome,
@@ -27,6 +28,7 @@ const estimate = (overrides: Partial<EstimateProjectOutcomeInput> = {}) =>
     deterministicFailureSessionIds: [],
     judgedSessions: verdicts({ successes: 160, failures: 40, inclusionProbability: 0.1 }),
     supportedJudgmentVersions: [VERSION],
+    floors: LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.outcome,
     ...overrides,
   })
 

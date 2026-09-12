@@ -57,6 +57,7 @@ describe("getSessionAssessment", () => {
             memoryEvents: [],
             moments: { moments: [], labels: [] },
             screeningDecisions: [],
+            scoringEligibleSignalIds: [],
           },
         ])
       },
@@ -144,6 +145,7 @@ describe("getSessionAssessment", () => {
             memoryEvents: Object.freeze([]),
             moments: { moments: Object.freeze([]), labels: Object.freeze([]) },
             screeningDecisions: persisted.screeningDecisions,
+            scoringEligibleSignalIds: [],
           },
         ])
       },

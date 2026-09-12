@@ -45,7 +45,7 @@ const session = (index: number, overrides: Partial<MatchedSession> = {}): Matche
   sessionId: `session-${index}`,
   stratum: "openai/gpt-4o",
   outcome: 0,
-  inclusionProbability: 1,
+  inclusionProbabilityByGroupId: new Map([["group-a", 1]]),
   exposedGroupIds: [],
   fold: (index % 2) as 0 | 1,
   ...overrides,
@@ -171,13 +171,49 @@ describe("estimateResidualEffect", () => {
   it("weights a sampled session by the inverse of its inclusion probability", () => {
     const sessions: MatchedSession[] = [
       ...Array.from({ length: 10 }, (_, index) =>
-        session(index, { outcome: 1, exposedGroupIds: ["group-a"], inclusionProbability: 0.1 }),
+        session(index, {
+          outcome: 1,
+          exposedGroupIds: ["group-a"],
+          inclusionProbabilityByGroupId: new Map([["group-a", 0.1]]),
+        }),
       ),
       ...Array.from({ length: 10 }, (_, index) => session(index + 10, { outcome: 0 })),
     ]
     const result = estimateResidualEffect({ sessions, groupId: "group-a" })
 
     expect(result.measured && result.rawEffect).toBeCloseTo(1, 6)
+  })
+
+  it("does not apply one group's sampling probability to another group", () => {
+    const sessions: MatchedSession[] = [
+      ...Array.from({ length: 10 }, (_, index) =>
+        session(index, {
+          outcome: index < 5 ? 1 : 0,
+          exposedGroupIds: ["group-a", "group-b"],
+          inclusionProbabilityByGroupId: new Map([
+            ["group-a", 1],
+            ["group-b", 0.01],
+          ]),
+        }),
+      ),
+      ...Array.from({ length: 10 }, (_, index) => session(index + 10, { outcome: 0 })),
+    ]
+
+    const result = estimateResidualEffect({ sessions, groupId: "group-a" })
+
+    expect(result.measured && result.rawEffect).toBeCloseTo(0.5, 6)
+  })
+
+  it("leaves an effect unmeasured when its reader probability is unavailable", () => {
+    const sessions = cohort({ exposedCount: 10, cleanCount: 10, exposedOutcome: 1, cleanOutcome: 0 }).map((entry) => ({
+      ...entry,
+      inclusionProbabilityByGroupId: new Map(),
+    }))
+
+    expect(estimateResidualEffect({ sessions, groupId: "group-a" })).toEqual({
+      measured: false,
+      reason: "unknownInclusionProbability",
+    })
   })
 
   it("only compares inside a stratum, so a confounded size difference is not an effect", () => {

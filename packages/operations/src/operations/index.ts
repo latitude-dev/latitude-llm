@@ -1,5 +1,6 @@
 import type { OperationModule } from "../core/mount.ts"
 import { accountModule } from "./account.ts"
+import { agentScoreModule } from "./agent-score.ts"
 import { analyticsModule } from "./analytics.ts"
 import { annotationsModule } from "./annotations.ts"
 import { apiKeysModule } from "./api-keys.ts"
@@ -48,4 +49,5 @@ export const operationModules: ReadonlyArray<OperationModule> = [
   importsModule,
   usageModule,
   projectUsageModule,
+  agentScoreModule,
 ]

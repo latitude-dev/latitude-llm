@@ -1,12 +1,9 @@
 import { type Score, ScoreRepository } from "@domain/scores"
 import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
+import type { OutcomeCoverageFloors } from "../entities/agent-score-artifact.ts"
 import { type OutcomeWindowDecision, OutcomeWindowDecisionSource } from "../ports/outcome-window-source.ts"
-import {
-  estimateProjectOutcome,
-  type OutcomeCoverageFloors,
-  type OutcomeSessionVerdict,
-} from "../scoring/estimate-outcome.ts"
+import { estimateProjectOutcome, type OutcomeSessionVerdict } from "../scoring/estimate-outcome.ts"
 
 /** How many sessions one verdict read covers. Bounded so a 28-day window is many small queries, not one unbounded `IN`. */
 export const OUTCOME_VERDICT_BATCH_SIZE = 500
@@ -23,7 +20,7 @@ export interface EstimateProjectOutcomeWindowInput {
    * for the other dimensions anyway; this use-case does not read it again.
    */
   readonly deterministicFailureSessionIds?: readonly string[]
-  readonly floors?: OutcomeCoverageFloors
+  readonly floors: OutcomeCoverageFloors
   readonly confidenceLevel?: number
   readonly batchSize?: number
 }
@@ -126,7 +123,7 @@ export const estimateProjectOutcomeWindow = Effect.fn("agentScore.estimateProjec
     deterministicFailureSessionIds: input.deterministicFailureSessionIds ?? [],
     judgedSessions,
     supportedJudgmentVersions: input.supportedJudgmentVersions,
-    ...(input.floors ? { floors: input.floors } : {}),
+    floors: input.floors,
     ...(input.confidenceLevel !== undefined ? { confidenceLevel: input.confidenceLevel } : {}),
   })
 })

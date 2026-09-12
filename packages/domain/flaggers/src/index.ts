@@ -11,11 +11,13 @@ export {
   FLAGGER_PROMPT_MAX_HINTS,
   FLAGGER_SAMPLED_POSITIVE_RATE_LIMIT,
   FLAGGER_SAMPLED_RATE_LIMIT,
+  FLAGGER_SAMPLING_SOURCES,
   FLAGGER_SCORING_ARTIFACT_VERSION,
   FLAGGER_SCREENING_ARTIFACT_VERSION,
   FLAGGER_SCREENING_OUTCOMES,
   FLAGGER_SCREENING_RETENTION_DAYS,
   FLAGGER_SCREENING_SELECTION_REASONS,
+  type FlaggerSamplingSource,
 } from "./constants.ts"
 export {
   assistantTurnHasOutputContent,
@@ -67,6 +69,7 @@ export {
   flaggerScreeningSelectionReasonSchema,
   flaggerScreeningSelectionSchema,
 } from "./entities/flagger-screening-decision.ts"
+export { buildJudgmentVersion } from "./entities/judgment-version.ts"
 export { isSafetySuiteSlug, SAFETY_SUITE_KEY, SAFETY_SUITE_SLUGS } from "./entities/safety-suite.ts"
 export {
   SAFETY_JUDGMENT_VERSION_PREFIX,

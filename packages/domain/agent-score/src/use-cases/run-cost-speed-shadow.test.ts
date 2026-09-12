@@ -98,6 +98,7 @@ const runShadow = ({
             memoryEvents: [],
             moments: { moments: [], labels: [] },
             screeningDecisions: [],
+            scoringEligibleSignalIds: [],
           })),
       )
     },

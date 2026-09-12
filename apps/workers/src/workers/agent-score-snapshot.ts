@@ -1,0 +1,185 @@
+import {
+  type AgentScoreArtifact,
+  type AgentScoreResult,
+  AgentScoreSnapshotRepository,
+  type CostMetricCatalog,
+  type CostScoringArtifact,
+  cacheAgentScoreExplanation,
+  computeAgentScore,
+  type DimensionSnapshot,
+  deriveSamplingRates,
+  type LatencyReferenceArtifact,
+  type ScoringJudge,
+} from "@domain/agent-score"
+import { FlaggerRepository, SAFETY_SUITE_SLUGS } from "@domain/flaggers"
+import type { OrganizationId, ProjectId, ScoreDimension } from "@domain/shared"
+import { Effect } from "effect"
+
+const TASK_OUTCOME_SLUG = "task-failure"
+
+interface SnapshotProjectInput {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  /** UTC date the sweep resolved, so every project in one run scores the same day. */
+  readonly date: string
+  /** Instant the window ends, resolved by the sweep. Falls back to the date's own cutoff. */
+  readonly to?: Date
+  readonly artifact: AgentScoreArtifact
+  readonly costArtifact: CostScoringArtifact
+  readonly catalog: CostMetricCatalog
+  readonly latencyArtifact: LatencyReferenceArtifact
+  readonly judge: ScoringJudge
+  /** Recompute a date that already has a snapshot, to refresh the cached explanation. */
+  readonly force?: boolean
+}
+
+type SnapshotProjectResult =
+  | { readonly status: "published"; readonly score: number }
+  | { readonly status: "already-published" }
+  | { readonly status: "refreshed"; readonly score: number }
+  | { readonly status: "withheld"; readonly reason: string }
+
+const DAY_MS = 86_400_000
+
+const startOfUtcDay = (date: string): number => new Date(`${date}T00:00:00.000Z`).getTime()
+
+/**
+ * The instant the window ends, which is the end of the date but never later than now.
+ *
+ * The end of the date rather than its start, so a snapshot dated the 29th covers the 29th; scoring
+ * to the start would publish a number for a day that had not happened yet. Clamped because the
+ * sweep runs inside the day it labels: an unclamped cutoff would end the window in hours that hold
+ * no data, and a rolling window ending there drops an equal stretch of real traffic off its oldest
+ * end while still reporting its full length. It would also score a different window than the one
+ * the sweep read to decide the project was eligible, so a project could be selected and then
+ * withheld for a floor it had actually met.
+ *
+ * Exported for tests.
+ */
+export const resolveScoringCutoff = (date: string, now: Date): Date =>
+  new Date(Math.min(startOfUtcDay(date) + DAY_MS, now.getTime()))
+
+const previousUtcDate = (date: string): string => new Date(startOfUtcDay(date) - DAY_MS).toISOString().slice(0, 10)
+
+const withheldReason = (result: AgentScoreResult): string => {
+  if (result.withheldReason === "sessionFloor") return "sessionFloor"
+  const unmeasured = result.dimensions
+    .filter((dimension) => dimension.coverage !== "measured")
+    .map((dimension) => `${dimension.scoreDimension}:${dimension.unmeasuredReason ?? "unmeasured"}`)
+  return unmeasured.join(",") || "unmeasured"
+}
+
+/**
+ * Scores one project for one date and stores the result if there is one to store.
+ *
+ * Runs under the project's own organisation, so row-level security scopes every read it makes. A
+ * withheld calculation writes nothing at all and reports the floor it missed: an unpublished day is
+ * a gap in the trend rather than a zero in it, and the reason is what the page needs to explain the
+ * gap to somebody looking at it.
+ *
+ * The derived sampling rates are written even when the score is withheld, and especially then: the
+ * usual reason a project cannot publish is that its sampled readers examined too few sessions, and
+ * that is the thing the rates exist to fix.
+ */
+export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")(function* (
+  input: SnapshotProjectInput,
+) {
+  const to = input.to ?? resolveScoringCutoff(input.date, new Date())
+  const snapshots = yield* AgentScoreSnapshotRepository
+  const existing = yield* snapshots.findByDate({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    date: input.date,
+  })
+  // A published score is never recomputed on its own: the number is a record of what was published
+  // that day. A forced run recomputes anyway, for the cached explanation, and the conditional insert
+  // below is what keeps the score itself untouched.
+  if (existing && !input.force) return { status: "already-published" } satisfies SnapshotProjectResult
+
+  // Yesterday's stored step is what makes today's window choice sticky, and the snapshot is the only
+  // durable record of it.
+  const previous = yield* snapshots.findByDate({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    date: previousUtcDate(input.date),
+  })
+
+  const result = yield* computeAgentScore({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    to,
+    artifact: input.artifact,
+    costArtifact: input.costArtifact,
+    catalog: input.catalog,
+    latencyArtifact: input.latencyArtifact,
+    judge: input.judge,
+    ...(previous ? { previousStepDays: previous.windowDays } : {}),
+  })
+
+  yield* applyDerivedSampling({ projectId: input.projectId, result })
+  // A missing cache entry costs a page one recomputation; a failed job costs a day of history. The
+  // first is not worth risking the second for.
+  yield* cacheAgentScoreExplanation(result).pipe(Effect.ignore)
+
+  if (!result.composite || !result.window) {
+    return { status: "withheld", reason: withheldReason(result) } satisfies SnapshotProjectResult
+  }
+
+  const published = (dimension: ScoreDimension): DimensionSnapshot | null => {
+    const entry = result.dimensions.find((candidate) => candidate.scoreDimension === dimension)
+    return entry?.score !== undefined && entry.interval ? { score: entry.score, interval: entry.interval } : null
+  }
+  const dimensions = {
+    outcome: published("outcome"),
+    reliability: published("reliability"),
+    cost: published("cost"),
+    speed: published("speed"),
+    safety: published("safety"),
+  }
+  // A composite exists only when all five passed, so this cannot fire; it is here so a future change
+  // that publishes a composite without a dimension fails loudly instead of storing a zero.
+  if (Object.values(dimensions).some((dimension) => dimension === null)) {
+    return { status: "withheld", reason: "missingDimensionScore" } satisfies SnapshotProjectResult
+  }
+
+  const wrote = yield* snapshots.insertIfAbsent({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    date: input.date,
+    scoringVersion: result.scoringVersion,
+    windowDays: result.window.stepDays,
+    eligibleSessionCount: result.window.eligibleSessionCount,
+    score: result.composite.score,
+    interval: result.composite.interval,
+    dimensions: dimensions as Record<ScoreDimension, DimensionSnapshot>,
+    ...(result.composite.policyCap?.applied ? { policyCap: result.composite.policyCap.cap } : {}),
+    createdAt: new Date(),
+  })
+
+  return (
+    wrote
+      ? { status: "published", score: result.composite.score }
+      : { status: "refreshed", score: result.composite.score }
+  ) satisfies SnapshotProjectResult
+})
+
+const applyDerivedSampling = ({
+  projectId,
+  result,
+}: {
+  readonly projectId: ProjectId
+  readonly result: AgentScoreResult
+}) =>
+  Effect.gen(function* () {
+    const eligibleSessions = result.window?.eligibleSessionCount ?? result.coverage?.eligibleSessionCount ?? 0
+    if (eligibleSessions <= 0) return 0
+    const rates = deriveSamplingRates({ eligibleSessions })
+    const flaggers = yield* FlaggerRepository
+    return yield* flaggers.applyDerivedSampling({
+      projectId,
+      rates: [
+        { slug: TASK_OUTCOME_SLUG, sampling: rates.taskOutcomePercent },
+        ...SAFETY_SUITE_SLUGS.map((slug) => ({ slug, sampling: rates.safetySuitePercent })),
+      ],
+    })
+  })

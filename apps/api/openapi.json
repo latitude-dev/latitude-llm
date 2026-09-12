@@ -14669,7 +14669,8 @@
                   "missingContent",
                   "truncatedContent",
                   "unknownModelContext",
-                  "criticalPathUnavailable"
+                  "criticalPathUnavailable",
+                  "missingLatencyReference"
                 ],
                 "description": "Reason the reader could not completely examine the session."
               },
@@ -14757,7 +14758,8 @@
                   "missingContent",
                   "truncatedContent",
                   "unknownModelContext",
-                  "criticalPathUnavailable"
+                  "criticalPathUnavailable",
+                  "missingLatencyReference"
                 ],
                 "description": "Reason the reader could not completely examine the session."
               },
@@ -16110,6 +16112,459 @@
               "period"
             ]
           }
+        ]
+      },
+      "AgentScoreHistory": {
+        "type": "object",
+        "properties": {
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentScoreSnapshot"
+            },
+            "description": "Published scores in the range, oldest first. Days without a published score are absent, not zero."
+          }
+        },
+        "required": [
+          "snapshots"
+        ]
+      },
+      "AgentScoreSnapshot": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "UTC date the score was published for, as `YYYY-MM-DD`."
+          },
+          "score": {
+            "type": "number",
+            "description": "Agent Score from 0 to 100: the weighted mean of the five dimensions for this window."
+          },
+          "interval": {
+            "$ref": "#/components/schemas/AgentScoreInterval"
+          },
+          "dimensions": {
+            "$ref": "#/components/schemas/AgentScoreDimensions"
+          },
+          "scoringVersion": {
+            "type": "string",
+            "description": "Version of the formulas, prompts and frozen references that produced this score. Scores from different versions are not directly comparable."
+          },
+          "windowDays": {
+            "type": "integer",
+            "description": "Length in days of the rolling window this score covers."
+          },
+          "eligibleSessionCount": {
+            "type": "integer",
+            "description": "Production sessions in the window the score was computed over."
+          },
+          "policyCap": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Ceiling a safety policy rule applied to the score, or `null` when no rule applied."
+          }
+        },
+        "required": [
+          "date",
+          "score",
+          "interval",
+          "dimensions",
+          "scoringVersion",
+          "windowDays",
+          "eligibleSessionCount",
+          "policyCap"
+        ]
+      },
+      "AgentScoreInterval": {
+        "type": "object",
+        "properties": {
+          "lower": {
+            "type": "number",
+            "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+          },
+          "upper": {
+            "type": "number",
+            "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+          }
+        },
+        "required": [
+          "lower",
+          "upper"
+        ]
+      },
+      "AgentScoreDimensions": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/AgentScoreDimension"
+          },
+          "reliability": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AgentScoreDimension"
+              },
+              {
+                "description": "Chance the agent completes a reference run of 20 sessions without a terminal operational failure."
+              }
+            ]
+          },
+          "cost": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AgentScoreDimension"
+              },
+              {
+                "description": "Health of the agent's use of paid and token-bearing resources."
+              }
+            ]
+          },
+          "speed": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AgentScoreDimension"
+              },
+              {
+                "description": "Share of user-visible critical-path time that was necessary."
+              }
+            ]
+          },
+          "safety": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AgentScoreDimension"
+              },
+              {
+                "description": "Chance a reference run of 100 sessions contains no confirmed agent-caused harm."
+              }
+            ]
+          }
+        },
+        "required": [
+          "outcome",
+          "reliability",
+          "cost",
+          "speed",
+          "safety"
+        ]
+      },
+      "AgentScoreDimension": {
+        "type": "object",
+        "properties": {
+          "score": {
+            "type": "number",
+            "description": "Dimension score from 0 to 100. Read it with the dimension's own meaning."
+          },
+          "interval": {
+            "$ref": "#/components/schemas/AgentScoreInterval"
+          }
+        },
+        "required": [
+          "score",
+          "interval"
+        ],
+        "description": "Share of comparable sessions expected to accomplish the user's task."
+      },
+      "AgentScoreCauses": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "notComputed"
+            ],
+            "description": "`notComputed` when the explanation has not been prepared yet; the scores are still valid."
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/AgentScoreExplanation"
+          }
+        },
+        "required": [
+          "status",
+          "explanation"
+        ]
+      },
+      "AgentScoreExplanation": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "computedAt": {
+            "type": "string",
+            "description": "When this evidence was read, as an ISO-8601 timestamp. It explains present behaviour, not the stored score."
+          },
+          "scoringVersion": {
+            "type": "string",
+            "description": "Scoring version the evidence was read under."
+          },
+          "windowDays": {
+            "type": "integer",
+            "description": "Length in days of the window the evidence covers."
+          },
+          "eligibleSessionCount": {
+            "type": "integer",
+            "description": "Production sessions in that window."
+          },
+          "attribution": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentScoreDimensionAttribution"
+            },
+            "description": "Per-dimension cause rows for the dimensions that support a counterfactual."
+          },
+          "outcomeIssues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentScoreIssueRow"
+            },
+            "description": "Where task failures concentrate. Reach only; these rows carry no share of the score."
+          },
+          "safetyConfirmedHarm": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentScoreIssueRow"
+            },
+            "description": "Issues where the agent caused confirmed harm."
+          },
+          "safetyExposure": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentScoreIssueRow"
+            },
+            "description": "Hostile or sensitive content the agent received. Exposure is context and never lowers Safety."
+          }
+        },
+        "required": [
+          "computedAt",
+          "scoringVersion",
+          "windowDays",
+          "eligibleSessionCount",
+          "attribution",
+          "outcomeIssues",
+          "safetyConfirmedHarm",
+          "safetyExposure"
+        ],
+        "description": "The evidence, or `null` when it is not ready."
+      },
+      "AgentScoreDimensionAttribution": {
+        "type": "object",
+        "properties": {
+          "scoreDimension": {
+            "type": "string",
+            "enum": [
+              "outcome",
+              "reliability",
+              "cost",
+              "speed",
+              "safety"
+            ],
+            "description": "Dimension explained."
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentScoreCauseRow"
+            },
+            "description": "Causes, most responsible first."
+          },
+          "residual": {
+            "type": "number",
+            "description": "Points of the deficit no named cause accounts for, including estimation error."
+          },
+          "totalDeficit": {
+            "type": "number",
+            "description": "The dimension's whole distance from healthy, in points."
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "sampled"
+            ],
+            "description": "`sampled` when there were too many causes to attribute exactly."
+          },
+          "approximationError": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Standard error of the sampled shares in points, or `null` when attribution was exact."
+          }
+        },
+        "required": [
+          "scoreDimension",
+          "rows",
+          "residual",
+          "totalDeficit",
+          "method",
+          "approximationError"
+        ]
+      },
+      "AgentScoreCauseRow": {
+        "type": "object",
+        "properties": {
+          "causeId": {
+            "type": "string",
+            "description": "Stable identifier of the metric, claim or finding kind behind this row."
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable name for the cause."
+          },
+          "attributedDeficit": {
+            "type": "number",
+            "description": "Points of the dimension's deficit attributed to this cause. Attributed deficits across a dimension add up; they are not a prediction of what fixing it returns."
+          },
+          "fixGain": {
+            "type": "number",
+            "description": "Points the dimension would recover if this cause alone disappeared. Fix gains overlap between causes and must never be summed."
+          },
+          "evidence": {
+            "type": "string",
+            "enum": [
+              "measured",
+              "associated"
+            ],
+            "description": "`measured` when the reader observed the effect directly; `associated` when it was estimated from matched comparison sessions and no causal claim is made."
+          },
+          "nativeEffect": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "number",
+                "description": "Size of the effect in its own unit, before it became score points."
+              },
+              "unit": {
+                "type": "string",
+                "description": "Unit the value is in, such as nanoseconds, sessions, or a Cost family."
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ],
+            "description": "The effect in the dimension's own terms, which is what the row shows beside the points."
+          },
+          "observationCount": {
+            "type": "integer",
+            "description": "Independent observations behind the row. Coverage context, not a score."
+          },
+          "destination": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "sessions",
+              "tools",
+              "memory",
+              "cost",
+              "signals",
+              null
+            ],
+            "description": "Product section that owns this evidence, or `null` when nothing specific can be opened."
+          }
+        },
+        "required": [
+          "causeId",
+          "label",
+          "attributedDeficit",
+          "fixGain",
+          "evidence",
+          "nativeEffect",
+          "observationCount",
+          "destination"
+        ]
+      },
+      "AgentScoreIssueRow": {
+        "type": "object",
+        "properties": {
+          "issueKey": {
+            "type": "string",
+            "description": "Stable identifier for the issue."
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable name for the issue."
+          },
+          "signalIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Signals this issue was observed through, if any."
+          },
+          "estimatedReach": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Sessions the issue touched, corrected for how often it could be observed. `null` when the correction is unknown."
+          },
+          "estimatedAdverseReach": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Sessions it touched that went badly, corrected the same way. `null` when unknown."
+          },
+          "examinedSessions": {
+            "type": "integer",
+            "description": "Raw sessions examined. Coverage context, never a ranking key."
+          },
+          "examinedAdverseSessions": {
+            "type": "integer",
+            "description": "Raw examined sessions that went badly."
+          },
+          "ranked": {
+            "type": "boolean",
+            "description": "`false` when a required joint observation probability was unknown, so the row explains without claiming a position."
+          }
+        },
+        "required": [
+          "issueKey",
+          "label",
+          "signalIds",
+          "estimatedReach",
+          "estimatedAdverseReach",
+          "examinedSessions",
+          "examinedAdverseSessions",
+          "ranked"
+        ]
+      },
+      "CurrentAgentScore": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Whether a score was published for today. `false` when a dimension did not meet its coverage or confidence floor; no earlier score is substituted."
+          },
+          "date": {
+            "type": "string",
+            "description": "UTC date the answer refers to, as `YYYY-MM-DD`."
+          },
+          "snapshot": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AgentScoreSnapshot"
+              },
+              {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Today's score, or `null` when none was published."
+              }
+            ]
+          }
+        },
+        "required": [
+          "available",
+          "date",
+          "snapshot"
         ]
       }
     },
@@ -27732,6 +28187,241 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProjectUsageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/agent-score/history": {
+      "get": {
+        "tags": [
+          "Agent Score"
+        ],
+        "x-fern-sdk-group-name": "agentScore",
+        "x-fern-sdk-method-name": "history",
+        "summary": "List Agent Score history",
+        "description": "Returns the project's published Agent Scores in a date range, oldest first. Days the project did not publish are absent from the list.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listAgentScoreHistory",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`."
+            },
+            "required": false,
+            "description": "Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "Inclusive end date as `YYYY-MM-DD`. Defaults to today."
+            },
+            "required": false,
+            "description": "Inclusive end date as `YYYY-MM-DD`. Defaults to today.",
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published Agent Scores in the range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentScoreHistory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/agent-score/causes": {
+      "get": {
+        "tags": [
+          "Agent Score"
+        ],
+        "x-fern-sdk-group-name": "agentScore",
+        "x-fern-sdk-method-name": "causes",
+        "summary": "Get Agent Score causes",
+        "description": "Returns what explains the project's current Agent Score: ranked causes per dimension, and where Outcome failures and Safety harm concentrate. This is current evidence from the live window and does not reconstruct any stored score.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getAgentScoreCauses",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current cause rows, or an explicit absence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentScoreCauses"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/agent-score": {
+      "get": {
+        "tags": [
+          "Agent Score"
+        ],
+        "x-fern-sdk-group-name": "agentScore",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get Agent Score",
+        "description": "Returns the project's Agent Score for today: one number from 0 to 100 and the five dimensions behind it. A score is published only when every dimension meets its coverage and confidence floors, so a project can have no score for a day.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getAgentScore",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Today's Agent Score, or an explicit absence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentAgentScore"
                 }
               }
             }

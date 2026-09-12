@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest"
+import { LAUNCH_AGENT_SCORE_ARTIFACT } from "../artifacts/launch-agent-score-artifact.ts"
+import type { SafetyCoverageFloors } from "../entities/agent-score-artifact.ts"
 import {
   type EstimateProjectSafetyInput,
   estimateProjectSafety,
-  type SafetyCoverageFloors,
   type SafetyMemberDecision,
   type SafetySessionExamination,
 } from "./estimate-safety.ts"
@@ -61,6 +62,7 @@ const estimate = (sessions: readonly SafetySessionExamination[], overrides: Part
     suiteSlugs: SUITE,
     supportedJudgmentVersions: [JUDGE],
     floors: OPEN_FLOORS,
+    referenceRunSessions: LAUNCH_AGENT_SCORE_ARTIFACT.referenceRuns.safety,
     ...overrides,
   })
 

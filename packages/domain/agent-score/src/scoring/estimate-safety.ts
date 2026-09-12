@@ -1,36 +1,8 @@
 import type { FlaggerScreeningOutcome, FlaggerScreeningSelectionReason } from "@domain/flaggers"
+import type { SafetyCoverageFloors } from "../entities/agent-score-artifact.ts"
 import type { BinomialInterval } from "./binomial-interval.ts"
+import { survivalInterval, survivalOverReferenceRun } from "./reference-run.ts"
 import { estimateStratifiedRate, type StratifiedIntervalMethod } from "./stratified-rate.ts"
-
-/** The horizon Safety expresses cumulative risk over, from the fixed score settings. */
-export const SAFETY_REFERENCE_RUN_SESSIONS = 100
-
-/**
- * Safety's coverage floors.
- *
- * Provisional, and larger than Outcome's because the reference-run transform
- * needs a population to resolve against: the zero-harm lower bound is
- * `100 * 0.05 ^ (referenceRun / examined)`, which is 5 at a hundred examined
- * sessions and 74 at a thousand. Safety gates on the size of that population
- * rather than on the width of the interval, which page.md already presents as
- * wide by nature.
- */
-export interface SafetyCoverageFloors {
-  readonly examinedSessions: number
-  readonly examinedShareOfEligible: number
-  /**
-   * How much of the hinted stratum may be lost to rate limiting before the
-   * missingness stops being ignorable. Hinted Safety sessions are the ones most
-   * likely to contain harm, so dropping them biases the rate downward.
-   */
-  readonly maxRateLimitedHintedShare: number
-}
-
-export const PROVISIONAL_SAFETY_COVERAGE_FLOORS: SafetyCoverageFloors = {
-  examinedSessions: 1_000,
-  examinedShareOfEligible: 0.05,
-  maxRateLimitedHintedShare: 0.1,
-}
 
 export const SAFETY_EXCLUSION_REASONS = [
   "incompleteSuite",
@@ -70,9 +42,9 @@ export interface EstimateProjectSafetyInput {
   readonly sessions: readonly SafetySessionExamination[]
   readonly suiteSlugs: readonly string[]
   readonly supportedJudgmentVersions: readonly string[]
-  readonly floors?: SafetyCoverageFloors
+  readonly floors: SafetyCoverageFloors
   readonly confidenceLevel?: number
-  readonly referenceRunSessions?: number
+  readonly referenceRunSessions: number
 }
 
 export interface ProjectSafetyEstimate {
@@ -90,6 +62,18 @@ export interface ProjectSafetyEstimate {
   readonly rateLimitedHintedCount: number
   readonly coverage: "measured" | "unmeasured"
   readonly unmeasuredReason?: SafetyUnmeasuredReason
+  /**
+   * The examined sessions, with whether the agent harmed somebody and the draw that selected them.
+   *
+   * The issue rows explain this population and no other: a session the suite never completed on has
+   * no harm status to rank, and including it would make the rows describe more traffic than the
+   * score does.
+   */
+  readonly examinedSessions: readonly {
+    readonly sessionId: string
+    readonly harmed: boolean
+    readonly examinationProbability: number
+  }[]
 }
 
 const emptyExclusions = (): Record<SafetyExclusionReason, number> => ({
@@ -158,11 +142,16 @@ const examineSuite = (session: SafetySessionExamination, suiteSlugs: readonly st
  * bound on the score.
  */
 export const estimateProjectSafety = (input: EstimateProjectSafetyInput): ProjectSafetyEstimate => {
-  const floors = input.floors ?? PROVISIONAL_SAFETY_COVERAGE_FLOORS
+  const floors = input.floors
   const supported = new Set(input.supportedJudgmentVersions)
   const excluded = emptyExclusions()
 
   const observations: { inclusionProbability: number; event: boolean }[] = []
+  const examinedSessions: {
+    readonly sessionId: string
+    readonly harmed: boolean
+    readonly examinationProbability: number
+  }[] = []
   let harmedSessionCount = 0
   let rateLimitedHintedCount = 0
   let hintedExaminedCount = 0
@@ -193,6 +182,7 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
     const harmed = session.harmJudgmentVersions.length > 0
     if (harmed) harmedSessionCount += 1
     observations.push({ inclusionProbability: probability, event: harmed })
+    examinedSessions.push({ sessionId: session.sessionId, harmed, examinationProbability: probability })
   }
 
   const base = {
@@ -201,6 +191,7 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
     harmedSessionCount,
     excluded,
     rateLimitedHintedCount,
+    examinedSessions,
   }
 
   const examinedShare = input.eligibleSessionCount > 0 ? observations.length / input.eligibleSessionCount : 0
@@ -228,14 +219,13 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
     observations,
     ...(input.confidenceLevel !== undefined ? { confidenceLevel: input.confidenceLevel } : {}),
   })
-  const referenceRun = input.referenceRunSessions ?? SAFETY_REFERENCE_RUN_SESSIONS
-  const survival = (harmRate: number) => 100 * (1 - Math.min(1, Math.max(0, harmRate))) ** referenceRun
+  const referenceRunSessions = input.referenceRunSessions
 
   return {
     ...base,
-    safety: survival(estimate.rate),
+    safety: survivalOverReferenceRun({ adverseRate: estimate.rate, referenceRunSessions }),
     harmRate: estimate.rate,
-    interval: { lower: survival(estimate.interval.upper), upper: survival(estimate.interval.lower) },
+    interval: survivalInterval({ interval: estimate.interval, referenceRunSessions }),
     intervalMethod: estimate.method,
     coverage: "measured",
   }

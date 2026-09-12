@@ -17,7 +17,7 @@ import type { MemoryEvent } from "@domain/memories"
 import { countTokens } from "@domain/memories"
 import { isConfirmedHarmFindingKind, type Score } from "@domain/scores"
 import type { ScoreDimension } from "@domain/shared"
-import type { SignalWithLifecycle } from "@domain/signals"
+import { type SignalWithLifecycle, scoringEligibleSignalIds } from "@domain/signals"
 import {
   classifySpanEndpoint,
   hasUsableAssistantCompletion,
@@ -401,13 +401,27 @@ const scoreAnchors = (score: Score) => {
 const flaggerLabel = (slug: string | undefined): string | undefined =>
   slug === undefined ? undefined : (FLAGGER_DISPLAY[slug as FlaggerSlug]?.name ?? slug)
 
-const readScoreFindings = (scores: readonly Score[], signals: readonly SignalWithLifecycle[]): AssessmentFinding[] => {
+const scoreObservationProbability = (
+  score: Score,
+  screeningDecisions: NormalizedSessionAssessmentInput["screeningDecisions"],
+): number | undefined => {
+  const flaggerSlug = score.sourceType === "annotation" ? score.metadata.flaggerSlug : undefined
+  if (!flaggerSlug) return 1
+  return screeningDecisions.find((decision) => decision.flaggerSlug === flaggerSlug)?.inclusionProbability
+}
+
+const readScoreFindings = (
+  scores: readonly Score[],
+  signals: readonly SignalWithLifecycle[],
+  screeningDecisions: NormalizedSessionAssessmentInput["screeningDecisions"],
+): AssessmentFinding[] => {
   const signalsById = new Map<string, SignalWithLifecycle>(signals.map((signal) => [signal.id, signal]))
   return scores.flatMap((score): AssessmentFinding[] => {
     if (score.draftedAt || score.errored) return []
     const signal = score.signalId ? signalsById.get(score.signalId) : undefined
     if (signal?.ignoredAt) return []
     const metadata = score.sourceType === "annotation" ? score.metadata : undefined
+    const observationProbability = scoreObservationProbability(score, screeningDecisions)
     const evidenceKey = metadata?.flaggerFindingKey ?? `score:${score.id}`
     const signalIds = signal ? [signal.id] : []
     const references = scoreAnchors(score)
@@ -426,6 +440,7 @@ const readScoreFindings = (scores: readonly Score[], signals: readonly SignalWit
       ...references,
       independentHumanEvidence:
         score.annotatorId !== null || (score.sourceType === "annotation" && score.sourceId !== "SYSTEM"),
+      ...(observationProbability !== undefined && observationProbability > 0 ? { observationProbability } : {}),
     }
 
     if (metadata?.flaggerSlug === "task-failure") {
@@ -689,6 +704,15 @@ const toolDefinitionSurfaces = ({
   }
 }
 
+/** Applied claims only: a dropped claim was time some other claim already accounted for. */
+const avoidableNsByCause = (
+  claims: readonly { readonly cause: string; readonly removedNs: number }[],
+): Record<string, number> => {
+  const byCause: Record<string, number> = {}
+  for (const claim of claims) byCause[claim.cause] = (byCause[claim.cause] ?? 0) + claim.removedNs
+  return byCause
+}
+
 export interface ReadSessionAssessmentSourcesInput {
   readonly session: SessionDetail
   readonly spans: readonly Span[]
@@ -728,7 +752,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
         : []),
       ...deterministic.findings,
       ...spanFindings.findings,
-      ...readScoreFindings(input.scores, input.signals),
+      ...readScoreFindings(input.scores, input.signals, input.screeningDecisions),
       ...readMomentFindings(input.moments),
     ]
 
@@ -756,8 +780,10 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       findings,
       readers: [...deterministic.readers, ...spanFindings.readers, ...costEvidence.readers],
       screeningDecisions: input.screeningDecisions,
+      scoringEligibleSignalIds: [...scoringEligibleSignalIds(input.signals)],
       costEvidence: {
         readings: costEvidence.readings,
+        workloadStratum: costEvidence.workloadStratum,
         denominators: costEvidence.denominators,
         observedCriticalPathNs: costEvidence.criticalPath.observedNs,
         criticalPathComplete: costEvidence.criticalPath.completeness === "complete",
@@ -765,6 +791,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
         estimatedAvoidableNs: costEvidence.speed.estimatedAvoidableNs,
         measuredAvoidableMicrocents: 0,
         estimatedAvoidableMicrocents: 0,
+        avoidableNsByCause: avoidableNsByCause(costEvidence.speed.appliedClaims),
       },
     } satisfies NormalizedSessionAssessmentInput
   })

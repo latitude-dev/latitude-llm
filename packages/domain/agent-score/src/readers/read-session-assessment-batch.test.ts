@@ -1,7 +1,7 @@
 import type { Score } from "@domain/scores"
-import { ChSqlClient, OrganizationId, ProjectId, ScoreId, SessionId, SqlClient, TraceId } from "@domain/shared"
+import { ChSqlClient, OrganizationId, ProjectId, ScoreId, SessionId, SpanId, SqlClient, TraceId } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
-import type { SessionDetail } from "@domain/spans"
+import type { SessionDetail, SessionGenerationFact } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { describe, expect, it, vi } from "vitest"
 import {
@@ -10,6 +10,51 @@ import {
 } from "../ports/session-assessment-sources.ts"
 import { getSessionAssessment } from "../use-cases/get-session-assessment.ts"
 import { readSessionAssessmentBatch, readSessionAssessmentInputBatch } from "./read-session-assessment-batch.ts"
+
+/**
+ * A streaming call the frozen latency reference covers, slower than its published expectation.
+ *
+ * Present so the parity comparison actually exercises the artifact. Without a generation the latency
+ * readers are not applicable, both paths agree on nothing, and the test would keep passing if the
+ * artifact stopped reaching one of them.
+ */
+const makeGeneration = (traceId: string): SessionGenerationFact =>
+  ({
+    traceId: TraceId(traceId),
+    spanId: SpanId("generation"),
+    parentSpanId: "",
+    operation: "chat",
+    provider: "openai",
+    model: "gpt-4o",
+    responseModel: "",
+    startTime: new Date("2026-01-01T00:00:00.000Z"),
+    endTime: new Date("2026-01-01T00:00:03.000Z"),
+    durationNs: 3_000_000_000,
+    name: "chat",
+    toolName: "",
+    agentName: "",
+    tokens: { tokensInput: 2_000, tokensOutput: 200, tokensCacheRead: 0, tokensCacheCreate: 0, tokensReasoning: 0 },
+    costInputMicrocents: 700,
+    costOutputMicrocents: 300,
+    costTotalMicrocents: 1_000,
+    costSource: "estimated",
+    costPricedProvider: "openai",
+    costPricedModel: "gpt-4o",
+    isStreaming: true,
+    timeToFirstTokenNs: 1_500_000_000,
+    finishReasons: ["stop"],
+    statusCode: "ok",
+    statusMessage: "",
+    errorType: "",
+    capturedBytes: { inputMessages: 0, outputMessages: 0, toolDefinitions: 0 },
+    content: null,
+    inputContentState: "absent",
+    outputContentState: "absent",
+    toolDefinitionContentState: "absent",
+    pricingState: "registryEstimated",
+    modelContextState: "known",
+    modelContextLimitTokens: 128_000,
+  }) as unknown as SessionGenerationFact
 
 const makeSession = (sessionId: string, traceId: string): SessionDetail =>
   ({
@@ -106,6 +151,7 @@ describe("readSessionAssessmentBatch", () => {
             memoryEvents: [],
             moments: { moments: [], labels: [] },
             screeningDecisions: [],
+            scoringEligibleSignalIds: [],
           })),
         )
       },
@@ -168,6 +214,44 @@ describe("readSessionAssessmentBatch", () => {
     expect(result).toEqual([])
   })
 
+  it("reaches both paths with the frozen latency reference, so the parity below is not vacuous", async () => {
+    const sessions = [makeSession("session-1", "trace-1")]
+    const layer = Layer.mergeAll(
+      Layer.succeed(SessionAssessmentBulkTelemetrySource, {
+        read: () =>
+          Effect.succeed(
+            sessions.map((session) => ({
+              session,
+              spans: [],
+              generations: [makeGeneration("trace-1")],
+              toolCalls: [],
+              memoryEvents: [],
+              moments: { moments: [], labels: [] },
+              screeningDecisions: [],
+              scoringEligibleSignalIds: [],
+            })),
+          ),
+      }),
+      Layer.succeed(SessionAssessmentBulkJudgmentSource, { read: () => Effect.succeed([]) }),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId("org-1") })),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId("org-1") })),
+    )
+
+    const [assessment] = await Effect.runPromise(
+      readSessionAssessmentInputBatch({
+        organizationId: OrganizationId("org-1"),
+        projectId: ProjectId("project-1"),
+        sessionIds: [SessionId("session-1")],
+        cutoff: new Date("2026-01-02T00:00:00.000Z"),
+      }).pipe(Effect.provide(layer)),
+    )
+
+    // A covered cohort read against a reference that has one: applicable and readable, not absent.
+    const ttft = assessment?.readers.find((reader) => reader.readerId === "spans.ttft")
+    expect(ttft).toMatchObject({ applicable: true, totalCount: 1, readableCount: 1 })
+    expect(ttft?.limitation).toBeUndefined()
+  })
+
   it("keeps normalized facts and resolved semantics byte-identical between single and bulk reads", async () => {
     vi.useFakeTimers()
     const cutoff = new Date("2026-01-02T00:00:00.000Z")
@@ -181,11 +265,12 @@ describe("readSessionAssessmentBatch", () => {
             .map((session) => ({
               session,
               spans: [],
-              generations: [],
+              generations: [makeGeneration(session.traceIds[0] ?? "trace-1")],
               toolCalls: [],
               memoryEvents: [],
               moments: { moments: [], labels: [] },
               screeningDecisions: [],
+              scoringEligibleSignalIds: [],
             })),
         ),
     })

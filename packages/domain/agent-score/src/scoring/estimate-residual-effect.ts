@@ -6,14 +6,13 @@
  * agent whose signal-bearing sessions are also its biggest sessions cannot have that difference
  * read as the signal's effect.
  *
- * `inclusionProbability` is the stored screening draw. Weighting by its inverse is what makes a
- * sampled positive stand for the sessions it was sampled from instead of for itself.
+ * An exposed group's inclusion probability is the stored draw of the reader that produced it.
  */
 export interface MatchedSession {
   readonly sessionId: string
   readonly stratum: string
   readonly outcome: number
-  readonly inclusionProbability: number
+  readonly inclusionProbabilityByGroupId: ReadonlyMap<string, number>
   /** Signal groups present on this session. Membership is the treatment. */
   readonly exposedGroupIds: readonly string[]
   /** Deterministic 0 or 1, so the fit and the evaluation never share traffic. */
@@ -36,7 +35,12 @@ export const DEFAULT_RESIDUAL_SUPPORT: ResidualSupportFloors = {
   shrinkageConstant: 20,
 }
 
-export const RESIDUAL_GAP_REASONS = ["noExposure", "noOverlap", "insufficientSupport"] as const
+export const RESIDUAL_GAP_REASONS = [
+  "noExposure",
+  "noOverlap",
+  "insufficientSupport",
+  "unknownInclusionProbability",
+] as const
 export type ResidualGapReason = (typeof RESIDUAL_GAP_REASONS)[number]
 
 export type ResidualEffect =
@@ -52,13 +56,16 @@ export type ResidualEffect =
     }
   | { readonly measured: false; readonly reason: ResidualGapReason }
 
-const weightOf = (session: MatchedSession): number =>
-  session.inclusionProbability > 0 ? 1 / Math.min(1, session.inclusionProbability) : 0
+const weightOf = (session: MatchedSession, groupId: string): number => {
+  if (!session.exposedGroupIds.includes(groupId)) return 1
+  const probability = session.inclusionProbabilityByGroupId.get(groupId)
+  return probability !== undefined && probability > 0 ? 1 / Math.min(1, probability) : 0
+}
 
-const weightedMean = (sessions: readonly MatchedSession[]): number => {
-  const weight = sessions.reduce((total, session) => total + weightOf(session), 0)
+const weightedMean = (sessions: readonly MatchedSession[], groupId: string): number => {
+  const weight = sessions.reduce((total, session) => total + weightOf(session, groupId), 0)
   if (weight <= 0) return 0
-  return sessions.reduce((total, session) => total + weightOf(session) * session.outcome, 0) / weight
+  return sessions.reduce((total, session) => total + weightOf(session, groupId) * session.outcome, 0) / weight
 }
 
 interface StratumEffect {
@@ -71,11 +78,9 @@ interface StratumEffect {
 const stratumEffects = ({
   sessions,
   groupId,
-  floors,
 }: {
   readonly sessions: readonly MatchedSession[]
   readonly groupId: string
-  readonly floors: ResidualSupportFloors
 }): { readonly used: StratumEffect[]; readonly dropped: number } => {
   const byStratum = new Map<string, MatchedSession[]>()
   for (const session of sessions) {
@@ -92,8 +97,8 @@ const stratumEffects = ({
       continue
     }
     used.push({
-      difference: weightedMean(exposed) - weightedMean(unexposed),
-      exposedWeight: exposed.reduce((total, session) => total + weightOf(session), 0),
+      difference: weightedMean(exposed, groupId) - weightedMean(unexposed, groupId),
+      exposedWeight: exposed.reduce((total, session) => total + weightOf(session, groupId), 0),
       exposedCount: exposed.length,
       unexposedCount: unexposed.length,
     })
@@ -135,6 +140,9 @@ export const estimateResidualEffect = ({
   const exposed = sessions.filter((session) => session.exposedGroupIds.includes(groupId))
   const unexposed = sessions.filter((session) => !session.exposedGroupIds.includes(groupId))
   if (exposed.length === 0) return { measured: false, reason: "noExposure" }
+  if (exposed.some((session) => weightOf(session, groupId) === 0)) {
+    return { measured: false, reason: "unknownInclusionProbability" }
+  }
   if (exposed.length < floors.minimumExposedSessions || unexposed.length < floors.minimumUnexposedSessions) {
     return { measured: false, reason: "insufficientSupport" }
   }
@@ -142,7 +150,7 @@ export const estimateResidualEffect = ({
   const folds = [0, 1] as const
   const perFold = folds.map((fold) => {
     const evaluation = sessions.filter((session) => session.fold === fold)
-    return stratumEffects({ sessions: evaluation, groupId, floors })
+    return stratumEffects({ sessions: evaluation, groupId })
   })
   const usable = perFold.filter((fold) => fold.used.length >= floors.minimumStrata)
   const droppedStrata = perFold.reduce((total, fold) => total + fold.dropped, 0)

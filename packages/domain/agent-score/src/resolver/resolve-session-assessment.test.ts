@@ -39,6 +39,7 @@ const input: NormalizedSessionAssessmentInput = {
     },
   ],
   screeningDecisions: [],
+  scoringEligibleSignalIds: [],
 }
 
 describe("resolveSessionAssessmentPage", () => {

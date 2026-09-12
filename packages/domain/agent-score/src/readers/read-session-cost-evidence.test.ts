@@ -79,7 +79,10 @@ const artifact: LatencyReferenceArtifact = {
   ],
 }
 
-const read = (generations: readonly SessionGenerationFact[]) =>
+const readWith = (
+  generations: readonly SessionGenerationFact[],
+  latencyArtifact: LatencyReferenceArtifact | undefined,
+) =>
   readSessionCostEvidence({
     generations,
     toolCalls: [],
@@ -91,8 +94,10 @@ const read = (generations: readonly SessionGenerationFact[]) =>
     toolDefinitions: [],
     unmatchedToolCallNames: [],
     cacheEvidence: null,
-    latencyArtifact: artifact,
+    ...(latencyArtifact ? { latencyArtifact } : {}),
   })
+
+const read = (generations: readonly SessionGenerationFact[]) => readWith(generations, artifact)
 
 describe("readSessionCostEvidence", () => {
   it("turns TTFT and throughput excess into modeled avoidable critical-path time", () => {
@@ -142,5 +147,51 @@ describe("readSessionCostEvidence", () => {
       readableCount: 1,
       totalCount: 1,
     })
+  })
+})
+
+describe("latency reader coverage", () => {
+  const reader = (evidence: ReturnType<typeof read>, readerId: "spans.ttft" | "spans.throughput") =>
+    evidence.readers.find((fact) => fact.readerId === readerId)
+
+  it("reports a readable cohort when the frozen reference answers", () => {
+    const evidence = read([generation()])
+
+    expect(reader(evidence, "spans.ttft")).toMatchObject({ applicable: true, readableCount: 1, totalCount: 1 })
+    expect(reader(evidence, "spans.throughput")).toMatchObject({ applicable: true, readableCount: 1, totalCount: 1 })
+    expect(reader(evidence, "spans.ttft")?.limitation).toBeUndefined()
+  })
+
+  it("reports an unbuilt reference as unmeasured rather than contributing nothing silently", () => {
+    const evidence = readWith([generation()], undefined)
+
+    expect(reader(evidence, "spans.ttft")).toMatchObject({
+      applicable: true,
+      readableCount: 0,
+      totalCount: 1,
+      limitation: "missingLatencyReference",
+    })
+    expect(reader(evidence, "spans.throughput")).toMatchObject({
+      applicable: true,
+      readableCount: 0,
+      limitation: "missingLatencyReference",
+    })
+    expect(evidence.speed.estimatedAvoidableNs).toBe(0)
+  })
+
+  it("reports a cohort the reference does not cover as unreadable", () => {
+    const evidence = read([generation({ provider: "anthropic", model: "claude-sonnet-5" })])
+
+    expect(reader(evidence, "spans.ttft")).toMatchObject({
+      readableCount: 0,
+      limitation: "missingLatencyReference",
+    })
+  })
+
+  it("leaves a non-streaming call out of the time-to-first-token denominator entirely", () => {
+    const evidence = read([generation({ isStreaming: false, timeToFirstTokenNs: 0 })])
+
+    expect(reader(evidence, "spans.ttft")).toMatchObject({ applicable: false, totalCount: 0 })
+    expect(reader(evidence, "spans.throughput")).toMatchObject({ applicable: true, totalCount: 1 })
   })
 })

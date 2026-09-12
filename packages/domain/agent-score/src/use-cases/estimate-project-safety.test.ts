@@ -4,6 +4,7 @@ import { ChSqlClient, OrganizationId, ProjectId, ScoreId, SessionId, SqlClient, 
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import { LAUNCH_AGENT_SCORE_ARTIFACT } from "../artifacts/launch-agent-score-artifact.ts"
 import { type SafetyWindowDecision, SafetyWindowDecisionSource } from "../ports/safety-window-source.ts"
 import { estimateProjectSafetyWindow } from "./estimate-project-safety.ts"
 
@@ -109,7 +110,8 @@ const run = (input: {
       from: FROM,
       to: TO,
       supportedJudgmentVersions: [VERSION],
-      ...("floors" in input ? (input.floors ? { floors: input.floors } : {}) : { floors: OPEN_FLOORS }),
+      referenceRunSessions: LAUNCH_AGENT_SCORE_ARTIFACT.referenceRuns.safety,
+      floors: "floors" in input ? (input.floors ?? LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.safety) : OPEN_FLOORS,
       ...(input.batchSize !== undefined ? { batchSize: input.batchSize } : {}),
     }).pipe(Effect.provide(layer)),
   ).then((estimate) => ({ estimate, reads, suiteSlugsRead }))
@@ -182,8 +184,8 @@ describe("estimateProjectSafetyWindow", () => {
     expect(estimate.examinedSessionCount).toBe(9)
   })
 
-  // The default floors are what PR 6 freezes; the rest of this file opens them
-  // so the join is testable without a thousand fixtures.
+  // The launch artifact's floors are the shipped ones; the rest of this file opens
+  // them so the join is testable without a thousand fixtures.
   it("publishes no number under the shipped floors when the window is small", async () => {
     const layerRun = await run({ ...examinedWindow(100), floors: undefined })
 

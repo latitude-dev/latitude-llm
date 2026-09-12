@@ -328,7 +328,9 @@ describe("readSessionAssessmentSources", () => {
     expect(
       result.findings.some((finding) => finding.kind === "providerError" || finding.kind === "finishFailure"),
     ).toBe(false)
-    expect(result.readers.filter((reader) => reader.readerId.startsWith("spans."))).toEqual([
+    expect(
+      result.readers.filter((reader) => ["spans.finish_failure", "spans.provider_error"].includes(reader.readerId)),
+    ).toEqual([
       expect.objectContaining({ readerId: "spans.finish_failure", limitation: "unmappedTelemetry", readableCount: 0 }),
       expect.objectContaining({ readerId: "spans.provider_error", limitation: "unmappedTelemetry", readableCount: 0 }),
     ])
@@ -419,6 +421,36 @@ describe("readSessionAssessmentSources", () => {
     expect(resolved.coverage.readers.find((reader) => reader.readerId === "flagger:refusal")).toMatchObject({
       status: "notExamined",
       limitation: "notSelected",
+    })
+  })
+
+  it("attaches the producing flagger's sampling probability to a signal finding", async () => {
+    const screeningDecision = {
+      decisionId: "d".repeat(64),
+      organizationId,
+      projectId,
+      sessionId,
+      flaggerSlug: "refusal",
+      analysisHash: "a".repeat(64),
+      scoringArtifactVersion: "flagger-screening-v1",
+      attempt: 1,
+      version: 1,
+      selected: true,
+      reason: "ordinary-sample",
+      inclusionProbability: 0.25,
+      hintKinds: [],
+      outcome: "matched",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      retentionDays: 90,
+    } satisfies FlaggerScreeningDecision
+    const assessment = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
+      scores: [score("sampled-score", "sampled-signal", { flaggerSlug: "refusal" })],
+      signals: [signal("sampled-signal")],
+      screeningDecisions: [screeningDecision],
+    })
+
+    expect(assessment.findings.find((finding) => finding.scoreIds.includes("sampled-score"))).toMatchObject({
+      observationProbability: 0.25,
     })
   })
 

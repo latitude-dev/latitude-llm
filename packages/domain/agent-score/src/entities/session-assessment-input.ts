@@ -27,6 +27,7 @@ export interface AssessmentFindingReference {
   readonly anchors: readonly SessionEvidenceAnchor[]
   readonly destinations: readonly SessionEvidenceDestination[]
   readonly independentHumanEvidence: boolean
+  readonly observationProbability?: number
 }
 
 export type AssessmentFinding = AssessmentFindingReference &
@@ -93,6 +94,18 @@ export type AssessmentFinding = AssessmentFindingReference &
       }
   )
 
+/** Why a reader could not read everything it applied to. */
+export const READER_LIMITATIONS = [
+  "missingTelemetry",
+  "unmappedTelemetry",
+  "missingPricing",
+  "missingContent",
+  "truncatedContent",
+  "unknownModelContext",
+  "criticalPathUnavailable",
+  "missingLatencyReference",
+] as const
+
 export interface AssessmentReaderFact {
   readonly readerId: string
   readonly label: string
@@ -101,14 +114,7 @@ export interface AssessmentReaderFact {
   readonly findingCount: number
   readonly readableCount: number
   readonly totalCount: number
-  readonly limitation?:
-    | "missingTelemetry"
-    | "unmappedTelemetry"
-    | "missingPricing"
-    | "missingContent"
-    | "truncatedContent"
-    | "unknownModelContext"
-    | "criticalPathUnavailable"
+  readonly limitation?: (typeof READER_LIMITATIONS)[number]
 }
 
 /**
@@ -121,6 +127,15 @@ export interface AssessmentReaderFact {
  */
 export interface NormalizedSessionCostEvidence {
   readonly readings: readonly CostMetricReading[]
+  /**
+   * The workload this session is comparable with, for the matched signal estimator.
+   *
+   * Built from provider, model, prompt size and streaming mode because those are what make two
+   * sessions cost and take a similar amount without any signal being involved. Comparison only ever
+   * happens inside one key, so an agent whose signal-bearing sessions are also its biggest sessions
+   * cannot have that difference read as the signal's effect.
+   */
+  readonly workloadStratum: string
   readonly denominators: CostFamilyDenominators
   readonly observedCriticalPathNs: number
   readonly criticalPathComplete: boolean
@@ -128,6 +143,8 @@ export interface NormalizedSessionCostEvidence {
   readonly estimatedAvoidableNs: number
   readonly measuredAvoidableMicrocents: number
   readonly estimatedAvoidableMicrocents: number
+  /** Avoidable critical-path nanoseconds by the claim that produced them, for Speed attribution. */
+  readonly avoidableNsByCause: Readonly<Record<string, number>>
 }
 
 export interface NormalizedSessionAssessmentInput {
@@ -143,5 +160,13 @@ export interface NormalizedSessionAssessmentInput {
   readonly findings: readonly AssessmentFinding[]
   readonly readers: readonly AssessmentReaderFact[]
   readonly screeningDecisions: readonly FlaggerScreeningDecision[]
+  /**
+   * Signals on this session whose occurrences may inform a score.
+   *
+   * Recorded here because only this reader sees signal lifecycle: the window job receives ids and
+   * could not otherwise tell an ignored cluster from a live one, and workflow state must not be
+   * able to move a score's explanation by being invisible to it.
+   */
+  readonly scoringEligibleSignalIds: readonly string[]
   readonly costEvidence?: NormalizedSessionCostEvidence
 }

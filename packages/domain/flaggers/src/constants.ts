@@ -84,3 +84,13 @@ export const FLAGGER_DRAFT_DEFAULTS = {
   passed: false,
   value: 0,
 } as const
+
+/**
+ * Who last set a flagger's sampling rate.
+ *
+ * `default` is a provisioned row nobody has touched, `derived` is the Agent Score sweep's
+ * traffic-aware rate, and `user` is a deliberate choice. The sweep writes over the first two and
+ * never the third: a rate somebody set is a decision, not a starting point.
+ */
+export const FLAGGER_SAMPLING_SOURCES = ["default", "derived", "user"] as const
+export type FlaggerSamplingSource = (typeof FLAGGER_SAMPLING_SOURCES)[number]

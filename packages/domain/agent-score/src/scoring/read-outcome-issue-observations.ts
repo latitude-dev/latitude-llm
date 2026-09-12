@@ -1,4 +1,3 @@
-import { isSignalEligibleForScoring, type SignalWithLifecycle } from "@domain/signals"
 import type { SessionAssessmentItem } from "../entities/session-assessment.ts"
 import type { IssueObservation } from "./build-issue-rows.ts"
 
@@ -22,14 +21,13 @@ const explainsOutcomeFailure = (item: SessionAssessmentItem): boolean =>
  */
 export const readOutcomeIssueObservations = (input: {
   readonly items: readonly SessionAssessmentItem[]
-  readonly signals: readonly SignalWithLifecycle[]
+  /** Signals whose occurrences may inform a score, from `scoringEligibleSignalIds`. */
+  readonly eligibleSignalIds: ReadonlySet<string>
   /** Probability the sampled readers behind these items ran, by flagger-derived metric id. */
   readonly observationProbability?: number
   readonly verdictScoreIds?: readonly string[]
 }): readonly IssueObservation[] => {
-  const eligibleSignalIds = new Set(
-    input.signals.filter(isSignalEligibleForScoring).map((signal) => signal.id as string),
-  )
+  const { eligibleSignalIds } = input
   const verdictScoreIds = new Set(input.verdictScoreIds ?? [])
 
   return input.items.filter(explainsOutcomeFailure).flatMap((item): IssueObservation[] => {

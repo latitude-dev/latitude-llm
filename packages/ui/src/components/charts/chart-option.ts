@@ -56,6 +56,12 @@ export type ChartSeries = ChartBarSeries | ChartLineSeries
 export interface ChartAxisDescriptor {
   /** Axis label shown adjacent to the values. */
   readonly name?: string
+  /** Hides the axis and its grid lines while retaining its scale. */
+  readonly show?: boolean
+  /** Fixed lower bound for comparable charts. */
+  readonly min?: number
+  /** Fixed upper bound for comparable charts. */
+  readonly max?: number
   /** Smallest split interval. Defaults to 1, which flattens sub-unit ranges (e.g. dollars). */
   readonly minInterval?: number
   /** Formats this axis' tick labels and the tooltip values of its series. */
@@ -80,6 +86,15 @@ interface ChartOptionInput {
   /** Suppress the built-in legend when the caller renders its own (echarts' only toggles visibility). */
   readonly hideLegend?: boolean
 }
+
+const axisScaleOptions = (descriptor: ChartAxisDescriptor | undefined) => ({
+  ...(descriptor?.show === undefined ? {} : { show: descriptor.show }),
+  ...(descriptor?.min === undefined ? {} : { min: descriptor.min }),
+  ...(descriptor?.max === undefined ? {} : { max: descriptor.max }),
+  ...(descriptor?.show === false ? { splitLine: { show: false } } : {}),
+})
+
+const chartGridLeft = (descriptor: ChartAxisDescriptor | undefined): number => (descriptor?.show === false ? 16 : 48)
 
 export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
   const {
@@ -120,6 +135,7 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
 
   const withAxisOptions = (descriptor: ChartAxisDescriptor | undefined) => ({
     ...yAxisBase,
+    ...axisScaleOptions(descriptor),
     ...(descriptor?.minInterval === undefined ? {} : { minInterval: descriptor.minInterval }),
     ...(descriptor?.formatValue ? { axisLabel: { ...yAxisBase.axisLabel, formatter: descriptor.formatValue } } : {}),
   })
@@ -209,7 +225,7 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
   const option: EChartsCoreOption = {
     backgroundColor: "transparent",
     grid: {
-      left: 48,
+      left: chartGridLeft(primaryAxis),
       right: gridRight,
       top: gridTop,
       bottom: gridVerticalInsetPx,

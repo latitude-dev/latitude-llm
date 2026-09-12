@@ -109,6 +109,7 @@ export namespace SessionAssessmentReaderCoverage {
             TruncatedContent: "truncatedContent",
             UnknownModelContext: "unknownModelContext",
             CriticalPathUnavailable: "criticalPathUnavailable",
+            MissingLatencyReference: "missingLatencyReference",
         } as const;
         export type Limitation = (typeof Limitation)[keyof typeof Limitation];
 
@@ -177,6 +178,7 @@ export namespace SessionAssessmentReaderCoverage {
             TruncatedContent: "truncatedContent",
             UnknownModelContext: "unknownModelContext",
             CriticalPathUnavailable: "criticalPathUnavailable",
+            MissingLatencyReference: "missingLatencyReference",
         } as const;
         export type Limitation = (typeof Limitation)[keyof typeof Limitation];
 

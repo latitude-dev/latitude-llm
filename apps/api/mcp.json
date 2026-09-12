@@ -39375,7 +39375,8 @@
                             "missingContent",
                             "truncatedContent",
                             "unknownModelContext",
-                            "criticalPathUnavailable"
+                            "criticalPathUnavailable",
+                            "missingLatencyReference"
                           ],
                           "description": "Reason the reader could not completely examine the session."
                         },
@@ -39463,7 +39464,8 @@
                             "missingContent",
                             "truncatedContent",
                             "unknownModelContext",
-                            "criticalPathUnavailable"
+                            "criticalPathUnavailable",
+                            "missingLatencyReference"
                           ],
                           "description": "Reason the reader could not completely examine the session."
                         },
@@ -43408,6 +43410,1045 @@
           "credits",
           "categories",
           "period"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "listAgentScoreHistory",
+      "title": "List Agent Score history",
+      "description": "Returns the project's published Agent Scores in a date range, oldest first. Days the project did not publish are absent from the list.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "from": {
+            "description": "Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`.",
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "to": {
+            "description": "Inclusive end date as `YYYY-MM-DD`. Defaults to today.",
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          }
+        },
+        "required": [
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "description": "UTC date the score was published for, as `YYYY-MM-DD`."
+                },
+                "score": {
+                  "type": "number",
+                  "description": "Agent Score from 0 to 100: the weighted mean of the five dimensions for this window."
+                },
+                "interval": {
+                  "type": "object",
+                  "properties": {
+                    "lower": {
+                      "type": "number",
+                      "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                    },
+                    "upper": {
+                      "type": "number",
+                      "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                    }
+                  },
+                  "required": [
+                    "lower",
+                    "upper"
+                  ],
+                  "additionalProperties": false
+                },
+                "dimensions": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {
+                      "type": "object",
+                      "properties": {
+                        "score": {
+                          "type": "number",
+                          "description": "Dimension score from 0 to 100. Read it with the dimension's own meaning."
+                        },
+                        "interval": {
+                          "type": "object",
+                          "properties": {
+                            "lower": {
+                              "type": "number",
+                              "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                            },
+                            "upper": {
+                              "type": "number",
+                              "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                            }
+                          },
+                          "required": [
+                            "lower",
+                            "upper"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "score",
+                        "interval"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Share of comparable sessions expected to accomplish the user's task."
+                    },
+                    "reliability": {
+                      "type": "object",
+                      "properties": {
+                        "score": {
+                          "type": "number",
+                          "description": "Dimension score from 0 to 100. Read it with the dimension's own meaning."
+                        },
+                        "interval": {
+                          "type": "object",
+                          "properties": {
+                            "lower": {
+                              "type": "number",
+                              "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                            },
+                            "upper": {
+                              "type": "number",
+                              "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                            }
+                          },
+                          "required": [
+                            "lower",
+                            "upper"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "score",
+                        "interval"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Chance the agent completes a reference run of 20 sessions without a terminal operational failure."
+                    },
+                    "cost": {
+                      "type": "object",
+                      "properties": {
+                        "score": {
+                          "type": "number",
+                          "description": "Dimension score from 0 to 100. Read it with the dimension's own meaning."
+                        },
+                        "interval": {
+                          "type": "object",
+                          "properties": {
+                            "lower": {
+                              "type": "number",
+                              "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                            },
+                            "upper": {
+                              "type": "number",
+                              "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                            }
+                          },
+                          "required": [
+                            "lower",
+                            "upper"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "score",
+                        "interval"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Health of the agent's use of paid and token-bearing resources."
+                    },
+                    "speed": {
+                      "type": "object",
+                      "properties": {
+                        "score": {
+                          "type": "number",
+                          "description": "Dimension score from 0 to 100. Read it with the dimension's own meaning."
+                        },
+                        "interval": {
+                          "type": "object",
+                          "properties": {
+                            "lower": {
+                              "type": "number",
+                              "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                            },
+                            "upper": {
+                              "type": "number",
+                              "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                            }
+                          },
+                          "required": [
+                            "lower",
+                            "upper"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "score",
+                        "interval"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Share of user-visible critical-path time that was necessary."
+                    },
+                    "safety": {
+                      "type": "object",
+                      "properties": {
+                        "score": {
+                          "type": "number",
+                          "description": "Dimension score from 0 to 100. Read it with the dimension's own meaning."
+                        },
+                        "interval": {
+                          "type": "object",
+                          "properties": {
+                            "lower": {
+                              "type": "number",
+                              "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                            },
+                            "upper": {
+                              "type": "number",
+                              "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                            }
+                          },
+                          "required": [
+                            "lower",
+                            "upper"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "score",
+                        "interval"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Chance a reference run of 100 sessions contains no confirmed agent-caused harm."
+                    }
+                  },
+                  "required": [
+                    "outcome",
+                    "reliability",
+                    "cost",
+                    "speed",
+                    "safety"
+                  ],
+                  "additionalProperties": false
+                },
+                "scoringVersion": {
+                  "type": "string",
+                  "description": "Version of the formulas, prompts and frozen references that produced this score. Scores from different versions are not directly comparable."
+                },
+                "windowDays": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Length in days of the rolling window this score covers."
+                },
+                "eligibleSessionCount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Production sessions in the window the score was computed over."
+                },
+                "policyCap": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Ceiling a safety policy rule applied to the score, or `null` when no rule applied."
+                }
+              },
+              "required": [
+                "date",
+                "score",
+                "interval",
+                "dimensions",
+                "scoringVersion",
+                "windowDays",
+                "eligibleSessionCount",
+                "policyCap"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Published scores in the range, oldest first. Days without a published score are absent, not zero."
+          }
+        },
+        "required": [
+          "snapshots"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "getAgentScoreCauses",
+      "title": "Get Agent Score causes",
+      "description": "Returns what explains the project's current Agent Score: ranked causes per dimension, and where Outcome failures and Safety harm concentrate. This is current evidence from the live window and does not reconstruct any stored score.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          }
+        },
+        "required": [
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "notComputed"
+            ],
+            "description": "`notComputed` when the explanation has not been prepared yet; the scores are still valid."
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "computedAt": {
+                    "type": "string",
+                    "description": "When this evidence was read, as an ISO-8601 timestamp. It explains present behaviour, not the stored score."
+                  },
+                  "scoringVersion": {
+                    "type": "string",
+                    "description": "Scoring version the evidence was read under."
+                  },
+                  "windowDays": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Length in days of the window the evidence covers."
+                  },
+                  "eligibleSessionCount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Production sessions in that window."
+                  },
+                  "attribution": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "scoreDimension": {
+                          "type": "string",
+                          "enum": [
+                            "outcome",
+                            "reliability",
+                            "cost",
+                            "speed",
+                            "safety"
+                          ],
+                          "description": "Dimension explained."
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "causeId": {
+                                "type": "string",
+                                "description": "Stable identifier of the metric, claim or finding kind behind this row."
+                              },
+                              "label": {
+                                "type": "string",
+                                "description": "Human-readable name for the cause."
+                              },
+                              "attributedDeficit": {
+                                "type": "number",
+                                "description": "Points of the dimension's deficit attributed to this cause. Attributed deficits across a dimension add up; they are not a prediction of what fixing it returns."
+                              },
+                              "fixGain": {
+                                "type": "number",
+                                "description": "Points the dimension would recover if this cause alone disappeared. Fix gains overlap between causes and must never be summed."
+                              },
+                              "evidence": {
+                                "type": "string",
+                                "enum": [
+                                  "measured",
+                                  "associated"
+                                ],
+                                "description": "`measured` when the reader observed the effect directly; `associated` when it was estimated from matched comparison sessions and no causal claim is made."
+                              },
+                              "nativeEffect": {
+                                "type": "object",
+                                "properties": {
+                                  "value": {
+                                    "type": "number",
+                                    "description": "Size of the effect in its own unit, before it became score points."
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "description": "Unit the value is in, such as nanoseconds, sessions, or a Cost family."
+                                  }
+                                },
+                                "required": [
+                                  "value",
+                                  "unit"
+                                ],
+                                "additionalProperties": false,
+                                "description": "The effect in the dimension's own terms, which is what the row shows beside the points."
+                              },
+                              "observationCount": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "Independent observations behind the row. Coverage context, not a score."
+                              },
+                              "destination": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "sessions",
+                                      "tools",
+                                      "memory",
+                                      "cost",
+                                      "signals"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Product section that owns this evidence, or `null` when nothing specific can be opened."
+                              }
+                            },
+                            "required": [
+                              "causeId",
+                              "label",
+                              "attributedDeficit",
+                              "fixGain",
+                              "evidence",
+                              "nativeEffect",
+                              "observationCount",
+                              "destination"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Causes, most responsible first."
+                        },
+                        "residual": {
+                          "type": "number",
+                          "description": "Points of the deficit no named cause accounts for, including estimation error."
+                        },
+                        "totalDeficit": {
+                          "type": "number",
+                          "description": "The dimension's whole distance from healthy, in points."
+                        },
+                        "method": {
+                          "type": "string",
+                          "enum": [
+                            "exact",
+                            "sampled"
+                          ],
+                          "description": "`sampled` when there were too many causes to attribute exactly."
+                        },
+                        "approximationError": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Standard error of the sampled shares in points, or `null` when attribution was exact."
+                        }
+                      },
+                      "required": [
+                        "scoreDimension",
+                        "rows",
+                        "residual",
+                        "totalDeficit",
+                        "method",
+                        "approximationError"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Per-dimension cause rows for the dimensions that support a counterfactual."
+                  },
+                  "outcomeIssues": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "issueKey": {
+                          "type": "string",
+                          "description": "Stable identifier for the issue."
+                        },
+                        "label": {
+                          "type": "string",
+                          "description": "Human-readable name for the issue."
+                        },
+                        "signalIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Signals this issue was observed through, if any."
+                        },
+                        "estimatedReach": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Sessions the issue touched, corrected for how often it could be observed. `null` when the correction is unknown."
+                        },
+                        "estimatedAdverseReach": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Sessions it touched that went badly, corrected the same way. `null` when unknown."
+                        },
+                        "examinedSessions": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Raw sessions examined. Coverage context, never a ranking key."
+                        },
+                        "examinedAdverseSessions": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Raw examined sessions that went badly."
+                        },
+                        "ranked": {
+                          "type": "boolean",
+                          "description": "`false` when a required joint observation probability was unknown, so the row explains without claiming a position."
+                        }
+                      },
+                      "required": [
+                        "issueKey",
+                        "label",
+                        "signalIds",
+                        "estimatedReach",
+                        "estimatedAdverseReach",
+                        "examinedSessions",
+                        "examinedAdverseSessions",
+                        "ranked"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Where task failures concentrate. Reach only; these rows carry no share of the score."
+                  },
+                  "safetyConfirmedHarm": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "issueKey": {
+                          "type": "string",
+                          "description": "Stable identifier for the issue."
+                        },
+                        "label": {
+                          "type": "string",
+                          "description": "Human-readable name for the issue."
+                        },
+                        "signalIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Signals this issue was observed through, if any."
+                        },
+                        "estimatedReach": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Sessions the issue touched, corrected for how often it could be observed. `null` when the correction is unknown."
+                        },
+                        "estimatedAdverseReach": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Sessions it touched that went badly, corrected the same way. `null` when unknown."
+                        },
+                        "examinedSessions": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Raw sessions examined. Coverage context, never a ranking key."
+                        },
+                        "examinedAdverseSessions": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Raw examined sessions that went badly."
+                        },
+                        "ranked": {
+                          "type": "boolean",
+                          "description": "`false` when a required joint observation probability was unknown, so the row explains without claiming a position."
+                        }
+                      },
+                      "required": [
+                        "issueKey",
+                        "label",
+                        "signalIds",
+                        "estimatedReach",
+                        "estimatedAdverseReach",
+                        "examinedSessions",
+                        "examinedAdverseSessions",
+                        "ranked"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Issues where the agent caused confirmed harm."
+                  },
+                  "safetyExposure": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "issueKey": {
+                          "type": "string",
+                          "description": "Stable identifier for the issue."
+                        },
+                        "label": {
+                          "type": "string",
+                          "description": "Human-readable name for the issue."
+                        },
+                        "signalIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Signals this issue was observed through, if any."
+                        },
+                        "estimatedReach": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Sessions the issue touched, corrected for how often it could be observed. `null` when the correction is unknown."
+                        },
+                        "estimatedAdverseReach": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Sessions it touched that went badly, corrected the same way. `null` when unknown."
+                        },
+                        "examinedSessions": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Raw sessions examined. Coverage context, never a ranking key."
+                        },
+                        "examinedAdverseSessions": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Raw examined sessions that went badly."
+                        },
+                        "ranked": {
+                          "type": "boolean",
+                          "description": "`false` when a required joint observation probability was unknown, so the row explains without claiming a position."
+                        }
+                      },
+                      "required": [
+                        "issueKey",
+                        "label",
+                        "signalIds",
+                        "estimatedReach",
+                        "estimatedAdverseReach",
+                        "examinedSessions",
+                        "examinedAdverseSessions",
+                        "ranked"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Hostile or sensitive content the agent received. Exposure is context and never lowers Safety."
+                  }
+                },
+                "required": [
+                  "computedAt",
+                  "scoringVersion",
+                  "windowDays",
+                  "eligibleSessionCount",
+                  "attribution",
+                  "outcomeIssues",
+                  "safetyConfirmedHarm",
+                  "safetyExposure"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The evidence, or `null` when it is not ready."
+          }
+        },
+        "required": [
+          "status",
+          "explanation"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "getAgentScore",
+      "title": "Get Agent Score",
+      "description": "Returns the project's Agent Score for today: one number from 0 to 100 and the five dimensions behind it. A score is published only when every dimension meets its coverage and confidence floors, so a project can have no score for a day.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          }
+        },
+        "required": [
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Whether a score was published for today. `false` when a dimension did not meet its coverage or confidence floor; no earlier score is substituted."
+          },
+          "date": {
+            "type": "string",
+            "description": "UTC date the answer refers to, as `YYYY-MM-DD`."
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "description": "UTC date the score was published for, as `YYYY-MM-DD`."
+                  },
+                  "score": {
+                    "type": "number",
+                    "description": "Agent Score from 0 to 100: the weighted mean of the five dimensions for this window."
+                  },
+                  "interval": {
+                    "type": "object",
+                    "properties": {
+                      "lower": {
+                        "type": "number",
+                        "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                      },
+                      "upper": {
+                        "type": "number",
+                        "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                      }
+                    },
+                    "required": [
+                      "lower",
+                      "upper"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "dimensions": {
+                    "type": "object",
+                    "properties": {
+                      "outcome": {
+                        "type": "object",
+                        "properties": {
+                          "score": {
+                            "type": "number",
+                            "description": "Dimension score from 0 to 100. Read it with the dimension's own meaning."
+                          },
+                          "interval": {
+                            "type": "object",
+                            "properties": {
+                              "lower": {
+                                "type": "number",
+                                "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                              },
+                              "upper": {
+                                "type": "number",
+                                "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                              }
+                            },
+                            "required": [
+                              "lower",
+                              "upper"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "score",
+                          "interval"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Share of comparable sessions expected to accomplish the user's task."
+                      },
+                      "reliability": {
+                        "type": "object",
+                        "properties": {
+                          "score": {
+                            "type": "number",
+                            "description": "Dimension score from 0 to 100. Read it with the dimension's own meaning."
+                          },
+                          "interval": {
+                            "type": "object",
+                            "properties": {
+                              "lower": {
+                                "type": "number",
+                                "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                              },
+                              "upper": {
+                                "type": "number",
+                                "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                              }
+                            },
+                            "required": [
+                              "lower",
+                              "upper"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "score",
+                          "interval"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Chance the agent completes a reference run of 20 sessions without a terminal operational failure."
+                      },
+                      "cost": {
+                        "type": "object",
+                        "properties": {
+                          "score": {
+                            "type": "number",
+                            "description": "Dimension score from 0 to 100. Read it with the dimension's own meaning."
+                          },
+                          "interval": {
+                            "type": "object",
+                            "properties": {
+                              "lower": {
+                                "type": "number",
+                                "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                              },
+                              "upper": {
+                                "type": "number",
+                                "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                              }
+                            },
+                            "required": [
+                              "lower",
+                              "upper"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "score",
+                          "interval"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Health of the agent's use of paid and token-bearing resources."
+                      },
+                      "speed": {
+                        "type": "object",
+                        "properties": {
+                          "score": {
+                            "type": "number",
+                            "description": "Dimension score from 0 to 100. Read it with the dimension's own meaning."
+                          },
+                          "interval": {
+                            "type": "object",
+                            "properties": {
+                              "lower": {
+                                "type": "number",
+                                "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                              },
+                              "upper": {
+                                "type": "number",
+                                "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                              }
+                            },
+                            "required": [
+                              "lower",
+                              "upper"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "score",
+                          "interval"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Share of user-visible critical-path time that was necessary."
+                      },
+                      "safety": {
+                        "type": "object",
+                        "properties": {
+                          "score": {
+                            "type": "number",
+                            "description": "Dimension score from 0 to 100. Read it with the dimension's own meaning."
+                          },
+                          "interval": {
+                            "type": "object",
+                            "properties": {
+                              "lower": {
+                                "type": "number",
+                                "description": "Lower bound of the 95% interval, on the same 0 to 100 scale."
+                              },
+                              "upper": {
+                                "type": "number",
+                                "description": "Upper bound of the 95% interval, on the same 0 to 100 scale."
+                              }
+                            },
+                            "required": [
+                              "lower",
+                              "upper"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "score",
+                          "interval"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Chance a reference run of 100 sessions contains no confirmed agent-caused harm."
+                      }
+                    },
+                    "required": [
+                      "outcome",
+                      "reliability",
+                      "cost",
+                      "speed",
+                      "safety"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "scoringVersion": {
+                    "type": "string",
+                    "description": "Version of the formulas, prompts and frozen references that produced this score. Scores from different versions are not directly comparable."
+                  },
+                  "windowDays": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Length in days of the rolling window this score covers."
+                  },
+                  "eligibleSessionCount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Production sessions in the window the score was computed over."
+                  },
+                  "policyCap": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Ceiling a safety policy rule applied to the score, or `null` when no rule applied."
+                  }
+                },
+                "required": [
+                  "date",
+                  "score",
+                  "interval",
+                  "dimensions",
+                  "scoringVersion",
+                  "windowDays",
+                  "eligibleSessionCount",
+                  "policyCap"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Today's score, or `null` when none was published."
+          }
+        },
+        "required": [
+          "available",
+          "date",
+          "snapshot"
         ],
         "additionalProperties": false
       },
