@@ -93,6 +93,18 @@ export type AssessmentFinding = AssessmentFindingReference &
       }
   )
 
+/** Why a reader could not read everything it applied to. */
+export const READER_LIMITATIONS = [
+  "missingTelemetry",
+  "unmappedTelemetry",
+  "missingPricing",
+  "missingContent",
+  "truncatedContent",
+  "unknownModelContext",
+  "criticalPathUnavailable",
+  "missingLatencyReference",
+] as const
+
 export interface AssessmentReaderFact {
   readonly readerId: string
   readonly label: string
@@ -101,15 +113,7 @@ export interface AssessmentReaderFact {
   readonly findingCount: number
   readonly readableCount: number
   readonly totalCount: number
-  readonly limitation?:
-    | "missingTelemetry"
-    | "unmappedTelemetry"
-    | "missingPricing"
-    | "missingContent"
-    | "truncatedContent"
-    | "unknownModelContext"
-    | "criticalPathUnavailable"
-    | "missingLatencyReference"
+  readonly limitation?: (typeof READER_LIMITATIONS)[number]
 }
 
 /**

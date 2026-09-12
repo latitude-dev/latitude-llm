@@ -5,6 +5,7 @@ import {
   AGENT_SCORE_EXPLANATION_TTL_SECONDS,
   type AgentScoreExplanation,
   agentScoreExplanationCacheKey,
+  agentScoreExplanationSchema,
   toAgentScoreExplanation,
 } from "../entities/agent-score-explanation.ts"
 
@@ -60,12 +61,14 @@ export const getAgentScoreExplanation = Effect.fn("agentScore.getExplanation")(f
   if (!cached) return { status: "notComputed" } satisfies AgentScoreExplanationResult
 
   // A shape this build no longer understands is stale, not fatal: the next daily run replaces it.
+  // Validated rather than cast, because the page dereferences every branch of it and an entry
+  // written by an older build would break the page instead of reading as a miss.
   const parsed = yield* Effect.try({
-    try: () => JSON.parse(cached) as AgentScoreExplanation,
+    try: () => agentScoreExplanationSchema.safeParse(JSON.parse(cached)),
     catch: () => null,
   }).pipe(Effect.orElseSucceed(() => null))
 
   return (
-    parsed ? { status: "ready", explanation: parsed } : { status: "notComputed" }
+    parsed?.success ? { status: "ready", explanation: parsed.data } : { status: "notComputed" }
   ) satisfies AgentScoreExplanationResult
 })
