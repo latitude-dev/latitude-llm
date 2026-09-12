@@ -21,6 +21,7 @@ import {
   ELIGIBLE_SESSION_AGE_HISTOGRAM_QUERY,
   ELIGIBLE_SESSION_IDS_QUERY,
   SESSION_END_DEBOUNCE_SECONDS,
+  SWEEP_PARTITION_GRACE_DAYS,
 } from "./eligible-sessions.ts"
 
 interface AgeRow {
@@ -122,6 +123,7 @@ export const ScoreProjectSweepSourceLive = Layer.succeed(ScoreProjectSweepSource
             query: ELIGIBLE_PROJECTS_QUERY,
             query_params: {
               from: formatCHDate(daysBefore(to, maxStepDays)),
+              partitionFrom: formatCHDate(daysBefore(to, maxStepDays + SWEEP_PARTITION_GRACE_DAYS)),
               to: formatCHDate(to),
               debounceSeconds: SESSION_END_DEBOUNCE_SECONDS,
               noReflagTag: FLAGGER_NO_REFLAG_TAG,

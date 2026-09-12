@@ -195,6 +195,42 @@ describe("ScoreProjectSweepSourceLive", () => {
     ])
   })
 
+  it("still finds a long session that started before the window but stayed active inside it", async () => {
+    // Started 40 days out, last active 2 days out: outside the 28-day window by start time, inside
+    // it by activity, and the grace margin on the partition bound is what keeps it visible.
+    await ch.client.insert({
+      table: "sessions",
+      values: [sessionRow("long-running", 2, { min_start_time: `${chDate(40)}000000` }), sessionRow("ordinary", 2)],
+      format: "JSONEachRow",
+    })
+
+    const projects = await run(
+      Effect.gen(function* () {
+        const source = yield* ScoreProjectSweepSource
+        return yield* source.listProjects({ to, maxStepDays: 28, sessionFloor: 2 })
+      }),
+    )
+
+    expect(projects).toEqual([{ organizationId, projectId, eligibleSessions: 2 }])
+  })
+
+  it("does not fan out to a project whose traffic is all older than the window", async () => {
+    await ch.client.insert({
+      table: "sessions",
+      values: Array.from({ length: 5 }, (_, index) => sessionRow(`ancient-${index}`, 200)),
+      format: "JSONEachRow",
+    })
+
+    const projects = await run(
+      Effect.gen(function* () {
+        const source = yield* ScoreProjectSweepSource
+        return yield* source.listProjects({ to, maxStepDays: 28, sessionFloor: 1 })
+      }),
+    )
+
+    expect(projects).toEqual([])
+  })
+
   it("leaves out a project that cannot publish under any step", async () => {
     await ch.client.insert({
       table: "sessions",

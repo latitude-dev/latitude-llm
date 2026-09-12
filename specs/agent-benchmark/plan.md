@@ -1526,7 +1526,14 @@ Each row is a gate the previous checklist asserted and the code does not current
 - [x] **P6-19** Add the cross-organization project sweep source: projects with at least the session
   floor of eligible sessions in the longest step. Read it under the system organization sentinel the
   way `wrapped-fan-out.ts` does, and return organization and project ids together so the fan-out
-  payload carries both.
+  payload carries both. Bound it on `min_start_time`, which is the partition key: the sort key starts
+  at `organization_id`, so a cross-organisation query has nothing else to prune on and would
+  otherwise read every partition ever written for every tenant. The bound runs before aggregation and
+  can drop an older part of a session whose parts straddle a month boundary, which is safe here
+  because the sweep produces a candidate list and the per-project pass recomputes eligibility
+  exactly: a dropped part can only over-include, and an over-included project withholds. The grace
+  margin is what stops the bound under-including a session that started before the window and was
+  still running inside it.
 - [x] **P6-20** Apply the applicability gates from [`score.md`](score.md#eligible-sessions) once, at
   the population boundary, so every dimension narrows the same base rather than each re-deriving it.
   The predicate is now one `ELIGIBLE_SESSION_HAVING` constant shared by the per-project subquery, the

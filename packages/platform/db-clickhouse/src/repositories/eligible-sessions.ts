@@ -70,12 +70,30 @@ export const ELIGIBLE_SESSION_AGE_HISTOGRAM_QUERY = `
 `
 
 /**
+ * How far before the window the sweep's partition filter reaches back.
+ *
+ * `sessions` is partitioned by month on `min_start_time`, so a bound on that column is what prunes
+ * partitions. A session that started before the bound and was still active inside the window would
+ * be missed, and the sweep must not miss a project that deserves a snapshot, so the bound sits a
+ * month earlier than the window itself. A session still running two months after it began does not
+ * occur in practice; one that has been idle that long is not eligible anyway.
+ */
+export const SWEEP_PARTITION_GRACE_DAYS = 31
+
+/**
  * Projects with enough eligible traffic for the daily sweep to fan out to.
  *
  * ⚠️ SECURITY: cross-organisation by design. It carries no organisation filter because the sweep
  * has to find every project in the cluster, so it may only run under the system sentinel. It shares
  * `ELIGIBLE_SESSION_HAVING` with the per-project readers, which is what keeps the sweep's idea of an
  * eligible session identical to the one the score is then computed over.
+ *
+ * The `min_start_time` bound is the only thing standing between this and a full-history scan of
+ * every tenant: the sort key starts at `organization_id`, which a cross-organisation query cannot
+ * use, so partition pruning is all that is left. It is deliberately applied before aggregation even
+ * though that can drop an older part of a session whose parts straddle a month boundary. The result
+ * is a candidate list, not a verdict: the per-project pass recomputes eligibility exactly, so a
+ * dropped part can only make this over-include, and an over-included project simply withholds.
  */
 export const ELIGIBLE_PROJECTS_QUERY = `
   SELECT organization_id, project_id, count() AS eligible_sessions
@@ -85,6 +103,7 @@ export const ELIGIBLE_PROJECTS_QUERY = `
       project_id,
       session_id,${ELIGIBLE_SESSION_AGGREGATES}
     FROM sessions
+    WHERE min_start_time >= {partitionFrom:DateTime64(9, 'UTC')}
     GROUP BY organization_id, project_id, session_id
     ${ELIGIBLE_SESSION_HAVING}
   )
