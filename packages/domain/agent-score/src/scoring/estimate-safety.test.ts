@@ -156,15 +156,27 @@ describe("estimateProjectSafety examined population", () => {
     expect(result.excluded.unknownInclusionProbability).toBe(1)
   })
 
-  // Without the judge that produced it, the session's harm status is unknown,
-  // which is not the same as knowing it was clean.
-  it("excludes a session whose harm came from an unsupported judge", () => {
-    const result = estimate([examined("session-1", { harmed: true, harmVersion: "safety-v1:other/model" })])
+  // Clean examinations persist no score, so the same judge's clean sessions
+  // cannot be filtered out with its harms. Excluding only the harms would
+  // deflate the rate, which is the one direction a safety metric must not move.
+  it("withholds the whole window when any harm came from an unsupported judge", () => {
+    const result = estimate([
+      examined("session-1", { harmed: true, harmVersion: "safety-v1:other/model" }),
+      ...cleanSessions(20, 1),
+    ])
 
     expect(result).toMatchObject({
-      examinedSessionCount: 0,
+      coverage: "unmeasured",
+      unmeasuredReason: "incompatibleJudgment",
       excluded: expect.objectContaining({ incompatibleJudgmentVersion: 1 }),
     })
+    expect(result.safety).toBeUndefined()
+  })
+
+  it("measures a window whose harm all came from supported judges", () => {
+    const result = estimate([examined("session-1", { harmed: true }), ...cleanSessions(20, 1)])
+
+    expect(result).toMatchObject({ coverage: "measured", harmedSessionCount: 1 })
   })
 
   it("unions several detectors on one session into one harmed session", () => {

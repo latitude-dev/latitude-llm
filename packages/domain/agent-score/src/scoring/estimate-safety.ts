@@ -41,7 +41,11 @@ export const SAFETY_EXCLUSION_REASONS = [
 
 export type SafetyExclusionReason = (typeof SAFETY_EXCLUSION_REASONS)[number]
 
-export type SafetyUnmeasuredReason = "examinedFloor" | "coverageFloor" | "rateLimitedHintedFloor"
+export type SafetyUnmeasuredReason =
+  | "examinedFloor"
+  | "coverageFloor"
+  | "rateLimitedHintedFloor"
+  | "incompatibleJudgment"
 
 export interface SafetyMemberDecision {
   readonly flaggerSlug: string
@@ -175,8 +179,6 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
       excluded.incompleteSuite += 1
       continue
     }
-    // Harm judged by an unsupported judge is evidence this window cannot pool,
-    // and the session's harm status is unknown without it.
     if (session.harmJudgmentVersions.some((version) => !supported.has(version))) {
       excluded.incompatibleJudgmentVersion += 1
       continue
@@ -205,6 +207,13 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
   const hintedStratum = hintedExaminedCount + rateLimitedHintedCount
   const rateLimitedHintedShare = hintedStratum > 0 ? rateLimitedHintedCount / hintedStratum : 0
 
+  // A clean examination persists no score and so carries no judge, which is why
+  // an unsupported version cannot be excluded per session the way Outcome does:
+  // that judge's clean sessions would stay in the denominator while its harms
+  // left, deflating the rate. The whole window goes unmeasured instead.
+  if (excluded.incompatibleJudgmentVersion > 0) {
+    return { ...base, coverage: "unmeasured", unmeasuredReason: "incompatibleJudgment" }
+  }
   if (observations.length < floors.examinedSessions) {
     return { ...base, coverage: "unmeasured", unmeasuredReason: "examinedFloor" }
   }

@@ -160,7 +160,7 @@ describe("estimateProjectSafetyWindow", () => {
     expect(estimate.harmedSessionCount).toBe(1)
   })
 
-  it("excludes a session whose harm came from an unsupported judge", async () => {
+  it("withholds the window when any harm came from an unsupported judge", async () => {
     const { estimate } = await run({
       decisions: examinedWindow(100).decisions,
       scores: [safetyScore(0, { version: "safety-v1:other/model" })],
@@ -168,6 +168,7 @@ describe("estimateProjectSafetyWindow", () => {
 
     expect(estimate.examinedSessionCount).toBe(99)
     expect(estimate.excluded.incompatibleJudgmentVersion).toBe(1)
+    expect(estimate).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "incompatibleJudgment" })
   })
 
   it("leaves a session with an incomplete suite out of the denominator", async () => {

@@ -586,10 +586,16 @@ wide by nature, and gating on width would withhold the dimension permanently. Th
 reference run are chosen together, because the zero-harm lower bound is
 `100 * 0.05 ^ (referenceRun / examined)`.
 
-Rate-limited hinted sessions are counted rather than dropped. They record `selected: false` at
-inclusion probability one, and hinted Safety sessions are the ones most likely to contain harm, so
-losing too many of them biases the rate downward instead of merely widening it. Past a configured
-share of the hinted stratum, Safety is unmeasured.
+Rate-limited hinted sessions are never examined, so they enter neither the numerator nor the
+denominator, but they are tallied rather than ignored. They record `selected: false` at inclusion
+probability one, and hinted Safety sessions are the ones most likely to contain harm, so losing too
+many of them biases the rate downward instead of merely widening it. Past a configured share of the
+hinted stratum, Safety is unmeasured.
+
+An unsupported judgment version withholds the whole window rather than excluding the sessions that
+carry it. A clean examination persists no score and so names no judge, so the same judge's clean
+sessions cannot be filtered out alongside its harms; dropping only the harms would deflate the rate.
+Outcome can exclude per session because every examined session there carries a verdict score.
 
 #### Composite policy
 
