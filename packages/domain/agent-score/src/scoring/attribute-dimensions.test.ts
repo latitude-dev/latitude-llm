@@ -260,6 +260,16 @@ describe("cause destinations", () => {
     expect(result.rows.find((row) => row.causeId === "providerError")?.destination).toBe("sessions")
   })
 
+  it("sends a recovered tool retry to Tools, under the name the reader gives it", () => {
+    const result = attributeSpeedWindow({
+      fold: fold({ foldedSessionCount: 50, speedCauseNs: new Map([["recovered:toolFailure", 400_000]]) }),
+      observedNs: 1_000_000,
+      observedScore: 60,
+    })
+
+    expect(result.rows[0]?.destination).toBe("tools")
+  })
+
   it("leaves a cause nothing maps as unlinked rather than guessing a section", () => {
     const result = attributeSpeedWindow({
       fold: fold({ foldedSessionCount: 50, speedCauseNs: new Map([["something:unmapped", 400_000]]) }),

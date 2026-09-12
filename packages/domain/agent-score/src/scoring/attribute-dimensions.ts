@@ -44,8 +44,11 @@ const DESTINATION_BY_CAUSE: Readonly<Record<string, CauseDestination>> = {
   "tools.thrashing": "tools",
   "tools.structural_defect": "tools",
   "memory.repeated_zero_hit": "memory",
-  "recovery.provider_retry": "sessions",
-  "recovery.tool_retry": "tools",
+  // `recoverySpeedClaims` names a retry after the incident kind it recovered from.
+  "recovered:providerError": "sessions",
+  "recovered:toolFailure": "tools",
+  "recovered:outputDamage": "sessions",
+  "recovered:finishFailure": "sessions",
   // Reliability causes, which are the finding kinds that end a session.
   noOutput: "sessions",
   outputDamage: "sessions",
