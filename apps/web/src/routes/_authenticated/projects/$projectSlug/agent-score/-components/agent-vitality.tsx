@@ -18,7 +18,7 @@ const previousScore = (
   history: readonly AgentScoreRecord[] | undefined,
 ): AgentScoreRecord | null => {
   if (!snapshot || !history) return null
-  return [...history].reverse().find((entry) => entry.date < snapshot.date && entry.score > 0) ?? null
+  return [...history].reverse().find((entry) => entry.date < snapshot.date) ?? null
 }
 
 function ScoreDelta({ value }: { readonly value: number | null }) {
@@ -83,7 +83,7 @@ export function AgentVitality({
 }) {
   const [activeSection, setActiveSection] = useState<VitalityRingSection | null>(null)
   const previous = previousScore(snapshot, history)
-  const delta = snapshot && previous ? (snapshot.score - previous.score) / previous.score : null
+  const delta = snapshot && previous && previous.score > 0 ? (snapshot.score - previous.score) / previous.score : null
   const dimensions = SCORE_DIMENSION_ORDER.map((dimension) => ({
     id: dimension,
     weight: dimensionWeights?.[dimension] ?? 1 / SCORE_DIMENSION_ORDER.length,

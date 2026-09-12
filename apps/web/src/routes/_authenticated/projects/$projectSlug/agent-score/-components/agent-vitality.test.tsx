@@ -27,6 +27,23 @@ const snapshot: AgentScoreRecord = {
 const dimensionWeights = { outcome: 0.35, reliability: 0.25, cost: 0.15, speed: 0.15, safety: 0.1 }
 
 describe("AgentVitality", () => {
+  it("does not compare against an older snapshot when the previous score is zero", () => {
+    const previousSnapshot = { ...snapshot, date: "2026-09-11", score: 0 }
+    const olderSnapshot = { ...snapshot, date: "2026-09-10", score: 50 }
+
+    render(
+      <AgentVitality
+        date={snapshot.date}
+        snapshot={snapshot}
+        history={[olderSnapshot, previousSnapshot]}
+        dimensionWeights={dimensionWeights}
+        isLoading={false}
+      />,
+    )
+
+    expect(screen.queryByText(/up|down/)).toBeNull()
+  })
+
   it("emphasizes a hovered dimension and restores the composite over the center", () => {
     const { container } = render(
       <AgentVitality
