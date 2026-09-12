@@ -49,4 +49,5 @@ export { inferModalityFromMime, resolveContentModality } from "./mime-modality.t
 export { LatitudeObservabilityTestError } from "./observability-test.ts"
 export { relativeTime } from "./relativeTime.ts"
 export { hammingDistance64, simhash64 } from "./simhash.ts"
+export { stripLoneSurrogates } from "./strip-lone-surrogates.ts"
 export { toTitle } from "./to-title.ts"
