@@ -1,43 +1,18 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import { type SafetyWindowDecision, SafetyWindowDecisionSource } from "@domain/agent-score"
-import type { FlaggerScreeningOutcome, FlaggerScreeningSelectionReason } from "@domain/flaggers"
+import {
+  FLAGGER_NO_REFLAG_TAG,
+  type FlaggerScreeningOutcome,
+  type FlaggerScreeningSelectionReason,
+} from "@domain/flaggers"
 import { ChSqlClient, type ChSqlClientShape, SessionId, toRepositoryError } from "@domain/shared"
 import { formatCHDate, normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
-
-const SESSION_END_DEBOUNCE_SECONDS = 5 * 60
-
-/**
- * Production sessions whose last activity has settled.
- *
- * Same population the flagger coverage panel counts, because Safety's coverage
- * share is only meaningful against the base the suite could have sampled from.
- */
-const ELIGIBLE_SESSIONS = `
-  SELECT session_id
-  FROM (
-    SELECT
-      session_id,
-      sum(tokens_total) AS tokens_total,
-      groupUniqArrayIfMerge(models) AS models,
-      argMaxIfMerge(simulation_id) AS simulation_id,
-      if(
-        max(max_start_time) >= min(min_start_time),
-        max(max_start_time),
-        max(max_end_time)
-      ) AS last_activity_time
-    FROM sessions
-    WHERE organization_id = {organizationId:String}
-      AND project_id = {projectId:String}
-    GROUP BY session_id
-    HAVING last_activity_time >= {from:DateTime64(9, 'UTC')}
-      AND last_activity_time <= subtractSeconds({to:DateTime64(9, 'UTC')}, {debounceSeconds:UInt32})
-      AND (tokens_total > 0 OR length(models) > 0)
-      AND simulation_id = ''
-  )
-`
-
-const eligibleSessionsQuery = `SELECT count() AS eligible_sessions FROM (${ELIGIBLE_SESSIONS})`
+import {
+  ELIGIBLE_SESSION_COUNT_QUERY,
+  ELIGIBLE_SESSION_IDS_QUERY,
+  SESSION_END_DEBOUNCE_SECONDS,
+} from "./eligible-sessions.ts"
 
 /**
  * The newest screening generation per session and suite member, revisions collapsed.
@@ -47,7 +22,7 @@ const eligibleSessionsQuery = `SELECT count() AS eligible_sessions FROM (${ELIGI
  * members answered in different generations is visible as such to the estimator.
  */
 const decisionsQuery = `
-  WITH eligible_sessions AS (${ELIGIBLE_SESSIONS})
+  WITH eligible_sessions AS (${ELIGIBLE_SESSION_IDS_QUERY})
   SELECT
     session_id,
     flagger_slug,
@@ -121,9 +96,10 @@ export const SafetyWindowDecisionSourceLive = Layer.succeed(SafetyWindowDecision
             from: formatCHDate(from),
             to: formatCHDate(to),
             debounceSeconds: SESSION_END_DEBOUNCE_SECONDS,
+            noReflagTag: FLAGGER_NO_REFLAG_TAG,
           }
           const [eligibleResult, decisionResult] = await Promise.all([
-            client.query({ query: eligibleSessionsQuery, query_params: queryParams, format: "JSONEachRow" }),
+            client.query({ query: ELIGIBLE_SESSION_COUNT_QUERY, query_params: queryParams, format: "JSONEachRow" }),
             client.query({ query: decisionsQuery, query_params: queryParams, format: "JSONEachRow" }),
           ])
           const eligibleRows = await eligibleResult.json<EligibleSessionsRow>()

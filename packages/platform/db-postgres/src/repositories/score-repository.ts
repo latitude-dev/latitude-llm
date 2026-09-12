@@ -732,9 +732,7 @@ export const ScoreRepositoryLive = Layer.effect(
                     eq(scores.sourceId, "SYSTEM"),
                     eq(scores.sessionId, sessionId as string),
                     isNull(scores.draftedAt),
-                    ...(flaggerSlug === undefined
-                      ? []
-                      : [sql`${scores.metadata}->>'flaggerSlug' = ${flaggerSlug}`]),
+                    ...(flaggerSlug === undefined ? [] : [sql`${scores.metadata}->>'flaggerSlug' = ${flaggerSlug}`]),
                   ),
                 )
                 .orderBy(desc(scores.createdAt))
