@@ -29,6 +29,10 @@ export { MetricSeriesReaderLive } from "./repositories/metric-series-reader.ts"
 export { OutcomeWindowDecisionSourceLive } from "./repositories/outcome-window-decision-source.ts"
 export { SafetyWindowDecisionSourceLive } from "./repositories/safety-window-decision-source.ts"
 export { ScoreAnalyticsRepositoryLive } from "./repositories/score-analytics-repository.ts"
+export {
+  ScoreProjectSweepSourceLive,
+  ScoreWindowSourceLive,
+} from "./repositories/score-window-source.ts"
 export { SessionAssessmentBulkTelemetrySourceLive } from "./repositories/session-assessment-bulk-source.ts"
 export {
   SessionAnalysisRepositoryLive,

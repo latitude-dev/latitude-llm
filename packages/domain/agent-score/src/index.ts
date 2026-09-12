@@ -229,6 +229,16 @@ export {
   type SafetyWindowScope,
 } from "./ports/safety-window-source.ts"
 export {
+  ScoreProjectSweepSource,
+  type ScoreProjectSweepSourceShape,
+  type ScoreSweepProject,
+  type ScoreSweepScope,
+  type ScoreWindowCountsScope,
+  type ScoreWindowSessionsScope,
+  ScoreWindowSource,
+  type ScoreWindowSourceShape,
+} from "./ports/score-window-source.ts"
+export {
   type SessionAssessmentBulkJudgmentScope,
   SessionAssessmentBulkJudgmentSource,
   type SessionAssessmentBulkJudgmentSourceShape,
@@ -445,6 +455,13 @@ export {
   selectReliabilityEndpoint,
   selectReliabilityEndpoints,
 } from "./scoring/select-reliability-endpoints.ts"
+export {
+  SCORE_WINDOW_REASONS,
+  type ScoreWindowReason,
+  type ScoreWindowSelection,
+  type ScoreWindowStepCount,
+  selectScoreWindow,
+} from "./scoring/select-score-window.ts"
 export {
   type EstimateProjectOutcomeWindowInput,
   estimateProjectOutcomeWindow,

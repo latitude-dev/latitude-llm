@@ -1511,21 +1511,27 @@ Each row is a gate the previous checklist asserted and the code does not current
 
 ### Step 3: window selection and the eligible population
 
-- [ ] **P6-16** Add `selectScoreWindow` as a pure function: the shortest of 7, 14, 21, or 28 days
+- [x] **P6-16** Add `selectScoreWindow` as a pure function: the shortest of 7, 14, 21, or 28 days
   reaching 1,000 eligible sessions, withheld below 200, and 28 days once a project passes the floor
   without reaching the target. Return the chosen step and the reason it was chosen.
-- [ ] **P6-17** Implement D7's hysteresis against the previous snapshot's stored step: do not shorten
+- [x] **P6-17** Implement D7's hysteresis against the previous snapshot's stored step: do not shorten
   until the shorter step exceeds the target by 10%, do not lengthen until the current step falls 10%
   below it. With no previous snapshot or after a withheld day, choose without hysteresis.
-- [ ] **P6-18** Add the eligible-count-per-step read as one ClickHouse query with conditional counts
-  over `ELIGIBLE_SESSIONS_SUBQUERY`, then the session id list for the chosen step. Do not issue four
-  queries, and do not select ids for steps that were not chosen.
-- [ ] **P6-19** Add the cross-organization project sweep source: projects with at least the session
+- [x] **P6-18** Add the eligible-count-per-step read as one ClickHouse query over
+  `ELIGIBLE_SESSIONS_SUBQUERY`, then the session id list for the chosen step. Do not issue four
+  queries, and do not select ids for steps that were not chosen. The one query returns an age
+  histogram rather than a conditional count per step: the step list lives in the artifact, so
+  counting in SQL would mean generating a column per configured step, and folding buckets in the
+  domain keeps the SQL fixed and the steps configurable.
+- [x] **P6-19** Add the cross-organization project sweep source: projects with at least the session
   floor of eligible sessions in the longest step. Read it under the system organization sentinel the
   way `wrapped-fan-out.ts` does, and return organization and project ids together so the fan-out
   payload carries both.
-- [ ] **P6-20** Apply the applicability gates from [`score.md`](score.md#eligible-sessions) once, at
+- [x] **P6-20** Apply the applicability gates from [`score.md`](score.md#eligible-sessions) once, at
   the population boundary, so every dimension narrows the same base rather than each re-deriving it.
+  The predicate is now one `ELIGIBLE_SESSION_HAVING` constant shared by the per-project subquery, the
+  age histogram, the session-id read, and the cross-organisation sweep, so the sweep's idea of an
+  eligible session cannot diverge from the one the score is then computed over.
 
 ### Step 4: composition, coverage, and the publication gate
 
