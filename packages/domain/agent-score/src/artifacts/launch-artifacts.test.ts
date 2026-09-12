@@ -38,11 +38,24 @@ describe("validateLaunchArtifacts", () => {
     }
   })
 
-  it("carries no latency cohorts until the reference has been built", () => {
+  it("answers both latency lookups for every model it carries a reference for", () => {
     const result = run(validateLaunchArtifacts())
     if (result._tag !== "Success") throw new Error("artifacts did not load")
-    expect(result.success.latency.ttft).toEqual([])
-    expect(result.success.latency.throughput).toEqual([])
+    const { latency } = result.success
+    expect(latency.ttft.length).toBeGreaterThan(0)
+    expect(latency.throughput.map((cohort) => `${cohort.provider}/${cohort.model}`)).toEqual(
+      latency.ttft.map((cohort) => `${cohort.provider}/${cohort.model}`),
+    )
+  })
+
+  it("keeps the provisional reference coarse, so no cohort claims a measured distribution", () => {
+    const result = run(validateLaunchArtifacts())
+    if (result._tag !== "Success") throw new Error("artifacts did not load")
+    const { latency } = result.success
+    expect(latency.calibration).toBe("provisional")
+    for (const cohort of [...latency.ttft, ...latency.throughput]) {
+      expect(cohort.granularity).toBe("providerModel")
+    }
   })
 })
 
