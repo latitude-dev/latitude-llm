@@ -1,3 +1,4 @@
+import type { CauseDestination } from "@domain/agent-score"
 import { Button, cn, Icon, Skeleton, Text } from "@repo/ui"
 import { Link } from "@tanstack/react-router"
 import {
@@ -78,6 +79,41 @@ function SignalEvidenceDetails({
   )
 }
 
+/**
+ * Where a cause leads, and what to call the link.
+ *
+ * The benchmark ranks a consequence; the section that owns the evidence is where somebody goes to do
+ * something about it. A cause the domain could not place carries no destination and gets no link,
+ * because a wrong one wastes more of somebody's time than an absent one.
+ */
+const DESTINATION_LINKS: Readonly<Record<CauseDestination, { readonly to: string; readonly label: string }>> = {
+  sessions: { to: "/projects/$projectSlug", label: "View sessions" },
+  tools: { to: "/projects/$projectSlug/tools", label: "View tools" },
+  memory: { to: "/projects/$projectSlug/memory", label: "View memory" },
+  cost: { to: "/projects/$projectSlug/cost", label: "View cost" },
+  signals: { to: "/projects/$projectSlug/signals", label: "View signals" },
+}
+
+function DestinationLink({
+  destination,
+  projectSlug,
+}: {
+  readonly destination: CauseDestination
+  readonly projectSlug: string
+}) {
+  const link = DESTINATION_LINKS[destination]
+  return (
+    <div className="flex px-4 py-3">
+      <Button asChild variant="link" size="sm" className="h-auto px-0 py-0">
+        <Link to={link.to} params={{ projectSlug }}>
+          {link.label}
+          <Icon icon={ArrowUpRightIcon} size="xs" />
+        </Link>
+      </Button>
+    </div>
+  )
+}
+
 function EvidenceDetails({ details }: { readonly details: readonly DimensionEvidenceDetail[] }) {
   return (
     <div className="flex flex-col divide-y divide-border">
@@ -101,7 +137,11 @@ function EvidenceRow({
   readonly projectSlug: string
 }) {
   const [expanded, setExpanded] = useState(false)
-  const expandable = row.signalId !== undefined || row.description !== undefined || row.details !== undefined
+  const expandable =
+    row.signalId !== undefined ||
+    row.description !== undefined ||
+    row.details !== undefined ||
+    row.destination !== undefined
   const leading = row.signalId ? (
     <Icon icon={ArrowUpRightIcon} size="xs" color="foregroundMuted" />
   ) : (
@@ -136,6 +176,9 @@ function EvidenceRow({
             </div>
           ) : null}
           {row.details ? <EvidenceDetails details={row.details} /> : null}
+          {row.signalId === undefined && row.destination ? (
+            <DestinationLink destination={row.destination} projectSlug={projectSlug} />
+          ) : null}
         </div>
       ) : null}
     </div>

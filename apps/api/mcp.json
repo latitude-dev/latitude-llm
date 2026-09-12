@@ -43834,6 +43834,24 @@
                                 "minimum": -9007199254740991,
                                 "maximum": 9007199254740991,
                                 "description": "Independent observations behind the row. Coverage context, not a score."
+                              },
+                              "destination": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "sessions",
+                                      "tools",
+                                      "memory",
+                                      "cost",
+                                      "signals"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Product section that owns this evidence, or `null` when nothing specific can be opened."
                               }
                             },
                             "required": [
@@ -43843,7 +43861,8 @@
                               "fixGain",
                               "evidence",
                               "nativeEffect",
-                              "observationCount"
+                              "observationCount",
+                              "destination"
                             ],
                             "additionalProperties": false
                           },

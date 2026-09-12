@@ -16451,6 +16451,21 @@
           "observationCount": {
             "type": "integer",
             "description": "Independent observations behind the row. Coverage context, not a score."
+          },
+          "destination": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "sessions",
+              "tools",
+              "memory",
+              "cost",
+              "signals",
+              null
+            ],
+            "description": "Product section that owns this evidence, or `null` when nothing specific can be opened."
           }
         },
         "required": [
@@ -16460,7 +16475,8 @@
           "fixGain",
           "evidence",
           "nativeEffect",
-          "observationCount"
+          "observationCount",
+          "destination"
         ]
       },
       "AgentScoreIssueRow": {

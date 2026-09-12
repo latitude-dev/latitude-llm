@@ -1700,13 +1700,14 @@ Each row is a gate the previous checklist asserted and the code does not current
 - [x] **P6-48** Build the trend from stored snapshots alone, marking scoring-version changes,
   window-length changes, policy caps, and unpublished dates as gaps. The tooltip shows only what the
   snapshot stores.
-- [~] **P6-49** Link every cause to the destinations session assessment already uses: Sessions, Tools,
+- [x] **P6-49** Link every cause to the destinations session assessment already uses: Sessions, Tools,
   Memory, Cost, Signals, Behaviors, and Settings. A signal row links to its signal page, which already
   owns examples, lifecycle, and resolution; the benchmark ranks consequence and does not duplicate the
-  workflow. The rows render with their evidence and effects; the links are not wired yet, because the
-  cause identities the window carries are metric ids, claim causes and finding kinds rather than the
-  anchored destinations a session-level finding has. Deriving a destination from a metric id is the
-  work left, and a wrong link is worse than none.
+  workflow. A destination is a section, not an anchor, which is why a metric id is enough to resolve
+  one: Cost causes take theirs from the catalog entry that defined the metric, and Speed claims and
+  terminal finding kinds resolve through an explicit table. A cause neither places carries no
+  destination and renders no link, because a wrong one wastes more of somebody's time than an absent
+  one. Behaviors and Settings stay unmapped until they own evidence a cause can point at.
 - [x] **P6-50** Enforce the prohibitions in
   [`page.md`](page.md#statements-the-page-must-avoid) in the components, not only in copy review:
   no uncorrected sampled share presented as a defect rate, no causal language on an associated effect,
@@ -1799,16 +1800,21 @@ The exit gate is what merging PR 6 requires. It does not require production traf
   scope, insert idempotency on a repeated date, queue payload scope, bulk evidence reads, rendering
   the headline and history from frozen snapshot data, and dynamic cause queries that are never
   presented as historical decomposition.
-- [~] **P6-62** End-to-end fixtures cover every metric, signal role, overlap case, missing-coverage
+- [x] **P6-62** End-to-end fixtures cover every metric, signal role, overlap case, missing-coverage
   case, and destination, and reconcile the session assessment, the window estimator input, the cause
   row, and the snapshot for one inspected window. `window-reconciliation.test.ts` follows one window
   through the panel, the estimator and the attribution, and found them disagreeing: a session ended
   by a provider error or a failed tool call showed `completion: "undetermined"` on its Scores panel
   while the score counted it a terminal failure, because those findings carried an incident effect
-  and never a completion one. A terminal incident is both, and now emits both. Destination coverage
-  waits on P6-49; the snapshot leg is covered by the repository and route tests rather than here.
-- [ ] **P6-63** Single-session and bulk parity still holds on the same fixtures after the latency
-  artifact reaches the interactive path.
+  and never a completion one. A terminal incident is both, and now emits both. Destinations are
+  covered by the attribution tests; the snapshot leg is covered by the repository and route tests
+  rather than here.
+- [x] **P6-63** Single-session and bulk parity still holds on the same fixtures after the latency
+  artifact reaches the interactive path. It did, but vacuously: the parity fixture carried no
+  generations, so the latency readers were never applicable and the comparison would have kept
+  passing if the artifact stopped reaching one of the paths. The fixture now carries a streaming call
+  the frozen reference covers, and a second test asserts the reader reports it readable, so the
+  parity statement is about the artifact and not around it.
 - [ ] `pnpm typecheck` and `pnpm test` pass. Generated contracts and schemas are current.
 
 ### Launch gate

@@ -1,5 +1,6 @@
 import { SCORE_DIMENSIONS, type ScoreDimension } from "@domain/shared"
 import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
+import type { CostMetricCatalog } from "../entities/cost-metric-catalog.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
 import { attributeDeficit, type CauseAttribution, type DeficitAttribution } from "./attribute-deficit.ts"
 import type { WindowFold } from "./fold-window-contributions.ts"
@@ -15,6 +16,63 @@ import type { ReliabilitySessionEndpoint } from "./select-reliability-endpoints.
  */
 export type CauseEvidenceKind = "measured" | "associated"
 
+/**
+ * The product section that owns a cause, so a row leads somewhere that can act on it.
+ *
+ * The same vocabulary the catalog already uses for Cost metrics, because the benchmark ranks a
+ * consequence and the section that owns the evidence is where somebody goes to do something about
+ * it. `page.md` fixes the mapping; nothing here invents a destination a section cannot show.
+ */
+export const CAUSE_DESTINATIONS = ["sessions", "tools", "memory", "cost", "signals"] as const
+export type CauseDestination = (typeof CAUSE_DESTINATIONS)[number]
+
+/**
+ * Where a Speed claim or a terminal finding leads.
+ *
+ * Cost causes are metric ids and take their destination from the catalog entry that defined them.
+ * These two have no catalog row: a Speed claim is named by the reader that produced it, and a
+ * Reliability cause is the finding kind that ended the session. A cause with no entry here gets no
+ * link at all, which is the honest default — a wrong destination wastes more of somebody's time
+ * than an absent one.
+ */
+const DESTINATION_BY_CAUSE: Readonly<Record<string, CauseDestination>> = {
+  // Speed claim causes, as `composeSpeedCounterfactual` names them.
+  "latency:ttft": "sessions",
+  "latency:throughput": "sessions",
+  "latency:ttft+throughput": "sessions",
+  "tools.repeated_call": "tools",
+  "tools.thrashing": "tools",
+  "tools.structural_defect": "tools",
+  "memory.repeated_zero_hit": "memory",
+  "recovery.provider_retry": "sessions",
+  "recovery.tool_retry": "tools",
+  // Reliability causes, which are the finding kinds that end a session.
+  noOutput: "sessions",
+  outputDamage: "sessions",
+  finishFailure: "sessions",
+  providerError: "sessions",
+  toolFailure: "tools",
+  toolStructuralDefect: "tools",
+}
+
+/** A section the interface can actually open, or nothing. `sessionAssessment` is not a section. */
+const asCauseDestination = (destination: string): CauseDestination | undefined =>
+  (CAUSE_DESTINATIONS as readonly string[]).includes(destination) ? (destination as CauseDestination) : undefined
+
+const destinationForMetric = ({
+  metricId,
+  catalog,
+}: {
+  readonly metricId: string
+  readonly catalog: CostMetricCatalog | undefined
+}): CauseDestination | undefined => {
+  const entry = catalog?.entries.find((candidate) => candidate.metricId === metricId)
+  // The catalog lists every section a metric belongs on, most specific first; the first one the
+  // interface can open is the one the row leads to.
+  const fromCatalog = entry?.destinations.flatMap((destination) => asCauseDestination(destination) ?? [])
+  return fromCatalog?.[0] ?? DESTINATION_BY_CAUSE[metricId]
+}
+
 export interface DimensionCauseRow extends CauseAttribution {
   readonly scoreDimension: ScoreDimension
   readonly label: string
@@ -24,6 +82,8 @@ export interface DimensionCauseRow extends CauseAttribution {
   readonly signalId?: string
   /** Independent observations behind the row, which is the reader's count and never a score. */
   readonly observationCount: number
+  /** The section that owns this evidence. Absent when nothing can usefully be opened. */
+  readonly destination?: CauseDestination
 }
 
 export interface DimensionAttribution {
@@ -68,12 +128,14 @@ const attributionOf = ({
 export const attributeCostWindow = ({
   fold,
   artifact,
+  catalog,
   observedScore,
   residualSignalPenalty = 0,
   seed,
 }: {
   readonly fold: WindowFold
   readonly artifact: CostScoringArtifact
+  readonly catalog?: CostMetricCatalog
   readonly observedScore: number
   readonly residualSignalPenalty?: number
   readonly seed?: number
@@ -115,11 +177,13 @@ export const attributeCostWindow = ({
     }),
     describe: (causeId) => {
       const cause = fold.costCauseUnits.get(causeId)
+      const destination = destinationForMetric({ metricId: causeId, catalog })
       return {
         label: causeId,
         evidence: "measured",
         nativeEffect: { value: cause?.penalizedUnits ?? 0, unit: cause?.family ?? "units" },
         observationCount: fold.foldedSessionCount,
+        ...(destination ? { destination } : {}),
       }
     },
   })
@@ -157,12 +221,16 @@ export const attributeSpeedWindow = ({
       observedScore,
       ...(seed !== undefined ? { seed } : {}),
     }),
-    describe: (causeId) => ({
-      label: causeId,
-      evidence: "measured",
-      nativeEffect: { value: fold.speedCauseNs.get(causeId) ?? 0, unit: "nanoseconds" },
-      observationCount: fold.foldedSessionCount,
-    }),
+    describe: (causeId) => {
+      const destination = DESTINATION_BY_CAUSE[causeId]
+      return {
+        label: causeId,
+        evidence: "measured",
+        nativeEffect: { value: fold.speedCauseNs.get(causeId) ?? 0, unit: "nanoseconds" },
+        observationCount: fold.foldedSessionCount,
+        ...(destination ? { destination } : {}),
+      }
+    },
   })
 }
 
@@ -218,12 +286,16 @@ export const attributeReliabilityWindow = ({
       observedScore,
       ...(seed !== undefined ? { seed } : {}),
     }),
-    describe: (causeId) => ({
-      label: causeId,
-      evidence: "measured",
-      nativeEffect: { value: sessionsByCause.get(causeId) ?? 0, unit: "sessions" },
-      observationCount: sessionsByCause.get(causeId) ?? 0,
-    }),
+    describe: (causeId) => {
+      const destination = DESTINATION_BY_CAUSE[causeId]
+      return {
+        label: causeId,
+        evidence: "measured",
+        nativeEffect: { value: sessionsByCause.get(causeId) ?? 0, unit: "sessions" },
+        observationCount: sessionsByCause.get(causeId) ?? 0,
+        ...(destination ? { destination } : {}),
+      }
+    },
   })
 }
 

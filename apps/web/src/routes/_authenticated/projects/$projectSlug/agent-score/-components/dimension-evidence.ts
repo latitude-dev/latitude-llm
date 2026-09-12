@@ -1,3 +1,4 @@
+import type { CauseDestination } from "@domain/agent-score"
 import { formatDuration, formatPrice } from "@repo/utils"
 import type {
   AgentScoreExplanationRecord,
@@ -25,6 +26,8 @@ export interface DimensionEvidenceRow {
   readonly tone: EvidenceTone
   readonly details?: readonly DimensionEvidenceDetail[]
   readonly signalId?: string
+  /** Product section that owns this evidence, so a row leads somewhere that can act on it. */
+  readonly destination?: CauseDestination
 }
 
 export interface DimensionEvidence {
@@ -246,6 +249,7 @@ const addAttribution = (evidence: MutableEvidence, dimension: ScoreDimensionKey,
       progress: clamp(row.attributedDeficit / maximumDeficit),
       tone: "negative",
       ...(row.signalId ? { signalId: row.signalId } : {}),
+      ...(row.destination ? { destination: row.destination } : {}),
     })
   }
   if (attribution && attribution.residual > 0.05) {

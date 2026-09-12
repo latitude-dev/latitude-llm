@@ -220,6 +220,10 @@ const CauseRowSchema = z
       .number()
       .int()
       .describe("Independent observations behind the row. Coverage context, not a score."),
+    destination: z
+      .enum(["sessions", "tools", "memory", "cost", "signals"])
+      .nullable()
+      .describe("Product section that owns this evidence, or `null` when nothing specific can be opened."),
   })
   .openapi("AgentScoreCauseRow")
 
@@ -321,6 +325,7 @@ const toExplanationResponse = (explanation: AgentScoreExplanation) => ({
       evidence: row.evidence,
       nativeEffect: row.nativeEffect,
       observationCount: row.observationCount,
+      destination: row.destination ?? null,
     })),
     residual: dimension.residual,
     totalDeficit: dimension.totalDeficit,

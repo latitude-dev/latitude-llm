@@ -277,6 +277,7 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
         attributeCostWindow({
           fold: pass.fold,
           artifact: input.costArtifact,
+          catalog: input.catalog,
           observedScore: scoreOf("cost") ?? 100,
           residualSignalPenalty: signalEffects.costPenalty,
           ...(input.seed !== undefined ? { seed: input.seed } : {}),

@@ -391,6 +391,8 @@ export {
   attributeCostWindow,
   attributeReliabilityWindow,
   attributeSpeedWindow,
+  CAUSE_DESTINATIONS,
+  type CauseDestination,
   type CauseEvidenceKind,
   type DimensionAttribution,
   type DimensionCauseRow,

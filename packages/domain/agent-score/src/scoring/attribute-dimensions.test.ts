@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { LAUNCH_COST_SCORING_ARTIFACT } from "../artifacts/launch-cost-scoring-artifact.ts"
 import type { CostFamily } from "../entities/cost-evidence.ts"
+import { PROVISIONAL_COST_METRIC_CATALOG } from "../entities/cost-metric-catalog.ts"
 import { attributeCostWindow, attributeReliabilityWindow, attributeSpeedWindow } from "./attribute-dimensions.ts"
 import type { SessionWindowContribution } from "./bootstrap-window.ts"
 import { EMPTY_WINDOW_FOLD, type WindowFold } from "./fold-window-contributions.ts"
@@ -209,5 +210,63 @@ describe("attributeReliabilityWindow", () => {
     expect(
       attributeReliabilityWindow({ endpoints: clean, referenceRunSessions: 20, observedScore: 100 }),
     ).toMatchObject({ rows: [], residual: 0 })
+  })
+})
+
+describe("cause destinations", () => {
+  it("sends a Cost metric to the section its catalog entry names", () => {
+    const result = attributeCostWindow({
+      fold: fold({
+        contributions: [contribution([{ family: "tools", eligibleUnits: 1_000 }])],
+        foldedSessionCount: 100,
+        costCauseUnits: new Map([["tools.repeated_call", { family: "tools" as const, penalizedUnits: 300 }]]),
+      }),
+      artifact: LAUNCH_COST_SCORING_ARTIFACT,
+      catalog: PROVISIONAL_COST_METRIC_CATALOG,
+      observedScore: 90,
+    })
+
+    expect(result.rows[0]?.destination).toBe("cost")
+  })
+
+  it("sends a repeated tool call on the Speed side to Tools", () => {
+    const result = attributeSpeedWindow({
+      fold: fold({ foldedSessionCount: 50, speedCauseNs: new Map([["tools.repeated_call", 400_000]]) }),
+      observedNs: 1_000_000,
+      observedScore: 60,
+    })
+
+    expect(result.rows[0]?.destination).toBe("tools")
+  })
+
+  it("sends a terminal tool failure to Tools and a provider error to Sessions", () => {
+    const endpoint = (sessionId: string, causes: readonly string[]) => ({
+      sessionId,
+      terminalFailure: causes.length > 0,
+      readable: true,
+      causes,
+    })
+    const result = attributeReliabilityWindow({
+      endpoints: [
+        ...Array.from({ length: 80 }, (_, index) => endpoint(`ok-${index}`, [])),
+        ...Array.from({ length: 12 }, (_, index) => endpoint(`tool-${index}`, ["toolFailure"])),
+        ...Array.from({ length: 8 }, (_, index) => endpoint(`provider-${index}`, ["providerError"])),
+      ],
+      referenceRunSessions: 20,
+      observedScore: survivalOverReferenceRun({ adverseRate: 0.2, referenceRunSessions: 20 }),
+    })
+
+    expect(result.rows.find((row) => row.causeId === "toolFailure")?.destination).toBe("tools")
+    expect(result.rows.find((row) => row.causeId === "providerError")?.destination).toBe("sessions")
+  })
+
+  it("leaves a cause nothing maps as unlinked rather than guessing a section", () => {
+    const result = attributeSpeedWindow({
+      fold: fold({ foldedSessionCount: 50, speedCauseNs: new Map([["something:unmapped", 400_000]]) }),
+      observedNs: 1_000_000,
+      observedScore: 60,
+    })
+
+    expect(result.rows[0]?.destination).toBeUndefined()
   })
 })
