@@ -38,7 +38,12 @@ const suiteDecisions = (index: number, overrides: Partial<SafetyWindowDecision> 
 
 const safetyScore = (
   index: number,
-  options: { readonly findingKind?: string; readonly version?: string; readonly slug?: string } = {},
+  options: {
+    readonly findingKind?: string
+    readonly version?: string
+    readonly slug?: string
+    readonly analysisHash?: string
+  } = {},
 ): Score =>
   ({
     id: ScoreId(`score-${index}`.padEnd(24, "x").slice(0, 24)),
@@ -60,6 +65,7 @@ const safetyScore = (
       flaggerPath: "sampled",
       safetyFindingKind: options.findingKind ?? "injectionCompliance",
       scoringArtifactVersion: options.version ?? VERSION,
+      analysisHash: options.analysisHash ?? `hash-${index}`,
     },
     error: null,
     errored: false,
@@ -139,6 +145,17 @@ describe("estimateProjectSafetyWindow", () => {
 
   // Exposure and defense are persisted the same way harm is, so the join has to
   // read the finding kind rather than the presence of a Safety score.
+  // The suite names which generation was examined; a harm score from an older
+  // generation is operational history, not this window's answer.
+  it("ignores harm from a generation the newest suite decisions do not name", async () => {
+    const { estimate } = await run({
+      decisions: examinedWindow(100).decisions,
+      scores: [safetyScore(0, { analysisHash: "an-older-generation" })],
+    })
+
+    expect(estimate.harmedSessionCount).toBe(0)
+  })
+
   it("counts only confirmed harm, not exposure or a successful defense", async () => {
     const { estimate } = await run({
       decisions: examinedWindow(100).decisions,
