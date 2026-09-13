@@ -209,6 +209,75 @@ describe("SessionAssessmentBulkTelemetrySourceLive", () => {
     ])
   })
 
+  it("chunks a large trace-id batch into bounded ClickHouse queries instead of one unbounded IN(...)", async () => {
+    const sessionCount = 30
+    const manySessions = Array.from({ length: sessionCount }, (_, index) => {
+      const sid = SessionId(`session-${index}`)
+      const tid = TraceId(`trace-${index}`)
+      return {
+        organizationId,
+        projectId,
+        sessionId: sid,
+        traceIds: [tid],
+        outputMessages: [],
+      } as unknown as SessionDetail
+    })
+
+    const traceIdBatchSizes: number[] = []
+    const dependencies = Layer.mergeAll(
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      Layer.succeed(
+        SessionRepository,
+        createFakeSessionRepository({ listDetailsBySessionIds: () => Effect.succeed(manySessions) }).repository,
+      ),
+      Layer.succeed(
+        SpanRepository,
+        createFakeSpanRepository({
+          listByTraceIds: () => Effect.succeed([]),
+          listGenerationFactsByTraceIds: (input) => {
+            traceIdBatchSizes.push(input.traceIds.length)
+            return Effect.succeed(input.traceIds.map((tid) => generation(tid, `gen-${tid}`)))
+          },
+          listToolCallFactsByTraceIds: () => Effect.succeed([]),
+        }).repository,
+      ),
+      Layer.succeed(
+        SessionAnalysisRepository,
+        createFakeSessionAnalysisRepository([], { listLatestBySessions: () => Effect.succeed([]) }).repository,
+      ),
+      Layer.succeed(SessionSemanticMomentRepository, createFakeSessionSemanticMomentRepository().repository),
+      Layer.succeed(SessionMomentLabelRepository, createFakeSessionMomentLabelRepository().repository),
+      Layer.succeed(
+        FlaggerScreeningDecisionRepository,
+        createFakeFlaggerScreeningDecisionRepository([], { listLatestBySessions: () => Effect.succeed([]) }).repository,
+      ),
+      Layer.succeed(MemoryRepository, createFakeMemoryRepository().repository),
+    )
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const source = yield* SessionAssessmentBulkTelemetrySource
+        return yield* source.read({
+          organizationId,
+          projectId,
+          sessionIds: manySessions.map((session) => session.sessionId),
+          cutoff,
+        })
+      }).pipe(Effect.provide(SessionAssessmentBulkTelemetrySourceLive.pipe(Layer.provideMerge(dependencies)))),
+    )
+
+    // More than one query was issued, and none of them carried every trace id at once.
+    expect(traceIdBatchSizes.length).toBeGreaterThan(1)
+    expect(Math.max(...traceIdBatchSizes)).toBeLessThan(sessionCount)
+    expect(traceIdBatchSizes.reduce((sum, size) => sum + size, 0)).toBe(sessionCount)
+
+    // Results still come back whole: every session gets the generation fact from its own chunk.
+    expect(result).toHaveLength(sessionCount)
+    for (const facts of result) {
+      expect(facts.generations).toHaveLength(1)
+    }
+  })
+
   it("keys Cost source facts to the session that owns their trace", async () => {
     const dependencies = Layer.mergeAll(
       Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
