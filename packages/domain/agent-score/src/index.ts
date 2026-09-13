@@ -62,6 +62,20 @@ export {
   toAgentScoreExplanation,
 } from "./entities/agent-score-explanation.ts"
 export {
+  AGENT_SCORE_AVAILABILITY_METRICS,
+  AGENT_SCORE_THRESHOLD_METRICS,
+  type AgentScoreAvailabilityRequirement,
+  type AgentScoreDimensionReadiness,
+  type AgentScoreReadiness,
+  type AgentScoreRequirement,
+  type AgentScoreThresholdRequirement,
+  agentScoreAvailabilityRequirementSchema,
+  agentScoreDimensionReadinessSchema,
+  agentScoreReadinessSchema,
+  agentScoreRequirementSchema,
+  agentScoreThresholdRequirementSchema,
+} from "./entities/agent-score-readiness.ts"
+export {
   type AgentScoreSnapshot,
   type AgentScoreSnapshotIdentity,
   agentScoreSnapshotSchema,
@@ -415,7 +429,6 @@ export type {
 export { aggregateWindowCost, aggregateWindowSpeed, bootstrapWindow } from "./scoring/bootstrap-window.ts"
 export {
   buildIssueRows,
-  ISSUE_ROW_LIMIT,
   type IssueObservation,
   type IssueRow,
   type IssueSession,
@@ -517,6 +530,11 @@ export {
 } from "./scoring/fold-window-contributions.ts"
 export type { LinkedSignalOccurrence, SignalLinkage, SignalOccurrence } from "./scoring/link-signal-occurrences.ts"
 export { linkSignalOccurrences } from "./scoring/link-signal-occurrences.ts"
+export {
+  type ObservedCauseMeasurement,
+  type ObservedDimensionCause,
+  observeDimensionCauses,
+} from "./scoring/observe-dimension-causes.ts"
 export { readOutcomeIssueObservations } from "./scoring/read-outcome-issue-observations.ts"
 export {
   readSafetyIssueObservations,

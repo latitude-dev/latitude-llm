@@ -127,12 +127,20 @@ const run = (harness: Harness = {}) => {
 }
 
 describe("computeAgentScore", () => {
-  it("withholds without reading a single session when the project is under the floor", async () => {
+  it("withholds scores but still reads evidence when the project is under the floor", async () => {
     const { result, telemetryReads } = await run({ countsByStep: { 7: 1, 14: 1, 21: 1, 28: 1 }, sessionCount: 1 })
 
     expect(result).toMatchObject({ status: "withheld", withheldReason: "sessionFloor" })
-    expect(result.window).toBeUndefined()
-    expect(telemetryReads).toEqual([])
+    expect(result.window).toMatchObject({
+      stepDays: 28,
+      reason: "belowSessionFloor",
+      eligibleSessionCount: 1,
+    })
+    expect(result.sessionFloor).toBe(2)
+    expect(result.dimensions.some((dimension) => dimension.score !== undefined)).toBe(false)
+    expect(result.coverage?.readSessionCount).toBe(1)
+    expect(result.readiness?.sessionRequirement).toMatchObject({ current: 1, required: 2, met: false })
+    expect(telemetryReads).toEqual([1])
   })
 
   it("selects the window before reading, and records the step it chose", async () => {
@@ -179,6 +187,11 @@ describe("computeAgentScore", () => {
     expect(result.dimensions.find((dimension) => dimension.scoreDimension === "safety")?.unmeasuredReason).toBe(
       "examinedFloor",
     )
+    expect(
+      result.readiness?.dimensions
+        .find((dimension) => dimension.scoreDimension === "outcome")
+        ?.requirements.find((requirement) => requirement.metric === "outcomeEvaluations"),
+    ).toMatchObject({ current: 0, required: 1, met: false })
   })
 
   it("still reports coverage and native inputs when it publishes nothing", async () => {

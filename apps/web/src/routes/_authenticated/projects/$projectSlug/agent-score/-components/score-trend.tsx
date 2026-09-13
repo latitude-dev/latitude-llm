@@ -1,7 +1,12 @@
-import { Chart, type ChartSeries, Skeleton, Tabs, Text } from "@repo/ui"
+import { Chart, type ChartSeries, Icon, Skeleton, Tabs, Text } from "@repo/ui"
+import { CircleCheckIcon, CircleDashedIcon, TriangleAlertIcon } from "lucide-react"
 import { useState } from "react"
-import type { AgentScoreRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
-import { formatDate } from "./agent-score-format.ts"
+import type {
+  AgentScoreExplanationRecord,
+  AgentScoreRecord,
+} from "../../../../../../domains/agent-score/agent-score.functions.ts"
+import { formatCount, formatDate } from "./agent-score-format.ts"
+import { type AgentScoreReadinessView, agentScoreReadiness, type DimensionReadinessRow } from "./score-readiness.ts"
 
 const SCORE_COLOR = "hsl(var(--viz-red))"
 const DAY_MS = 86_400_000
@@ -27,13 +32,119 @@ const chartLabel = (date: string, range: TrendRange): string => {
     : value.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })
 }
 
+function ReadinessProgress({
+  readiness,
+}: {
+  readonly readiness: Extract<AgentScoreReadinessView, { kind: "sessions" }>
+}) {
+  const label = `${formatCount(readiness.current)} of ${formatCount(readiness.required)} eligible sessions`
+  return (
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(readiness.progress * 100)}
+      className="flex h-2 w-full overflow-hidden rounded-full bg-muted"
+    >
+      <span className="h-full rounded-full bg-primary" style={{ width: `${readiness.progress * 100}%` }} />
+    </div>
+  )
+}
+
+function ReadinessIcon({ state }: { readonly state: DimensionReadinessRow["state"] }) {
+  if (state === "ready") return <Icon icon={CircleCheckIcon} size="xs" color="successMutedForeground" />
+  if (state === "actionNeeded") return <Icon icon={TriangleAlertIcon} size="xs" color="warningMutedForeground" />
+  return <Icon icon={CircleDashedIcon} size="xs" color="foregroundMuted" />
+}
+
+function DimensionReadiness({
+  readiness,
+}: {
+  readonly readiness: Extract<AgentScoreReadinessView, { kind: "dimensions" }>
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex flex-1 flex-col justify-center divide-y divide-border">
+        {readiness.rows.map((row) => (
+          <div
+            key={row.dimension}
+            className="grid min-h-8 grid-cols-[minmax(7.5rem,1fr)_minmax(9rem,1.35fr)_auto] items-center gap-3 py-1.5"
+          >
+            <Text.H6B noWrap>{row.label}</Text.H6B>
+            <span className="flex min-w-0 items-center gap-1.5">
+              <ReadinessIcon state={row.state} />
+              <Text.H6 color={row.state === "actionNeeded" ? "warningMutedForeground" : "foregroundMuted"} noWrap>
+                {row.status}
+              </Text.H6>
+            </span>
+            {row.value ? (
+              <Text.H6 className="shrink-0 tabular-nums" noWrap>
+                {row.value}
+              </Text.H6>
+            ) : (
+              <span />
+            )}
+          </div>
+        ))}
+      </div>
+      <Text.H7 color="foregroundMuted">
+        Collecting items update automatically. Scores publish when all five dimensions are ready.
+      </Text.H7>
+    </div>
+  )
+}
+
+function ScoreReadiness({ explanation }: { readonly explanation: AgentScoreExplanationRecord["explanation"] }) {
+  const readiness = agentScoreReadiness(explanation)
+  const summary =
+    readiness.kind === "sessions"
+      ? "Collecting automatically"
+      : readiness.kind === "dimensions"
+        ? `${formatCount(readiness.readyDimensions)} of ${formatCount(readiness.totalDimensions)} ready`
+        : undefined
+
+  return (
+    <>
+      <div className="flex flex-row items-center justify-between gap-3">
+        <Text.H6 color="foregroundMuted">Score readiness</Text.H6>
+        {summary ? <Text.H6 color="foregroundMuted">{summary}</Text.H6> : null}
+      </div>
+      {readiness.kind === "sessions" ? (
+        <div className="flex flex-1 flex-col justify-center gap-4">
+          <div className="flex flex-col gap-1">
+            <Text.H4M className="tabular-nums">
+              {formatCount(readiness.current)} / {formatCount(readiness.required)} eligible sessions
+            </Text.H4M>
+            <Text.H6 color="foregroundMuted">
+              {formatCount(readiness.remaining)} more {readiness.remaining === 1 ? "session" : "sessions"} needed in the
+              current {formatCount(readiness.windowDays)}-day window.
+            </Text.H6>
+          </div>
+          <ReadinessProgress readiness={readiness} />
+          <Text.H7 color="foregroundMuted">This updates automatically as production sessions arrive.</Text.H7>
+        </div>
+      ) : readiness.kind === "dimensions" ? (
+        <DimensionReadiness readiness={readiness} />
+      ) : (
+        <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
+          <Text.H6B>Evidence has not been calculated yet</Text.H6B>
+          <Text.H6 color="foregroundMuted">Refresh to evaluate the latest sessions.</Text.H6>
+        </div>
+      )}
+    </>
+  )
+}
+
 export function ScoreTrend({
   endDate,
   history,
+  explanation,
   isLoading,
 }: {
   readonly endDate: string
   readonly history: readonly AgentScoreRecord[] | undefined
+  readonly explanation: AgentScoreExplanationRecord["explanation"]
   readonly isLoading: boolean
 }) {
   const [range, setRange] = useState<TrendRange>("7d")
@@ -54,38 +165,35 @@ export function ScoreTrend({
 
   return (
     <div className="flex min-h-[296px] min-w-0 flex-1 flex-col gap-4 rounded-xl bg-secondary p-6">
-      <div className="flex flex-row items-center justify-between gap-3">
-        <Text.H6 color="foregroundMuted">Score evolution</Text.H6>
-        <Tabs options={RANGE_OPTIONS} active={range} onSelect={setRange} variant="bordered" size="sm" />
-      </div>
       {isLoading ? (
         <Skeleton className="min-h-[200px] w-full flex-1 rounded-lg" />
       ) : hasScores ? (
-        <div className="flex min-h-0 flex-1 flex-col justify-end gap-2">
-          <Chart
-            categories={dates.map((date) => chartLabel(date, range))}
-            series={series}
-            height={200}
-            ariaLabel={`Agent vitality over the last ${dayCount} days`}
-            hideLegend
-            primaryAxis={{ show: false, min: 0, max: 100, formatValue: (value) => value.toFixed(1) }}
-            tooltipTitle={(_, index) => formatDate(dates[index] ?? endDate)}
-          />
-          {versions.size > 1 || windows.size > 1 ? (
-            <Text.H7 color="foregroundMuted">
-              {versions.size > 1
-                ? "This range crosses scoring versions, so the line is not a continuous measurement."
-                : "This range includes scores calculated over different window lengths."}
-            </Text.H7>
-          ) : null}
-        </div>
+        <>
+          <div className="flex flex-row items-center justify-between gap-3">
+            <Text.H6 color="foregroundMuted">Score evolution</Text.H6>
+            <Tabs options={RANGE_OPTIONS} active={range} onSelect={setRange} variant="bordered" size="sm" />
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col justify-end gap-2">
+            <Chart
+              categories={dates.map((date) => chartLabel(date, range))}
+              series={series}
+              height={200}
+              ariaLabel={`Agent vitality over the last ${dayCount} days`}
+              hideLegend
+              primaryAxis={{ show: false, min: 0, max: 100, formatValue: (value) => value.toFixed(1) }}
+              tooltipTitle={(_, index) => formatDate(dates[index] ?? endDate)}
+            />
+            {versions.size > 1 || windows.size > 1 ? (
+              <Text.H7 color="foregroundMuted">
+                {versions.size > 1
+                  ? "This range crosses scoring versions, so the line is not a continuous measurement."
+                  : "This range includes scores calculated over different window lengths."}
+              </Text.H7>
+            ) : null}
+          </div>
+        </>
       ) : (
-        <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
-          <Text.H6B>No published scores in the last {dayCount} days</Text.H6B>
-          <Text.H6 color="foregroundMuted">
-            The graph fills in when all five dimensions can be measured on the same day.
-          </Text.H6>
-        </div>
+        <ScoreReadiness explanation={explanation} />
       )}
     </div>
   )

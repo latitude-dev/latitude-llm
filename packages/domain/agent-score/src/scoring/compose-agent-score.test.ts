@@ -73,6 +73,7 @@ const safety = (overrides: Partial<ProjectSafetyEstimate> = {}): ProjectSafetyEs
       incompatibleJudgmentVersion: 0,
     },
     rateLimitedHintedCount: 0,
+    rateLimitedHintedShare: 0,
     coverage: "measured" as const,
     ...overrides,
   }

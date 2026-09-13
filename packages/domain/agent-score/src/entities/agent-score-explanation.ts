@@ -3,6 +3,7 @@ import { scoreDimensionSchema } from "@domain/shared"
 import { z } from "zod"
 import { CAUSE_DESTINATIONS } from "../scoring/attribute-dimensions.ts"
 import type { AgentScoreResult } from "./agent-score.ts"
+import { agentScoreReadinessSchema } from "./agent-score-readiness.ts"
 import { COST_FAMILIES } from "./cost-evidence.ts"
 import { READER_LIMITATIONS } from "./session-assessment-input.ts"
 
@@ -27,6 +28,17 @@ const dimensionAttributionSchema = z.object({
   explainedDeficit: z.number(),
   method: z.enum(["exact", "sampled"]),
   approximationError: z.number().optional(),
+})
+
+const observedCauseSchema = z.object({
+  scoreDimension: scoreDimensionSchema,
+  causeId: z.string(),
+  label: z.string(),
+  measurement: z.enum(["measured", "associated", "notMeasured"]),
+  nativeEffect: z.object({ value: z.number(), unit: z.string() }),
+  observationCount: z.number(),
+  signalId: z.string().optional(),
+  destination: z.enum(CAUSE_DESTINATIONS).optional(),
 })
 
 const issueRowSchema = z.object({
@@ -110,7 +122,22 @@ export const agentScoreExplanationSchema = z.object({
   window: z.object({ stepDays: z.number(), from: z.string(), to: z.string() }),
   eligibleSessionCount: z.number(),
   readSessionCount: z.number(),
+  publication: z.object({
+    status: z.enum(["published", "withheld"]),
+    reason: z.enum(["sessionFloor", "unmeasuredDimensions"]).optional(),
+    sessionFloor: z.number(),
+    dimensions: z
+      .array(
+        z.object({
+          scoreDimension: scoreDimensionSchema,
+          coverage: z.enum(["measured", "unmeasured"]),
+          unmeasuredReason: z.string().optional(),
+        }),
+      )
+      .readonly(),
+  }),
   attribution: z.array(dimensionAttributionSchema).readonly(),
+  observedCauses: z.array(observedCauseSchema).readonly(),
   issues: windowIssuesSchema,
   coverage: z.object({
     cost: costWindowGateSchema,
@@ -122,6 +149,7 @@ export const agentScoreExplanationSchema = z.object({
     unmeasuredSignalEffects: z.number(),
     artifactVersions: z.object({ cost: z.string(), costCatalog: z.string(), latency: z.string() }),
   }),
+  readiness: agentScoreReadinessSchema,
   /** Native amounts the page shows beside the scores, labelled as context rather than scored. */
   native: z.object({
     observedCriticalPathNs: z.number(),
@@ -133,7 +161,7 @@ export type AgentScoreExplanation = z.infer<typeof agentScoreExplanationSchema>
 
 /** Turns a completed window computation into the shape the page and the cache both use. */
 export const toAgentScoreExplanation = (result: AgentScoreResult): AgentScoreExplanation | null => {
-  if (!result.window || !result.coverage || !result.native) return null
+  if (!result.coverage || !result.native || !result.readiness) return null
 
   return {
     organizationId: result.organizationId,
@@ -147,7 +175,18 @@ export const toAgentScoreExplanation = (result: AgentScoreResult): AgentScoreExp
     },
     eligibleSessionCount: result.window.eligibleSessionCount,
     readSessionCount: result.coverage.readSessionCount,
+    publication: {
+      status: result.status,
+      ...(result.withheldReason ? { reason: result.withheldReason } : {}),
+      sessionFloor: result.sessionFloor,
+      dimensions: result.dimensions.map((dimension) => ({
+        scoreDimension: dimension.scoreDimension,
+        coverage: dimension.coverage,
+        ...(dimension.unmeasuredReason ? { unmeasuredReason: dimension.unmeasuredReason } : {}),
+      })),
+    },
     attribution: result.attribution ?? [],
+    observedCauses: result.observedCauses ?? [],
     issues: result.issues ?? { outcome: [], safety: { confirmedHarm: [], exposure: [] } },
     coverage: {
       cost: result.coverage.cost,
@@ -159,6 +198,7 @@ export const toAgentScoreExplanation = (result: AgentScoreResult): AgentScoreExp
       unmeasuredSignalEffects: result.coverage.unmeasuredSignalEffects,
       artifactVersions: result.coverage.artifactVersions,
     },
+    readiness: result.readiness,
     native: {
       observedCriticalPathNs: result.native.speed.observedNs,
       avoidableCriticalPathNs: result.native.speed.avoidableNs,
