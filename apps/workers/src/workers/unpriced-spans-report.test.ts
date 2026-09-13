@@ -76,6 +76,41 @@ describe("reportUnpricedSpans", () => {
     expect(lines).toHaveLength(0)
   })
 
+  // Datadog ingests a span's recorded "exception" event as a second, attribute-less Error Tracking
+  // occurrence alongside the one derived from the span's own error.* attributes, silently doubling
+  // this issue's reported volume. The reporting span must carry error info only via attributes.
+  it("reports the error via span attributes only, never span.recordException", async () => {
+    const setAttributes = vi.fn()
+    const setStatus = vi.fn()
+    const end = vi.fn()
+    const recordException = vi.fn()
+    const startSpan = vi.fn().mockReturnValue({ setAttributes, setStatus, end, recordException })
+
+    vi.resetModules()
+    vi.doMock("@repo/observability", async () => {
+      const actual = await vi.importActual<typeof import("@repo/observability")>("@repo/observability")
+      return { ...actual, trace: { ...actual.trace, getTracer: () => ({ startSpan }) } }
+    })
+
+    const isolated = await import("./unpriced-spans-report.ts")
+    isolated.resetUnpricedSpanReportThrottle()
+    Effect.runSync(isolated.reportUnpricedSpans([group()], organizationId))
+
+    vi.doUnmock("@repo/observability")
+    vi.resetModules()
+
+    expect(recordException).not.toHaveBeenCalled()
+    expect(setAttributes).toHaveBeenCalledWith(
+      expect.objectContaining({
+        "gen_ai.provider.name": "@some-vendor/unmapped-sdk",
+        "gen_ai.request.model": "mystery-model",
+        "error.type": "UnpricedSpanError",
+        "error.message": "Ingested token usage that no pricing matched; cost recorded as 0",
+      }),
+    )
+    expect(end).toHaveBeenCalledOnce()
+  })
+
   // Overflow used to clear the whole map, which re-opened every pair still inside its window.
   it("keeps throttling a pair when a flood of new pairs overflows the tracked set", () => {
     Effect.runSync(reportUnpricedSpans([group({ model: "evicted-first" })], organizationId))

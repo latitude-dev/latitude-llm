@@ -33,7 +33,7 @@ const toError = (value: unknown): Error => {
  * rewrites its Nitro/Vinxi server bundle frames from `.mjs` to `.js` to match
  * the upload-time aliases created during the build.
  */
-const normalizeStack = (stack: string): string =>
+export const normalizeStack = (stack: string): string =>
   stack.replaceAll("file://", "").replaceAll(/(\/app\/apps\/web\/\.output\/server\/[^\s):]+)\.mjs(?=[:)])/g, "$1.js")
 
 export function recordSpanExceptionForDatadog(span: Span, error: unknown): Error {
