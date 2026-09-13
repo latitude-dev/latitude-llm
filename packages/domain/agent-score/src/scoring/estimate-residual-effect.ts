@@ -50,6 +50,8 @@ export type ResidualEffect =
       readonly effect: number
       readonly rawEffect: number
       readonly exposedSessions: number
+      /** Selection-corrected number of exposed sessions represented by the observed sample. */
+      readonly exposedWeight: number
       readonly unexposedSessions: number
       readonly usedStrata: number
       readonly droppedStrata: number
@@ -164,6 +166,7 @@ export const estimateResidualEffect = ({
     effect: Math.max(0, rawEffect) * shrinkage,
     rawEffect,
     exposedSessions: exposed.length,
+    exposedWeight: exposed.reduce((total, session) => total + weightOf(session, groupId), 0),
     unexposedSessions: unexposed.length,
     usedStrata: usable.reduce((total, fold) => total + fold.used.length, 0),
     droppedStrata,

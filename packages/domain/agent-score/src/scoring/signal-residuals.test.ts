@@ -141,6 +141,7 @@ describe("estimateResidualEffect", () => {
     if (result.measured) {
       expect(result.rawEffect).toBeCloseTo(0.4, 6)
       expect(result.effect).toBeCloseTo(0.4 * (20 / 40), 6)
+      expect(result.exposedWeight).toBe(20)
       expect(result.effect).toBeLessThan(result.rawEffect)
     }
   })
@@ -182,6 +183,7 @@ describe("estimateResidualEffect", () => {
     const result = estimateResidualEffect({ sessions, groupId: "group-a" })
 
     expect(result.measured && result.rawEffect).toBeCloseTo(1, 6)
+    expect(result.measured && result.exposedWeight).toBe(100)
   })
 
   it("does not apply one group's sampling probability to another group", () => {
@@ -384,7 +386,23 @@ describe("estimateSpeedSignalResiduals", () => {
     })
     const { residuals } = estimateSpeedSignalResiduals({ sessions, groups: [group] })
 
-    expect(residuals[0]?.avoidableNs).toBeCloseTo(800_000_000 * (20 / 40), 3)
+    expect(residuals[0]?.avoidableNs).toBeCloseTo(800_000_000 * (20 / 40) * 20, 3)
+  })
+
+  it("scales the per-session effect to the selection-corrected exposed population", () => {
+    const sessions = cohort({
+      exposedCount: 20,
+      cleanCount: 20,
+      exposedOutcome: 900_000_000,
+      cleanOutcome: 100_000_000,
+    }).map((entry) =>
+      entry.exposedGroupIds.includes("group-a")
+        ? { ...entry, inclusionProbabilityByGroupId: new Map([["group-a", 0.25]]) }
+        : entry,
+    )
+    const { residuals } = estimateSpeedSignalResiduals({ sessions, groups: [group] })
+
+    expect(residuals[0]?.avoidableNs).toBeCloseTo(800_000_000 * (20 / 40) * 80, 3)
   })
 
   it("reports a gap when the comparison fails", () => {

@@ -148,7 +148,10 @@ export const attributeCostWindow = ({
       family,
       fold.contributions.reduce(
         (total, contribution) =>
-          total + (contribution.families.find((entry) => entry.family === family)?.eligibleUnits ?? 0),
+          total +
+          (contribution.costUsableForDenominator
+            ? (contribution.families.find((entry) => entry.family === family)?.eligibleUnits ?? 0)
+            : 0),
         0,
       ),
     ]),
@@ -209,6 +212,9 @@ export const attributeSpeedWindow = ({
   readonly seed?: number
 }): DimensionAttribution => {
   const causeIds = [...fold.speedCauseNs.keys()]
+  const observedSessionCount = fold.contributions.filter(
+    (contribution) => contribution.speed.usableForDenominator,
+  ).length
   const scoreWith = (active: ReadonlySet<string>): number => {
     if (observedNs <= 0) return 100
     const avoidable = [...active].reduce((total, causeId) => total + (fold.speedCauseNs.get(causeId) ?? 0), 0)
@@ -230,7 +236,7 @@ export const attributeSpeedWindow = ({
         label: causeId,
         evidence: "measured",
         nativeEffect: { value: fold.speedCauseNs.get(causeId) ?? 0, unit: "nanoseconds" },
-        observationCount: fold.foldedSessionCount,
+        observationCount: observedSessionCount,
         ...(destination ? { destination } : {}),
       }
     },

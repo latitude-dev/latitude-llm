@@ -155,7 +155,8 @@ export const estimateSpeedSignalResiduals = ({
       for (const signalId of group.signalIds) gaps.push({ signalId, groupId: group.groupId, support })
       continue
     }
-    for (const [signalId, avoidableNs] of splitAcrossMembers({ group, effect: support.effect })) {
+    const windowAvoidableNs = support.effect * support.exposedWeight
+    for (const [signalId, avoidableNs] of splitAcrossMembers({ group, effect: windowAvoidableNs })) {
       residuals.push({ signalId, groupId: group.groupId, avoidableNs, support })
     }
   }

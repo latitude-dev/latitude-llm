@@ -22,7 +22,7 @@ const makeGeneration = (traceId: string): SessionGenerationFact =>
   ({
     traceId: TraceId(traceId),
     spanId: SpanId("generation"),
-    parentSpanId: "",
+    parentSpanId: "root",
     operation: "chat",
     provider: "openai",
     model: "gpt-4o",
@@ -55,6 +55,15 @@ const makeGeneration = (traceId: string): SessionGenerationFact =>
     modelContextState: "known",
     modelContextLimitTokens: 128_000,
   }) as unknown as SessionGenerationFact
+
+const makeRoot = (traceId: string): SessionGenerationFact => ({
+  ...makeGeneration(traceId),
+  spanId: SpanId("root"),
+  parentSpanId: "",
+  operation: "invoke_agent",
+  provider: "",
+  model: "",
+})
 
 const makeSession = (sessionId: string, traceId: string): SessionDetail =>
   ({
@@ -223,7 +232,7 @@ describe("readSessionAssessmentBatch", () => {
             sessions.map((session) => ({
               session,
               spans: [],
-              generations: [makeGeneration("trace-1")],
+              generations: [makeRoot("trace-1"), makeGeneration("trace-1")],
               toolCalls: [],
               memoryEvents: [],
               moments: { moments: [], labels: [] },
@@ -265,7 +274,10 @@ describe("readSessionAssessmentBatch", () => {
             .map((session) => ({
               session,
               spans: [],
-              generations: [makeGeneration(session.traceIds[0] ?? "trace-1")],
+              generations: [
+                makeRoot(session.traceIds[0] ?? "trace-1"),
+                makeGeneration(session.traceIds[0] ?? "trace-1"),
+              ],
               toolCalls: [],
               memoryEvents: [],
               moments: { moments: [], labels: [] },

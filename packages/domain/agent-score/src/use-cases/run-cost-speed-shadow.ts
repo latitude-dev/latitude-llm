@@ -163,11 +163,13 @@ const decilesOf = (values: readonly number[]): number[] => {
  */
 const familyDistributionsOf = (contributions: readonly SessionWindowContribution[]): ShadowFamilyDistribution[] =>
   COST_FAMILIES.map((family) => {
-    const shares = contributions.flatMap((contribution) =>
-      contribution.families.flatMap((entry) =>
-        entry.family === family && entry.eligibleUnits > 0 ? [entry.penalizedUnits / entry.eligibleUnits] : [],
-      ),
-    )
+    const shares = contributions
+      .filter((contribution) => contribution.costUsableForDenominator)
+      .flatMap((contribution) =>
+        contribution.families.flatMap((entry) =>
+          entry.family === family && entry.eligibleUnits > 0 ? [entry.penalizedUnits / entry.eligibleUnits] : [],
+        ),
+      )
     return { family, sessionCount: shares.length, deciles: decilesOf(shares) }
   })
 

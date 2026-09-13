@@ -130,10 +130,10 @@ export interface NormalizedSessionCostEvidence {
   /**
    * The workload this session is comparable with, for the matched signal estimator.
    *
-   * Built from provider, model, prompt size and streaming mode because those are what make two
-   * sessions cost and take a similar amount without any signal being involved. Comparison only ever
-   * happens inside one key, so an agent whose signal-bearing sessions are also its biggest sessions
-   * cannot have that difference read as the signal's effect.
+   * Built from provider, model, input and output size, toolset, call scale and streaming mode because
+   * those are what make two sessions cost and take a similar amount without any signal being
+   * involved. Comparison only ever happens inside one key, so an agent whose signal-bearing sessions
+   * are also its biggest sessions cannot have that difference read as the signal's effect.
    */
   readonly workloadStratum: string
   readonly denominators: CostFamilyDenominators

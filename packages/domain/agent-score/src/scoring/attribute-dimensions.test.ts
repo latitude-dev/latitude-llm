@@ -12,6 +12,7 @@ const contribution = (
   families: readonly { family: CostFamily; eligibleUnits: number }[],
 ): SessionWindowContribution => ({
   sessionId: "session",
+  costUsableForDenominator: true,
   families: families.map((entry) => ({ ...entry, penalizedUnits: 0 })),
   speed: { observedNs: 0, avoidableNs: 0, usableForDenominator: true },
 })

@@ -80,6 +80,7 @@ const contribution = (
   speed: { readonly observedNs: number; readonly avoidableNs: number; readonly usableForDenominator?: boolean },
 ): SessionWindowContribution => ({
   sessionId,
+  costUsableForDenominator: true,
   families: COST_FAMILIES.map((family) =>
     family === "spend" ? { family, ...spend } : { family, eligibleUnits: 0, penalizedUnits: 0 },
   ),

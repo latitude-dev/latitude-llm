@@ -232,7 +232,7 @@ describe("buildWindowSignalEffects", () => {
   it("estimates Speed in nanoseconds and shares no cap with Cost", () => {
     const result = build(evidenceFor({ exposed: 30, clean: 30, exposedShare: 0.5, cleanShare: 0.5 }))
 
-    expect(result.avoidableNs).toBeGreaterThan(0)
+    expect(result.avoidableNs).toBeCloseTo(5_400_000, 6)
     expect(result.avoidableNs).toBeGreaterThan(LAUNCH_COST_SCORING_ARTIFACT.residualSignalCap)
   })
 

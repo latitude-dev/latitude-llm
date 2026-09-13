@@ -98,6 +98,26 @@ const readWith = (
   })
 
 const read = (generations: readonly SessionGenerationFact[]) => readWith(generations, artifact)
+const readOnPath = (
+  generations: readonly SessionGenerationFact[],
+  latencyArtifact: LatencyReferenceArtifact | undefined,
+) =>
+  readWith(
+    [
+      generation({
+        spanId: SpanId("root"),
+        parentSpanId: "",
+        operation: "invoke_agent",
+        provider: "",
+        model: "",
+        startTime: at(0),
+        endTime: at(2_000),
+        durationNs: 2_000_000_000,
+      }),
+      ...generations,
+    ],
+    latencyArtifact,
+  )
 
 describe("readSessionCostEvidence", () => {
   it("turns TTFT and throughput excess into modeled avoidable critical-path time", () => {
@@ -148,6 +168,63 @@ describe("readSessionCostEvidence", () => {
       totalCount: 1,
     })
   })
+
+  it("separates workloads by output size", () => {
+    const shortOutput = read([generation()]).workloadStratum
+    const longOutput = read([generation({ tokens: { ...generation().tokens, tokensOutput: 5_000 } })]).workloadStratum
+
+    expect(shortOutput).not.toBe(longOutput)
+  })
+
+  it("separates workloads by the tools offered to the model", () => {
+    const withTools = readSessionCostEvidence({
+      generations: [
+        generation({
+          capturedBytes: { inputMessages: 0, outputMessages: 0, toolDefinitions: 1 },
+          content: {
+            inputMessages: [],
+            outputMessages: [],
+            toolDefinitions: [{ name: "search", description: "", parameters: {} }],
+          },
+          toolDefinitionContentState: "captured",
+        }),
+      ],
+      toolCalls: [],
+      memoryEvents: [],
+      countTokens: () => 0,
+      completed: true,
+      recoveredIncidents: [],
+      recoveredStructuralDefects: [],
+      toolDefinitions: [
+        {
+          name: "search",
+          estimatedSerializedTokens: 20,
+          requestCount: 1,
+          calledAtLeastOnce: false,
+          observationPeriodComplete: false,
+        },
+      ],
+      unmatchedToolCallNames: [],
+      cacheEvidence: null,
+      latencyArtifact: artifact,
+    }).workloadStratum
+
+    expect(withTools).not.toBe(read([generation()]).workloadStratum)
+  })
+
+  it("separates unknown tool metadata from an observed empty toolset", () => {
+    const unknownTools = read([generation()]).workloadStratum
+    const noTools = read([
+      generation({
+        capturedBytes: { inputMessages: 1, outputMessages: 0, toolDefinitions: 0 },
+        content: { inputMessages: [], outputMessages: [], toolDefinitions: [] },
+        inputContentState: "captured",
+      }),
+    ]).workloadStratum
+
+    expect(unknownTools).toContain("|unknown-tools|")
+    expect(noTools).toContain("|no-tools|")
+  })
 })
 
 describe("latency reader coverage", () => {
@@ -155,7 +232,7 @@ describe("latency reader coverage", () => {
     evidence.readers.find((fact) => fact.readerId === readerId)
 
   it("reports a readable cohort when the frozen reference answers", () => {
-    const evidence = read([generation()])
+    const evidence = readOnPath([generation()], artifact)
 
     expect(reader(evidence, "spans.ttft")).toMatchObject({ applicable: true, readableCount: 1, totalCount: 1 })
     expect(reader(evidence, "spans.throughput")).toMatchObject({ applicable: true, readableCount: 1, totalCount: 1 })
@@ -163,7 +240,7 @@ describe("latency reader coverage", () => {
   })
 
   it("reports an unbuilt reference as unmeasured rather than contributing nothing silently", () => {
-    const evidence = readWith([generation()], undefined)
+    const evidence = readOnPath([generation()], undefined)
 
     expect(reader(evidence, "spans.ttft")).toMatchObject({
       applicable: true,
@@ -180,7 +257,7 @@ describe("latency reader coverage", () => {
   })
 
   it("reports a cohort the reference does not cover as unreadable", () => {
-    const evidence = read([generation({ provider: "anthropic", model: "claude-sonnet-5" })])
+    const evidence = readOnPath([generation({ provider: "anthropic", model: "claude-sonnet-5" })], artifact)
 
     expect(reader(evidence, "spans.ttft")).toMatchObject({
       readableCount: 0,
@@ -188,8 +265,34 @@ describe("latency reader coverage", () => {
     })
   })
 
+  it("ignores reference gaps for generations that hold no critical-path time", () => {
+    const root = generation({
+      spanId: SpanId("root"),
+      parentSpanId: "",
+      operation: "invoke_agent",
+      provider: "",
+      model: "",
+      startTime: at(0),
+      endTime: at(2_000),
+      durationNs: 2_000_000_000,
+    })
+    const background = generation({
+      spanId: SpanId("background"),
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      startTime: at(200),
+      endTime: at(400),
+      durationNs: 200_000_000,
+    })
+
+    const evidence = read([root, generation(), background])
+
+    expect(reader(evidence, "spans.ttft")).toMatchObject({ readableCount: 1, totalCount: 1 })
+    expect(reader(evidence, "spans.throughput")).toMatchObject({ readableCount: 1, totalCount: 1 })
+  })
+
   it("leaves a non-streaming call out of the time-to-first-token denominator entirely", () => {
-    const evidence = read([generation({ isStreaming: false, timeToFirstTokenNs: 0 })])
+    const evidence = readOnPath([generation({ isStreaming: false, timeToFirstTokenNs: 0 })], artifact)
 
     expect(reader(evidence, "spans.ttft")).toMatchObject({ applicable: false, totalCount: 0 })
     expect(reader(evidence, "spans.throughput")).toMatchObject({ applicable: true, totalCount: 1 })

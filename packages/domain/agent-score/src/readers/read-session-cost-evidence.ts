@@ -7,6 +7,7 @@ import {
   isLlmCompletionOperation,
   latencyInputBucket,
   latencyInputTokens,
+  latencyOutputBucket,
   latencyOutputTokens,
   marginalCriticalPathNs,
   modelRegistryPricing,
@@ -132,26 +133,37 @@ const usageOperations: ReadonlySet<string> = new Set(USAGE_OPERATIONS)
  * A session with no readable generation gets an explicit unknown key rather than an empty one, so it
  * only ever matches other unknowns.
  */
-const workloadStratumOf = (generations: readonly SessionGenerationFact[]): string => {
+const workloadStratumOf = (
+  generations: readonly SessionGenerationFact[],
+  toolDefinitions: readonly ToolDefinitionSurface[],
+): string => {
   const completions = generations.filter((generation) => isLlmCompletionOperation(generation.operation))
   if (completions.length === 0) return "unknown"
 
   const byCalls = new Map<string, number>()
   let inputTokens = 0
+  let outputTokens = 0
   let streaming = 0
   for (const generation of completions) {
     const pair = `${generation.provider}/${generation.model}`
     byCalls.set(pair, (byCalls.get(pair) ?? 0) + 1)
     inputTokens += latencyInputTokens(generation.tokens)
+    outputTokens += latencyOutputTokens(generation.tokens)
     if (generation.isStreaming) streaming += 1
   }
   const dominant = [...byCalls.entries()].sort(
     (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
   )[0]
-  const bucket = latencyInputBucket(Math.round(inputTokens / completions.length))
+  const inputBucket = latencyInputBucket(Math.round(inputTokens / completions.length))
+  const outputBucket = latencyOutputBucket(Math.round(outputTokens / completions.length))
+  const toolset = completions.some((generation) => generation.content === null)
+    ? "unknown-tools"
+    : toolDefinitions.length === 0
+      ? "no-tools"
+      : [...new Set(toolDefinitions.map((definition) => definition.name))].sort().join(",")
   const mode = streaming * 2 >= completions.length ? "streaming" : "buffered"
   const scale = completions.length <= 2 ? "short" : completions.length <= 10 ? "medium" : "long"
-  return `${dominant?.[0] ?? "unknown"}|${bucket}|${mode}|${scale}`
+  return `${dominant?.[0] ?? "unknown"}|${inputBucket}|${outputBucket}|${toolset}|${mode}|${scale}`
 }
 
 /**
@@ -173,14 +185,34 @@ interface LatencyEvidence {
   readonly throughput: LatencyReaderCoverage
 }
 
+const latencyApplicableCompletions = ({
+  generations,
+  criticalPath,
+}: {
+  readonly generations: readonly SessionGenerationFact[]
+  readonly criticalPath: SessionCriticalPath
+}): readonly SessionGenerationFact[] => {
+  if (criticalPath.completeness !== "complete") return []
+  const pathsByTrace = new Map(
+    criticalPath.traces.filter((path) => path.completeness === "complete").map((path) => [path.traceId, path]),
+  )
+  return generations.filter((generation) => {
+    if (!isLlmCompletionOperation(generation.operation)) return false
+    const path = pathsByTrace.get(generation.traceId)
+    return path !== undefined && marginalCriticalPathNs({ path, spanId: generation.spanId }) > 0
+  })
+}
+
 const readLatencyEvidence = ({
   generations,
+  criticalPath,
   artifact,
 }: {
   readonly generations: readonly SessionGenerationFact[]
+  readonly criticalPath: SessionCriticalPath
   readonly artifact: LatencyReferenceArtifact | undefined
 }): LatencyEvidence => {
-  const completions = generations.filter((generation) => isLlmCompletionOperation(generation.operation))
+  const completions = latencyApplicableCompletions({ generations, criticalPath })
   if (!artifact) {
     // Every streaming completion could have been compared and none was, which is unmeasured Speed
     // evidence rather than clean Speed evidence.
@@ -417,7 +449,11 @@ export const readSessionCostEvidence = (input: SessionCostEvidenceInput): Sessio
     readRecoveredIncidentRate({ completed: input.completed, recovered: input.recoveredIncidents }),
   ]
 
-  const latency = readLatencyEvidence({ generations: input.generations, artifact: input.latencyArtifact })
+  const latency = readLatencyEvidence({
+    generations: input.generations,
+    criticalPath,
+    artifact: input.latencyArtifact,
+  })
   const speed = composeSpeedCounterfactual({
     criticalPath,
     claims: [...recoverySpeedClaims({ incidents: input.recoveredIncidents, criticalPath }), ...latency.claims],
@@ -429,7 +465,7 @@ export const readSessionCostEvidence = (input: SessionCostEvidenceInput): Sessio
 
   return {
     readings,
-    workloadStratum: workloadStratumOf(input.generations),
+    workloadStratum: workloadStratumOf(input.generations, input.toolDefinitions),
     denominators: {
       spend: spendCoverage.pricedMicrocents,
       context: ledger.readableInputTokens,

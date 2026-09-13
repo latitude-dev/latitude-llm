@@ -10,23 +10,39 @@ import type { ProjectReliabilityEstimate } from "./estimate-reliability.ts"
 import type { ProjectSafetyEstimate } from "./estimate-safety.ts"
 import type { CostWindowGate, SpeedWindowGate } from "./window-gates.ts"
 
-const outcome = (overrides: Partial<ProjectOutcomeEstimate> = {}): ProjectOutcomeEstimate => ({
-  outcome: 80,
-  interval: { lower: 75, upper: 85 },
-  intervalMethod: "exactBinomial",
-  eligibleSessionCount: 1_000,
-  examinedSessionCount: 200,
-  deterministicSessionCount: 0,
-  sampledSessionCount: 200,
-  sampledFailureCount: 40,
-  sampledWeight: 2_000,
-  censusWeight: 0,
-  excluded: { incompatibleJudgmentVersion: 0, unknownInclusionProbability: 0, deterministicEndpoint: 0 },
-  coverage: "measured",
-  judgedSessions: [],
-  deterministicFailureSessionIds: [],
-  ...overrides,
-})
+const outcome = (overrides: Partial<ProjectOutcomeEstimate> = {}): ProjectOutcomeEstimate => {
+  const estimate = {
+    outcome: 80,
+    interval: { lower: 75, upper: 85 },
+    intervalMethod: "exactBinomial" as const,
+    eligibleSessionCount: 1_000,
+    examinedSessionCount: 200,
+    deterministicSessionCount: 0,
+    sampledSessionCount: 200,
+    sampledFailureCount: 40,
+    sampledWeight: 2_000,
+    censusWeight: 0,
+    excluded: { incompatibleJudgmentVersion: 0, unknownInclusionProbability: 0, deterministicEndpoint: 0 },
+    coverage: "measured" as const,
+    ...overrides,
+  }
+  const inclusionProbability =
+    estimate.sampledWeight > 0 ? Math.min(1, estimate.sampledSessionCount / estimate.sampledWeight) : 1
+  return {
+    ...estimate,
+    judgedSessions:
+      overrides.judgedSessions ??
+      Array.from({ length: estimate.sampledSessionCount }, (_, index) => ({
+        sessionId: `outcome-${index}`,
+        succeeded: index >= estimate.sampledFailureCount,
+        inclusionProbability,
+        judgmentVersion: "test",
+      })),
+    deterministicFailureSessionIds:
+      overrides.deterministicFailureSessionIds ??
+      Array.from({ length: estimate.deterministicSessionCount }, (_, index) => `deterministic-${index}`),
+  }
+}
 
 const reliability = (overrides: Partial<ProjectReliabilityEstimate> = {}): ProjectReliabilityEstimate => ({
   reliability: 36,
@@ -41,25 +57,36 @@ const reliability = (overrides: Partial<ProjectReliabilityEstimate> = {}): Proje
   ...overrides,
 })
 
-const safety = (overrides: Partial<ProjectSafetyEstimate> = {}): ProjectSafetyEstimate => ({
-  safety: 90,
-  harmRate: 0.001,
-  interval: { lower: 56, upper: 99 },
-  intervalMethod: "exactBinomial",
-  eligibleSessionCount: 1_000,
-  examinedSessionCount: 1_000,
-  harmedSessionCount: 1,
-  excluded: {
-    incompleteSuite: 0,
-    suiteNotApplicable: 0,
-    unknownInclusionProbability: 0,
-    incompatibleJudgmentVersion: 0,
-  },
-  rateLimitedHintedCount: 0,
-  coverage: "measured",
-  examinedSessions: [],
-  ...overrides,
-})
+const safety = (overrides: Partial<ProjectSafetyEstimate> = {}): ProjectSafetyEstimate => {
+  const estimate = {
+    safety: 90,
+    harmRate: 0.001,
+    interval: { lower: 56, upper: 99 },
+    intervalMethod: "exactBinomial" as const,
+    eligibleSessionCount: 1_000,
+    examinedSessionCount: 1_000,
+    harmedSessionCount: 1,
+    excluded: {
+      incompleteSuite: 0,
+      suiteNotApplicable: 0,
+      unknownInclusionProbability: 0,
+      incompatibleJudgmentVersion: 0,
+    },
+    rateLimitedHintedCount: 0,
+    coverage: "measured" as const,
+    ...overrides,
+  }
+  return {
+    ...estimate,
+    examinedSessions:
+      overrides.examinedSessions ??
+      Array.from({ length: estimate.examinedSessionCount }, (_, index) => ({
+        sessionId: `safety-${index}`,
+        harmed: index < estimate.harmedSessionCount,
+        examinationProbability: 1,
+      })),
+  }
+}
 
 const costGate = (overrides: Partial<CostWindowGate> = {}): CostWindowGate => ({
   coverage: "measured",
@@ -81,6 +108,7 @@ const speedGate = (overrides: Partial<SpeedWindowGate> = {}): SpeedWindowGate =>
 const contributions = (count: number): SessionWindowContribution[] =>
   Array.from({ length: count }, (_, index) => ({
     sessionId: `session-${index}`,
+    costUsableForDenominator: true,
     families: [{ family: "tools" as const, eligibleUnits: 10, penalizedUnits: index % 5 === 0 ? 4 : 1 }],
     speed: { observedNs: 1_000_000, avoidableNs: index % 4 === 0 ? 300_000 : 50_000, usableForDenominator: true },
   }))
@@ -209,6 +237,67 @@ describe("the composite interval", () => {
   it("reproduces itself from the same seed and inputs", () => {
     expect(compose().composite?.interval).toEqual(compose().composite?.interval)
   })
+
+  it("preserves Outcome sampling strata in composite replicates", () => {
+    const judgedSessions = Array.from({ length: 100 }, (_, index) => ({
+      sessionId: `weighted-outcome-${index}`,
+      succeeded: index >= 20,
+      inclusionProbability: index < 20 ? 0.01 : 1,
+      judgmentVersion: "test",
+    }))
+    const outcomeOnly: AgentScoreArtifact = {
+      ...LAUNCH_AGENT_SCORE_ARTIFACT,
+      compositeWeights: { outcome: 1, reliability: 0, cost: 0, speed: 0, safety: 0 },
+    }
+    const weighted = compose({
+      artifact: outcomeOnly,
+      outcome: outcome({
+        outcome: (100 * 80) / 2_080,
+        sampledSessionCount: 100,
+        sampledFailureCount: 20,
+        sampledWeight: 2_080,
+        judgedSessions,
+      }),
+    })
+    const uniform = compose({
+      artifact: outcomeOnly,
+      outcome: outcome({
+        outcome: 80,
+        sampledSessionCount: 100,
+        sampledFailureCount: 20,
+        sampledWeight: 100,
+        judgedSessions: judgedSessions.map((session) => ({ ...session, inclusionProbability: 1 })),
+      }),
+    })
+
+    expect(weighted.composite?.interval.upper).toBeLessThan(uniform.composite?.interval.lower as number)
+  })
+
+  it("preserves Safety sampling strata in composite replicates", () => {
+    const examinedSessions = Array.from({ length: 100 }, (_, index) => ({
+      sessionId: `weighted-safety-${index}`,
+      harmed: index < 20,
+      examinationProbability: index < 20 ? 0.01 : 1,
+    }))
+    const safetyOnly: AgentScoreArtifact = {
+      ...LAUNCH_AGENT_SCORE_ARTIFACT,
+      compositeWeights: { outcome: 0, reliability: 0, cost: 0, speed: 0, safety: 1 },
+    }
+    const weighted = compose({
+      artifact: safetyOnly,
+      safety: safety({ examinedSessionCount: 100, harmedSessionCount: 20, examinedSessions }),
+    })
+    const uniform = compose({
+      artifact: safetyOnly,
+      safety: safety({
+        examinedSessionCount: 100,
+        harmedSessionCount: 20,
+        examinedSessions: examinedSessions.map((session) => ({ ...session, examinationProbability: 1 })),
+      }),
+    })
+
+    expect(weighted.composite?.interval.upper).toBeLessThan(uniform.composite?.interval.lower as number)
+  })
 })
 
 describe("the published dimensions", () => {
@@ -250,6 +339,8 @@ describe("the composite policy cap", () => {
     expect(result.composite?.score).toBe(50)
     expect(result.composite?.policyCap).toMatchObject({ applied: true, cap: 50 })
     expect(result.composite?.policyCap?.removedPoints).toBeCloseTo(uncapped - 50, 9)
+    expect(result.composite?.interval.upper).toBeLessThanOrEqual(50)
+    expect(result.composite?.interval.lower).toBeLessThanOrEqual(result.composite?.score as number)
   })
 
   it("leaves a clean window alone even when the cap is enabled", () => {
