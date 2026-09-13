@@ -304,4 +304,108 @@ describe("SessionAssessmentBulkTelemetrySourceLive", () => {
 
     expect(result[0]?.screeningDecisions).toEqual([currentDecision])
   })
+
+  it("bounds bulk trace/session reads a grace period before the window's start when `from` is given", async () => {
+    const from = new Date("2026-01-01T00:00:00.000Z")
+    const expectedStartTimeFrom = new Date("2025-12-01T00:00:00.000Z")
+    const seen: { startTimeFrom: Date | undefined }[] = []
+    const dependencies = Layer.mergeAll(
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      Layer.succeed(
+        SessionRepository,
+        createFakeSessionRepository({
+          listDetailsBySessionIds: (input) => {
+            seen.push({ startTimeFrom: input.startTimeFrom })
+            return Effect.succeed([session])
+          },
+        }).repository,
+      ),
+      Layer.succeed(
+        SpanRepository,
+        createFakeSpanRepository({
+          listByTraceIds: (input) => {
+            seen.push({ startTimeFrom: input.startTimeFrom })
+            return Effect.succeed([])
+          },
+          listGenerationFactsByTraceIds: (input) => {
+            seen.push({ startTimeFrom: input.startTimeFrom })
+            return Effect.succeed([])
+          },
+          listToolCallFactsByTraceIds: (input) => {
+            seen.push({ startTimeFrom: input.startTimeFrom })
+            return Effect.succeed([])
+          },
+        }).repository,
+      ),
+      Layer.succeed(
+        SessionAnalysisRepository,
+        createFakeSessionAnalysisRepository([], { listLatestBySessions: () => Effect.succeed([]) }).repository,
+      ),
+      Layer.succeed(SessionSemanticMomentRepository, createFakeSessionSemanticMomentRepository().repository),
+      Layer.succeed(SessionMomentLabelRepository, createFakeSessionMomentLabelRepository().repository),
+      Layer.succeed(
+        FlaggerScreeningDecisionRepository,
+        createFakeFlaggerScreeningDecisionRepository([], { listLatestBySessions: () => Effect.succeed([]) }).repository,
+      ),
+      Layer.succeed(MemoryRepository, createFakeMemoryRepository().repository),
+    )
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const source = yield* SessionAssessmentBulkTelemetrySource
+        return yield* source.read({ organizationId, projectId, sessionIds: [sessionId], from, cutoff })
+      }).pipe(Effect.provide(SessionAssessmentBulkTelemetrySourceLive.pipe(Layer.provideMerge(dependencies)))),
+    )
+
+    expect(seen).toEqual([
+      { startTimeFrom: expectedStartTimeFrom },
+      { startTimeFrom: expectedStartTimeFrom },
+      { startTimeFrom: expectedStartTimeFrom },
+      { startTimeFrom: expectedStartTimeFrom },
+    ])
+  })
+
+  it("leaves the bulk trace/session reads unbounded below when `from` is omitted", async () => {
+    const seen: { startTimeFrom: Date | undefined }[] = []
+    const dependencies = Layer.mergeAll(
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      Layer.succeed(
+        SessionRepository,
+        createFakeSessionRepository({
+          listDetailsBySessionIds: (input) => {
+            seen.push({ startTimeFrom: input.startTimeFrom })
+            return Effect.succeed([session])
+          },
+        }).repository,
+      ),
+      Layer.succeed(
+        SpanRepository,
+        createFakeSpanRepository({
+          listByTraceIds: () => Effect.succeed([]),
+          listGenerationFactsByTraceIds: () => Effect.succeed([]),
+          listToolCallFactsByTraceIds: () => Effect.succeed([]),
+        }).repository,
+      ),
+      Layer.succeed(
+        SessionAnalysisRepository,
+        createFakeSessionAnalysisRepository([], { listLatestBySessions: () => Effect.succeed([]) }).repository,
+      ),
+      Layer.succeed(SessionSemanticMomentRepository, createFakeSessionSemanticMomentRepository().repository),
+      Layer.succeed(SessionMomentLabelRepository, createFakeSessionMomentLabelRepository().repository),
+      Layer.succeed(
+        FlaggerScreeningDecisionRepository,
+        createFakeFlaggerScreeningDecisionRepository([], { listLatestBySessions: () => Effect.succeed([]) }).repository,
+      ),
+      Layer.succeed(MemoryRepository, createFakeMemoryRepository().repository),
+    )
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const source = yield* SessionAssessmentBulkTelemetrySource
+        return yield* source.read({ organizationId, projectId, sessionIds: [sessionId], cutoff })
+      }).pipe(Effect.provide(SessionAssessmentBulkTelemetrySourceLive.pipe(Layer.provideMerge(dependencies)))),
+    )
+
+    expect(seen).toEqual([{ startTimeFrom: undefined }])
+  })
 })

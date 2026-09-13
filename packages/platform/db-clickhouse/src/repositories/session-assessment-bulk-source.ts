@@ -14,6 +14,20 @@ import { MemoryRepository } from "@domain/memories"
 import { TraceId } from "@domain/shared"
 import { SessionRepository, SpanRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
+import { SWEEP_PARTITION_GRACE_DAYS } from "./eligible-sessions.ts"
+
+/**
+ * How far before the assessment window's start the bulk trace/session reads reach back.
+ *
+ * `spans` is partitioned by month on `start_time` and does not carry `session_id`/`trace_id` in its
+ * sort key, so an unbounded-below `start_time` filter forces a full-history scan of the project
+ * instead of pruning to the window — exactly the failure mode `SWEEP_PARTITION_GRACE_DAYS` already
+ * guards against for the sweep's own `sessions` read. A session in the window can still have started
+ * before it, so the bound sits the same grace period earlier rather than at the window's own start.
+ */
+const readGraceMs = SWEEP_PARTITION_GRACE_DAYS * 24 * 60 * 60 * 1000
+
+const startTimeFromOf = (from: Date): Date => new Date(from.getTime() - readGraceMs)
 
 const groupByKey = <Value>(
   items: readonly Value[],
@@ -48,10 +62,12 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
     return {
       read: (input) =>
         Effect.gen(function* () {
+          const startTimeFromBound = input.from ? { startTimeFrom: startTimeFromOf(input.from) } : {}
           const sessions = yield* sessionRepository.listDetailsBySessionIds({
             organizationId: input.organizationId,
             projectId: input.projectId,
             sessionIds: input.sessionIds,
+            ...startTimeFromBound,
             cutoff: input.cutoff,
           })
           const traceIds = [...new Set(sessions.flatMap((session) => session.traceIds.map(TraceId)))]
@@ -61,7 +77,7 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
             ),
           )
           const scope = { organizationId: input.organizationId, projectId: input.projectId }
-          const traceScope = { ...scope, traceIds, startTimeTo: input.cutoff }
+          const traceScope = { ...scope, traceIds, ...startTimeFromBound, startTimeTo: input.cutoff }
           const sessionScope = { ...scope, sessionIds: input.sessionIds, indexedAtTo: input.cutoff }
 
           const [spans, generations, toolCalls, memoryEvents, analyses, moments, labels, screeningDecisions] =

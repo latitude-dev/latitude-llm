@@ -96,6 +96,7 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly sessionIds: readonly SessionId[]
+  readonly from: Date
   readonly cutoff: Date
   readonly latencyArtifact: LatencyReferenceArtifact
   readonly costArtifact: CostScoringArtifact
@@ -115,6 +116,7 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
       organizationId: input.organizationId,
       projectId: input.projectId,
       sessionIds,
+      from: input.from,
       cutoff: input.cutoff,
       latencyArtifact: input.latencyArtifact,
     })
@@ -195,6 +197,7 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     organizationId: input.organizationId,
     projectId: input.projectId,
     sessionIds,
+    from,
     cutoff: input.to,
     latencyArtifact: input.latencyArtifact,
     costArtifact: input.costArtifact,

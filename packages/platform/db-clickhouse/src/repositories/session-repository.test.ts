@@ -195,6 +195,39 @@ describe("SessionRepository", () => {
     })
   })
 
+  it("excludes spans that started before startTimeFrom", async () => {
+    const sessionId = SessionId("bounded-from-session")
+    const oldTraceId = "1".repeat(32)
+    const recentTraceId = "2".repeat(32)
+    await insertSpans([
+      makeSpanRow({
+        traceId: oldTraceId,
+        spanId: "1".repeat(16),
+        sessionId,
+        startTime: new Date("2025-01-01T00:00:00.000Z"),
+      }),
+      makeSpanRow({
+        traceId: recentTraceId,
+        spanId: "2".repeat(16),
+        sessionId,
+        startTime: new Date("2026-01-01T00:00:00.000Z"),
+      }),
+    ])
+
+    const snapshot = await runCh(
+      repo.listDetailsBySessionIds({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionIds: [sessionId],
+        startTimeFrom: new Date("2026-01-01T00:00:00.000Z"),
+        cutoff: new Date("2026-06-01T00:00:00.000Z"),
+      }),
+    )
+
+    expect(snapshot).toHaveLength(1)
+    expect(snapshot[0]).toMatchObject({ sessionId, traceCount: 1, traceIds: [recentTraceId] })
+  })
+
   describe("orphan-trace-as-session", () => {
     it("synthesizes a 1-trace session for spans without gen_ai.conversation.id", async () => {
       const traceId = "a".repeat(32)

@@ -36,6 +36,12 @@ export interface SessionAssessmentBulkScope {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly sessionIds: readonly SessionId[]
+  /**
+   * Start of the scoring window these sessions were selected from, for bounding bulk trace reads.
+   * Omitted callers (a single-session lookup, say) keep the prior unbounded-below read — the volume
+   * that makes an unbounded scan expensive only exists for a window's worth of sessions.
+   */
+  readonly from?: Date
   readonly cutoff: Date
 }
 
