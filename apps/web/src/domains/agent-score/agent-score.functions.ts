@@ -47,6 +47,7 @@ const toRecord = (snapshot: AgentScoreSnapshot): AgentScoreRecord => ({
 })
 
 const projectInput = z.object({ projectId: z.string() })
+const AGENT_SCORE_REFRESH_THROTTLE_MS = 5 * 60_000
 
 export const getProjectAgentScore = createServerFn({ method: "GET" })
   .inputValidator(projectInput)
@@ -116,14 +117,24 @@ export const refreshProjectAgentScore = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<{ enqueued: true }> => {
     const orgId = await resolveOrgScope(context)
     const publisher = await getQueuePublisher()
+    const projectId = ProjectId(data.projectId)
+    const date = new Date().toISOString().slice(0, 10)
     await Effect.runPromise(
       publisher
-        .publish("agent-score", "snapshotProject", {
-          organizationId: orgId,
-          projectId: ProjectId(data.projectId),
-          date: new Date().toISOString().slice(0, 10),
-          force: true,
-        })
+        .publish(
+          "agent-score",
+          "snapshotProject",
+          {
+            organizationId: orgId,
+            projectId,
+            date,
+            force: true,
+          },
+          {
+            dedupeKey: `org:${orgId}:agent-score:refresh:${projectId}:${date}`,
+            leadingThrottleMs: AGENT_SCORE_REFRESH_THROTTLE_MS,
+          },
+        )
         .pipe(withTracing),
     )
     return { enqueued: true }
