@@ -923,6 +923,40 @@ describe("SpanRepository", () => {
       })
     })
 
+    it("keeps colliding span ids from different traces while deduping each trace", async () => {
+      const traceA = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+      const traceB = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+      const sharedSpanId = "abababababababab"
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: sharedSpanId,
+            name: "trace-a-older",
+            ingested_at: "2026-01-01 00:10:00.000",
+          }),
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: sharedSpanId,
+            name: "trace-a-newer",
+            ingested_at: "2026-01-01 00:20:00.000",
+          }),
+          makeSpanRow({
+            trace_id: traceB,
+            span_id: sharedSpanId,
+            name: "trace-b",
+            ingested_at: "2026-01-01 00:15:00.000",
+          }),
+        ]),
+      )
+
+      const window = await listWindow(startCursor, 10)
+
+      expect(window.spans.map((span) => span.name)).toEqual(["trace-b", "trace-a-newer"])
+      expect(window.spans.map((span) => span.traceId)).toEqual([traceB, traceA])
+    })
+
     it("pages multiple spans by latest ingested_at, surfacing a re-ingested span at its newest version", async () => {
       // Exercises late materialization end-to-end: the lean keyset picks the page's span_ids
       // (deduped to newest ingested_at, ordered, limited), then the detail re-dedups them.
@@ -1080,6 +1114,32 @@ describe("SpanRepository", () => {
       )
 
       expect(floor).toBeNull()
+    })
+
+    it("counts colliding span ids separately when finding the recent-limit floor", async () => {
+      const traceA = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+      const traceB = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+      const traceC = TraceId("cccccccccccccccccccccccccccccccc")
+      const sharedSpanId = "abababababababab"
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ trace_id: traceA, span_id: sharedSpanId, ingested_at: "2026-01-01 00:10:00.000" }),
+          makeSpanRow({ trace_id: traceB, span_id: sharedSpanId, ingested_at: "2026-01-01 00:20:00.000" }),
+          makeSpanRow({ trace_id: traceC, span_id: "cdcdcdcdcdcdcdcd", ingested_at: "2026-01-01 00:30:00.000" }),
+        ]),
+      )
+
+      const floor = await runCh(
+        repo.findIngestedAtFloorForRecentLimit({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          windowEnd: WINDOW_END,
+          limit: 2,
+        }),
+      )
+
+      expect(floor).toEqual(new Date("2026-01-01T00:10:00.000Z"))
     })
   })
 
@@ -1669,6 +1729,42 @@ describe("SpanRepository", () => {
       )
 
       expect(spans.map((span) => span.name)).toEqual(["span-4", "span-3"])
+    })
+
+    it("keeps colliding span ids from different traces in the recent sample", async () => {
+      const traceA = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+      const traceB = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+      const sharedSpanId = "abababababababab"
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: sharedSpanId,
+            name: "trace-a-older",
+            ingested_at: "2026-01-01 00:10:00.000",
+          }),
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: sharedSpanId,
+            name: "trace-a-newer",
+            ingested_at: "2026-01-01 00:30:00.000",
+          }),
+          makeSpanRow({
+            trace_id: traceB,
+            span_id: sharedSpanId,
+            name: "trace-b",
+            ingested_at: "2026-01-01 00:20:00.000",
+          }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listRecentDetailsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, limit: 2 }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["trace-a-newer", "trace-b"])
+      expect(spans.map((span) => span.traceId)).toEqual([traceA, traceB])
     })
   })
 
