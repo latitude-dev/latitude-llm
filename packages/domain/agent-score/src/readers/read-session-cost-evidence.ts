@@ -185,14 +185,34 @@ interface LatencyEvidence {
   readonly throughput: LatencyReaderCoverage
 }
 
+const latencyApplicableCompletions = ({
+  generations,
+  criticalPath,
+}: {
+  readonly generations: readonly SessionGenerationFact[]
+  readonly criticalPath: SessionCriticalPath
+}): readonly SessionGenerationFact[] => {
+  if (criticalPath.completeness !== "complete") return []
+  const pathsByTrace = new Map(
+    criticalPath.traces.filter((path) => path.completeness === "complete").map((path) => [path.traceId, path]),
+  )
+  return generations.filter((generation) => {
+    if (!isLlmCompletionOperation(generation.operation)) return false
+    const path = pathsByTrace.get(generation.traceId)
+    return path !== undefined && marginalCriticalPathNs({ path, spanId: generation.spanId }) > 0
+  })
+}
+
 const readLatencyEvidence = ({
   generations,
+  criticalPath,
   artifact,
 }: {
   readonly generations: readonly SessionGenerationFact[]
+  readonly criticalPath: SessionCriticalPath
   readonly artifact: LatencyReferenceArtifact | undefined
 }): LatencyEvidence => {
-  const completions = generations.filter((generation) => isLlmCompletionOperation(generation.operation))
+  const completions = latencyApplicableCompletions({ generations, criticalPath })
   if (!artifact) {
     // Every streaming completion could have been compared and none was, which is unmeasured Speed
     // evidence rather than clean Speed evidence.
@@ -429,7 +449,11 @@ export const readSessionCostEvidence = (input: SessionCostEvidenceInput): Sessio
     readRecoveredIncidentRate({ completed: input.completed, recovered: input.recoveredIncidents }),
   ]
 
-  const latency = readLatencyEvidence({ generations: input.generations, artifact: input.latencyArtifact })
+  const latency = readLatencyEvidence({
+    generations: input.generations,
+    criticalPath,
+    artifact: input.latencyArtifact,
+  })
   const speed = composeSpeedCounterfactual({
     criticalPath,
     claims: [...recoverySpeedClaims({ incidents: input.recoveredIncidents, criticalPath }), ...latency.claims],
