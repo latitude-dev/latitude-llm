@@ -1,5 +1,5 @@
 import type { DomainEvent, EventsPublisher } from "@domain/events"
-import { QueuePublishError } from "@domain/queue"
+import { NonRetryableTaskError, QueuePublishError } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { generateId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
@@ -9,7 +9,7 @@ import { organizations } from "@platform/db-postgres/schema/better-auth"
 import { billingUsageEvents, billingUsagePeriods } from "@platform/db-postgres/schema/billing"
 import { FakeStorageDisk } from "@platform/storage-object/testing"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createBillingWorker } from "./billing.ts"
@@ -853,5 +853,43 @@ describe("createSpanIngestionWorker", () => {
     expect(Number(rows[0]?.count)).toBe(0)
     expect(pub.published).toHaveLength(0)
     expect(disk.files.has(fileKey)).toBe(true)
+  })
+
+  it("fails fast with a NonRetryableTaskError when the buffered payload's object never exists", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
+    const organizationId = generateId()
+    const projectId = generateId()
+    // Deliberately never written to `disk` — simulates the observed production failure
+    // where the very first read of a freshly-published fileKey already comes back missing.
+    const fileKey = `span-ingestion/${organizationId}-never-written.json`
+
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
+
+    const exit = await Effect.runPromiseExit(
+      consumer.dispatchTaskEffect("span-ingestion", "ingest", {
+        fileKey,
+        inlinePayload: null,
+        contentType: "application/json",
+        organizationId,
+        apiKeyId: `api-key-${organizationId}`,
+        ingestedAt: "2026-03-18T10:00:00.000Z",
+        defaultProjectId: projectId,
+        projectIdBySlug: {},
+      }),
+    )
+
+    expect(exit._tag).toBe("Failure")
+    const error = exit._tag === "Failure" ? Cause.squash(exit.cause) : null
+    expect(error).toBeInstanceOf(NonRetryableTaskError)
+    expect(pub.published).toHaveLength(0)
   })
 })

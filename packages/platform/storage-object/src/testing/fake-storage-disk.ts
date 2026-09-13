@@ -62,7 +62,10 @@ export class FakeStorageDisk implements StorageDiskPort {
 
   async getBytes(key: string): Promise<Uint8Array> {
     const value = this.files.get(key)
-    if (!value) throw new Error(`Missing file for key ${key}`)
+    // Shaped like the real S3 driver's NoSuchKey (name) so callers that classify a
+    // missing object as non-retryable (see causesIndicateMissingStorageObject) can be
+    // exercised against this fake instead of only against a live S3 bucket.
+    if (!value) throw Object.assign(new Error("The specified key does not exist."), { name: "NoSuchKey" })
     return value
   }
 

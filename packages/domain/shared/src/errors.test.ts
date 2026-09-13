@@ -4,9 +4,11 @@ import {
   BadRequestError,
   ConflictError,
   causesIncludeConnectionReset,
+  causesIndicateMissingStorageObject,
   NotFoundError,
   PermissionError,
   RepositoryError,
+  StorageError,
   UnauthorizedError,
   ValidationError,
 } from "./errors.ts"
@@ -129,6 +131,45 @@ describe("causesIncludeConnectionReset", () => {
     const b: { message: string; cause?: unknown } = { message: "b", cause: a }
     a.cause = b
     expect(causesIncludeConnectionReset(a)).toBe(false)
+  })
+})
+
+describe("causesIndicateMissingStorageObject", () => {
+  it("detects S3's NoSuchKey by error name", () => {
+    expect(causesIndicateMissingStorageObject(Object.assign(new Error("boom"), { name: "NoSuchKey" }))).toBe(true)
+  })
+
+  it("detects the fs driver's ENOENT by code", () => {
+    expect(causesIndicateMissingStorageObject(Object.assign(new Error("boom"), { code: "ENOENT" }))).toBe(true)
+  })
+
+  it("detects S3's message even when flydrive wraps it without preserving the name", () => {
+    const s3Error = new Error("The specified key does not exist.")
+    const flydriveError = new Error('Cannot read file from location "tmp-ingest/org/proj/file.json"', {
+      cause: s3Error,
+    })
+    expect(causesIndicateMissingStorageObject(flydriveError)).toBe(true)
+  })
+
+  it("walks the StorageError cause chain from getFromDisk", () => {
+    const s3Error = Object.assign(new Error("The specified key does not exist."), { name: "NoSuchKey" })
+    const storageError = new StorageError({ cause: s3Error, operation: "getFromDisk" })
+    expect(causesIndicateMissingStorageObject(storageError.cause)).toBe(true)
+  })
+
+  it("returns false for a transient storage failure (should still retry)", () => {
+    expect(causesIndicateMissingStorageObject(new Error("connect ETIMEDOUT"))).toBe(false)
+    expect(
+      causesIndicateMissingStorageObject(Object.assign(new Error("read ECONNRESET"), { code: "ECONNRESET" })),
+    ).toBe(false)
+    expect(causesIndicateMissingStorageObject(null)).toBe(false)
+  })
+
+  it("terminates on circular cause chains", () => {
+    const a: { message: string; cause?: unknown } = { message: "a" }
+    const b: { message: string; cause?: unknown } = { message: "b", cause: a }
+    a.cause = b
+    expect(causesIndicateMissingStorageObject(a)).toBe(false)
   })
 })
 

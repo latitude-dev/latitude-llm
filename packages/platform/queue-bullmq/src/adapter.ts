@@ -9,11 +9,18 @@ import type {
   TaskName,
   TaskPayload,
 } from "@domain/queue"
-import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError, TOPIC_NAMES } from "@domain/queue"
+import {
+  NonRetryableTaskError,
+  QueueClientError,
+  QueuePublishError,
+  QueuePublisher,
+  QueueSubscribeError,
+  TOPIC_NAMES,
+} from "@domain/queue"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { recordSpanExceptionForDatadog, serializeError } from "@repo/observability"
 import { base64urlEncode } from "@repo/utils"
-import { type Job, Queue, Worker } from "bullmq"
+import { type Job, Queue, UnrecoverableError, Worker } from "bullmq"
 import { Cause, Effect, Layer } from "effect"
 import { createBullMqRedisConnection } from "./connection.ts"
 import { BULLMQ_PREFIX } from "./constants.ts"
@@ -154,6 +161,16 @@ interface FinalFailureInvocation {
 }
 
 /**
+ * Translates a queue-agnostic task failure into what the BullMQ processor must
+ * throw. A `NonRetryableTaskError` becomes an `UnrecoverableError` so BullMQ
+ * moves the job straight to failed instead of burning the rest of its
+ * configured attempts on a failure proven not to succeed on retry. Pure +
+ * exported so the mapping is unit-testable without a real OTel span.
+ */
+export const toWorkerThrowable = (error: unknown, recordedError: Error): Error =>
+  error instanceof NonRetryableTaskError ? new UnrecoverableError(recordedError.message) : recordedError
+
+/**
  * Decide whether a failed job should fire its terminal-failure hook, and with
  * what arguments. Pure + exported so the gating (only on the terminal attempt,
  * only when a hook is registered for the task) can be unit-tested without Redis.
@@ -165,10 +182,11 @@ interface FinalFailureInvocation {
 export const resolveFinalFailureHook = (
   job: Job | undefined,
   handlers: AnyFinalFailureHandlers | undefined,
+  error?: unknown,
 ): FinalFailureInvocation | null => {
   if (!job || !handlers) return null
 
-  const context = failedJobContextFromJob(job)
+  const context = failedJobContextFromJob(job, error)
   if (!context || context.willRetry) return null
 
   const hook = handlers[job.name]
@@ -365,7 +383,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                         code: SpanStatusCode.ERROR,
                         message: err.message,
                       })
-                      throw err
+                      throw toWorkerThrowable(error, err)
                     } finally {
                       span.end()
                     }
@@ -394,11 +412,11 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
               logIncident({
                 kind: "job_failed",
                 queue,
-                job: failedJobContextFromJob(job),
+                job: failedJobContextFromJob(job, error),
                 error: toError(error),
               })
 
-              const invocation = resolveFinalFailureHook(job, finalFailureHandlers.get(queue))
+              const invocation = resolveFinalFailureHook(job, finalFailureHandlers.get(queue), error)
               if (!invocation) return
               void Effect.runPromiseExitWith(services)(
                 invocation.hook(invocation.payload, toError(error), invocation.context),

@@ -1,5 +1,5 @@
 import type { QueueName } from "@domain/queue"
-import type { Job } from "bullmq"
+import { type Job, UnrecoverableError } from "bullmq"
 
 /** Context for a BullMQ job failure after handler or worker processing (observable / alerting). */
 export type BullMqFailedJobContext = {
@@ -24,13 +24,20 @@ export type BullMqWorkerIncident =
     }
   | { readonly kind: "job_stalled"; readonly queue: QueueName; readonly jobId: string }
 
-export const failedJobContextFromJob = (job: Job | undefined): BullMqFailedJobContext | undefined => {
+/**
+ * `error` is the value the processor threw for this failure, when available. An
+ * `UnrecoverableError` means BullMQ skipped the remaining attempts regardless of
+ * `attemptsMade` vs `attemptsConfigured`, so it forces `willRetry: false` — otherwise
+ * this failure would be misreported as retrying and would wrongly skip a registered
+ * terminal-failure hook.
+ */
+export const failedJobContextFromJob = (job: Job | undefined, error?: unknown): BullMqFailedJobContext | undefined => {
   if (!job) {
     return undefined
   }
   const attemptsConfigured = typeof job.opts.attempts === "number" ? job.opts.attempts : (job.opts.attempts ?? 1)
   const attemptsMade = job.attemptsMade
-  const willRetry = attemptsMade < attemptsConfigured
+  const willRetry = attemptsMade < attemptsConfigured && !(error instanceof UnrecoverableError)
   return {
     id: job.id,
     task: job.name,
