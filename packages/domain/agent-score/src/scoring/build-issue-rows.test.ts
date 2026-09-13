@@ -142,6 +142,18 @@ describe("buildIssueRows", () => {
     expect(rows).toHaveLength(5)
   })
 
+  it("returns every issue when no limit is requested", () => {
+    const rows = buildIssueRows({
+      sessions: Array.from({ length: 25 }, (_, index) =>
+        session(`session-${index}`, true, [
+          { issueKey: `issue-${index}`, label: `Issue ${index}`, observationProbability: 1 },
+        ]),
+      ),
+    })
+
+    expect(rows).toHaveLength(25)
+  })
+
   it("returns nothing when no session carried an issue", () => {
     expect(buildIssueRows({ sessions: [session("a", true, [])] })).toEqual([])
   })

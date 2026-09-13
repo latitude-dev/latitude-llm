@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
-import type { AgentScoreRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
+import type {
+  AgentScoreExplanationRecord,
+  AgentScoreRecord,
+} from "../../../../../../domains/agent-score/agent-score.functions.ts"
 import { AgentVitality } from "./agent-vitality.tsx"
 
 afterEach(cleanup)
@@ -26,10 +29,16 @@ const snapshot: AgentScoreRecord = {
 
 const dimensionWeights = { outcome: 0.35, reliability: 0.25, cost: 0.15, speed: 0.15, safety: 0.1 }
 
+const belowFloorExplanation = {
+  eligibleSessionCount: 86,
+  window: { stepDays: 28 },
+  publication: { status: "withheld", reason: "sessionFloor", sessionFloor: 200, dimensions: [] },
+} as unknown as NonNullable<AgentScoreExplanationRecord["explanation"]>
+
 describe("AgentVitality", () => {
   it("renders a score-shaped placeholder while loading", () => {
     render(
-      <AgentVitality date={snapshot.date} snapshot={null} history={undefined} dimensionWeights={undefined} isLoading />,
+      <AgentVitality snapshot={null} history={undefined} dimensionWeights={undefined} isLoading explanation={null} />,
     )
 
     expect(screen.getByLabelText("Loading Agent Score").getAttribute("aria-busy")).toBe("true")
@@ -43,25 +52,40 @@ describe("AgentVitality", () => {
 
     render(
       <AgentVitality
-        date={snapshot.date}
         snapshot={snapshot}
         history={[olderSnapshot, previousSnapshot]}
         dimensionWeights={dimensionWeights}
         isLoading={false}
+        explanation={null}
       />,
     )
 
     expect(screen.queryByText(/up|down/)).toBeNull()
   })
 
+  it("explains how an unavailable score becomes available", () => {
+    render(
+      <AgentVitality
+        snapshot={null}
+        history={[]}
+        dimensionWeights={dimensionWeights}
+        isLoading={false}
+        explanation={belowFloorExplanation}
+      />,
+    )
+
+    expect(screen.getByText("86 of 200 sessions")).toBeDefined()
+    expect(screen.getByText(/score will be calculated after the minimum is reached/i)).toBeDefined()
+  })
+
   it("emphasizes a hovered dimension and restores the composite over the center", () => {
     const { container } = render(
       <AgentVitality
-        date={snapshot.date}
         snapshot={snapshot}
         history={[]}
         dimensionWeights={dimensionWeights}
         isLoading={false}
+        explanation={null}
       />,
     )
     const outcomeHitArea = container.querySelector('[data-ring-hit-area="outcome"]')

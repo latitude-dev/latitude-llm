@@ -15,7 +15,13 @@ const EXPLANATION = {
   window: { stepDays: 28, from: "2026-08-15T04:00:00.000Z", to: "2026-09-12T04:00:00.000Z" },
   eligibleSessionCount: 5037,
   readSessionCount: 5037,
+  publication: {
+    status: "published",
+    sessionFloor: 200,
+    dimensions: [],
+  },
   attribution: [],
+  observedCauses: [],
   issues: { outcome: [], safety: { confirmedHarm: [], exposure: [] } },
   coverage: {
     cost: {

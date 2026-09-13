@@ -7,7 +7,9 @@ type Snapshot = NonNullable<Parameters<typeof buildDimensionEvidence>[0]["snapsh
 const explanation = {
   window: { stepDays: 7, from: "2026-09-05T00:00:00.000Z", to: "2026-09-12T00:00:00.000Z" },
   eligibleSessionCount: 100,
+  publication: { status: "published", sessionFloor: 200, dimensions: [] },
   attribution: [],
+  observedCauses: [],
   issues: { outcome: [], safety: { confirmedHarm: [], exposure: [] } },
   native: {
     observedCriticalPathNs: 100,
@@ -63,6 +65,46 @@ describe("buildDimensionEvidence", () => {
       "Sessions with usable cost data",
       "Readable model input",
     ])
+  })
+
+  it("lists observed causes when score publication is withheld", () => {
+    const withheld = {
+      ...explanation,
+      publication: {
+        status: "withheld",
+        reason: "sessionFloor",
+        sessionFloor: 200,
+        dimensions: [],
+      },
+      observedCauses: [
+        {
+          scoreDimension: "cost",
+          causeId: "tools.repeated_call",
+          label: "tools.repeated_call",
+          measurement: "measured",
+          nativeEffect: { value: 0.4, unit: "tools" },
+          observationCount: 1,
+          destination: "tools",
+        },
+        {
+          scoreDimension: "cost",
+          causeId: "signal:signal-1",
+          label: "Repeated answers",
+          measurement: "notMeasured",
+          nativeEffect: { value: 1, unit: "sessions" },
+          observationCount: 1,
+          signalId: "signal-1",
+          destination: "signals",
+        },
+      ],
+    } as unknown as Explanation
+
+    const evidence = buildDimensionEvidence({ dimension: "cost", snapshot: null, explanation: withheld })
+
+    expect(evidence.affected).toEqual([
+      expect.objectContaining({ label: "Repeated tool calls", value: "0.4 call equivalents" }),
+    ])
+    expect(evidence.context).toEqual([expect.objectContaining({ label: "Repeated answers", value: "1 session" })])
   })
 
   it("does not describe safety exposure as confirmed harm", () => {
