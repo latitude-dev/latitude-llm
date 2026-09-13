@@ -7,5 +7,7 @@ let encoder: Tiktoken | null = null
 /** Approximate token count of a body using the o200k_base encoding ([D5]). */
 export const countTokens = (body: string): number => {
   if (encoder === null) encoder = getEncoding("o200k_base")
-  return encoder.encode(body).length
+  // `body` is arbitrary session content, not a prompt we control — a literal substring like
+  // "<|endoftext|>" must count as ordinary text, not throw as a disallowed special token.
+  return encoder.encode(body, [], []).length
 }
