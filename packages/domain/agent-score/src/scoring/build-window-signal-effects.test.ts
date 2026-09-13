@@ -92,6 +92,7 @@ describe("readSessionSignalEvidence", () => {
 
     expect(evidence.linkedSignalIds).toEqual(["signal-1"])
     expect(evidence.unlinkedSignalIds).toEqual([])
+    expect(evidence.signals).toEqual([{ signalId: "signal-1", label: "Signal", scoreDimensions: ["cost"] }])
   })
 
   it("leaves an occurrence unlinked when nothing already charges its evidence", () => {

@@ -38,7 +38,6 @@ export interface DimensionEvidence {
 }
 
 const clamp = (value: number): number => Math.max(0, Math.min(1, value))
-const MIN_VISIBLE_SCORE_IMPACT = 0.05
 
 const DIMENSION_LABELS: Readonly<Record<ScoreDimensionKey, string>> = {
   outcome: "Outcome",
@@ -91,7 +90,10 @@ const formatAttributedCount = (value: number): string =>
 
 const formatNative = (effect: { readonly value: number; readonly unit: string }): string => {
   if (effect.unit === "nanoseconds") return formatDuration(effect.value)
-  if (effect.unit === "sessions") return `${formatCount(Math.round(effect.value))} sessions`
+  if (effect.unit === "sessions") {
+    const sessions = Math.round(effect.value)
+    return `${formatCount(sessions)} ${sessions === 1 ? "session" : "sessions"}`
+  }
   if (effect.unit === "microcents" || effect.unit === "spend") return formatPrice(effect.value / 100_000_000)
   if (effect.unit === "context") return `${formatAttributedCount(effect.value)} tokens`
   if (effect.unit === "tools") return `${formatAttributedCount(effect.value)} call equivalents`
@@ -231,7 +233,7 @@ const createEvidence = (): MutableEvidence => ({ affected: [], coverageGaps: [],
 
 const addAttribution = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
   const attribution = explanation.attribution.find((entry) => entry.scoreDimension === dimension)
-  const affectedRows = (attribution?.rows ?? []).filter((row) => row.attributedDeficit > MIN_VISIBLE_SCORE_IMPACT)
+  const affectedRows = (attribution?.rows ?? []).filter((row) => row.attributedDeficit > 0)
   const maximumDeficit = Math.max(1, ...affectedRows.map((row) => row.attributedDeficit))
   for (const row of affectedRows) {
     const description = findingDescription(row.causeId)
@@ -261,6 +263,38 @@ const addAttribution = (evidence: MutableEvidence, dimension: ScoreDimensionKey,
       progress: clamp(attribution.residual / Math.max(1, attribution.totalDeficit)),
       tone: "negative",
     })
+  }
+}
+
+const addObservedCauses = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
+  const causes = explanation.observedCauses.filter((cause) => cause.scoreDimension === dimension)
+  const maximum = Math.max(1, ...causes.map((cause) => cause.observationCount))
+  for (const cause of causes) {
+    const description = findingDescription(cause.causeId) ?? findingDescription(cause.label)
+    const row: DimensionEvidenceRow = {
+      id: `${dimension}:observed:${cause.causeId}`,
+      label: cause.signalId ? cause.label : findingLabel(cause.label),
+      ...(description ? { description } : {}),
+      value: formatNative(cause.nativeEffect),
+      progress: clamp(cause.observationCount / maximum),
+      tone: cause.measurement === "notMeasured" ? "neutral" : "negative",
+      details: [
+        { label: "Scoring window", value: `Last ${formatCount(explanation.window.stepDays)} days` },
+        {
+          label: "Evidence",
+          value:
+            cause.measurement === "measured"
+              ? "Directly measured"
+              : cause.measurement === "associated"
+                ? "Observed association"
+                : "Effect not measured yet",
+        },
+      ],
+      ...(cause.signalId ? { signalId: cause.signalId } : {}),
+      ...(cause.destination ? { destination: cause.destination } : {}),
+    }
+    if (cause.measurement === "notMeasured") evidence.context.push(row)
+    else evidence.affected.push(row)
   }
 }
 
@@ -366,7 +400,8 @@ export function buildDimensionEvidence({
   readonly explanation: Explanation
 }): DimensionEvidence {
   const evidence = createEvidence()
-  addAttribution(evidence, dimension, explanation)
+  if (explanation.publication.status === "published") addAttribution(evidence, dimension, explanation)
+  else addObservedCauses(evidence, dimension, explanation)
   addIssues(evidence, dimension, explanation)
   addCostFamilies(evidence, dimension, explanation)
   addEndpointCoverage(evidence, dimension, snapshot, explanation)

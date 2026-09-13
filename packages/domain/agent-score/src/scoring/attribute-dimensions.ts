@@ -62,7 +62,9 @@ const DESTINATION_BY_CAUSE: Readonly<Record<string, CauseDestination>> = {
 const asCauseDestination = (destination: string): CauseDestination | undefined =>
   (CAUSE_DESTINATIONS as readonly string[]).includes(destination) ? (destination as CauseDestination) : undefined
 
-const destinationForMetric = ({
+export const destinationForCause = (causeId: string): CauseDestination | undefined => DESTINATION_BY_CAUSE[causeId]
+
+export const destinationForMetric = ({
   metricId,
   catalog,
 }: {

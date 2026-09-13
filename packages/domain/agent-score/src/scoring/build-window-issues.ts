@@ -1,7 +1,7 @@
 import type { NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
 import { resolveSessionAssessmentItems } from "../resolver/resolve-assessment-findings.ts"
 import type { IssueObservation } from "./build-issue-rows.ts"
-import { buildIssueRows, ISSUE_ROW_LIMIT, type IssueRow, type IssueSession } from "./build-issue-rows.ts"
+import { buildIssueRows, type IssueRow, type IssueSession } from "./build-issue-rows.ts"
 import { buildSafetyIssues, type SafetyIssues } from "./build-safety-issues.ts"
 import type { ProjectOutcomeEstimate } from "./estimate-outcome.ts"
 import type { ProjectSafetyEstimate } from "./estimate-safety.ts"
@@ -85,7 +85,7 @@ export const buildWindowIssues = ({
   evidence,
   outcome,
   safety,
-  rowLimit = ISSUE_ROW_LIMIT,
+  rowLimit,
 }: {
   readonly evidence: readonly SessionIssueEvidence[]
   readonly outcome: ProjectOutcomeEstimate
@@ -118,7 +118,13 @@ export const buildWindowIssues = ({
   }))
 
   return {
-    outcome: buildIssueRows({ sessions: outcomeSessions, rowLimit }),
-    safety: buildSafetyIssues({ sessions: safetySessions, rowLimit }),
+    outcome: buildIssueRows({
+      sessions: outcomeSessions,
+      ...(rowLimit !== undefined ? { rowLimit } : {}),
+    }),
+    safety: buildSafetyIssues({
+      sessions: safetySessions,
+      ...(rowLimit !== undefined ? { rowLimit } : {}),
+    }),
   }
 }

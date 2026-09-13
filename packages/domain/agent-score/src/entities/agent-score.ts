@@ -6,6 +6,7 @@ import type { AgentScoreComposite, DimensionResult } from "../scoring/compose-ag
 import type { ProjectOutcomeEstimate } from "../scoring/estimate-outcome.ts"
 import type { ProjectReliabilityEstimate } from "../scoring/estimate-reliability.ts"
 import type { ProjectSafetyEstimate } from "../scoring/estimate-safety.ts"
+import type { ObservedDimensionCause } from "../scoring/observe-dimension-causes.ts"
 import type { ScoreWindowReason } from "../scoring/select-score-window.ts"
 import type { WindowReaderCoverage } from "../scoring/tally-reader-coverage.ts"
 import type { CostWindowGate, SpeedWindowGate } from "../scoring/window-gates.ts"
@@ -14,7 +15,7 @@ export interface AgentScoreWindow {
   readonly stepDays: number
   readonly from: Date
   readonly to: Date
-  readonly reason: ScoreWindowReason
+  readonly reason: ScoreWindowReason | "belowSessionFloor"
   readonly eligibleSessionCount: number
 }
 
@@ -57,9 +58,9 @@ export interface AgentScoreResult {
   readonly projectId: ProjectId
   /** The version every formula, curve, prompt and frozen reference in this run came from. */
   readonly scoringVersion: string
+  readonly sessionFloor: number
   readonly status: AgentScoreStatus
-  /** Absent when the project did not reach the session floor under any step. */
-  readonly window?: AgentScoreWindow
+  readonly window: AgentScoreWindow
   readonly dimensions: readonly DimensionResult[]
   readonly composite?: AgentScoreComposite
   readonly coverage?: AgentScoreCoverage
@@ -72,6 +73,8 @@ export interface AgentScoreResult {
    * history of a number. Outcome and Safety are absent here and use the smaller issue contract.
    */
   readonly attribution?: readonly DimensionAttribution[]
+  /** Observed causes that remain safe to show when score publication is withheld. */
+  readonly observedCauses?: readonly ObservedDimensionCause[]
   /**
    * Where Outcome failures and Safety harm concentrate.
    *

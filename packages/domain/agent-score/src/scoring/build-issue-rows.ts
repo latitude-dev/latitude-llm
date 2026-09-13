@@ -1,6 +1,3 @@
-/** How many issue rows the page can absorb before the tail stops explaining anything. */
-export const ISSUE_ROW_LIMIT = 20
-
 export interface IssueObservation {
   /** Identity of the issue, already collapsed: a signal and the score it was discovered from share one. */
   readonly issueKey: string
@@ -149,13 +146,12 @@ export const buildIssueRows = (input: {
   // Ranked rows lead, ordered by corrected adverse reach. An unranked row still
   // appears, because the issue is real even when its share of the failures
   // cannot be estimated, but it cannot claim a position it did not earn.
-  return rows
-    .sort((left, right) => {
-      if (left.ranked !== right.ranked) return left.ranked ? -1 : 1
-      if (left.ranked) return (right.estimatedAdverseReach ?? 0) - (left.estimatedAdverseReach ?? 0)
-      // An unranked row may have no corrected reach either, so the raw count is
-      // the only figure both sides are guaranteed to have.
-      return right.examinedSessions - left.examinedSessions
-    })
-    .slice(0, input.rowLimit ?? ISSUE_ROW_LIMIT)
+  const sorted = rows.sort((left, right) => {
+    if (left.ranked !== right.ranked) return left.ranked ? -1 : 1
+    if (left.ranked) return (right.estimatedAdverseReach ?? 0) - (left.estimatedAdverseReach ?? 0)
+    // An unranked row may have no corrected reach either, so the raw count is
+    // the only figure both sides are guaranteed to have.
+    return right.examinedSessions - left.examinedSessions
+  })
+  return input.rowLimit === undefined ? sorted : sorted.slice(0, input.rowLimit)
 }

@@ -1,8 +1,12 @@
 import { Icon, Skeleton, Text } from "@repo/ui"
 import { ChartNoAxesCombinedIcon } from "lucide-react"
 import { useState } from "react"
-import type { AgentScoreRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
-import { formatCount, formatDate, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
+import type {
+  AgentScoreExplanationRecord,
+  AgentScoreRecord,
+} from "../../../../../../domains/agent-score/agent-score.functions.ts"
+import { formatCount, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
+import { agentScoreReadiness } from "./score-readiness.ts"
 import { type VitalityRingSection, VitalityScoreRing } from "./score-ring.tsx"
 
 const DIMENSION_LABELS: Readonly<Record<ScoreDimensionKey, string>> = {
@@ -40,16 +44,22 @@ function ScoreDelta({ value }: { readonly value: number | null }) {
 }
 
 function VitalityDetails({
-  date,
   snapshot,
   delta,
+  explanation,
 }: {
-  readonly date: string
   readonly snapshot: AgentScoreRecord | null
   readonly delta: number | null
+  readonly explanation: AgentScoreExplanationRecord["explanation"]
 }) {
   if (!snapshot) {
-    return <Text.H6 color="foregroundMuted">No score published for {formatDate(date)}</Text.H6>
+    const readiness = agentScoreReadiness(explanation)
+    return (
+      <div className="flex max-w-64 flex-col items-center gap-1">
+        <Text.H6B color="foregroundMuted">{readiness.title}</Text.H6B>
+        <Text.H7 color="foregroundMuted">{readiness.detail}</Text.H7>
+      </div>
+    )
   }
 
   return (
@@ -83,17 +93,17 @@ function AgentVitalitySkeleton() {
 }
 
 export function AgentVitality({
-  date,
   snapshot,
   history,
   dimensionWeights,
   isLoading,
+  explanation,
 }: {
-  readonly date: string
   readonly snapshot: AgentScoreRecord | null
   readonly history: readonly AgentScoreRecord[] | undefined
   readonly dimensionWeights: Readonly<Record<ScoreDimensionKey, number>> | undefined
   readonly isLoading: boolean
+  readonly explanation: AgentScoreExplanationRecord["explanation"]
 }) {
   const [activeSection, setActiveSection] = useState<VitalityRingSection | null>(null)
   if (isLoading) return <AgentVitalitySkeleton />
@@ -120,7 +130,7 @@ export function AgentVitality({
         <div className="flex flex-row items-center gap-1.5">
           <Text.H5M>{activeLabel}</Text.H5M>
         </div>
-        <VitalityDetails date={date} snapshot={snapshot} delta={delta} />
+        <VitalityDetails snapshot={snapshot} delta={delta} explanation={explanation} />
       </div>
     </div>
   )
