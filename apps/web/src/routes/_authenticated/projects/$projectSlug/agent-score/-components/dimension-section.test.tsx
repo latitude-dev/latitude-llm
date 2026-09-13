@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
-import { DimensionSection } from "./dimension-section.tsx"
+import { DimensionSection, DimensionSectionSkeleton } from "./dimension-section.tsx"
 
 afterEach(cleanup)
 
@@ -32,6 +32,12 @@ const summary = {
 }
 
 describe("DimensionSection", () => {
+  it("keeps the ring and text layout visible while loading", () => {
+    render(<DimensionSectionSkeleton />)
+
+    expect(screen.getByLabelText("Loading score dimension").getAttribute("aria-busy")).toBe("true")
+  })
+
   it("opens effects, keeps healthy evidence collapsed, and toggles both levels", () => {
     render(
       <DimensionSection

@@ -1,3 +1,4 @@
+import type { ScoreDimension } from "@domain/shared"
 import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostMetricReading } from "../entities/cost-metric-reading.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
@@ -24,6 +25,11 @@ export interface SessionSignalEvidence {
   readonly unlinkedSignalIds: readonly string[]
   readonly inclusionProbabilityBySignalId: ReadonlyMap<string, number>
   readonly linkedSignalIds: readonly string[]
+  readonly signals: readonly {
+    readonly signalId: string
+    readonly label: string
+    readonly scoreDimensions: readonly ScoreDimension[]
+  }[]
 }
 
 export interface WindowSignalEffects {
@@ -115,6 +121,27 @@ const inclusionProbabilitiesOf = (occurrences: readonly SignalOccurrence[]): Rea
   return probabilities
 }
 
+const observedSignalsOf = (session: NormalizedSessionAssessmentInput): SessionSignalEvidence["signals"] => {
+  const eligibleSignalIds = new Set(session.scoringEligibleSignalIds)
+  const signals = new Map<string, { readonly label: string; readonly scoreDimensions: Set<ScoreDimension> }>()
+
+  for (const finding of session.findings) {
+    if (finding.kind !== "classifiedJudgment" || !finding.negative) continue
+    for (const signalId of finding.signalIds) {
+      if (!eligibleSignalIds.has(signalId)) continue
+      const signal = signals.get(signalId) ?? { label: finding.label, scoreDimensions: new Set<ScoreDimension>() }
+      for (const role of finding.roles) signal.scoreDimensions.add(role.scoreDimension)
+      signals.set(signalId, signal)
+    }
+  }
+
+  return [...signals.entries()].map(([signalId, signal]) => ({
+    signalId,
+    label: signal.label,
+    scoreDimensions: [...signal.scoreDimensions],
+  }))
+}
+
 /**
  * Splits a session's signal occurrences into the ones a family already charges and the rest.
  *
@@ -145,6 +172,7 @@ export const readSessionSignalEvidence = (session: NormalizedSessionAssessmentIn
     unlinkedSignalIds: [...new Set(linkage.unlinked.map((occurrence) => occurrence.signalId))],
     inclusionProbabilityBySignalId: inclusionProbabilitiesOf(linkage.unlinked),
     linkedSignalIds: [...new Set(linkage.linked.map((entry) => entry.occurrence.signalId))],
+    signals: observedSignalsOf(session),
   }
 }
 

@@ -244,6 +244,7 @@ export function DimensionSection({
   id,
   title,
   description,
+  unavailableReason,
   score,
   projectId,
   projectSlug,
@@ -256,6 +257,7 @@ export function DimensionSection({
   readonly id: string
   readonly title: string
   readonly description: string
+  readonly unavailableReason?: string
   readonly score: number | null
   readonly projectId: string
   readonly projectSlug: string
@@ -281,6 +283,7 @@ export function DimensionSection({
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <Text.H5M>{title}</Text.H5M>
           <Text.H6 color="foregroundMuted">{description}</Text.H6>
+          {score === null && unavailableReason ? <Text.H7 color="foregroundMuted">{unavailableReason}</Text.H7> : null}
         </div>
         <Icon icon={open ? ChevronDownIcon : ChevronUpIcon} size="sm" color="foregroundMuted" />
       </button>
@@ -317,7 +320,7 @@ export function DimensionSection({
             rows={coverage}
             projectId={projectId}
             projectSlug={projectSlug}
-            initiallyOpen={false}
+            initiallyOpen={score === null}
           />
         </div>
       ) : null}
@@ -326,5 +329,17 @@ export function DimensionSection({
 }
 
 export function DimensionSectionSkeleton() {
-  return <Skeleton className="h-24 w-full rounded-xl" />
+  return (
+    <output
+      className="flex min-h-24 w-full flex-row items-center gap-4 rounded-xl bg-secondary px-6 py-4"
+      aria-label="Loading score dimension"
+      aria-busy="true"
+    >
+      <Skeleton className="h-14 w-14 shrink-0 rounded-full" />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-4 w-64 max-w-full" />
+      </div>
+    </output>
+  )
 }

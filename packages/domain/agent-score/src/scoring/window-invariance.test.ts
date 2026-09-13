@@ -81,6 +81,7 @@ const signalSession = ({
   unlinkedSignalIds: signals,
   inclusionProbabilityBySignalId: new Map(signals.map((signalId) => [signalId, 1])),
   linkedSignalIds: [],
+  signals: [],
 })
 
 /** Exposed sessions carry a small excess, so the residual cap never masks a doubling. */

@@ -1,8 +1,12 @@
-import { Icon, Text } from "@repo/ui"
+import { Icon, Skeleton, Text } from "@repo/ui"
 import { ChartNoAxesCombinedIcon } from "lucide-react"
 import { useState } from "react"
-import type { AgentScoreRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
-import { formatCount, formatDate, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
+import type {
+  AgentScoreExplanationRecord,
+  AgentScoreRecord,
+} from "../../../../../../domains/agent-score/agent-score.functions.ts"
+import { formatCount, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
+import { agentScoreReadiness } from "./score-readiness.ts"
 import { type VitalityRingSection, VitalityScoreRing } from "./score-ring.tsx"
 
 const DIMENSION_LABELS: Readonly<Record<ScoreDimensionKey, string>> = {
@@ -40,21 +44,21 @@ function ScoreDelta({ value }: { readonly value: number | null }) {
 }
 
 function VitalityDetails({
-  date,
   snapshot,
   delta,
-  isLoading,
+  explanation,
 }: {
-  readonly date: string
   readonly snapshot: AgentScoreRecord | null
   readonly delta: number | null
-  readonly isLoading: boolean
+  readonly explanation: AgentScoreExplanationRecord["explanation"]
 }) {
   if (!snapshot) {
+    const readiness = agentScoreReadiness(explanation)
     return (
-      <Text.H6 color="foregroundMuted">
-        {isLoading ? "Loading the latest score" : `No score published for ${formatDate(date)}`}
-      </Text.H6>
+      <div className="flex max-w-64 flex-col items-center gap-1">
+        <Text.H6B color="foregroundMuted">{readiness.title}</Text.H6B>
+        <Text.H7 color="foregroundMuted">{readiness.detail}</Text.H7>
+      </div>
     )
   }
 
@@ -68,26 +72,48 @@ function VitalityDetails({
   )
 }
 
+function AgentVitalitySkeleton() {
+  return (
+    <output
+      className="flex min-h-[296px] min-w-[280px] basis-[30%] flex-col items-center justify-center gap-4 rounded-xl bg-secondary px-6 py-6"
+      aria-label="Loading Agent Score"
+      aria-busy="true"
+    >
+      <div className="relative flex h-40 w-40 items-center justify-center">
+        <Skeleton className="absolute inset-1 rounded-full" />
+        <div className="absolute inset-4 rounded-full bg-secondary" />
+        <Skeleton className="relative h-7 w-16" />
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+    </output>
+  )
+}
+
 export function AgentVitality({
-  date,
   snapshot,
   history,
   dimensionWeights,
   isLoading,
+  explanation,
 }: {
-  readonly date: string
   readonly snapshot: AgentScoreRecord | null
   readonly history: readonly AgentScoreRecord[] | undefined
   readonly dimensionWeights: Readonly<Record<ScoreDimensionKey, number>> | undefined
   readonly isLoading: boolean
+  readonly explanation: AgentScoreExplanationRecord["explanation"]
 }) {
   const [activeSection, setActiveSection] = useState<VitalityRingSection | null>(null)
+  if (isLoading) return <AgentVitalitySkeleton />
+
   const previous = previousScore(snapshot, history)
   const delta = snapshot && previous && previous.score > 0 ? (snapshot.score - previous.score) / previous.score : null
   const dimensions = SCORE_DIMENSION_ORDER.map((dimension) => ({
     id: dimension,
     weight: dimensionWeights?.[dimension] ?? 1 / SCORE_DIMENSION_ORDER.length,
-    score: isLoading ? null : (snapshot?.dimensions[dimension]?.score ?? null),
+    score: snapshot?.dimensions[dimension]?.score ?? null,
   }))
   const activeDimension = activeSection && activeSection !== "vitality" ? activeSection : null
   const activeLabel = activeDimension ? DIMENSION_LABELS[activeDimension] : "Agent vitality"
@@ -95,7 +121,7 @@ export function AgentVitality({
   return (
     <div className="flex min-h-[296px] min-w-[280px] basis-[30%] flex-col items-center justify-center gap-4 rounded-xl bg-secondary px-6 py-6">
       <VitalityScoreRing
-        score={isLoading ? null : (snapshot?.score ?? null)}
+        score={snapshot?.score ?? null}
         dimensions={dimensions}
         activeSection={activeSection}
         onActiveSectionChange={setActiveSection}
@@ -104,7 +130,7 @@ export function AgentVitality({
         <div className="flex flex-row items-center gap-1.5">
           <Text.H5M>{activeLabel}</Text.H5M>
         </div>
-        <VitalityDetails date={date} snapshot={snapshot} delta={delta} isLoading={isLoading} />
+        <VitalityDetails snapshot={snapshot} delta={delta} explanation={explanation} />
       </div>
     </div>
   )

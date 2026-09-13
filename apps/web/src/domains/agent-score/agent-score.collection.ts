@@ -33,7 +33,7 @@ export function useProjectAgentScoreHistory(projectId: string) {
  * The cause rows, fetched separately from the score.
  *
  * Its own query so the page paints its numbers from the snapshot without waiting: the explanation
- * comes from a cache the daily job warms, and on a miss there is nothing to wait for anyway.
+ * comes from a cache the scoring worker warms, and on a miss there is nothing to wait for anyway.
  */
 export function useProjectAgentScoreExplanation(projectId: string) {
   const scope = useProjectScope()

@@ -1,17 +1,22 @@
-import { Button, Icon, Text } from "@repo/ui"
+import { Button, Icon, Text, useToast } from "@repo/ui"
 import { RotateCwIcon } from "lucide-react"
+import { useState } from "react"
 import {
   useProjectAgentScore,
   useProjectAgentScoreExplanation,
   useProjectAgentScoreHistory,
 } from "../../../../../../domains/agent-score/agent-score.collection.ts"
+import { refreshProjectAgentScore } from "../../../../../../domains/agent-score/agent-score.functions.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
+import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { SectionHeader } from "../../-components/section-header.tsx"
 import type { useRouteProject } from "../../-route-data.ts"
 import { formatCount, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
+import { agentScoreRefreshMarker, waitForAgentScoreRefresh } from "./agent-score-refresh.ts"
 import { AgentVitality } from "./agent-vitality.tsx"
 import { buildDimensionEvidence, type DimensionEvidence } from "./dimension-evidence.ts"
 import { DimensionSection, DimensionSectionSkeleton } from "./dimension-section.tsx"
+import { dimensionReadiness } from "./score-readiness.ts"
 import { ScoreTrend } from "./score-trend.tsx"
 
 type RouteProject = ReturnType<typeof useRouteProject>
@@ -27,6 +32,8 @@ const DIMENSION_META: Record<ScoreDimensionKey, { readonly title: string; readon
 const EMPTY_EVIDENCE: DimensionEvidence = { affected: [], coverageGaps: [], healthy: [], context: [] }
 
 export function AgentScorePage({ project }: { readonly project: RouteProject }) {
+  const { toast } = useToast()
+  const [isReloading, setIsReloading] = useState(false)
   const scoreQuery = useProjectAgentScore(project.id)
   const historyQuery = useProjectAgentScoreHistory(project.id)
   const explanationQuery = useProjectAgentScoreExplanation(project.id)
@@ -35,7 +42,45 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
   const explanation = explanationQuery.data?.explanation ?? null
   const date = current?.date ?? new Date().toISOString().slice(0, 10)
   const isRefreshing = scoreQuery.isRefetching || historyQuery.isRefetching || explanationQuery.isRefetching
-  const refresh = () => Promise.all([scoreQuery.refetch(), historyQuery.refetch(), explanationQuery.refetch()])
+  const refresh = async () => {
+    if (isReloading) return
+    const previousMarker = agentScoreRefreshMarker({ snapshot, explanation })
+    const previousSnapshotMarker = `${snapshot?.date ?? "none"}:${snapshot?.score ?? "none"}`
+    const previousExplanationTime = explanation?.computedAt
+    setIsReloading(true)
+    try {
+      await refreshProjectAgentScore({ data: { projectId: project.id } })
+      const completed = await waitForAgentScoreRefresh({
+        previousMarker,
+        refetch: async () => {
+          const [scoreResult, explanationResult] = await Promise.all([scoreQuery.refetch(), explanationQuery.refetch()])
+          const nextSnapshot = scoreResult.data?.snapshot ?? null
+          const nextExplanation = explanationResult.data?.explanation ?? null
+          const nextSnapshotMarker = `${nextSnapshot?.date ?? "none"}:${nextSnapshot?.score ?? "none"}`
+          const nextMarker = agentScoreRefreshMarker({ snapshot: nextSnapshot, explanation: nextExplanation })
+          const snapshotChanged = nextSnapshotMarker !== previousSnapshotMarker
+          const explanationChanged = nextExplanation?.computedAt !== previousExplanationTime
+          const explanationFinished = nextExplanation?.publication.status === "withheld" || nextSnapshot !== null
+          return snapshotChanged || (explanationChanged && explanationFinished) ? nextMarker : previousMarker
+        },
+      })
+      await historyQuery.refetch()
+      if (!completed) {
+        toast({
+          title: "Agent Score is still refreshing",
+          description: "The calculation is taking longer than expected. Try refreshing again in a few minutes.",
+        })
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Could not refresh the Agent Score",
+        description: toUserMessage(error),
+      })
+    } finally {
+      setIsReloading(false)
+    }
+  }
 
   return (
     <Layout className="overflow-y-auto gap-12">
@@ -48,7 +93,13 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
             />
           }
           actions={
-            <Button type="button" variant="outline" size="sm" isLoading={isRefreshing} onClick={() => void refresh()}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              isLoading={isReloading || isRefreshing}
+              onClick={() => void refresh()}
+            >
               <Icon icon={RotateCwIcon} size="sm" />
               Refresh
             </Button>
@@ -57,17 +108,17 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
         <div className="flex flex-col gap-6 px-6 pb-6">
           <div className="flex flex-row gap-3 @max-[64rem]:flex-col">
             <AgentVitality
-              date={date}
               snapshot={snapshot}
               history={historyQuery.data}
               dimensionWeights={current?.dimensionWeights}
-              isLoading={scoreQuery.isLoading}
+              isLoading={isReloading || scoreQuery.isLoading || (!snapshot && explanationQuery.isLoading)}
+              explanation={explanation}
             />
-            <ScoreTrend endDate={date} history={historyQuery.data} isLoading={historyQuery.isLoading} />
+            <ScoreTrend endDate={date} history={historyQuery.data} isLoading={isReloading || historyQuery.isLoading} />
           </div>
 
           <div className="flex flex-col gap-3">
-            {explanationQuery.isLoading
+            {isReloading || explanationQuery.isLoading
               ? SCORE_DIMENSION_ORDER.map((dimension) => <DimensionSectionSkeleton key={dimension} />)
               : SCORE_DIMENSION_ORDER.map((dimension) => {
                   const meta = DIMENSION_META[dimension]
@@ -77,12 +128,20 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                   const affected = [...evidence.affected].sort(
                     (left, right) => Number(Boolean(left.signalId)) - Number(Boolean(right.signalId)),
                   )
+                  const unavailableReason =
+                    snapshot || !explanation
+                      ? undefined
+                      : dimensionReadiness(
+                          explanation.publication.dimensions.find((entry) => entry.scoreDimension === dimension),
+                          explanation,
+                        )
                   return (
                     <DimensionSection
                       key={dimension}
                       id={dimension}
                       title={meta.title}
                       description={meta.description}
+                      {...(unavailableReason ? { unavailableReason } : {})}
                       score={snapshot?.dimensions[dimension]?.score ?? null}
                       projectId={project.id}
                       projectSlug={project.slug}
@@ -100,7 +159,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                 })}
           </div>
 
-          {explanation ? (
+          {explanation && !isReloading ? (
             <div className="flex flex-row flex-wrap items-center gap-x-3 gap-y-1 px-1">
               <Text.H7 color="foregroundMuted">
                 Evidence updated {new Date(explanation.computedAt).toLocaleString()}
