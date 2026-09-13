@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## v0.3.100 - 2026-09-13
+
+### Agent Score
+
+- Outcome and Safety intervals now pool sessions by selection stratum before drawing a replicate, so the confidence interval reflects how the sample was taken instead of treating every judged session as equally likely to have been picked. The policy cap is applied to each replicate as well, so the interval cannot span a score the cap would have refused (ref: #4628).
+- A session whose required Cost families could not be read is excluded from Cost but kept for Speed: one dimension's missing evidence no longer erases another's readable evidence. Cost denominators and cause counts now come from the sessions actually folded in rather than from every session read (ref: #4628).
+- Latency comparison is scoped to completions that sit on a complete critical path, and the workload stratum distinguishes output-token bucket and toolset, with unreadable tool content as its own key, so unlike sessions are not compared against each other. Speed is withheld when a latency reader could not read every applicable unit (ref: #4628).
+- Unlinked signal residuals scale by the selection-corrected exposed weight, so a signal's avoidable time describes the window rather than the sampled subset of it (ref: #4628).
+- A project below the session floor now gets a readiness breakdown instead of a bare "no score": the trend card shows progress towards the session floor, and each dimension reports the requirement it is short of and by how much (ref: #4629).
+- The page renders placeholders while the score loads, and the refresh action enqueues the scoring worker to warm the explanation cache, throttled to one run per project every five minutes. An explanation computed for a different window than the visible snapshot is ignored rather than shown as current (ref: #4629).
+- `pnpm seed` and `pnpm db:reset` publish an Agent Score, so a freshly seeded environment opens on a real score (ref: #4629).
+
 ## v0.3.99 - 2026-09-13
 
 ### Agent Score
