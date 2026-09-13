@@ -32,7 +32,7 @@ export const flaggerScreeningWorkflow = async (input: FlaggerScreeningWorkflowIn
       await startChild(flaggerClassificationWorkflow, {
         // One classification per session×slug at a time; a later generation
         // re-runs after the previous completes (default ALLOW_DUPLICATE).
-        workflowId: `flagger-classification:${input.sessionId}:${classification.flaggerSlug}`,
+        workflowId: `flagger-classification:${input.sessionId}:${classification.flaggerSlug}:${input.analysisHash.slice(0, 16)}`,
         parentClosePolicy: ParentClosePolicy.ABANDON,
         args: [
           {
