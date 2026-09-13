@@ -196,7 +196,7 @@
     "@openai/agents": "0.11.6",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "ai": "6.0.208",
+    "ai": "7.0.93",
     "ai7": "npm:ai@7.0.0-beta.181",
     "cohere-ai": "7.21.0",
     "llamaindex": "0.12.1",

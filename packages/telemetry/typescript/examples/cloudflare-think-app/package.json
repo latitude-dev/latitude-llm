@@ -14,7 +14,7 @@
     "@latitude-data/telemetry": "file:../..",
     "@opentelemetry/api": "^1.9.1",
     "agents": "^0.22.0",
-    "ai": "^6.0.214",
+    "ai": "^7.0.93",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "zod": "^4.5.4"
