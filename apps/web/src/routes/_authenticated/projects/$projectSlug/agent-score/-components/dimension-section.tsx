@@ -1,5 +1,5 @@
 import type { CauseDestination } from "@domain/agent-score"
-import { Button, cn, Icon, Skeleton, Status, Text } from "@repo/ui"
+import { Button, cn, Icon, Skeleton, Text } from "@repo/ui"
 import { Link } from "@tanstack/react-router"
 import {
   ArrowUpRightIcon,
@@ -13,7 +13,6 @@ import { useState } from "react"
 import { useSignal } from "../../../../../../domains/signals/signals.collection.ts"
 import { FindingRow } from "../../-components/finding-row.tsx"
 import type { DimensionEvidenceDetail, DimensionEvidenceRow, EvidenceTone } from "./dimension-evidence.ts"
-import type { DimensionReadinessView, ScoreReadinessState, ScoreRequirementView } from "./score-readiness.ts"
 import { DimensionScoreRing } from "./score-ring.tsx"
 
 const toneClasses: Record<EvidenceTone, string> = {
@@ -31,58 +30,6 @@ const toneIconColor = (tone: EvidenceTone) =>
     : tone === "positive"
       ? ("successMutedForeground" as const)
       : ("foregroundMuted" as const)
-
-const readinessStatusVariant: Readonly<Record<ScoreReadinessState, "success" | "info" | "warning">> = {
-  ready: "success",
-  collecting: "info",
-  actionNeeded: "warning",
-}
-
-function RequirementProgress({
-  requirement,
-  state,
-}: {
-  readonly requirement: ScoreRequirementView
-  readonly state: ScoreReadinessState
-}) {
-  if (requirement.progress === undefined) return null
-  return (
-    <div
-      role="progressbar"
-      aria-label={requirement.label}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={Math.round(requirement.progress * 100)}
-      className="flex h-1 w-full overflow-hidden rounded-full bg-muted"
-    >
-      <span
-        className={cn("h-full rounded-full", {
-          "bg-primary": state === "collecting",
-          "bg-warning-muted-foreground": state === "actionNeeded",
-        })}
-        style={{ width: `${requirement.progress * 100}%` }}
-      />
-    </div>
-  )
-}
-
-function DimensionRequirements({ readiness }: { readonly readiness: DimensionReadinessView }) {
-  if (readiness.requirements.length === 0) return null
-  return (
-    <div className="flex max-w-xl flex-col gap-2 pt-1">
-      {readiness.requirements.map((requirement) => (
-        <div key={requirement.id} className="flex flex-col gap-1">
-          <div className="flex min-w-0 items-center justify-between gap-4">
-            <Text.H7 color="foregroundMuted">{requirement.label}</Text.H7>
-            <Text.H7 className="shrink-0 tabular-nums">{requirement.value}</Text.H7>
-          </div>
-          <RequirementProgress requirement={requirement} state={readiness.state} />
-        </div>
-      ))}
-      {readiness.detail ? <Text.H7 color="foregroundMuted">{readiness.detail}</Text.H7> : null}
-    </div>
-  )
-}
 
 function SignalEvidenceDetails({
   row,
@@ -297,7 +244,6 @@ export function DimensionSection({
   id,
   title,
   description,
-  readiness,
   score,
   projectId,
   projectSlug,
@@ -310,7 +256,6 @@ export function DimensionSection({
   readonly id: string
   readonly title: string
   readonly description: string
-  readonly readiness?: DimensionReadinessView
   readonly score: number | null
   readonly projectId: string
   readonly projectSlug: string
@@ -334,14 +279,8 @@ export function DimensionSection({
       >
         <DimensionScoreRing score={score} />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div className="flex flex-row flex-wrap items-center gap-2">
-            <Text.H5M>{title}</Text.H5M>
-            {readiness ? (
-              <Status variant={readinessStatusVariant[readiness.state]} label={readiness.label} indicator={false} />
-            ) : null}
-          </div>
+          <Text.H5M>{title}</Text.H5M>
           <Text.H6 color="foregroundMuted">{description}</Text.H6>
-          {score === null && readiness ? <DimensionRequirements readiness={readiness} /> : null}
         </div>
         <Icon icon={open ? ChevronDownIcon : ChevronUpIcon} size="sm" color="foregroundMuted" />
       </button>

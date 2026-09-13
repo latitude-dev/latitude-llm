@@ -16,7 +16,6 @@ import { agentScoreRefreshMarker, waitForAgentScoreRefresh } from "./agent-score
 import { AgentVitality } from "./agent-vitality.tsx"
 import { buildDimensionEvidence, type DimensionEvidence } from "./dimension-evidence.ts"
 import { DimensionSection, DimensionSectionSkeleton } from "./dimension-section.tsx"
-import { dimensionReadiness } from "./score-readiness.ts"
 import { ScoreTrend } from "./score-trend.tsx"
 
 type RouteProject = ReturnType<typeof useRouteProject>
@@ -112,9 +111,13 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
               history={historyQuery.data}
               dimensionWeights={current?.dimensionWeights}
               isLoading={isReloading || scoreQuery.isLoading || (!snapshot && explanationQuery.isLoading)}
-              explanation={explanation}
             />
-            <ScoreTrend endDate={date} history={historyQuery.data} isLoading={isReloading || historyQuery.isLoading} />
+            <ScoreTrend
+              endDate={date}
+              history={historyQuery.data}
+              explanation={explanation}
+              isLoading={isReloading || historyQuery.isLoading || (!snapshot && explanationQuery.isLoading)}
+            />
           </div>
 
           <div className="flex flex-col gap-3">
@@ -128,20 +131,12 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                   const affected = [...evidence.affected].sort(
                     (left, right) => Number(Boolean(left.signalId)) - Number(Boolean(right.signalId)),
                   )
-                  const readiness =
-                    snapshot || !explanation
-                      ? undefined
-                      : dimensionReadiness(
-                          explanation.publication.dimensions.find((entry) => entry.scoreDimension === dimension),
-                          explanation,
-                        )
                   return (
                     <DimensionSection
                       key={dimension}
                       id={dimension}
                       title={meta.title}
                       description={meta.description}
-                      {...(readiness ? { readiness } : {})}
                       score={snapshot?.dimensions[dimension]?.score ?? null}
                       projectId={project.id}
                       projectSlug={project.slug}

@@ -74,40 +74,4 @@ describe("DimensionSection", () => {
     expect(screen.queryByText("Terminal provider failure")).toBeNull()
     expect(screen.queryByRole("button", { name: /Healthy/ })).toBeNull()
   })
-
-  it("shows aligned readiness requirements instead of a generic unavailable message", () => {
-    render(
-      <DimensionSection
-        id="outcome"
-        title="Outcome quality"
-        description="Did users accomplish what they came for?"
-        readiness={{
-          state: "collecting",
-          label: "Collecting data",
-          detail: "Latitude evaluates sampled sessions automatically as new sessions finish.",
-          requirements: [
-            {
-              id: "outcomeEvaluations:all",
-              label: "Completed outcome evaluations",
-              value: "12 / 100",
-              progress: 0.12,
-            },
-          ],
-        }}
-        score={null}
-        projectId="project-1"
-        projectSlug="project-one"
-        affected={[row]}
-        healthy={[]}
-        context={[]}
-        coverage={[summary]}
-      />,
-    )
-
-    expect(screen.getByText("Collecting data")).toBeDefined()
-    expect(screen.getByText("Completed outcome evaluations")).toBeDefined()
-    expect(screen.getByText("12 / 100")).toBeDefined()
-    expect(screen.getByRole("progressbar", { name: "Completed outcome evaluations" })).toBeDefined()
-    expect(screen.queryByText("More sessions need a completed evaluation.")).toBeNull()
-  })
 })
