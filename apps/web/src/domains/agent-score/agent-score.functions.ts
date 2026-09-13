@@ -13,7 +13,7 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
-import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
+import { getPostgresClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
@@ -87,11 +87,12 @@ export interface AgentScoreExplanationRecord {
 }
 
 /**
- * The cause rows, read from the cache the daily job warms.
+ * The cause rows, read from the cache the scoring worker warms.
  *
  * Separate from the score on purpose: the page renders its numbers from the snapshot immediately and
  * fills the explanation in when it arrives, because computing one means reading every session in the
- * window and that is not work a page load can wait on.
+ * window and that is not work a page load can wait on. The page's explicit refresh action can enqueue
+ * that worker when the cache is missing or stale.
  */
 export const getProjectAgentScoreExplanation = createServerFn({ method: "GET" })
   .inputValidator(projectInput)
@@ -108,4 +109,22 @@ export const getProjectAgentScoreExplanation = createServerFn({ method: "GET" })
       status: result.status,
       explanation: result.status === "ready" ? result.explanation : null,
     }
+  })
+
+export const refreshProjectAgentScore = createServerFn({ method: "POST" })
+  .inputValidator(projectInput)
+  .handler(async ({ data, context }): Promise<{ enqueued: true }> => {
+    const orgId = await resolveOrgScope(context)
+    const publisher = await getQueuePublisher()
+    await Effect.runPromise(
+      publisher
+        .publish("agent-score", "snapshotProject", {
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          date: new Date().toISOString().slice(0, 10),
+          force: true,
+        })
+        .pipe(withTracing),
+    )
+    return { enqueued: true }
   })
