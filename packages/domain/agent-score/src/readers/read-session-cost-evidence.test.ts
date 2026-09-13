@@ -158,7 +158,17 @@ describe("readSessionCostEvidence", () => {
 
   it("separates workloads by the tools offered to the model", () => {
     const withTools = readSessionCostEvidence({
-      generations: [generation()],
+      generations: [
+        generation({
+          capturedBytes: { inputMessages: 0, outputMessages: 0, toolDefinitions: 1 },
+          content: {
+            inputMessages: [],
+            outputMessages: [],
+            toolDefinitions: [{ name: "search", description: "", parameters: {} }],
+          },
+          toolDefinitionContentState: "captured",
+        }),
+      ],
       toolCalls: [],
       memoryEvents: [],
       countTokens: () => 0,
@@ -180,6 +190,20 @@ describe("readSessionCostEvidence", () => {
     }).workloadStratum
 
     expect(withTools).not.toBe(read([generation()]).workloadStratum)
+  })
+
+  it("separates unknown tool metadata from an observed empty toolset", () => {
+    const unknownTools = read([generation()]).workloadStratum
+    const noTools = read([
+      generation({
+        capturedBytes: { inputMessages: 1, outputMessages: 0, toolDefinitions: 0 },
+        content: { inputMessages: [], outputMessages: [], toolDefinitions: [] },
+        inputContentState: "captured",
+      }),
+    ]).workloadStratum
+
+    expect(unknownTools).toContain("|unknown-tools|")
+    expect(noTools).toContain("|no-tools|")
   })
 })
 

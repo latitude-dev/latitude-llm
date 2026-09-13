@@ -156,8 +156,9 @@ const workloadStratumOf = (
   )[0]
   const inputBucket = latencyInputBucket(Math.round(inputTokens / completions.length))
   const outputBucket = latencyOutputBucket(Math.round(outputTokens / completions.length))
-  const toolset =
-    toolDefinitions.length === 0
+  const toolset = completions.some((generation) => generation.content === null)
+    ? "unknown-tools"
+    : toolDefinitions.length === 0
       ? "no-tools"
       : [...new Set(toolDefinitions.map((definition) => definition.name))].sort().join(",")
   const mode = streaming * 2 >= completions.length ? "streaming" : "buffered"
