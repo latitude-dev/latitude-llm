@@ -3,6 +3,7 @@ import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
 import type { WindowSpeedAggregate } from "./bootstrap-window.ts"
 import type { WindowFold } from "./fold-window-contributions.ts"
+import type { WindowReaderCoverage } from "./tally-reader-coverage.ts"
 
 export type CostUnmeasuredReason = "requiredFamilyUnreadable" | "publishableSessionFloor" | "noReadableSessions"
 
@@ -83,7 +84,11 @@ export const gateCostWindow = ({
   return { ...base, coverage: "measured" }
 }
 
-export type SpeedUnmeasuredReason = "completePathFloor" | "completePathCoverageFloor" | "noObservedTime"
+export type SpeedUnmeasuredReason =
+  | "completePathFloor"
+  | "completePathCoverageFloor"
+  | "latencyReferenceCoverage"
+  | "noObservedTime"
 
 export interface SpeedWindowGate {
   readonly coverage: "measured" | "unmeasured"
@@ -104,10 +109,12 @@ export interface SpeedWindowGate {
 export const gateSpeedWindow = ({
   speed,
   eligibleSessionCount,
+  latencyReaderCoverage,
   floors,
 }: {
   readonly speed: WindowSpeedAggregate
   readonly eligibleSessionCount: number
+  readonly latencyReaderCoverage: readonly WindowReaderCoverage[]
   readonly floors: SpeedCoverageFloors
 }): SpeedWindowGate => {
   const completeShareOfEligible = eligibleSessionCount > 0 ? speed.includedSessionCount / eligibleSessionCount : 0
@@ -122,6 +129,9 @@ export const gateSpeedWindow = ({
   }
   if (completeShareOfEligible < floors.completeCriticalPathShareOfEligible) {
     return { ...base, coverage: "unmeasured", unmeasuredReason: "completePathCoverageFloor" }
+  }
+  if (latencyReaderCoverage.some((reader) => reader.readableUnits < reader.applicableUnits)) {
+    return { ...base, coverage: "unmeasured", unmeasuredReason: "latencyReferenceCoverage" }
   }
   if (speed.observedNs <= 0) {
     return { ...base, coverage: "unmeasured", unmeasuredReason: "noObservedTime" }

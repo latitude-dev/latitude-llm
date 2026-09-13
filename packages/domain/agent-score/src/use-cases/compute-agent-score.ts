@@ -242,6 +242,9 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     gate: gateSpeedWindow({
       speed: aggregateWindowSpeed(pass.fold.contributions, signalEffects.avoidableNs),
       eligibleSessionCount: selection.eligibleSessionCount,
+      latencyReaderCoverage: [...pass.readers.values()].filter(
+        (reader) => reader.readerId === "spans.ttft" || reader.readerId === "spans.throughput",
+      ),
       floors: input.artifact.dimensionFloors.speed,
     }),
   }

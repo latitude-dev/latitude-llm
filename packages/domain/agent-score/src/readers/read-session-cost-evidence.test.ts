@@ -148,6 +148,39 @@ describe("readSessionCostEvidence", () => {
       totalCount: 1,
     })
   })
+
+  it("separates workloads by output size", () => {
+    const shortOutput = read([generation()]).workloadStratum
+    const longOutput = read([generation({ tokens: { ...generation().tokens, tokensOutput: 5_000 } })]).workloadStratum
+
+    expect(shortOutput).not.toBe(longOutput)
+  })
+
+  it("separates workloads by the tools offered to the model", () => {
+    const withTools = readSessionCostEvidence({
+      generations: [generation()],
+      toolCalls: [],
+      memoryEvents: [],
+      countTokens: () => 0,
+      completed: true,
+      recoveredIncidents: [],
+      recoveredStructuralDefects: [],
+      toolDefinitions: [
+        {
+          name: "search",
+          estimatedSerializedTokens: 20,
+          requestCount: 1,
+          calledAtLeastOnce: false,
+          observationPeriodComplete: false,
+        },
+      ],
+      unmatchedToolCallNames: [],
+      cacheEvidence: null,
+      latencyArtifact: artifact,
+    }).workloadStratum
+
+    expect(withTools).not.toBe(read([generation()]).workloadStratum)
+  })
 })
 
 describe("latency reader coverage", () => {

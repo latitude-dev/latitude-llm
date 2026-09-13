@@ -82,7 +82,9 @@ const costWindowGateSchema = z.object({
 
 const speedWindowGateSchema = z.object({
   coverage: z.enum(["measured", "unmeasured"]),
-  unmeasuredReason: z.enum(["completePathFloor", "completePathCoverageFloor", "noObservedTime"]).optional(),
+  unmeasuredReason: z
+    .enum(["completePathFloor", "completePathCoverageFloor", "latencyReferenceCoverage", "noObservedTime"])
+    .optional(),
   completeSessionCount: z.number(),
   incompleteSessionCount: z.number(),
   completeShareOfEligible: z.number(),

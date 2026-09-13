@@ -7,6 +7,7 @@ import {
   isLlmCompletionOperation,
   latencyInputBucket,
   latencyInputTokens,
+  latencyOutputBucket,
   latencyOutputTokens,
   marginalCriticalPathNs,
   modelRegistryPricing,
@@ -132,26 +133,36 @@ const usageOperations: ReadonlySet<string> = new Set(USAGE_OPERATIONS)
  * A session with no readable generation gets an explicit unknown key rather than an empty one, so it
  * only ever matches other unknowns.
  */
-const workloadStratumOf = (generations: readonly SessionGenerationFact[]): string => {
+const workloadStratumOf = (
+  generations: readonly SessionGenerationFact[],
+  toolDefinitions: readonly ToolDefinitionSurface[],
+): string => {
   const completions = generations.filter((generation) => isLlmCompletionOperation(generation.operation))
   if (completions.length === 0) return "unknown"
 
   const byCalls = new Map<string, number>()
   let inputTokens = 0
+  let outputTokens = 0
   let streaming = 0
   for (const generation of completions) {
     const pair = `${generation.provider}/${generation.model}`
     byCalls.set(pair, (byCalls.get(pair) ?? 0) + 1)
     inputTokens += latencyInputTokens(generation.tokens)
+    outputTokens += latencyOutputTokens(generation.tokens)
     if (generation.isStreaming) streaming += 1
   }
   const dominant = [...byCalls.entries()].sort(
     (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
   )[0]
-  const bucket = latencyInputBucket(Math.round(inputTokens / completions.length))
+  const inputBucket = latencyInputBucket(Math.round(inputTokens / completions.length))
+  const outputBucket = latencyOutputBucket(Math.round(outputTokens / completions.length))
+  const toolset =
+    toolDefinitions.length === 0
+      ? "no-tools"
+      : [...new Set(toolDefinitions.map((definition) => definition.name))].sort().join(",")
   const mode = streaming * 2 >= completions.length ? "streaming" : "buffered"
   const scale = completions.length <= 2 ? "short" : completions.length <= 10 ? "medium" : "long"
-  return `${dominant?.[0] ?? "unknown"}|${bucket}|${mode}|${scale}`
+  return `${dominant?.[0] ?? "unknown"}|${inputBucket}|${outputBucket}|${toolset}|${mode}|${scale}`
 }
 
 /**
@@ -429,7 +440,7 @@ export const readSessionCostEvidence = (input: SessionCostEvidenceInput): Sessio
 
   return {
     readings,
-    workloadStratum: workloadStratumOf(input.generations),
+    workloadStratum: workloadStratumOf(input.generations, input.toolDefinitions),
     denominators: {
       spend: spendCoverage.pricedMicrocents,
       context: ledger.readableInputTokens,
