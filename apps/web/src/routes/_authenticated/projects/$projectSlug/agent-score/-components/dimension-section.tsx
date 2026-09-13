@@ -326,5 +326,17 @@ export function DimensionSection({
 }
 
 export function DimensionSectionSkeleton() {
-  return <Skeleton className="h-24 w-full rounded-xl" />
+  return (
+    <output
+      className="flex min-h-24 w-full flex-row items-center gap-4 rounded-xl bg-secondary px-6 py-4"
+      aria-label="Loading score dimension"
+      aria-busy="true"
+    >
+      <Skeleton className="h-14 w-14 shrink-0 rounded-full" />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-4 w-64 max-w-full" />
+      </div>
+    </output>
+  )
 }

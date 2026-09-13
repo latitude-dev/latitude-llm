@@ -1,4 +1,4 @@
-import { Icon, Text } from "@repo/ui"
+import { Icon, Skeleton, Text } from "@repo/ui"
 import { ChartNoAxesCombinedIcon } from "lucide-react"
 import { useState } from "react"
 import type { AgentScoreRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
@@ -43,19 +43,13 @@ function VitalityDetails({
   date,
   snapshot,
   delta,
-  isLoading,
 }: {
   readonly date: string
   readonly snapshot: AgentScoreRecord | null
   readonly delta: number | null
-  readonly isLoading: boolean
 }) {
   if (!snapshot) {
-    return (
-      <Text.H6 color="foregroundMuted">
-        {isLoading ? "Loading the latest score" : `No score published for ${formatDate(date)}`}
-      </Text.H6>
-    )
+    return <Text.H6 color="foregroundMuted">No score published for {formatDate(date)}</Text.H6>
   }
 
   return (
@@ -65,6 +59,26 @@ function VitalityDetails({
       <Text.H6 color="foregroundMuted">{formatCount(snapshot.eligibleSessionCount)} sessions</Text.H6>
       <ScoreDelta value={delta} />
     </div>
+  )
+}
+
+function AgentVitalitySkeleton() {
+  return (
+    <output
+      className="flex min-h-[296px] min-w-[280px] basis-[30%] flex-col items-center justify-center gap-4 rounded-xl bg-secondary px-6 py-6"
+      aria-label="Loading Agent Score"
+      aria-busy="true"
+    >
+      <div className="relative flex h-40 w-40 items-center justify-center">
+        <Skeleton className="absolute inset-1 rounded-full" />
+        <div className="absolute inset-4 rounded-full bg-secondary" />
+        <Skeleton className="relative h-7 w-16" />
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+    </output>
   )
 }
 
@@ -82,12 +96,14 @@ export function AgentVitality({
   readonly isLoading: boolean
 }) {
   const [activeSection, setActiveSection] = useState<VitalityRingSection | null>(null)
+  if (isLoading) return <AgentVitalitySkeleton />
+
   const previous = previousScore(snapshot, history)
   const delta = snapshot && previous && previous.score > 0 ? (snapshot.score - previous.score) / previous.score : null
   const dimensions = SCORE_DIMENSION_ORDER.map((dimension) => ({
     id: dimension,
     weight: dimensionWeights?.[dimension] ?? 1 / SCORE_DIMENSION_ORDER.length,
-    score: isLoading ? null : (snapshot?.dimensions[dimension]?.score ?? null),
+    score: snapshot?.dimensions[dimension]?.score ?? null,
   }))
   const activeDimension = activeSection && activeSection !== "vitality" ? activeSection : null
   const activeLabel = activeDimension ? DIMENSION_LABELS[activeDimension] : "Agent vitality"
@@ -95,7 +111,7 @@ export function AgentVitality({
   return (
     <div className="flex min-h-[296px] min-w-[280px] basis-[30%] flex-col items-center justify-center gap-4 rounded-xl bg-secondary px-6 py-6">
       <VitalityScoreRing
-        score={isLoading ? null : (snapshot?.score ?? null)}
+        score={snapshot?.score ?? null}
         dimensions={dimensions}
         activeSection={activeSection}
         onActiveSectionChange={setActiveSection}
@@ -104,7 +120,7 @@ export function AgentVitality({
         <div className="flex flex-row items-center gap-1.5">
           <Text.H5M>{activeLabel}</Text.H5M>
         </div>
-        <VitalityDetails date={date} snapshot={snapshot} delta={delta} isLoading={isLoading} />
+        <VitalityDetails date={date} snapshot={snapshot} delta={delta} />
       </div>
     </div>
   )
