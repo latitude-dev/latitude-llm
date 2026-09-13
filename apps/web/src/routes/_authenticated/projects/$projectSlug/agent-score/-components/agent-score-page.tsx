@@ -12,7 +12,11 @@ import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { SectionHeader } from "../../-components/section-header.tsx"
 import type { useRouteProject } from "../../-route-data.ts"
 import { formatCount, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
-import { agentScoreRefreshMarker, waitForAgentScoreRefresh } from "./agent-score-refresh.ts"
+import {
+  agentScoreExplanationForDate,
+  agentScoreRefreshMarker,
+  waitForAgentScoreRefresh,
+} from "./agent-score-refresh.ts"
 import { AgentVitality } from "./agent-vitality.tsx"
 import { buildDimensionEvidence, type DimensionEvidence } from "./dimension-evidence.ts"
 import { DimensionSection, DimensionSectionSkeleton } from "./dimension-section.tsx"
@@ -38,8 +42,11 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
   const explanationQuery = useProjectAgentScoreExplanation(project.id)
   const current = scoreQuery.data
   const snapshot = current?.snapshot ?? null
-  const explanation = explanationQuery.data?.explanation ?? null
   const date = current?.date ?? new Date().toISOString().slice(0, 10)
+  const explanation = agentScoreExplanationForDate({
+    explanation: explanationQuery.data?.explanation ?? null,
+    date,
+  })
   const isRefreshing = scoreQuery.isRefetching || historyQuery.isRefetching || explanationQuery.isRefetching
   const refresh = async () => {
     if (isReloading) return
@@ -54,7 +61,10 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
         refetch: async () => {
           const [scoreResult, explanationResult] = await Promise.all([scoreQuery.refetch(), explanationQuery.refetch()])
           const nextSnapshot = scoreResult.data?.snapshot ?? null
-          const nextExplanation = explanationResult.data?.explanation ?? null
+          const nextExplanation = agentScoreExplanationForDate({
+            explanation: explanationResult.data?.explanation ?? null,
+            date: scoreResult.data?.date ?? date,
+          })
           const nextSnapshotMarker = `${nextSnapshot?.date ?? "none"}:${nextSnapshot?.score ?? "none"}`
           const nextMarker = agentScoreRefreshMarker({ snapshot: nextSnapshot, explanation: nextExplanation })
           const snapshotChanged = nextSnapshotMarker !== previousSnapshotMarker

@@ -16,6 +16,14 @@ export const agentScoreRefreshMarker = ({
   readonly explanation: AgentScoreExplanationRecord["explanation"]
 }): string => `${snapshot?.date ?? "none"}:${snapshot?.score ?? "none"}:${explanation?.computedAt ?? "none"}`
 
+export const agentScoreExplanationForDate = ({
+  explanation,
+  date,
+}: {
+  readonly explanation: AgentScoreExplanationRecord["explanation"]
+  readonly date: string
+}): AgentScoreExplanationRecord["explanation"] => (explanation?.window.to.slice(0, 10) === date ? explanation : null)
+
 export const waitForAgentScoreRefresh = async ({
   previousMarker,
   refetch,
