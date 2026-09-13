@@ -139,6 +139,7 @@ describe("computeAgentScore", () => {
     expect(result.sessionFloor).toBe(2)
     expect(result.dimensions.some((dimension) => dimension.score !== undefined)).toBe(false)
     expect(result.coverage?.readSessionCount).toBe(1)
+    expect(result.readiness?.sessionRequirement).toMatchObject({ current: 1, required: 2, met: false })
     expect(telemetryReads).toEqual([1])
   })
 
@@ -186,6 +187,11 @@ describe("computeAgentScore", () => {
     expect(result.dimensions.find((dimension) => dimension.scoreDimension === "safety")?.unmeasuredReason).toBe(
       "examinedFloor",
     )
+    expect(
+      result.readiness?.dimensions
+        .find((dimension) => dimension.scoreDimension === "outcome")
+        ?.requirements.find((requirement) => requirement.metric === "outcomeEvaluations"),
+    ).toMatchObject({ current: 0, required: 1, met: false })
   })
 
   it("still reports coverage and native inputs when it publishes nothing", async () => {

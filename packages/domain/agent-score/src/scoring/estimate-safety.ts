@@ -60,6 +60,7 @@ export interface ProjectSafetyEstimate {
   readonly excluded: Readonly<Record<SafetyExclusionReason, number>>
   /** Hinted sessions the limiter dropped, which is informative missingness rather than a sample. */
   readonly rateLimitedHintedCount: number
+  readonly rateLimitedHintedShare: number
   readonly coverage: "measured" | "unmeasured"
   readonly unmeasuredReason?: SafetyUnmeasuredReason
   /**
@@ -185,18 +186,18 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
     examinedSessions.push({ sessionId: session.sessionId, harmed, examinationProbability: probability })
   }
 
+  const examinedShare = input.eligibleSessionCount > 0 ? observations.length / input.eligibleSessionCount : 0
+  const hintedStratum = hintedExaminedCount + rateLimitedHintedCount
+  const rateLimitedHintedShare = hintedStratum > 0 ? rateLimitedHintedCount / hintedStratum : 0
   const base = {
     eligibleSessionCount: input.eligibleSessionCount,
     examinedSessionCount: observations.length,
     harmedSessionCount,
     excluded,
     rateLimitedHintedCount,
+    rateLimitedHintedShare,
     examinedSessions,
   }
-
-  const examinedShare = input.eligibleSessionCount > 0 ? observations.length / input.eligibleSessionCount : 0
-  const hintedStratum = hintedExaminedCount + rateLimitedHintedCount
-  const rateLimitedHintedShare = hintedStratum > 0 ? rateLimitedHintedCount / hintedStratum : 0
 
   // A clean examination persists no score and so carries no judge, which is why
   // an unsupported version cannot be excluded per session the way Outcome does:

@@ -3,6 +3,7 @@ import { scoreDimensionSchema } from "@domain/shared"
 import { z } from "zod"
 import { CAUSE_DESTINATIONS } from "../scoring/attribute-dimensions.ts"
 import type { AgentScoreResult } from "./agent-score.ts"
+import { agentScoreReadinessSchema } from "./agent-score-readiness.ts"
 import { COST_FAMILIES } from "./cost-evidence.ts"
 import { READER_LIMITATIONS } from "./session-assessment-input.ts"
 
@@ -148,6 +149,7 @@ export const agentScoreExplanationSchema = z.object({
     unmeasuredSignalEffects: z.number(),
     artifactVersions: z.object({ cost: z.string(), costCatalog: z.string(), latency: z.string() }),
   }),
+  readiness: agentScoreReadinessSchema,
   /** Native amounts the page shows beside the scores, labelled as context rather than scored. */
   native: z.object({
     observedCriticalPathNs: z.number(),
@@ -159,7 +161,7 @@ export type AgentScoreExplanation = z.infer<typeof agentScoreExplanationSchema>
 
 /** Turns a completed window computation into the shape the page and the cache both use. */
 export const toAgentScoreExplanation = (result: AgentScoreResult): AgentScoreExplanation | null => {
-  if (!result.coverage || !result.native) return null
+  if (!result.coverage || !result.native || !result.readiness) return null
 
   return {
     organizationId: result.organizationId,
@@ -196,6 +198,7 @@ export const toAgentScoreExplanation = (result: AgentScoreResult): AgentScoreExp
       unmeasuredSignalEffects: result.coverage.unmeasuredSignalEffects,
       artifactVersions: result.coverage.artifactVersions,
     },
+    readiness: result.readiness,
     native: {
       observedCriticalPathNs: result.native.speed.observedNs,
       avoidableCriticalPathNs: result.native.speed.avoidableNs,

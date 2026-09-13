@@ -44,6 +44,18 @@ const EXPLANATION = {
     unmeasuredSignalEffects: 0,
     artifactVersions: { cost: "cost@1", costCatalog: "catalog@1", latency: "latency@1" },
   },
+  readiness: {
+    sessionRequirement: {
+      kind: "threshold",
+      metric: "eligibleSessions",
+      current: 5037,
+      required: 200,
+      comparison: "atLeast",
+      unit: "sessions",
+      met: true,
+    },
+    dimensions: [],
+  },
   native: { observedCriticalPathNs: 1, avoidableCriticalPathNs: 0, costFamilyPenalties: {} },
 }
 

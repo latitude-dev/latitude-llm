@@ -10,6 +10,7 @@ import type { ObservedDimensionCause } from "../scoring/observe-dimension-causes
 import type { ScoreWindowReason } from "../scoring/select-score-window.ts"
 import type { WindowReaderCoverage } from "../scoring/tally-reader-coverage.ts"
 import type { CostWindowGate, SpeedWindowGate } from "../scoring/window-gates.ts"
+import type { AgentScoreReadiness } from "./agent-score-readiness.ts"
 
 export interface AgentScoreWindow {
   readonly stepDays: number
@@ -65,6 +66,7 @@ export interface AgentScoreResult {
   readonly composite?: AgentScoreComposite
   readonly coverage?: AgentScoreCoverage
   readonly native?: AgentScoreNativeInputs
+  readonly readiness?: AgentScoreReadiness
   /**
    * Why the score is what it is, resolved from the live window.
    *

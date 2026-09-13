@@ -17,6 +17,7 @@ import {
   type DimensionAttribution,
 } from "../scoring/attribute-dimensions.ts"
 import { aggregateWindowSpeed } from "../scoring/bootstrap-window.ts"
+import { buildAgentScoreReadiness } from "../scoring/build-score-readiness.ts"
 import {
   buildWindowIssues,
   readSessionIssueEvidence,
@@ -305,6 +306,30 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     ? composition.dimensions.map(({ score: _score, interval: _interval, ...dimension }) => dimension)
     : composition.dimensions
 
+  const coverage = {
+    eligibleSessionCount,
+    readSessionCount: pass.readSessionCount,
+    outcome,
+    reliability,
+    safety,
+    cost: cost.gate,
+    speed: speed.gate,
+    readers: [...pass.readers.values()],
+    artifactVersions: {
+      cost: input.costArtifact.artifactVersion,
+      costCatalog: input.catalog.catalogVersion,
+      latency: input.latencyArtifact.artifactVersion,
+    },
+    unmeasuredSignalEffects: signalEffects.gaps.length,
+  }
+  const native = { cost: composition.cost, speed: composition.speed }
+  const readiness = buildAgentScoreReadiness({
+    coverage,
+    native,
+    artifact: input.artifact,
+    costArtifact: input.costArtifact,
+  })
+
   const result: AgentScoreResult = {
     organizationId: input.organizationId,
     projectId: input.projectId,
@@ -323,23 +348,9 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     ...(publishable
       ? {}
       : { withheldReason: belowSessionFloor ? ("sessionFloor" as const) : ("unmeasuredDimensions" as const) }),
-    coverage: {
-      eligibleSessionCount,
-      readSessionCount: pass.readSessionCount,
-      outcome,
-      reliability,
-      safety,
-      cost: cost.gate,
-      speed: speed.gate,
-      readers: [...pass.readers.values()],
-      artifactVersions: {
-        cost: input.costArtifact.artifactVersion,
-        costCatalog: input.catalog.catalogVersion,
-        latency: input.latencyArtifact.artifactVersion,
-      },
-      unmeasuredSignalEffects: signalEffects.gaps.length,
-    },
-    native: { cost: composition.cost, speed: composition.speed },
+    coverage,
+    native,
+    readiness,
     attribution,
     observedCauses,
     issues,
