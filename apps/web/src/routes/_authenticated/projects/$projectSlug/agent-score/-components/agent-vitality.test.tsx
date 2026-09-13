@@ -33,6 +33,79 @@ const belowFloorExplanation = {
   eligibleSessionCount: 86,
   window: { stepDays: 28 },
   publication: { status: "withheld", reason: "sessionFloor", sessionFloor: 200, dimensions: [] },
+  readiness: {
+    sessionRequirement: {
+      kind: "threshold",
+      metric: "eligibleSessions",
+      current: 86,
+      required: 200,
+      comparison: "atLeast",
+      unit: "sessions",
+      met: false,
+    },
+    dimensions: [],
+  },
+} as unknown as NonNullable<AgentScoreExplanationRecord["explanation"]>
+
+const dimensionExplanation = {
+  eligibleSessionCount: 400,
+  window: { stepDays: 28 },
+  publication: {
+    status: "withheld",
+    reason: "unmeasuredDimensions",
+    sessionFloor: 200,
+    dimensions: [
+      { scoreDimension: "outcome", coverage: "unmeasured", unmeasuredReason: "examinedFloor" },
+      { scoreDimension: "reliability", coverage: "measured" },
+      { scoreDimension: "cost", coverage: "measured" },
+      { scoreDimension: "speed", coverage: "measured" },
+      { scoreDimension: "safety", coverage: "unmeasured", unmeasuredReason: "examinedFloor" },
+    ],
+  },
+  readiness: {
+    sessionRequirement: {
+      kind: "threshold",
+      metric: "eligibleSessions",
+      current: 400,
+      required: 200,
+      comparison: "atLeast",
+      unit: "sessions",
+      met: true,
+    },
+    dimensions: [
+      {
+        scoreDimension: "outcome",
+        requirements: [
+          {
+            kind: "threshold",
+            metric: "outcomeEvaluations",
+            current: 12,
+            required: 100,
+            comparison: "atLeast",
+            unit: "sessions",
+            met: false,
+          },
+        ],
+      },
+      { scoreDimension: "reliability", requirements: [] },
+      { scoreDimension: "cost", requirements: [] },
+      { scoreDimension: "speed", requirements: [] },
+      {
+        scoreDimension: "safety",
+        requirements: [
+          {
+            kind: "threshold",
+            metric: "safetyEvaluations",
+            current: 42,
+            required: 1_000,
+            comparison: "atLeast",
+            unit: "sessions",
+            met: false,
+          },
+        ],
+      },
+    ],
+  },
 } as unknown as NonNullable<AgentScoreExplanationRecord["explanation"]>
 
 describe("AgentVitality", () => {
@@ -74,8 +147,28 @@ describe("AgentVitality", () => {
       />,
     )
 
-    expect(screen.getByText("86 of 200 sessions")).toBeDefined()
-    expect(screen.getByText(/score will be calculated after the minimum is reached/i)).toBeDefined()
+    expect(screen.getByText("Score readiness")).toBeDefined()
+    expect(screen.getByText("86 of 200 eligible sessions")).toBeDefined()
+    expect(screen.getByText(/114 more sessions are needed/i)).toBeDefined()
+    expect(screen.getByRole("progressbar", { name: "86 of 200 eligible sessions" })).toBeDefined()
+  })
+
+  it("lists the exact requirements blocking score publication", () => {
+    render(
+      <AgentVitality
+        snapshot={null}
+        history={[]}
+        dimensionWeights={dimensionWeights}
+        isLoading={false}
+        explanation={dimensionExplanation}
+      />,
+    )
+
+    expect(screen.getByText("3 of 5 dimensions ready")).toBeDefined()
+    expect(screen.getByText("Outcome quality")).toBeDefined()
+    expect(screen.getByText("12 / 100")).toBeDefined()
+    expect(screen.getByText("Safety")).toBeDefined()
+    expect(screen.getByText("42 / 1,000")).toBeDefined()
   })
 
   it("emphasizes a hovered dimension and restores the composite over the center", () => {

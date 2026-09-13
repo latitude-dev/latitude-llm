@@ -128,7 +128,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                   const affected = [...evidence.affected].sort(
                     (left, right) => Number(Boolean(left.signalId)) - Number(Boolean(right.signalId)),
                   )
-                  const unavailableReason =
+                  const readiness =
                     snapshot || !explanation
                       ? undefined
                       : dimensionReadiness(
@@ -141,7 +141,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                       id={dimension}
                       title={meta.title}
                       description={meta.description}
-                      {...(unavailableReason ? { unavailableReason } : {})}
+                      {...(readiness ? { readiness } : {})}
                       score={snapshot?.dimensions[dimension]?.score ?? null}
                       projectId={project.id}
                       projectSlug={project.slug}
