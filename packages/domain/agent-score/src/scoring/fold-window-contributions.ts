@@ -33,6 +33,7 @@ export const foldSessionContribution = ({
 
   return {
     sessionId: session.sessionId,
+    costUsableForDenominator: aggregate.publishable,
     families: aggregate.families.map((family) => ({
       family: family.family,
       eligibleUnits: family.eligibleUnits,
@@ -92,9 +93,8 @@ export const EMPTY_WINDOW_FOLD: WindowFold = {
 /**
  * Adds one batch's contributions to a running fold.
  *
- * Sessions whose required families could not be read are counted but not contributed: they are the
- * window's coverage story, and letting their unreadable families into the denominator would treat
- * unknown resources as necessary ones.
+ * Sessions whose required Cost families could not be read are retained for Speed but excluded from
+ * Cost: one dimension's missing evidence must not erase another dimension's readable evidence.
  */
 export const foldWindowBatch = ({
   fold,
@@ -117,6 +117,7 @@ export const foldWindowBatch = ({
     familyCoverage[family] = { ...fold.familyCoverage[family] }
   }
   let withheld = 0
+  let published = 0
 
   for (const session of sessions) {
     // Coverage counts every session's readings, including a session whose required family could not
@@ -139,18 +140,19 @@ export const foldWindowBatch = ({
     })
     if (!aggregate.publishable) {
       withheld += 1
-      continue
-    }
-    const familyOf = new Map((session.costEvidence?.readings ?? []).map((reading) => [reading.metricId, reading]))
-    for (const [metricId, penalty] of aggregate.penaltiesByMetric) {
-      const reading = familyOf.get(metricId)
-      if (!reading) continue
-      const eligibleUnits = denominators[reading.family]
-      const existing = costCauseUnits.get(metricId)
-      costCauseUnits.set(metricId, {
-        family: reading.family,
-        penalizedUnits: (existing?.penalizedUnits ?? 0) + penalty * eligibleUnits,
-      })
+    } else {
+      published += 1
+      const familyOf = new Map((session.costEvidence?.readings ?? []).map((reading) => [reading.metricId, reading]))
+      for (const [metricId, penalty] of aggregate.penaltiesByMetric) {
+        const reading = familyOf.get(metricId)
+        if (!reading) continue
+        const eligibleUnits = denominators[reading.family]
+        const existing = costCauseUnits.get(metricId)
+        costCauseUnits.set(metricId, {
+          family: reading.family,
+          penalizedUnits: (existing?.penalizedUnits ?? 0) + penalty * eligibleUnits,
+        })
+      }
     }
     if (session.costEvidence?.criticalPathComplete) {
       for (const [cause, avoidableNs] of Object.entries(session.costEvidence.avoidableNsByCause)) {
@@ -162,7 +164,7 @@ export const foldWindowBatch = ({
 
   return {
     contributions: [...fold.contributions, ...added],
-    foldedSessionCount: fold.foldedSessionCount + added.length,
+    foldedSessionCount: fold.foldedSessionCount + published,
     withheldSessionCount: fold.withheldSessionCount + withheld,
     familyCoverage,
     costCauseUnits,

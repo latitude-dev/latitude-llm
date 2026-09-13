@@ -17,6 +17,7 @@ import type { ReliabilitySessionEndpoint } from "./select-reliability-endpoints.
 
 const contribution = (index: number, penalized: number): SessionWindowContribution => ({
   sessionId: `session-${index}`,
+  costUsableForDenominator: true,
   families: [{ family: "tools", eligibleUnits: 20, penalizedUnits: penalized }],
   speed: { observedNs: 1_000_000, avoidableNs: penalized * 10_000, usableForDenominator: true },
 })

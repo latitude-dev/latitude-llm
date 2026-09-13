@@ -11,6 +11,8 @@ import type { CostFamilyResult } from "./aggregate-session-cost.ts"
  */
 export interface SessionWindowContribution {
   readonly sessionId: string
+  /** False when a required Cost family was unreadable; excluded from Cost but retained for Speed. */
+  readonly costUsableForDenominator: boolean
   readonly families: readonly Pick<CostFamilyResult, "family" | "eligibleUnits" | "penalizedUnits">[]
   readonly speed: {
     readonly observedNs: number
@@ -54,9 +56,9 @@ export const aggregateWindowCost = ({
 }): WindowCostAggregate => {
   const familyPenalties = Object.fromEntries(
     COST_FAMILIES.map((family) => {
-      const rows = contributions.flatMap((contribution) =>
-        contribution.families.filter((entry) => entry.family === family),
-      )
+      const rows = contributions
+        .filter((contribution) => contribution.costUsableForDenominator)
+        .flatMap((contribution) => contribution.families.filter((entry) => entry.family === family))
       const eligible = rows.reduce((total, entry) => total + entry.eligibleUnits, 0)
       const penalized = rows.reduce((total, entry) => total + entry.penalizedUnits, 0)
       return [family, Math.min(artifact.familyCaps[family], ratio(penalized, eligible))]

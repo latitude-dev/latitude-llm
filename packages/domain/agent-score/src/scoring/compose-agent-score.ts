@@ -97,43 +97,81 @@ const percentile = (sorted: readonly number[], fraction: number): number => {
  * One dimension's endpoint as a distribution rather than a single rate.
  *
  * Outcome, Reliability and Safety each reduce to "how often did the adverse thing happen", so a
- * replicate draws that rate from the Beta its counts imply and pushes it back through the same
- * monotone map that produced the point estimate. Resampling the observed vector instead would make
- * a window with zero observed failures produce zero variation, and the composite would claim a
- * precision the evidence does not have.
+ * replicate draws each selection stratum's rate from the Beta its counts imply, pools the weighted
+ * strata and pushes that rate back through the same monotone map that produced the point estimate.
+ * Resampling the observed vector instead would make a window with zero observed failures produce
+ * zero variation, and the composite would claim a precision the evidence does not have.
  */
-interface EndpointModel {
+interface EndpointStratum {
   readonly adverseEvents: number
   readonly trials: number
+  readonly populationWeight: number
+}
+
+interface EndpointModel {
+  readonly strata: readonly EndpointStratum[]
+  readonly censusWeight: number
+  readonly censusAdverseEvents: number
   readonly scoreAt: (adverseRate: number) => number
 }
 
 const clampScore = (value: number): number => Math.max(0, Math.min(100, value))
 
+const strataOf = (
+  observations: readonly { readonly adverse: boolean; readonly inclusionProbability: number }[],
+): EndpointStratum[] => {
+  const counts = new Map<number, { adverseEvents: number; trials: number }>()
+  for (const observation of observations) {
+    const stratum = counts.get(observation.inclusionProbability) ?? { adverseEvents: 0, trials: 0 }
+    stratum.trials += 1
+    if (observation.adverse) stratum.adverseEvents += 1
+    counts.set(observation.inclusionProbability, stratum)
+  }
+  return [...counts.entries()].map(([inclusionProbability, counts]) => ({
+    ...counts,
+    populationWeight: counts.trials / inclusionProbability,
+  }))
+}
+
 const outcomeModel = (estimate: ProjectOutcomeEstimate): EndpointModel => ({
-  adverseEvents: estimate.sampledFailureCount,
-  trials: estimate.sampledSessionCount,
-  // The census is certain failure at weight one, so only the sampled side moves between replicates.
-  scoreAt: (failureRate) => {
-    const totalWeight = estimate.sampledWeight + estimate.censusWeight
-    return totalWeight <= 0 ? 0 : clampScore((100 * (estimate.sampledWeight * (1 - failureRate))) / totalWeight)
-  },
+  strata: strataOf(
+    estimate.judgedSessions.map((session) => ({
+      adverse: !session.succeeded,
+      inclusionProbability: session.inclusionProbability,
+    })),
+  ),
+  censusWeight: estimate.censusWeight,
+  censusAdverseEvents: estimate.censusWeight,
+  scoreAt: (failureRate) => clampScore(100 * (1 - failureRate)),
 })
 
 const reliabilityModel = (estimate: ProjectReliabilityEstimate, referenceRunSessions: number): EndpointModel => ({
-  adverseEvents: estimate.terminalFailureSessionCount,
-  trials: estimate.readableSessionCount,
+  strata: [
+    {
+      adverseEvents: estimate.terminalFailureSessionCount,
+      trials: estimate.readableSessionCount,
+      populationWeight: estimate.readableSessionCount,
+    },
+  ],
+  censusWeight: 0,
+  censusAdverseEvents: 0,
   scoreAt: (failureRate) => survivalOverReferenceRun({ adverseRate: failureRate, referenceRunSessions }),
 })
 
 const safetyModel = (estimate: ProjectSafetyEstimate, referenceRunSessions: number): EndpointModel => ({
-  adverseEvents: estimate.harmedSessionCount,
-  trials: estimate.examinedSessionCount,
+  strata: strataOf(
+    estimate.examinedSessions.map((session) => ({
+      adverse: session.harmed,
+      inclusionProbability: session.examinationProbability,
+    })),
+  ),
+  censusWeight: 0,
+  censusAdverseEvents: 0,
   scoreAt: (harmRate) => survivalOverReferenceRun({ adverseRate: harmRate, referenceRunSessions }),
 })
 
 /**
- * Draws an adverse rate from the Jeffreys posterior for the observed counts.
+ * Draws an adverse rate from the Jeffreys posterior for each stratum's observed counts.
  *
  * The half-counts are what keep the draw non-degenerate at the boundaries, which is the whole point:
  * a clean window has seen no harm, not proven that none can happen.
@@ -145,10 +183,18 @@ const drawAdverseRate = ({
   readonly model: EndpointModel
   readonly random: () => number
 }): number => {
-  if (model.trials <= 0) return 0
-  const alpha = model.adverseEvents + 0.5
-  const beta = model.trials - model.adverseEvents + 0.5
-  return inverseRegularizedIncompleteBeta(random(), alpha, beta)
+  const sampledWeight = model.strata.reduce((total, stratum) => total + stratum.populationWeight, 0)
+  const totalWeight = model.censusWeight + sampledWeight
+  if (totalWeight <= 0) return 0
+
+  const sampledAdverseWeight = model.strata.reduce((total, stratum) => {
+    if (stratum.trials <= 0) return total
+    const alpha = stratum.adverseEvents + 0.5
+    const beta = stratum.trials - stratum.adverseEvents + 0.5
+    const adverseRate = inverseRegularizedIncompleteBeta(random(), alpha, beta)
+    return total + stratum.populationWeight * adverseRate
+  }, 0)
+  return (model.censusAdverseEvents + sampledAdverseWeight) / totalWeight
 }
 
 const dimensionOf = ({
@@ -308,18 +354,17 @@ const bootstrapWindow = (input: ComposeAgentScoreInput): WindowBootstrap => {
     const speed = aggregateWindowSpeed(resampled, residualAvoidableNs).speed
     costs.push(cost)
     speeds.push(speed)
-    composites.push(
-      weightedComposite({
-        artifact: input.artifact,
-        scores: {
-          outcome: models.outcome.scoreAt(drawAdverseRate({ model: models.outcome, random })),
-          reliability: models.reliability.scoreAt(drawAdverseRate({ model: models.reliability, random })),
-          cost,
-          speed,
-          safety: models.safety.scoreAt(drawAdverseRate({ model: models.safety, random })),
-        },
-      }),
-    )
+    const composite = weightedComposite({
+      artifact: input.artifact,
+      scores: {
+        outcome: models.outcome.scoreAt(drawAdverseRate({ model: models.outcome, random })),
+        reliability: models.reliability.scoreAt(drawAdverseRate({ model: models.reliability, random })),
+        cost,
+        speed,
+        safety: models.safety.scoreAt(drawAdverseRate({ model: models.safety, random })),
+      },
+    })
+    composites.push(applyPolicyCap({ artifact: input.artifact, composite, safety: input.safety }).score)
   }
 
   return {

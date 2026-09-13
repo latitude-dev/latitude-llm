@@ -68,6 +68,7 @@ describe("unreconstructable critical paths", () => {
         excludedSessionCount: 9_980,
       },
       eligibleSessionCount: 10_000,
+      latencyReaderCoverage: [],
       floors: LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.speed,
     })
 

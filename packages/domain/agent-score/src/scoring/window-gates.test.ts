@@ -5,6 +5,7 @@ import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
 import type { WindowSpeedAggregate } from "./bootstrap-window.ts"
 import type { FamilyReadingCoverage, WindowFold } from "./fold-window-contributions.ts"
+import type { WindowReaderCoverage } from "./tally-reader-coverage.ts"
 import { gateCostWindow, gateSpeedWindow } from "./window-gates.ts"
 
 const COST_FLOORS = LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.cost
@@ -97,16 +98,33 @@ const speedAggregate = (overrides: Partial<WindowSpeedAggregate> = {}): WindowSp
   ...overrides,
 })
 
+const latencyReader = (overrides: Partial<WindowReaderCoverage> = {}): WindowReaderCoverage => ({
+  readerId: "spans.throughput",
+  label: "Generation throughput",
+  scoreDimensions: ["speed"],
+  applicableSessions: 800,
+  fullyReadSessions: 800,
+  readableUnits: 800,
+  applicableUnits: 800,
+  coverage: 1,
+  limitations: {},
+  ...overrides,
+})
+
+const gateSpeed = (overrides: Omit<Parameters<typeof gateSpeedWindow>[0], "latencyReaderCoverage">) =>
+  gateSpeedWindow({ latencyReaderCoverage: [latencyReader()], ...overrides })
+
 describe("gateSpeedWindow", () => {
   it("publishes when enough critical paths reconstructed", () => {
-    expect(
-      gateSpeedWindow({ speed: speedAggregate(), eligibleSessionCount: 1_000, floors: SPEED_FLOORS }),
-    ).toMatchObject({ coverage: "measured", completeSessionCount: 800 })
+    expect(gateSpeed({ speed: speedAggregate(), eligibleSessionCount: 1_000, floors: SPEED_FLOORS })).toMatchObject({
+      coverage: "measured",
+      completeSessionCount: 800,
+    })
   })
 
   it("withholds below the complete-path session floor", () => {
     expect(
-      gateSpeedWindow({
+      gateSpeed({
         speed: speedAggregate({ includedSessionCount: 50 }),
         eligibleSessionCount: 1_000,
         floors: SPEED_FLOORS,
@@ -116,7 +134,7 @@ describe("gateSpeedWindow", () => {
 
   it("withholds when the reconstructed sessions describe too little of the base", () => {
     expect(
-      gateSpeedWindow({
+      gateSpeed({
         speed: speedAggregate({ includedSessionCount: 300, excludedSessionCount: 9_700 }),
         eligibleSessionCount: 10_000,
         floors: SPEED_FLOORS,
@@ -126,11 +144,22 @@ describe("gateSpeedWindow", () => {
 
   it("withholds when there is no observed time to divide by", () => {
     expect(
-      gateSpeedWindow({
+      gateSpeed({
         speed: speedAggregate({ observedNs: 0, avoidableNs: 0 }),
         eligibleSessionCount: 1_000,
         floors: SPEED_FLOORS,
       }),
     ).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "noObservedTime" })
+  })
+
+  it("withholds when a latency reference was missing for an applicable generation", () => {
+    expect(
+      gateSpeedWindow({
+        speed: speedAggregate(),
+        eligibleSessionCount: 1_000,
+        latencyReaderCoverage: [latencyReader({ applicableUnits: 800, readableUnits: 799, coverage: 799 / 800 })],
+        floors: SPEED_FLOORS,
+      }),
+    ).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "latencyReferenceCoverage" })
   })
 })
