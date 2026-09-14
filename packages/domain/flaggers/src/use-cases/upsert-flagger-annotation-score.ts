@@ -144,18 +144,12 @@ const findFlaggerVerdictByGeneration = (input: {
 }) =>
   Effect.gen(function* () {
     const scoreRepository = yield* ScoreRepository
-    const published = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
+    return yield* scoreRepository.findPublishedSystemVerdictByGeneration({
       projectId: input.projectId,
       sessionId: input.sessionId as SessionId,
       flaggerSlug: input.flaggerSlug,
+      analysisHash: input.analysisHash,
     })
-
-    return (
-      published.find((score) => {
-        const metadata = score.metadata as { flaggerSlug?: string; analysisHash?: string } | null
-        return metadata?.flaggerSlug === input.flaggerSlug && metadata?.analysisHash === input.analysisHash
-      }) ?? null
-    )
   })
 
 export interface UpsertFlaggerVerdictScoreInput extends FlaggerScoreInput {
