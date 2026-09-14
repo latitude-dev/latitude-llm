@@ -11,7 +11,7 @@ import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { SectionHeader } from "../../-components/section-header.tsx"
 import type { useRouteProject } from "../../-route-data.ts"
-import { formatCount, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
+import { formatCount, SCORE_DIMENSION_ORDER } from "./agent-score-format.ts"
 import {
   agentScoreExplanationForDate,
   agentScoreRefreshMarker,
@@ -19,18 +19,11 @@ import {
 } from "./agent-score-refresh.ts"
 import { AgentVitality } from "./agent-vitality.tsx"
 import { buildDimensionEvidence, type DimensionEvidence } from "./dimension-evidence.ts"
+import { DIMENSION_META } from "./dimension-meta.ts"
 import { DimensionSection, DimensionSectionSkeleton } from "./dimension-section.tsx"
 import { ScoreTrend } from "./score-trend.tsx"
 
 type RouteProject = ReturnType<typeof useRouteProject>
-
-const DIMENSION_META: Record<ScoreDimensionKey, { readonly title: string; readonly description: string }> = {
-  outcome: { title: "Outcome quality", description: "Did users get what they came for?" },
-  reliability: { title: "Reliability", description: "Can the agent complete sessions without terminal failures?" },
-  cost: { title: "Cost", description: "Does the agent use model spend and context efficiently?" },
-  speed: { title: "Speed", description: "How quickly does the agent complete user-visible work?" },
-  safety: { title: "Safety", description: "Does the agent avoid causing harm?" },
-}
 
 const EMPTY_EVIDENCE: DimensionEvidence = { affected: [], coverageGaps: [], healthy: [], context: [] }
 
@@ -120,6 +113,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
               snapshot={snapshot}
               history={historyQuery.data}
               dimensionWeights={current?.dimensionWeights}
+              explanation={explanation}
               isLoading={isReloading || scoreQuery.isLoading || (!snapshot && explanationQuery.isLoading)}
             />
             <ScoreTrend
@@ -148,11 +142,9 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                       title={meta.title}
                       description={meta.description}
                       score={snapshot?.dimensions[dimension]?.score ?? null}
-                      projectId={project.id}
                       projectSlug={project.slug}
                       affected={affected}
                       healthy={evidence.healthy}
-                      context={evidence.context}
                       coverage={evidence.coverageGaps}
                       emptyAffectedMessage={
                         explanation

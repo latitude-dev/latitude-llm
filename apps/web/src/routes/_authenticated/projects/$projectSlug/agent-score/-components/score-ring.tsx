@@ -1,5 +1,6 @@
 import { Text } from "@repo/ui"
 import { formatScore, type ScoreDimensionKey } from "./agent-score-format.ts"
+import { DIMENSION_META } from "./dimension-meta.ts"
 
 const circumference = (radius: number) => 2 * Math.PI * radius
 const OUTER_RADIUS = 45
@@ -55,14 +56,6 @@ export const buildWeightedRingSegments = <Id extends string>(
 }
 
 const clampScore = (score: number): number => Math.max(0, Math.min(100, score))
-
-const vitalityScoreColor = (score: number): string => {
-  const value = clampScore(score)
-  if (value <= 50) {
-    return `color-mix(in oklch, hsl(var(--viz-red)) ${100 - value * 2}%, hsl(var(--viz-gold-soft)))`
-  }
-  return `color-mix(in oklch, hsl(var(--viz-gold-soft)) ${200 - value * 2}%, hsl(var(--viz-green)))`
-}
 
 const scoreColor = (score: number | null): string => {
   if (score === null) return "text-muted-foreground"
@@ -131,16 +124,16 @@ export function VitalityScoreRing({
   const segments = buildWeightedRingSegments(dimensions, outerLength)
   const hitSegments = buildWeightedRingSegments(dimensions, outerLength, 0)
   const activeDimension = activeSection && activeSection !== "vitality" ? activeSection : null
-  const displayedScore = activeDimension
-    ? (dimensions.find((dimension) => dimension.id === activeDimension)?.score ?? null)
-    : score
+  const displayedScore = score
   const innerOpacity = activeDimension ? DIMMED_OPACITY : 1
 
   return (
     <div className="relative h-40 w-40 shrink-0">
+      {/* biome-ignore lint/a11y/useSemanticElements: SVG groups cannot contain an HTML fieldset. */}
       <svg
         viewBox="0 0 100 100"
-        aria-hidden="true"
+        role="group"
+        aria-label="Agent vitality and dimension scores"
         className="h-full w-full"
         onPointerLeave={() => onActiveSectionChange(null)}
       >
@@ -177,13 +170,13 @@ export function VitalityScoreRing({
                   cy="50"
                   r={OUTER_RADIUS}
                   fill="none"
-                  stroke={vitalityScoreColor(segment.score)}
+                  stroke="currentColor"
                   strokeWidth={strokeWidth}
                   strokeLinecap="round"
                   strokeDasharray={`${progressLength} ${outerLength - progressLength}`}
                   strokeDashoffset={-segment.start}
                   transform="rotate(-90 50 50)"
-                  className="transition-[stroke-width] duration-200 ease-out"
+                  className={`transition-[stroke-width] duration-200 ease-out ${scoreColor(segment.score)}`}
                 />
               ) : null}
             </g>
@@ -206,7 +199,7 @@ export function VitalityScoreRing({
             className="text-muted-foreground transition-[stroke-width] duration-200 ease-out"
           />
           {score === null ? null : (
-            <g style={{ color: vitalityScoreColor(score) }}>
+            <g className={scoreColor(score)}>
               <ProgressCircle
                 score={score}
                 radius={INNER_RADIUS}
@@ -216,6 +209,7 @@ export function VitalityScoreRing({
           )}
         </g>
         {hitSegments.map((segment) => (
+          // biome-ignore lint/a11y/useSemanticElements: SVG hit areas need their own focus targets.
           <circle
             key={`${segment.id}-hit-area`}
             cx="50"
@@ -229,9 +223,15 @@ export function VitalityScoreRing({
             transform="rotate(-90 50 50)"
             pointerEvents="stroke"
             data-ring-hit-area={segment.id}
+            tabIndex={0}
+            role="button"
+            aria-label={`${DIMENSION_META[segment.id].title}: ${segment.score === null ? "not ready" : formatScore(segment.score)}`}
+            onFocus={() => onActiveSectionChange(segment.id)}
+            onBlur={() => onActiveSectionChange(null)}
             onPointerEnter={() => onActiveSectionChange(segment.id)}
           />
         ))}
+        {/* biome-ignore lint/a11y/useSemanticElements: SVG hit areas need their own focus targets. */}
         <circle
           cx="50"
           cy="50"
@@ -239,12 +239,16 @@ export function VitalityScoreRing({
           fill="transparent"
           pointerEvents="fill"
           data-ring-hit-area="vitality"
+          tabIndex={0}
+          role="button"
+          aria-label={`Agent vitality: ${score === null ? "not ready" : score.toFixed(1)}`}
+          onFocus={() => onActiveSectionChange("vitality")}
+          onBlur={() => onActiveSectionChange(null)}
           onPointerEnter={() => onActiveSectionChange("vitality")}
         />
       </svg>
       <div
-        className={`pointer-events-none absolute inset-0 flex items-center justify-center transition-colors duration-200 ease-out ${displayedScore === null ? "text-muted-foreground" : ""}`}
-        style={displayedScore === null ? undefined : { color: vitalityScoreColor(displayedScore) }}
+        className={`pointer-events-none absolute inset-0 flex items-center justify-center transition-colors duration-200 ease-out ${scoreColor(displayedScore)}`}
       >
         <Text.H3M className="tabular-nums" color="inherit">
           {displayedScore === null ? "—" : displayedScore.toFixed(1)}

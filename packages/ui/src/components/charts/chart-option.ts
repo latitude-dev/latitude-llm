@@ -47,6 +47,7 @@ export interface ChartLineSeries {
   readonly axis?: "left" | "right"
   readonly stack?: string
   readonly area?: boolean
+  readonly areaOpacity?: number
   readonly smooth?: boolean
   readonly step?: "start" | "middle" | "end"
 }
@@ -217,13 +218,15 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
       showSymbol: false,
       lineStyle: { width: s.area ? 1 : 2, color: s.color, opacity: s.area ? 0.8 : 1 },
       itemStyle: { color: s.color },
-      ...(s.area ? { areaStyle: { color: s.color, opacity: 0.45 } } : {}),
+      ...(s.area ? { areaStyle: { color: s.color, opacity: s.areaOpacity ?? 0.45 } } : {}),
       emphasis: { disabled: true },
     }
   })
 
   const option: EChartsCoreOption = {
     backgroundColor: "transparent",
+    animationDuration: 500,
+    animationDurationUpdate: 300,
     grid: {
       left: chartGridLeft(primaryAxis),
       right: gridRight,
