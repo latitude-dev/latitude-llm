@@ -179,6 +179,8 @@ Use the closest existing doc when possible:
 - `dev-docs/annotations.md`: annotation model and flows
 - `dev-docs/annotation-queues.md`: queueing and assignment behavior for annotations
 - `dev-docs/scores.md`: scoring logic and score lifecycle
+- `dev-docs/agent-score.md`: project Agent Score benchmark — five dimensions, window selection, daily snapshots, publication gate, explanation cache, workers, and public API
+- `dev-docs/session-assessment.md`: per-session assessment read model shared by the Scores panel and the benchmark
 - `dev-docs/issues.md`: issue detection, grouping, and issue workflows
 - `dev-docs/simulations.md`: simulation concepts and flows
 - `dev-docs/organizations.md`: organization tenancy and membership rules

@@ -26,6 +26,8 @@ The workflow that matters most is:
 
 Not every seeded issue needs to reach the final step, but any intentional stop in the chain should be deliberate and documented.
 
+`pnpm seed` and `pnpm db:reset` finish with `pnpm seed:agent-score`, which publishes a multi-day Agent Score trend for the default Acme project so the benchmark page opens on real numbers. See [`agent-score.md`](./agent-score.md) for the scoring model and [`agent-score:seed`](../apps/workers/src/scripts/seed-agent-score.ts) for options.
+
 ## Seed World
 
 The default seed creates one Acme organization, one default project, a small set of users and memberships, and one default API key. Most workflow-specific seed data belongs to the Acme support project under that single tenant boundary.
