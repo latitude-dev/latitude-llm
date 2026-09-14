@@ -31,13 +31,20 @@ const isStandardSchemaIssue = (issue: unknown): issue is StandardSchemaIssue =>
   ((issue as StandardSchemaIssue).path === undefined || Array.isArray((issue as StandardSchemaIssue).path))
 
 /**
- * TanStack's `execValidator` throws a plain `Error` whose message is the
- * JSON-encoded Standard Schema issues array when an `inputValidator` (e.g.
- * zod) rejects the request — rejected input, not a server fault, so it must
- * be duck-typed from the message shape rather than an exception type.
+ * TanStack's `execValidator` throws a plain `Error` (literally `new Error(...)`,
+ * not a subclass) whose message is the JSON-encoded Standard Schema issues
+ * array when an `inputValidator` (e.g. zod) rejects the request — rejected
+ * input, not a server fault, so it must be duck-typed from the message shape
+ * rather than an exception type.
+ *
+ * The exact-constructor check matters: `ZodError` (thrown by `schema.parse()`
+ * anywhere else, e.g. a repository mapper validating a persisted row) has the
+ * identical `message` shape — `JSON.stringify(issues, ..., 2)` — since it
+ * subclasses `Error`, but is a genuine server-side fault, not a rejected
+ * client input, and must still be reported.
  */
 const isInputValidationError = (e: unknown): boolean => {
-  if (!(e instanceof Error)) return false
+  if (!(e instanceof Error) || e.constructor !== Error) return false
   try {
     const parsed = JSON.parse(e.message)
     return Array.isArray(parsed) && parsed.length > 0 && parsed.every(isStandardSchemaIssue)

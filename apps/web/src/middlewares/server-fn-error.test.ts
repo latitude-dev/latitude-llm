@@ -2,6 +2,7 @@ import { NotFoundError, RepositoryError, UnauthorizedError } from "@domain/share
 import type { Span } from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { describe, expect, it, vi } from "vitest"
+import { z } from "zod"
 import { STALE_SERVER_FN_ERROR_TAG, STALE_SERVER_FN_USER_MESSAGE } from "../lib/stale-server-fn.ts"
 import {
   asStaleServerFnError,
@@ -98,6 +99,22 @@ describe("recordServerFnError", () => {
   it("still reports a JSON-array error message that isn't a validator issues shape", () => {
     const span = fakeSpan()
     const info = recordServerFnError(span, new Error(JSON.stringify([{ unrelated: "shape" }])))
+
+    expect(span.recordException).toHaveBeenCalledTimes(1)
+    expect(info.isClientError).toBe(false)
+    expect(info.status).toBe(500)
+  })
+
+  it("still reports a genuine ZodError as 500 despite its message matching the same issues shape", () => {
+    // A repository mapper validating a persisted row (e.g. `monitorSchema.parse(row)`)
+    // throws ZodError, whose `.message` is JSON.stringify(issues) too — identical
+    // shape to what TanStack's execValidator throws, but a real server-side fault
+    // (a malformed row / schema regression), not a rejected client input.
+    const schema = z.object({ organizationName: z.string().min(1) })
+    const result = schema.safeParse({ organizationName: "" })
+    if (result.success) throw new Error("expected validation to fail")
+    const span = fakeSpan()
+    const info = recordServerFnError(span, result.error)
 
     expect(span.recordException).toHaveBeenCalledTimes(1)
     expect(info.isClientError).toBe(false)
