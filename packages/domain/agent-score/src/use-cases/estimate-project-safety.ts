@@ -1,4 +1,4 @@
-import { SAFETY_SUITE_SLUGS } from "@domain/flaggers"
+import { type FlaggerScreeningOutcome, SAFETY_SUITE_SLUGS } from "@domain/flaggers"
 import { isConfirmedHarmFindingKind, type SafetyFindingKind, ScoreRepository } from "@domain/scores"
 import { type OrganizationId, type ProjectId, SessionId } from "@domain/shared"
 import { Effect } from "effect"
@@ -29,6 +29,33 @@ interface SafetyScoreMetadata {
   readonly flaggerSlug?: string
   readonly safetyFindingKind?: SafetyFindingKind
   readonly scoringArtifactVersion?: string
+  readonly analysisHash?: string
+}
+
+const isCompletedOutcome = (outcome: FlaggerScreeningOutcome | undefined): boolean =>
+  outcome === "matched" || outcome === "unmatched" || outcome === "success" || outcome === "failure"
+
+const examinedAnalysisHash = (
+  decisions: readonly SafetyMemberDecision[],
+  suiteSlugs: readonly string[],
+): string | undefined => {
+  const bySlug = new Map(decisions.map((decision) => [decision.flaggerSlug, decision]))
+  const completed: SafetyMemberDecision[] = []
+
+  for (const slug of suiteSlugs) {
+    const decision = bySlug.get(slug)
+    if (!decision) return undefined
+    if (decision.outcome === "notApplicable") continue
+    if (!decision.selected || !isCompletedOutcome(decision.outcome)) return undefined
+    completed.push(decision)
+  }
+
+  if (completed.length === 0) return undefined
+
+  const generations = new Set(completed.map((decision) => decision.analysisHash))
+  if (generations.size > 1) return undefined
+
+  return completed[0]?.analysisHash
 }
 
 const batched = <Value>(values: readonly Value[], size: number): Value[][] => {
@@ -84,6 +111,22 @@ export const estimateProjectSafetyWindow = Effect.fn("agentScore.estimateProject
     { concurrency: 1 },
   )
 
+  const examinedGenerationBySession = new Map<string, string>()
+  const matchedFlaggersBySession = new Map<string, Set<string>>()
+  for (const [sessionId, sessionDecisions] of decisionsBySession) {
+    const generation = examinedAnalysisHash(sessionDecisions, SAFETY_SUITE_SLUGS)
+    if (generation === undefined) continue
+    examinedGenerationBySession.set(sessionId, generation)
+    matchedFlaggersBySession.set(
+      sessionId,
+      new Set(
+        sessionDecisions
+          .filter((decision) => decision.analysisHash === generation && decision.outcome === "matched")
+          .map((decision) => decision.flaggerSlug),
+      ),
+    )
+  }
+
   // Harm unions per session: several detectors on one session are one harmed
   // session, and the judge behind each finding decides whether it can be pooled.
   const harmVersionsBySession = new Map<string, string[]>()
@@ -92,6 +135,16 @@ export const estimateProjectSafetyWindow = Effect.fn("agentScore.estimateProject
     const findingKind = metadata?.safetyFindingKind
     if (!findingKind || !isConfirmedHarmFindingKind(findingKind)) continue
     if (score.sessionId === null || !decisionsBySession.has(score.sessionId)) continue
+
+    const examinedGeneration = examinedGenerationBySession.get(score.sessionId)
+    if (examinedGeneration === undefined) continue
+
+    const flaggerSlug = metadata?.flaggerSlug
+    const matchesGeneration = metadata?.analysisHash === examinedGeneration
+    const legacyMatched =
+      flaggerSlug !== undefined && (matchedFlaggersBySession.get(score.sessionId)?.has(flaggerSlug) ?? false)
+    if (!matchesGeneration && !legacyMatched) continue
+
     const versions = harmVersionsBySession.get(score.sessionId) ?? []
     versions.push(metadata?.scoringArtifactVersion ?? "")
     harmVersionsBySession.set(score.sessionId, versions)
