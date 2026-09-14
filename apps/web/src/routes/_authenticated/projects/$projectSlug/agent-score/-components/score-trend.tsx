@@ -174,29 +174,30 @@ export function ScoreTrend({
         <>
           <ChartHeader
             title="Score evolution"
+            titleColor="foregroundMuted"
             fromIso={dates[0] ?? endDate}
             toIso={endDate}
             isAllTime={false}
             showWindow={false}
             actions={<Tabs options={RANGE_OPTIONS} active={range} onSelect={setRange} variant="bordered" size="sm" />}
           />
-          <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 py-3">
+          {versions.size > 1 || windows.size > 1 ? (
+            <Text.H7 color="foregroundMuted" className="px-4 pt-1">
+              {versions.size > 1
+                ? "This range crosses scoring versions, so the line is not a continuous measurement."
+                : "This range includes scores calculated over different window lengths."}
+            </Text.H7>
+          ) : null}
+          <div className="flex min-h-0 flex-1 flex-col justify-end gap-2 px-4 py-3">
             <Chart
               categories={dates.map((date) => chartLabel(date, range))}
               series={series}
-              height={200}
+              height={160}
               ariaLabel={`Agent vitality over the last ${dayCount} days`}
               hideLegend
               primaryAxis={{ show: false, min: 0, max: 100, formatValue: (value) => value.toFixed(1) }}
               tooltipTitle={(_, index) => formatDate(dates[index] ?? endDate)}
             />
-            {versions.size > 1 || windows.size > 1 ? (
-              <Text.H7 color="foregroundMuted">
-                {versions.size > 1
-                  ? "This range crosses scoring versions, so the line is not a continuous measurement."
-                  : "This range includes scores calculated over different window lengths."}
-              </Text.H7>
-            ) : null}
           </div>
         </>
       ) : (

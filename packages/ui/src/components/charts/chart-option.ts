@@ -225,6 +225,8 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
 
   const option: EChartsCoreOption = {
     backgroundColor: "transparent",
+    animationDuration: 500,
+    animationDurationUpdate: 300,
     grid: {
       left: chartGridLeft(primaryAxis),
       right: gridRight,

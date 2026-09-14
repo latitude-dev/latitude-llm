@@ -1,6 +1,6 @@
 import { Button, CopyableText, Icon, Skeleton, TagList, Text, Tooltip } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
-import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
+import { createFileRoute, getRouteApi, Link, useCanGoBack, useRouter } from "@tanstack/react-router"
 import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import { useState } from "react"
 import { SignalScoreDimensions } from "../../../../../../components/signals/signal-score-dimensions.tsx"
@@ -56,6 +56,8 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sign
 })
 
 function SignalDetailPage() {
+  const router = useRouter()
+  const canGoBack = useCanGoBack()
   const { projectSlug, signalSlug } = Route.useParams()
   const project = useRouteProject()
   // The URL carries the slug; resolve it to the stable id once, then key every
@@ -87,15 +89,28 @@ function SignalDetailPage() {
                   asChild
                   side="bottom"
                   trigger={
-                    <Button asChild variant="ghost" size="sm" className="w-fit" aria-label="Back to signals">
-                      <Link to="/projects/$projectSlug/signals" params={{ projectSlug }}>
+                    canGoBack ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-fit"
+                        aria-label="Go back"
+                        onClick={() => router.history.back()}
+                      >
                         <Icon icon={ArrowLeftIcon} size="sm" />
                         Back
-                      </Link>
-                    </Button>
+                      </Button>
+                    ) : (
+                      <Button asChild variant="ghost" size="sm" className="w-fit" aria-label="Back to signals">
+                        <Link to="/projects/$projectSlug/signals" params={{ projectSlug }}>
+                          <Icon icon={ArrowLeftIcon} size="sm" />
+                          Back
+                        </Link>
+                      </Button>
+                    )
                   }
                 >
-                  Back to signals
+                  {canGoBack ? "Go back" : "Back to signals"}
                 </Tooltip>
                 <SignalNeighborNav
                   projectId={project.id}

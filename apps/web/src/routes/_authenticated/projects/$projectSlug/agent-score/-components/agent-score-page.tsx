@@ -142,11 +142,9 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                       title={meta.title}
                       description={meta.description}
                       score={snapshot?.dimensions[dimension]?.score ?? null}
-                      projectId={project.id}
                       projectSlug={project.slug}
                       affected={affected}
                       healthy={evidence.healthy}
-                      context={evidence.context}
                       coverage={evidence.coverageGaps}
                       emptyAffectedMessage={
                         explanation
