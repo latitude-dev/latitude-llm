@@ -28,7 +28,7 @@ const isStandardSchemaIssue = (issue: unknown): issue is StandardSchemaIssue =>
   typeof issue === "object" &&
   issue !== null &&
   typeof (issue as StandardSchemaIssue).message === "string" &&
-  Array.isArray((issue as StandardSchemaIssue).path)
+  ((issue as StandardSchemaIssue).path === undefined || Array.isArray((issue as StandardSchemaIssue).path))
 
 /**
  * TanStack's `execValidator` throws a plain `Error` whose message is the

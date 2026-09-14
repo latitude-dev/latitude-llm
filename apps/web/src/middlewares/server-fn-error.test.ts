@@ -83,6 +83,18 @@ describe("recordServerFnError", () => {
     expect(JSON.parse(JSON.parse(info.error.message).message)).toEqual(JSON.parse(validationError.message))
   })
 
+  it("does NOT report a rejected inputValidator request with a root-level issue (no path)", () => {
+    // Standard Schema issues may omit `path` entirely for a root-level error,
+    // not just supply an empty array — the duck-type check must accept both.
+    const validationError = new Error(JSON.stringify([{ message: "Invalid input" }]))
+    const span = fakeSpan()
+    const info = recordServerFnError(span, validationError)
+
+    expect(span.recordException).not.toHaveBeenCalled()
+    expect(info.isClientError).toBe(true)
+    expect(info.status).toBe(400)
+  })
+
   it("still reports a JSON-array error message that isn't a validator issues shape", () => {
     const span = fakeSpan()
     const info = recordServerFnError(span, new Error(JSON.stringify([{ unrelated: "shape" }])))
