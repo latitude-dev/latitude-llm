@@ -108,10 +108,11 @@ export function DescribeSignalIntro({
         <SignalFlowDiagram />
       </div>
 
-      <div className="flex min-h-40 flex-1 flex-col gap-3">
+      <div className="flex flex-col gap-3">
         <AgentTextarea
-          fill
           label="What do you want to track?"
+          minRows={4}
+          maxRows={6}
           maxLength={SIGNAL_GENERATION_PROMPT_MAX_LENGTH}
           value={prompt}
           status={generating ? `${step ?? "Starting up"}…` : null}

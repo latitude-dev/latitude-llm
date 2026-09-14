@@ -49,7 +49,7 @@ function SignalEvidenceDetails({
   const signalSlug = signal?.slug ?? row.signalId
 
   return (
-    <div className="flex min-w-0 items-start gap-4 px-4 py-4">
+    <div className="flex min-w-0 items-start gap-4 py-4">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <Text.H6B>{title}</Text.H6B>
         {isLoading ? (
@@ -72,7 +72,7 @@ function SignalEvidenceDetails({
           aria-label={`Open signal ${title}`}
         >
           View signal
-          <Icon icon={ArrowUpRightIcon} size="xs" />
+          <Icon icon={ArrowUpRightIcon} size="sm" />
         </Link>
       </Button>
     </div>
@@ -103,11 +103,11 @@ function DestinationLink({
 }) {
   const link = DESTINATION_LINKS[destination]
   return (
-    <div className="flex px-4 py-3">
+    <div className="flex py-3">
       <Button asChild variant="link" size="sm" className="h-auto px-0 py-0">
         <Link to={link.to} params={{ projectSlug }}>
           {link.label}
-          <Icon icon={ArrowUpRightIcon} size="xs" />
+          <Icon icon={ArrowUpRightIcon} size="sm" />
         </Link>
       </Button>
     </div>
@@ -118,7 +118,7 @@ function EvidenceDetails({ details }: { readonly details: readonly DimensionEvid
   return (
     <div className="flex flex-col divide-y divide-border">
       {details.map((detail) => (
-        <div key={detail.label} className="flex min-w-0 items-center justify-between gap-4 px-4 py-2.5">
+        <div key={detail.label} className="flex min-w-0 items-center justify-between gap-4 py-2.5">
           <Text.H7 color="foregroundMuted">{detail.label}</Text.H7>
           <Text.H7 className="shrink-0 tabular-nums">{detail.value}</Text.H7>
         </div>
@@ -142,16 +142,13 @@ function EvidenceRow({
     row.description !== undefined ||
     row.details !== undefined ||
     row.destination !== undefined
-  const leading = row.signalId ? (
-    <Icon icon={ArrowUpRightIcon} size="xs" color="foregroundMuted" />
-  ) : (
-    <Icon icon={toneIcon(row.tone)} size="xs" color={toneIconColor(row.tone)} />
-  )
+  const leading = <Icon icon={toneIcon(row.tone)} size="sm" color={toneIconColor(row.tone)} />
 
   return (
     <div className="flex w-full flex-col">
       <FindingRow
         label={row.label}
+        padded={false}
         leading={leading}
         trailing={
           <Text.H6 className={cn("shrink-0 tabular-nums", toneClasses[row.tone])} noWrap>
@@ -160,10 +157,10 @@ function EvidenceRow({
         }
         expanded={expandable && expanded}
         onToggle={expandable ? () => setExpanded((value) => !value) : undefined}
-        className={cn({ "hover:bg-muted/60": expandable, "bg-muted/40": expandable && expanded })}
+        className={cn("px-2", { "hover:bg-muted/60": expandable, "bg-muted/40": expandable && expanded })}
       />
       {expandable && expanded ? (
-        <div className="divide-y divide-border border-t border-border bg-background pl-6">
+        <div className="divide-y divide-border border-t border-border bg-background pr-2 pl-8">
           {row.signalId ? (
             <SignalEvidenceDetails
               row={{ ...row, signalId: row.signalId }}
@@ -171,7 +168,7 @@ function EvidenceRow({
               projectSlug={projectSlug}
             />
           ) : row.description ? (
-            <div className="px-4 py-3">
+            <div className="py-3">
               <Text.H6 color="foregroundMuted">{row.description}</Text.H6>
             </div>
           ) : null}
@@ -207,30 +204,36 @@ function EvidenceGroup({
 
   return (
     <div className="flex flex-col">
-      <button
-        type="button"
-        className="flex min-h-12 w-full cursor-pointer flex-row items-center justify-between gap-3 px-6 text-left"
-        aria-expanded={open}
-        aria-controls={id}
-        aria-label={`${label}, ${open ? "hide" : "show"}`}
-        onClick={() => setOpen((value) => !value)}
+      <Button
+        asChild
+        variant="ghost"
+        size="sm"
+        className="h-auto w-full justify-between gap-3 rounded-none border-b border-border bg-muted px-2 py-3 font-normal text-muted-foreground hover:bg-muted-foreground/10"
       >
-        <Text.H6 color="foregroundMuted">{label}</Text.H6>
-        <span className="flex flex-row items-center gap-1 text-muted-foreground">
-          <Icon icon={open ? ChevronUpIcon : ChevronDownIcon} size="xs" />
-          <Text.H6 color="foregroundMuted">{open ? "Hide" : "Show"}</Text.H6>
-        </span>
-      </button>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={id}
+          aria-label={`${label}, ${open ? "hide" : "show"}`}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span className="font-medium">{label}</span>
+          <span className="flex flex-row items-center gap-1 text-muted-foreground">
+            <Icon icon={open ? ChevronUpIcon : ChevronDownIcon} size="sm" />
+            <span>{open ? "Hide" : "Show"}</span>
+          </span>
+        </button>
+      </Button>
       {open ? (
-        <div id={id} className="flex border-t border-border">
+        <div id={id} className="flex">
           {rows.length > 0 ? (
-            <div className="flex w-full flex-col divide-y divide-border">
+            <div className="flex w-full flex-col divide-y divide-border border-b border-border">
               {rows.map((row) => (
                 <EvidenceRow key={row.id} row={row} projectId={projectId} projectSlug={projectSlug} />
               ))}
             </div>
           ) : (
-            <div className="w-full px-4 py-4">
+            <div className="w-full border-b border-border px-2 py-4">
               <Text.H6 color="foregroundMuted">{emptyMessage}</Text.H6>
             </div>
           )}
@@ -285,7 +288,7 @@ export function DimensionSection({
         <Icon icon={open ? ChevronDownIcon : ChevronUpIcon} size="sm" color="foregroundMuted" />
       </button>
       {open ? (
-        <div id={`${id}-details`} className="divide-y divide-border border-t border-border">
+        <div id={`${id}-details`} className="flex flex-col gap-4 px-6 pb-4">
           <EvidenceGroup
             id={`${id}-affected`}
             label="Affected by"

@@ -54,29 +54,32 @@ export function SignalScopeEditor({
           onChange={onChange}
           excludeFields={SCORE_FILTER_FIELDS}
           portalContainer={popoverContainerRef}
+          compact
         />
 
         <div className="flex flex-col gap-2 border-t border-border pt-4">
-          <div className="flex items-baseline justify-between">
-            <Text.H5>How many of them?</Text.H5>
-            <Text.H5M>{sampling}%</Text.H5M>
+          <div className="flex w-full flex-col gap-2 md:w-1/2">
+            <div className="flex items-baseline justify-between">
+              <Text.H5>How many of them?</Text.H5>
+              <Text.H5M>{sampling}%</Text.H5M>
+            </div>
+            <Slider
+              min={0}
+              max={100}
+              step={1}
+              value={[sampling]}
+              onValueChange={(values) => onSamplingChange(values[0] ?? 0)}
+            />
+            <Text.H6 color="foregroundMuted">
+              {sampling === 0
+                ? "0% pauses this signal, so no sessions are checked."
+                : detectorKind === "rule"
+                  ? "Conditions are free and instant, so checking 100% of matching sessions is usually right."
+                  : detectorKind === "judge"
+                    ? "Each check sends the session to an LLM, which costs money and time. If you get a lot of traffic, checking a slice of it still catches the pattern for much less."
+                    : "A custom script might call an LLM, depending on what it does. If yours does, checking a slice keeps costs down and still catches the pattern."}
+            </Text.H6>
           </div>
-          <Slider
-            min={0}
-            max={100}
-            step={1}
-            value={[sampling]}
-            onValueChange={(values) => onSamplingChange(values[0] ?? 0)}
-          />
-          <Text.H6 color="foregroundMuted">
-            {sampling === 0
-              ? "0% pauses this signal, so no sessions are checked."
-              : detectorKind === "rule"
-                ? "Conditions are free and instant, so checking 100% of matching sessions is usually right."
-                : detectorKind === "judge"
-                  ? "Each check sends the session to an LLM, which costs money and time. If you get a lot of traffic, checking a slice of it still catches the pattern for much less."
-                  : "A custom script might call an LLM, depending on what it does. If yours does, checking a slice keeps costs down and still catches the pattern."}
-          </Text.H6>
         </div>
       </div>
     </div>

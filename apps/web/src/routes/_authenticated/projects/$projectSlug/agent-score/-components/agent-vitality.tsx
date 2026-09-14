@@ -1,17 +1,13 @@
-import { Icon, Skeleton, Text } from "@repo/ui"
+import { Icon, Skeleton, Text, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from "@repo/ui"
 import { ChartNoAxesCombinedIcon } from "lucide-react"
 import { useState } from "react"
-import type { AgentScoreRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
+import type {
+  AgentScoreExplanationRecord,
+  AgentScoreRecord,
+} from "../../../../../../domains/agent-score/agent-score.functions.ts"
 import { formatCount, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
 import { type VitalityRingSection, VitalityScoreRing } from "./score-ring.tsx"
-
-const DIMENSION_LABELS: Readonly<Record<ScoreDimensionKey, string>> = {
-  outcome: "Outcome quality",
-  reliability: "Reliability",
-  cost: "Cost",
-  speed: "Speed",
-  safety: "Safety",
-}
+import { VitalityHoverContent } from "./vitality-hover-content.tsx"
 
 const previousScore = (
   snapshot: AgentScoreRecord | null,
@@ -82,12 +78,14 @@ export function AgentVitality({
   snapshot,
   history,
   dimensionWeights,
+  explanation,
   isLoading,
 }: {
   readonly snapshot: AgentScoreRecord | null
   readonly history: readonly AgentScoreRecord[] | undefined
   readonly dimensionWeights: Readonly<Record<ScoreDimensionKey, number>> | undefined
   readonly isLoading: boolean
+  readonly explanation: AgentScoreExplanationRecord["explanation"]
 }) {
   const [activeSection, setActiveSection] = useState<VitalityRingSection | null>(null)
   if (isLoading) return <AgentVitalitySkeleton />
@@ -99,20 +97,40 @@ export function AgentVitality({
     weight: dimensionWeights?.[dimension] ?? 1 / SCORE_DIMENSION_ORDER.length,
     score: snapshot?.dimensions[dimension]?.score ?? null,
   }))
-  const activeDimension = activeSection && activeSection !== "vitality" ? activeSection : null
-  const activeLabel = activeDimension ? DIMENSION_LABELS[activeDimension] : "Agent vitality"
 
   return (
     <div className="flex min-h-[296px] min-w-[280px] basis-[30%] flex-col items-center justify-center gap-4 rounded-xl bg-secondary px-6 py-6">
-      <VitalityScoreRing
-        score={snapshot?.score ?? null}
-        dimensions={dimensions}
-        activeSection={activeSection}
-        onActiveSectionChange={setActiveSection}
-      />
+      <TooltipProvider>
+        <TooltipRoot
+          open={activeSection !== null}
+          onOpenChange={(open) => {
+            if (!open) setActiveSection(null)
+          }}
+        >
+          <TooltipTrigger
+            asChild
+            // The ring opens immediately; Radix's delayed open would dismiss the already-open tooltip.
+            onPointerMove={(event) => event.preventDefault()}
+          >
+            <div>
+              <VitalityScoreRing
+                score={snapshot?.score ?? null}
+                dimensions={dimensions}
+                activeSection={activeSection}
+                onActiveSectionChange={setActiveSection}
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={12} className="w-80 max-w-80 p-0">
+            {activeSection ? (
+              <VitalityHoverContent section={activeSection} snapshot={snapshot} explanation={explanation} />
+            ) : null}
+          </TooltipContent>
+        </TooltipRoot>
+      </TooltipProvider>
       <div className="flex flex-col items-center gap-1 text-center">
         <div className="flex flex-row items-center gap-1.5">
-          <Text.H5M>{activeLabel}</Text.H5M>
+          <Text.H5M>Agent vitality</Text.H5M>
         </div>
         <VitalityDetails snapshot={snapshot} delta={delta} />
       </div>
