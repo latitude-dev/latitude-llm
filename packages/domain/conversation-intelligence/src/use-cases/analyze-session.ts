@@ -133,7 +133,7 @@ const TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH = CONVERSATION_INTELLIGENCE_LLM_MAX_
 const TRUNCATION_MARKER = "\n[...truncated...]\n"
 
 const middleTruncate = (value: string, maxLength: number): string => {
-  if (value.length <= maxLength) return value
+  if (value.length <= maxLength) return stripLoneSurrogates(value)
   if (maxLength <= TRUNCATION_MARKER.length) return stripLoneSurrogates(value.slice(0, maxLength))
   const head = Math.floor((maxLength - TRUNCATION_MARKER.length) / 2)
   const tail = maxLength - TRUNCATION_MARKER.length - head
