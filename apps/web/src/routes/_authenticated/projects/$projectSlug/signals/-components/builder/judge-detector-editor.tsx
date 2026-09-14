@@ -39,21 +39,19 @@ export function JudgeDetectorEditor({
         onChange={(event) => onCriteriaChange(event.target.value)}
         placeholder='"the user got frustrated, repeating themselves, complaining, or giving up before getting a useful answer."'
       />
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
         <Text.H6 color="foregroundMuted">Try an example:</Text.H6>
-        <div className="flex flex-wrap gap-2">
-          {JUDGE_EXAMPLES.map((example) => (
-            <Button
-              key={example.label}
-              variant="secondary-soft"
-              size="sm"
-              title={example.criteria}
-              onClick={() => onCriteriaChange(example.criteria)}
-            >
-              {example.label}
-            </Button>
-          ))}
-        </div>
+        {JUDGE_EXAMPLES.map((example) => (
+          <Button
+            key={example.label}
+            variant="outline"
+            size="sm"
+            title={example.criteria}
+            onClick={() => onCriteriaChange(example.criteria)}
+          >
+            {example.label}
+          </Button>
+        ))}
       </div>
     </div>
   )

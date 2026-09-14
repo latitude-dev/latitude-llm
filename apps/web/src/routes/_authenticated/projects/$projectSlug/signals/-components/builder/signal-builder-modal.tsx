@@ -422,14 +422,14 @@ export function SignalBuilderModal({
       </Button>
     </>
   ) : !methodChosen ? (
-    <div className="flex w-full justify-end gap-2">
-      <Button variant="ghost" disabled={generating} onClick={() => setMethodChosen(true)}>
+    <>
+      <Button variant="link" disabled={generating} onClick={() => setMethodChosen(true)}>
         Configure manually
       </Button>
       <Button onClick={generate} disabled={generating || prompt.trim().length === 0} isLoading={generating}>
         Generate signal
       </Button>
-    </div>
+    </>
   ) : (
     <>
       <Button
@@ -457,14 +457,18 @@ export function SignalBuilderModal({
       dismissible={!generating}
       size="large"
       scrollable={false}
-      footerAlign={mode === "create" ? "justify" : "right"}
+      footerAlign={mode === "create" && !methodChosen ? "justify" : "right"}
       onOpenChange={(next) => {
         if (!next) onClose()
       }}
       title={mode === "create" ? "New signal" : "Edit signal"}
       description={
         !methodChosen ? undefined : mode === "create" ? (
-          <StepIndicator steps={CREATE_STEPS.map((id) => ({ id, label: STEP_TITLE[id] }))} activeIndex={stepIndex} />
+          <StepIndicator
+            steps={CREATE_STEPS.map((id) => ({ id, label: STEP_TITLE[id] }))}
+            activeIndex={stepIndex}
+            onStepClick={goToStep}
+          />
         ) : (
           <Tabs<EditTab>
             variant="bordered"

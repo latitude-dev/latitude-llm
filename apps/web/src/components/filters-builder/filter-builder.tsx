@@ -227,8 +227,6 @@ interface FilterBuilderProps {
   /** Field keys to omit (e.g. a signal scope hides `score.*`), matching the sidebar's prop. */
   readonly excludeFields?: readonly string[]
   readonly portalContainer?: RefObject<HTMLElement | null>
-  /** Use unboxed controls with removal actions beside each input. */
-  readonly compact?: boolean
   /** Render collapsed by default: a one-row summary of the applied-filter count, expandable via chevron. */
   readonly collapsible?: boolean
   /** When `collapsible`, start expanded on mount rather than collapsed. */
@@ -253,7 +251,6 @@ export function FilterBuilder({
   emptyMessage = "No filters yet.",
   excludeFields,
   portalContainer,
-  compact = false,
   collapsible = false,
   initialExpanded = false,
 }: FilterBuilderProps) {
@@ -400,11 +397,10 @@ export function FilterBuilder({
 
   const renderSection = (descriptor: FieldDescriptor) => {
     const onRemove = () => removeFilter(descriptor)
-    const layout = compact ? "compact" : "card"
     if (descriptor.kind === "status") {
       const selected = getStatusValues(value, "status")
       return (
-        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove} layout={layout}>
+        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove}>
           <StatusFilter
             selected={selected}
             onChange={(values) => setField("status", values.length > 0 ? [{ op: "in", value: [...values] }] : [])}
@@ -417,7 +413,7 @@ export function FilterBuilder({
       const legacy = getTextFilterValue(value, descriptor.field)
       const selected = inValues.length > 0 ? inValues : legacy ? [legacy] : []
       return (
-        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove} layout={layout}>
+        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove}>
           <MultiSelectFilter
             mode={mode}
             projectId={projectId}
@@ -432,7 +428,7 @@ export function FilterBuilder({
     }
     if (descriptor.kind === "text") {
       return (
-        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove} layout={layout}>
+        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove}>
           <DebouncedInput
             size="sm"
             placeholder={descriptor.placeholder ?? "Enter value…"}
@@ -445,7 +441,7 @@ export function FilterBuilder({
     if (descriptor.kind === "multiSelect") {
       const staticItems = staticItemsByField[descriptor.field]
       return (
-        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove} layout={layout}>
+        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove}>
           <MultiSelectFilter
             mode={mode}
             projectId={projectId}
@@ -461,7 +457,7 @@ export function FilterBuilder({
     if (descriptor.kind === "numberRange") {
       const range = getRangeValues(value, descriptor.field)
       return (
-        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove} layout={layout}>
+        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove}>
           <NumberFilterControl
             supportsPercentile={descriptor.percentile === true}
             minValue={toDisplayUnit(range.min, descriptor.displayScale)}
@@ -482,7 +478,7 @@ export function FilterBuilder({
     }
     if (descriptor.kind === "annotator") {
       return (
-        <FilterSection key={descriptorKey(descriptor)} label={descriptor.label} onRemove={onRemove} layout={layout}>
+        <FilterSection key={descriptorKey(descriptor)} label={descriptor.label} onRemove={onRemove}>
           <MultiSelectFilter
             mode={mode}
             projectId={projectId}
@@ -499,7 +495,7 @@ export function FilterBuilder({
     if (descriptor.kind === "hasScores") {
       const on = getHasAnnotationsOn(value)
       return (
-        <FilterSection key={descriptorKey(descriptor)} label={descriptor.label} onRemove={onRemove} layout={layout}>
+        <FilterSection key={descriptorKey(descriptor)} label={descriptor.label} onRemove={onRemove}>
           <div className="flex items-center justify-between gap-2">
             <Text.H6 color="foregroundMuted">
               {on ? "Only items with a human score." : "All items, scored or not."}
@@ -512,7 +508,7 @@ export function FilterBuilder({
     if (descriptor.kind === "llmActivity") {
       const on = isHasLlmActivityFilterOn(value)
       return (
-        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove} layout={layout}>
+        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove}>
           <div className="flex items-center justify-between gap-2">
             <Text.H6 color="foregroundMuted">
               {on ? "Hiding sessions without any LLM call." : "Including orphan fragments."}
@@ -526,7 +522,7 @@ export function FilterBuilder({
       )
     }
     return (
-      <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove} layout={layout}>
+      <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove}>
         <MetadataFilter
           entries={metadataEntriesFromFilters(value)}
           onChange={(entries) => onChange(applyMetadataEntries(value, entries))}
@@ -556,7 +552,7 @@ export function FilterBuilder({
     ) : null
 
   const sections = (
-    <div className={compact ? "flex flex-col gap-3" : "flex flex-col gap-2"}>
+    <div className="flex flex-col gap-2">
       {activeFilters.length === 0 ? <Text.H6 color="foregroundMuted">{emptyMessage}</Text.H6> : null}
       {activeFilters.map(renderSection)}
       {addFilterPicker}
