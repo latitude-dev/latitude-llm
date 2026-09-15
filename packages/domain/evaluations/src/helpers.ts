@@ -1,4 +1,5 @@
 import { deterministicSampling, type FilterSet, filterSetSchema, type ResolvedSettings } from "@domain/shared"
+import { compileSettingsToScript } from "./codegen/compile-settings-to-script.ts"
 import { ALIGNMENT_METRIC_TOLERANCE } from "./constants.ts"
 import type { ConfusionMatrix, Evaluation } from "./entities/evaluation.ts"
 import { isPausedEvaluation } from "./entities/evaluation.ts"
@@ -238,6 +239,10 @@ export const applySignalIgnoreToEvaluation = (input: {
         },
   )
 }
+
+// `settings`, when present, is the source of truth — recompiling guards against a stored `script` gone stale.
+export const resolveEvaluationScript = (evaluation: Pick<Evaluation, "script" | "settings">): string =>
+  evaluation.settings ? compileSettingsToScript(evaluation.settings) : evaluation.script
 
 export const getLiveEvaluationEligibility = (
   evaluation: Pick<Evaluation, "archivedAt" | "deletedAt" | "trigger">,
