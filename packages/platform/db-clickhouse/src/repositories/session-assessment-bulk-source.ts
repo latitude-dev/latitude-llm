@@ -30,23 +30,6 @@ const groupByKey = <Value>(
   return grouped
 }
 
-const batched = <Value>(values: readonly Value[], size: number): Value[][] => {
-  const batches: Value[][] = []
-  for (let index = 0; index < values.length; index += size) {
-    batches.push(values.slice(index, index + size))
-  }
-  return batches
-}
-
-/**
- * A `trace_id IN (...)` read against `spans` scans every matching row before any per-trace
- * dedup/limit narrows it back down, so its ClickHouse-side memory footprint scales with the
- * traceIds in one call, not just the (bounded) session batch that produced them: a session can
- * carry several traces (subagents), and long-running sessions can each carry many spans. Chunking
- * keeps one query's working set bounded regardless of how many traces a session batch resolves to.
- */
-const TRACE_ID_QUERY_BATCH_SIZE = 25
-
 /** Moments and labels of an unanalyzed session are kept; a superseded analysis generation is not. */
 const isAuthoritativeGeneration = (analysis: SessionAnalysis | undefined, analysisHash: string): boolean =>
   !analysis || (analysis.analysisStatus === "analyzed" && analysis.analysisHash === analysisHash)
@@ -80,32 +63,17 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
           const scope = { organizationId: input.organizationId, projectId: input.projectId }
           const traceScope = { ...scope, traceIds, startTimeTo: input.cutoff }
           const sessionScope = { ...scope, sessionIds: input.sessionIds, indexedAtTo: input.cutoff }
-          const traceIdBatches = batched(traceIds, TRACE_ID_QUERY_BATCH_SIZE)
 
           const [spans, generations, toolCalls, memoryEvents, analyses, moments, labels, screeningDecisions] =
             yield* Effect.all(
               [
-                Effect.forEach(
-                  traceIdBatches,
-                  (batch) => spanRepository.listByTraceIds({ ...traceScope, traceIds: batch }),
-                  { concurrency: 1 },
-                ).pipe(Effect.map((batches) => batches.flat())),
-                Effect.forEach(
-                  traceIdBatches,
-                  (batch) =>
-                    spanRepository.listGenerationFactsByTraceIds({
-                      ...traceScope,
-                      traceIds: batch,
-                      contentBudget: SESSION_ASSESSMENT_CONTENT_BUDGET,
-                      sessionKeyByTraceId: sessionByTraceId,
-                    }),
-                  { concurrency: 1 },
-                ).pipe(Effect.map((batches) => batches.flat())),
-                Effect.forEach(
-                  traceIdBatches,
-                  (batch) => spanRepository.listToolCallFactsByTraceIds({ ...traceScope, traceIds: batch }),
-                  { concurrency: 1 },
-                ).pipe(Effect.map((batches) => batches.flat())),
+                spanRepository.listByTraceIds(traceScope),
+                spanRepository.listGenerationFactsByTraceIds({
+                  ...traceScope,
+                  contentBudget: SESSION_ASSESSMENT_CONTENT_BUDGET,
+                  sessionKeyByTraceId: sessionByTraceId,
+                }),
+                spanRepository.listToolCallFactsByTraceIds(traceScope),
                 memoryRepository.readMemoryEventsBySessionIds({
                   ...scope,
                   sessionIds: input.sessionIds,
