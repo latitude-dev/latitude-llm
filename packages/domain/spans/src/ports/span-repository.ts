@@ -404,8 +404,8 @@ export interface SpanRepositoryShape {
 
   /**
    * Compact generation facts for every span in `traceIds`, deduped by `(trace_id, span_id)`, with
-   * content payloads loaded only while `contentBudget` allows. Two bounded queries regardless of
-   * session count: one over the projected columns, one over the payloads that fit the budget.
+   * content payloads loaded only while `contentBudget` allows. Reads use bounded trace and payload
+   * batches, then preserve one global ordering and budget selection across the complete input.
    */
   listGenerationFactsByTraceIds(input: {
     readonly organizationId: OrganizationId
