@@ -3,12 +3,11 @@ import { LAUNCH_AGENT_SCORE_ARTIFACT } from "../artifacts/launch-agent-score-art
 import { deriveSamplingRates, PROVISIONAL_SAMPLING_TARGETS } from "./derive-sampling-rates.ts"
 
 describe("deriveSamplingRates", () => {
-  it("examines nearly everything on a project that barely reaches the session target", () => {
-    const rates = deriveSamplingRates({ eligibleSessions: 1_000 })
+  it("examines everything on a project that reaches the session target", () => {
+    const rates = deriveSamplingRates({ eligibleSessions: 200 })
 
-    // At a fixed tenth this project would examine a hundred sessions against a floor of a thousand.
     expect(rates.safetySuitePercent).toBe(100)
-    expect(rates.taskOutcomePercent).toBe(20)
+    expect(rates.taskOutcomePercent).toBe(100)
   })
 
   it("samples a large project down, so cost does not grow with traffic", () => {
