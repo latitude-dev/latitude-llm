@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.3.101 - 2026-09-15
+
+### Agent Score
+
+- Lowered the provisional window-selection target to 200 eligible sessions and the Reliability, Speed, and Safety count floors to 100 sessions, allowing more projects to publish while retaining percentage coverage guards. The UI now suppresses score deltas and cached explanations across the new scoring-version boundary (ref: #4657).
+- Polished the Agent Score page with clearer score and evidence presentation, keyboard-focusable ring details, smoother charts, and richer hover details. The seeded benchmark now uses a model with latency references so Speed can be measured (ref: #4651).
+
 ## v0.3.100 - 2026-09-13
 
 ### Agent Score
