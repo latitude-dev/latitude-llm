@@ -40,6 +40,23 @@ describe("AgentVitality", () => {
     expect(screen.queryByText(/No score published/)).toBeNull()
   })
 
+  it("does not compare snapshots from different scoring versions", () => {
+    const previousSnapshot = { ...snapshot, date: "2026-09-11", score: 50 }
+    const currentSnapshot = { ...snapshot, scoringVersion: "agent-score-v2-provisional" }
+
+    render(
+      <AgentVitality
+        explanation={null}
+        snapshot={currentSnapshot}
+        history={[previousSnapshot]}
+        dimensionWeights={dimensionWeights}
+        isLoading={false}
+      />,
+    )
+
+    expect(screen.queryByText(/up|down/)).toBeNull()
+  })
+
   it("does not compare against an older snapshot when the previous score is zero", () => {
     const previousSnapshot = { ...snapshot, date: "2026-09-11", score: 0 }
     const olderSnapshot = { ...snapshot, date: "2026-09-10", score: 50 }
