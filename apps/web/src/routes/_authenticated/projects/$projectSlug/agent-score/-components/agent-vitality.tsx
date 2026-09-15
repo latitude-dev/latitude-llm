@@ -14,7 +14,8 @@ const previousScore = (
   history: readonly AgentScoreRecord[] | undefined,
 ): AgentScoreRecord | null => {
   if (!snapshot || !history) return null
-  return [...history].reverse().find((entry) => entry.date < snapshot.date) ?? null
+  const previous = [...history].reverse().find((entry) => entry.date < snapshot.date)
+  return previous?.scoringVersion === snapshot.scoringVersion ? previous : null
 }
 
 function ScoreDelta({ value }: { readonly value: number | null }) {

@@ -16,13 +16,19 @@ export const agentScoreRefreshMarker = ({
   readonly explanation: AgentScoreExplanationRecord["explanation"]
 }): string => `${snapshot?.date ?? "none"}:${snapshot?.score ?? "none"}:${explanation?.computedAt ?? "none"}`
 
-export const agentScoreExplanationForDate = ({
+export const agentScoreExplanationForSnapshot = ({
   explanation,
   date,
+  snapshot,
 }: {
   readonly explanation: AgentScoreExplanationRecord["explanation"]
   readonly date: string
-}): AgentScoreExplanationRecord["explanation"] => (explanation?.window.to.slice(0, 10) === date ? explanation : null)
+  readonly snapshot: Pick<AgentScoreRecord, "scoringVersion"> | null
+}): AgentScoreExplanationRecord["explanation"] => {
+  if (explanation?.window.to.slice(0, 10) !== date) return null
+  if (snapshot && explanation.scoringVersion !== snapshot.scoringVersion) return null
+  return explanation
+}
 
 export const waitForAgentScoreRefresh = async ({
   previousMarker,
