@@ -1,5 +1,5 @@
 import type { ToolCallHistogramBucket } from "@domain/spans"
-import { Button, Chart, type ChartSeries, HistogramSkeleton, Icon, Skeleton, Text } from "@repo/ui"
+import { Button, Chart, type ChartSeries, EmptyState, HistogramSkeleton, Icon, Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { BarChart2, ChevronDown, ChevronUp } from "lucide-react"
 import { useMemo, useState } from "react"
@@ -180,9 +180,7 @@ export function ToolsAnalyticsPanel({
             <HistogramSkeleton height={160} />
           </div>
         ) : histogram.length === 0 || histogram.every((bucket) => bucket.calls === 0) ? (
-          <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">
-            <Text.H6 color="foregroundMuted">No tool calls in this time window</Text.H6>
-          </div>
+          <EmptyState icon={BarChart2} message="No tool calls in this time window" />
         ) : (
           <>
             <ChartHeader title="Tool calls over time" fromIso={rangeFromIso} toIso={rangeToIso} isAllTime={isAllTime} />

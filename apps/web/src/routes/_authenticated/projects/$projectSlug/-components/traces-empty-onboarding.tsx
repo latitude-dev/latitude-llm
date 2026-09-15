@@ -212,8 +212,8 @@ function ConnectCard({
   const ctaLabel = orgHasConnectedProjects ? "Full setup instructions" : "Set up tracing"
 
   return (
-    <div className="flex w-full max-w-md flex-col items-start gap-5">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+    <div className="flex w-full max-w-lg flex-col items-start gap-5">
+      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted">
         <Icon icon={TelescopeIcon} size="lg" color="foregroundMuted" />
       </div>
 

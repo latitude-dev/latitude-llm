@@ -1,4 +1,4 @@
-import { Badge, Text } from "@repo/ui"
+import { Badge, EmptyState, Text } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import type { AdminProjectMetricsDto } from "../../../../domains/admin/projects.functions.ts"
 
@@ -23,11 +23,7 @@ interface TopSignalsTableProps {
 
 export function TopSignalsTable({ issues }: TopSignalsTableProps) {
   if (issues.length === 0) {
-    return (
-      <div className="flex h-full min-h-[120px] items-center justify-center">
-        <Text.H6 color="foregroundMuted">No signals with occurrences in this window.</Text.H6>
-      </div>
-    )
+    return <EmptyState message="No signals with occurrences in this window." />
   }
 
   return (
