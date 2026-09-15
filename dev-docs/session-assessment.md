@@ -2,6 +2,8 @@
 
 Session assessment is the per-session evidence read model used by the Scores panel, public session-assessment operations, and the Agent Score benchmark. It is resolved on demand from retained telemetry and persisted judgments. It is not a stored score, observation row, or assessment snapshot.
 
+The project-level benchmark — window selection, daily snapshots, publication gate, public score API, and UI page — is documented in [`agent-score.md`](./agent-score.md).
+
 Domain code lives in `packages/domain/agent-score`. Infrastructure adapters live in `packages/platform/db-clickhouse` and `packages/platform/db-postgres`.
 
 ## Model

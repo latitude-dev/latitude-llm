@@ -2,10 +2,11 @@
 
 > **Status**: design and staged implementation; progress is tracked in [`plan.md`](plan.md).
 >
-> **Durable homes after this stabilizes**: `dev-docs/signals.md` for signal evidence,
-> `dev-docs/flaggers.md` for observation coverage, `dev-docs/conversation-intelligence.md` for
-> moments as outcome evidence, `dev-docs/spans.md` for span readings, and a new
-> `dev-docs/agent-benchmark.md` for the score itself.
+> **Durable homes**: [`dev-docs/agent-score.md`](../../dev-docs/agent-score.md) for the project
+> benchmark; `dev-docs/session-assessment.md` for the per-session read model; `dev-docs/signals.md`
+> for signal evidence; `dev-docs/flaggers.md` for observation coverage;
+> `dev-docs/conversation-intelligence.md` for moments as outcome evidence; `dev-docs/spans.md` for
+> span readings. This spec folder remains the detailed design reference until fully retired.
 
 ## The problem
 
