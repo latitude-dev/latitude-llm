@@ -1512,11 +1512,12 @@ Each row is a gate the previous checklist asserted and the code does not current
 ### Step 3: window selection and the eligible population
 
 - [x] **P6-16** Add `selectScoreWindow` as a pure function: the shortest of 7, 14, 21, or 28 days
-  reaching 1,000 eligible sessions, withheld below 200, and 28 days once a project passes the floor
-  without reaching the target. Return the chosen step and the reason it was chosen.
+  reaching 200 eligible sessions, withheld below 200. Return the chosen step and the reason it was
+  chosen.
 - [x] **P6-17** Implement D7's hysteresis against the previous snapshot's stored step: do not shorten
   until the shorter step exceeds the target by 10%, do not lengthen until the current step falls 10%
-  below it. With no previous snapshot or after a withheld day, choose without hysteresis.
+  below it, and never retain a step below the publication floor. With no previous snapshot or after a
+  withheld day, choose without hysteresis.
 - [x] **P6-18** Add the eligible-count-per-step read as one ClickHouse query over
   `ELIGIBLE_SESSIONS_SUBQUERY`, then the session id list for the chosen step. Do not issue four
   queries, and do not select ids for steps that were not chosen. The one query returns an age

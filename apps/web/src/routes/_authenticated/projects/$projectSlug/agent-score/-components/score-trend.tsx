@@ -1,14 +1,14 @@
-import { Chart, type ChartSeries, Icon, Skeleton, Tabs, Text } from "@repo/ui"
+import { Chart, type ChartSeries, Icon, Skeleton, Tabs, Text, useChartCssTheme } from "@repo/ui"
 import { CircleCheckIcon, CircleDashedIcon, TriangleAlertIcon } from "lucide-react"
 import { useState } from "react"
 import type {
   AgentScoreExplanationRecord,
   AgentScoreRecord,
 } from "../../../../../../domains/agent-score/agent-score.functions.ts"
+import { ChartHeader } from "../../-components/chart-header.tsx"
 import { formatCount, formatDate } from "./agent-score-format.ts"
 import { type AgentScoreReadinessView, agentScoreReadiness, type DimensionReadinessRow } from "./score-readiness.ts"
 
-const SCORE_COLOR = "hsl(var(--viz-red))"
 const DAY_MS = 86_400_000
 
 type TrendRange = "7d" | "30d"
@@ -147,6 +147,7 @@ export function ScoreTrend({
   readonly explanation: AgentScoreExplanationRecord["explanation"]
   readonly isLoading: boolean
 }) {
+  const { primary } = useChartCssTheme()
   const [range, setRange] = useState<TrendRange>("7d")
   const dayCount = range === "7d" ? 7 : 30
   const dates = calendarEndingOn(endDate, dayCount)
@@ -160,40 +161,49 @@ export function ScoreTrend({
   const versions = new Set(selectedHistory.map((entry) => entry.scoringVersion))
   const windows = new Set(selectedHistory.map((entry) => entry.windowDays))
   const series: readonly ChartSeries[] = [
-    { kind: "line", name: "Agent vitality", values, color: SCORE_COLOR, area: true, smooth: true },
+    { kind: "line", name: "Agent vitality", values, color: primary, area: true, areaOpacity: 0.12, smooth: true },
   ]
 
   return (
-    <div className="flex min-h-[296px] min-w-0 flex-1 flex-col gap-4 rounded-xl bg-secondary p-6">
+    <div className="flex min-w-0 flex-1 flex-col rounded-xl bg-secondary">
       {isLoading ? (
-        <Skeleton className="min-h-[200px] w-full flex-1 rounded-lg" />
+        <div className="flex flex-1 p-4">
+          <Skeleton className="min-h-[200px] w-full flex-1 rounded-lg" />
+        </div>
       ) : hasScores ? (
         <>
-          <div className="flex flex-row items-center justify-between gap-3">
-            <Text.H6 color="foregroundMuted">Score evolution</Text.H6>
-            <Tabs options={RANGE_OPTIONS} active={range} onSelect={setRange} variant="bordered" size="sm" />
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col justify-end gap-2">
+          <ChartHeader
+            title="Score evolution"
+            titleColor="foregroundMuted"
+            fromIso={dates[0] ?? endDate}
+            toIso={endDate}
+            isAllTime={false}
+            showWindow={false}
+            actions={<Tabs options={RANGE_OPTIONS} active={range} onSelect={setRange} variant="bordered" size="sm" />}
+          />
+          {versions.size > 1 || windows.size > 1 ? (
+            <Text.H7 color="foregroundMuted" className="px-4 pt-1">
+              {versions.size > 1
+                ? "This range crosses scoring versions, so the line is not a continuous measurement."
+                : "This range includes scores calculated over different window lengths."}
+            </Text.H7>
+          ) : null}
+          <div className="flex min-h-0 flex-1 flex-col justify-end gap-2 px-4 py-3">
             <Chart
               categories={dates.map((date) => chartLabel(date, range))}
               series={series}
-              height={200}
+              height={160}
               ariaLabel={`Agent vitality over the last ${dayCount} days`}
               hideLegend
               primaryAxis={{ show: false, min: 0, max: 100, formatValue: (value) => value.toFixed(1) }}
               tooltipTitle={(_, index) => formatDate(dates[index] ?? endDate)}
             />
-            {versions.size > 1 || windows.size > 1 ? (
-              <Text.H7 color="foregroundMuted">
-                {versions.size > 1
-                  ? "This range crosses scoring versions, so the line is not a continuous measurement."
-                  : "This range includes scores calculated over different window lengths."}
-              </Text.H7>
-            ) : null}
           </div>
         </>
       ) : (
-        <ScoreReadiness explanation={explanation} />
+        <div className="p-6">
+          <ScoreReadiness explanation={explanation} />
+        </div>
       )}
     </div>
   )

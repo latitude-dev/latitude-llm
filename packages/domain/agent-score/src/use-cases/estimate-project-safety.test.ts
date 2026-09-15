@@ -184,12 +184,14 @@ describe("estimateProjectSafetyWindow", () => {
     expect(estimate.examinedSessionCount).toBe(9)
   })
 
-  // The launch artifact's floors are the shipped ones; the rest of this file opens
-  // them so the join is testable without a thousand fixtures.
-  it("publishes no number under the shipped floors when the window is small", async () => {
+  it("publishes under the shipped floors when a hundred sessions were examined", async () => {
     const layerRun = await run({ ...examinedWindow(100), floors: undefined })
 
-    expect(layerRun.estimate).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" })
-    expect(layerRun.estimate.safety).toBeUndefined()
+    expect(layerRun.estimate).toMatchObject({
+      coverage: "measured",
+      examinedSessionCount: 100,
+      harmedSessionCount: 0,
+      safety: 100,
+    })
   })
 })

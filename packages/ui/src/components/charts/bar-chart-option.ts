@@ -75,6 +75,8 @@ export function buildBarChartOption(
   const yAxisMax = maxValue > 0 ? maxValue * 1.1 : undefined
   const option: EChartsCoreOption = {
     backgroundColor: "transparent",
+    animationDuration: 500,
+    animationDurationUpdate: 300,
     grid: {
       left: showYAxis ? 48 : 8,
       right: 16,

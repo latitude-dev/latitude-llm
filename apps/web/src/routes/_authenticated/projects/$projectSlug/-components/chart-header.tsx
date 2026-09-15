@@ -1,4 +1,4 @@
-import { Icon, Text, type TextColor, Tooltip } from "@repo/ui"
+import { cn, Icon, Text, type TextColor, Tooltip } from "@repo/ui"
 import { formatChartWindowCaption } from "@repo/utils"
 import { ClockIcon, InfoIcon } from "lucide-react"
 import type { ReactNode } from "react"
@@ -45,7 +45,12 @@ export function ChartHeader({
   if (!window && !title && !actions) return null
 
   return (
-    <div className="flex min-h-11 items-start justify-between gap-2 px-4 pt-3">
+    <div
+      className={cn("flex min-h-11 justify-between gap-2 px-4 pt-3", {
+        "items-start": Boolean(window),
+        "items-center": !window,
+      })}
+    >
       <div className="flex min-w-0 flex-col gap-0.5">
         {title ? <Text.H6 color={titleColor}>{title}</Text.H6> : null}
         {window ? (
