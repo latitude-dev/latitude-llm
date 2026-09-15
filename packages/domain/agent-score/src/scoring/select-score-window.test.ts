@@ -71,10 +71,10 @@ describe("window hysteresis", () => {
     })
   })
 
-  it("keeps the shorter step until it falls the margin below the target", () => {
+  it("lengthens when the current step falls below the publication floor", () => {
     expect(select({ 7: 190, 14: 380, 21: 570, 28: 760 }, 7)).toMatchObject({
-      stepDays: 7,
-      reason: "heldByHysteresis",
+      stepDays: 14,
+      reason: "reachedTarget",
     })
   })
 
