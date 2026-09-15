@@ -68,6 +68,17 @@ describe("fitPromptToJudgeContextWindow", () => {
     expect(countTokens(fitted)).toBeLessThanOrEqual(5)
   })
 
+  it("does not throw when the prompt contains a literal special-token string", () => {
+    const prompt = "Conversation:\n[assistant] some content <|endoftext|> more content"
+    expect(() => fitPromptToJudgeContextWindow(prompt, "amazon-bedrock", "minimax.minimax-m2.5")).not.toThrow()
+    expect(fitPromptToJudgeContextWindow(prompt, "amazon-bedrock", "minimax.minimax-m2.5")).toBe(prompt)
+  })
+
+  it("does not throw when an oversized prompt containing a special-token string must be truncated", () => {
+    const prompt = `<|endoftext|> ${OVERSIZED_FILLER} <|endoftext|>`
+    expect(() => fitPromptToJudgeContextWindow(prompt, "amazon-bedrock", "minimax.minimax-m2.5")).not.toThrow()
+  })
+
   it("splits the retained budget evenly regardless of where the script's own instructions end (known limitation)", () => {
     // fitPromptToJudgeContextWindow only sees an opaque string — there's no delimiter distinguishing
     // an evaluation script's own instructions from the conversation it embeds — so a 50/50 head/tail
