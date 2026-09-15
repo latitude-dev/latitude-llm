@@ -80,6 +80,7 @@ export interface SessionRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly sessionIds: readonly SessionId[]
+    readonly startTimeFrom?: Date
     readonly cutoff: Date
   }): Effect.Effect<readonly SessionDetail[], RepositoryError, ChSqlClient>
 

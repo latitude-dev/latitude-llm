@@ -1165,6 +1165,7 @@ export const SpanRepositoryLive = Layer.effect(
       organizationId,
       projectId,
       traceIds,
+      startTimeFrom,
       startTimeTo,
       contentBudget,
       sessionKeyByTraceId,
@@ -1172,6 +1173,9 @@ export const SpanRepositoryLive = Layer.effect(
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         if (traceIds.length === 0) return []
+        const startFromClause = startTimeFrom
+          ? "AND start_time >= parseDateTime64BestEffort({startTimeFrom:String}, 9, 'UTC')"
+          : ""
         const startToClause = startTimeTo
           ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
           : ""
@@ -1179,6 +1183,7 @@ export const SpanRepositoryLive = Layer.effect(
           organizationId: organizationId as string,
           projectId: projectId as string,
           traceIds: Array.from(traceIds) as string[],
+          ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
           ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
         }
 
@@ -1194,6 +1199,7 @@ export const SpanRepositoryLive = Layer.effect(
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
                         AND trace_id IN ({traceIds:Array(String)})
+                        ${startFromClause}
                         ${startToClause}
                       ORDER BY trace_id, span_id, ingested_at DESC
                       LIMIT 1 BY trace_id, span_id
@@ -1227,6 +1233,7 @@ export const SpanRepositoryLive = Layer.effect(
                         AND project_id = {projectId:String}
                         AND trace_id IN ({traceIds:Array(String)})
                         AND span_id IN ({spanIds:Array(String)})
+                        ${startFromClause}
                         ${startToClause}
                       ORDER BY trace_id, span_id, ingested_at DESC
                       LIMIT 1 BY trace_id, span_id
@@ -1255,11 +1262,15 @@ export const SpanRepositoryLive = Layer.effect(
       organizationId,
       projectId,
       traceIds,
+      startTimeFrom,
       startTimeTo,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         if (traceIds.length === 0) return []
+        const startFromClause = startTimeFrom
+          ? "AND start_time >= parseDateTime64BestEffort({startTimeFrom:String}, 9, 'UTC')"
+          : ""
         const startToClause = startTimeTo
           ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
           : ""
@@ -1285,6 +1296,7 @@ export const SpanRepositoryLive = Layer.effect(
                         AND project_id = {projectId:String}
                         AND trace_id IN ({traceIds:Array(String)})
                         AND operation = 'execute_tool'
+                        ${startFromClause}
                         ${startToClause}
                       ORDER BY trace_id, span_id, ingested_at DESC
                       LIMIT 1 BY trace_id, span_id
@@ -1294,6 +1306,7 @@ export const SpanRepositoryLive = Layer.effect(
                 organizationId: organizationId as string,
                 projectId: projectId as string,
                 traceIds: Array.from(traceIds) as string[],
+                ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
                 ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
               },
               format: "JSONEachRow",

@@ -97,7 +97,12 @@ describe("SpanRepository Cost and Speed source facts", () => {
     )
   })
 
-  const readGenerations = (traceIds: readonly TraceId[], budget = UNLIMITED_BUDGET, startTimeTo?: Date) =>
+  const readGenerations = (
+    traceIds: readonly TraceId[],
+    budget = UNLIMITED_BUDGET,
+    startTimeTo?: Date,
+    startTimeFrom?: Date,
+  ) =>
     runCh(
       repo.listGenerationFactsByTraceIds({
         organizationId: ORG_ID,
@@ -105,6 +110,7 @@ describe("SpanRepository Cost and Speed source facts", () => {
         traceIds,
         contentBudget: budget,
         sessionKeyByTraceId: SESSION_KEYS,
+        ...(startTimeFrom ? { startTimeFrom } : {}),
         ...(startTimeTo ? { startTimeTo } : {}),
       }),
     )
@@ -265,11 +271,40 @@ describe("SpanRepository Cost and Speed source facts", () => {
     it("returns nothing for an empty trace list", async () => {
       expect(await readGenerations([])).toEqual([])
     })
+
+    it("excludes spans that started before startTimeFrom", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          spanRow({
+            name: "before-window",
+            start_time: "2025-01-01 00:00:00.000000000",
+            end_time: "2025-01-01 00:00:01.000000000",
+          }),
+          spanRow({
+            span_id: "2222222222222222",
+            name: "within-window",
+            start_time: "2026-01-01 00:00:00.000000000",
+            end_time: "2026-01-01 00:00:01.000000000",
+          }),
+        ]),
+      )
+
+      const facts = await readGenerations([TRACE_A], UNLIMITED_BUDGET, undefined, new Date("2026-01-01T00:00:00.000Z"))
+
+      expect(facts.map((fact) => fact.name)).toEqual(["within-window"])
+    })
   })
 
   describe("listToolCallFactsByTraceIds", () => {
-    const readToolCalls = (traceIds: readonly TraceId[]) =>
-      runCh(repo.listToolCallFactsByTraceIds({ organizationId: ORG_ID, projectId: PROJECT_ID, traceIds }))
+    const readToolCalls = (traceIds: readonly TraceId[], startTimeFrom?: Date) =>
+      runCh(
+        repo.listToolCallFactsByTraceIds({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds,
+          ...(startTimeFrom ? { startTimeFrom } : {}),
+        }),
+      )
 
     const toolRow = (overrides: Record<string, unknown>) =>
       spanRow({ operation: "execute_tool", provider: "", model: "", cost_source: "no_tokens", ...overrides })
@@ -366,6 +401,31 @@ describe("SpanRepository Cost and Speed source facts", () => {
 
       expect(await readToolCalls([TRACE_A])).toEqual([])
       expect(await readToolCalls([])).toEqual([])
+    })
+
+    it("excludes tool calls that started before startTimeFrom", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          toolRow({
+            span_id: "8888888888888888",
+            tool_call_id: "call-before",
+            tool_name: "old",
+            start_time: "2025-01-01 00:00:00.000000000",
+            end_time: "2025-01-01 00:00:01.000000000",
+          }),
+          toolRow({
+            span_id: "9999999999999999",
+            tool_call_id: "call-within",
+            tool_name: "recent",
+            start_time: "2026-01-01 00:00:00.000000000",
+            end_time: "2026-01-01 00:00:01.000000000",
+          }),
+        ]),
+      )
+
+      const facts = await readToolCalls([TRACE_A], new Date("2026-01-01T00:00:00.000Z"))
+
+      expect(facts.map((fact) => fact.toolCallId)).toEqual(["call-within"])
     })
   })
 })

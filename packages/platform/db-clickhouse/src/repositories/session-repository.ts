@@ -1078,10 +1078,13 @@ export const SessionRepositoryLive = Layer.effect(
             )
         }),
 
-      listDetailsBySessionIds: ({ organizationId, projectId, sessionIds, cutoff }) =>
+      listDetailsBySessionIds: ({ organizationId, projectId, sessionIds, startTimeFrom, cutoff }) =>
         Effect.gen(function* () {
           if (sessionIds.length === 0) return []
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const startFromClause = startTimeFrom
+            ? "AND start_time >= parseDateTime64BestEffort({startTimeFrom:String}, 9, 'UTC')"
+            : ""
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
@@ -1094,6 +1097,7 @@ export const SessionRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND start_time <= parseDateTime64BestEffort({cutoff:String}, 9, 'UTC')
+                          ${startFromClause}
                           AND (
                             session_id IN ({sessionIds:Array(String)})
                             OR (session_id = '' AND toString(trace_id) IN ({sessionIds:Array(String)}))
@@ -1107,6 +1111,7 @@ export const SessionRepositoryLive = Layer.effect(
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   sessionIds: sessionIds.map((sessionId) => sessionId as string),
+                  ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
                   cutoff: formatCHDate(cutoff),
                 },
                 format: "JSONEachRow",
