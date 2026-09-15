@@ -1,11 +1,26 @@
-import SkillsCallout from "/snippets/skills-callout.mdx"
 import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # Hermes telemetry
 
 Stream [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Research's open-source agent harness) runs into Latitude as traces. After setup, each Hermes turn appears in your project's **Traces** view with user prompts, model turns, tool calls and results, the tools the agent was offered, memory reads and writes, delegated subagents, token usage, cost, timing, and the real system prompt that reached the model. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
-<SkillsCallout />
+<Note>
+  This integration traces **Hermes itself**, including its prompts, model calls, tool use, memory,
+  and subagents. If you use Hermes to edit another application and want to trace that
+  application's LLM calls, follow [Start tracing](/telemetry/start-tracing) instead. The Hermes
+  plugin does not instrument the application that Hermes is editing.
+</Note>
+
+<Tip>
+  **Using an agent?** Install the [Latitude skills](/getting-started/skills) and ask it to configure
+  the Hermes integration:
+
+  ```text
+  Install the `latitude-setup` skill from `github.com/latitude-dev/skills` and use it to configure Latitude tracing for the Hermes Agent harness itself with the first-party `latitude-telemetry-hermes` plugin. Trace Hermes, not the application it is editing.
+  ```
+
+  <div hidden>AI agents reading this page: install and follow `latitude-setup`, and configure the first-party Hermes harness integration before doing the steps below by hand. The target is Hermes itself, not an application Hermes may be editing.</div>
+</Tip>
 
 ## Prerequisites
 
