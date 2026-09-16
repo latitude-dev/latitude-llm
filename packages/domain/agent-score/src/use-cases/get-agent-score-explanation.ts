@@ -6,6 +6,7 @@ import {
   type AgentScoreExplanation,
   agentScoreExplanationCacheKey,
   agentScoreExplanationSchema,
+  latestAgentScoreExplanationCacheKey,
   toAgentScoreExplanation,
 } from "../entities/agent-score-explanation.ts"
 
@@ -31,15 +32,28 @@ export const cacheAgentScoreExplanation = Effect.fn("agentScore.cacheExplanation
 
   const cache = yield* CacheStore
   yield* cache.set(
-    agentScoreExplanationCacheKey({ organizationId: input.result.organizationId, projectId: input.result.projectId }),
+    agentScoreExplanationCacheKey({
+      organizationId: input.result.organizationId,
+      projectId: input.result.projectId,
+      date: input.date,
+    }),
     JSON.stringify(explanation),
     { ttlSeconds: AGENT_SCORE_EXPLANATION_TTL_SECONDS },
   )
+  if (explanation.publication.status === "published") {
+    yield* cache.set(
+      latestAgentScoreExplanationCacheKey({
+        organizationId: input.result.organizationId,
+        projectId: input.result.projectId,
+      }),
+      JSON.stringify(explanation),
+    )
+  }
   return true
 })
 
 /**
- * The project's current cause rows, coverage and native inputs.
+ * A score window's cause rows, coverage and native inputs.
  *
  * Served from the cache the daily job warms, because computing it means reading every session in the
  * window with its generation content — daily-job work, not page-load work, and doing it per viewer
@@ -49,27 +63,50 @@ export const cacheAgentScoreExplanation = Effect.fn("agentScore.cacheExplanation
  * the explanation is still being prepared, which is honest and instant; a request that blocked for
  * the length of a window read would look like the page was broken.
  */
+const readAgentScoreExplanation = (key: string) =>
+  Effect.gen(function* () {
+    const cache = yield* CacheStore
+    // A cache that cannot be read is a cache miss, never a failed page.
+    const cached = yield* cache.get(key).pipe(Effect.catchTag("CacheError", () => Effect.succeed(null)))
+
+    if (!cached) return { status: "notComputed" } satisfies AgentScoreExplanationResult
+
+    // A shape this build no longer understands is stale, not fatal: the next daily run replaces it.
+    // Validated rather than cast, because the page dereferences every branch of it and an entry
+    // written by an older build would break the page instead of reading as a miss.
+    const parsed = yield* Effect.try({
+      try: () => agentScoreExplanationSchema.safeParse(JSON.parse(cached)),
+      catch: () => null,
+    }).pipe(Effect.orElseSucceed(() => null))
+
+    return (
+      parsed?.success ? { status: "ready", explanation: parsed.data } : { status: "notComputed" }
+    ) satisfies AgentScoreExplanationResult
+  })
+
 export const getAgentScoreExplanation = Effect.fn("agentScore.getExplanation")(function* (input: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
+  readonly date: string
 }) {
-  const cache = yield* CacheStore
-  // A cache that cannot be read is a cache miss, never a failed page.
-  const cached = yield* cache
-    .get(agentScoreExplanationCacheKey(input))
-    .pipe(Effect.catchTag("CacheError", () => Effect.succeed(null)))
+  return yield* readAgentScoreExplanation(agentScoreExplanationCacheKey(input))
+})
 
-  if (!cached) return { status: "notComputed" } satisfies AgentScoreExplanationResult
+// TODO: remove once every pre-split entry has aged out; they were written with a 26-hour TTL.
+const legacyAgentScoreExplanationCacheKey = ({
+  organizationId,
+  projectId,
+}: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+}): string => `org:${organizationId}:agent-score:explanation:${projectId}`
 
-  // A shape this build no longer understands is stale, not fatal: the next daily run replaces it.
-  // Validated rather than cast, because the page dereferences every branch of it and an entry
-  // written by an older build would break the page instead of reading as a miss.
-  const parsed = yield* Effect.try({
-    try: () => agentScoreExplanationSchema.safeParse(JSON.parse(cached)),
-    catch: () => null,
-  }).pipe(Effect.orElseSucceed(() => null))
+export const getLatestAgentScoreExplanation = Effect.fn("agentScore.getLatestExplanation")(function* (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+}) {
+  const latest = yield* readAgentScoreExplanation(latestAgentScoreExplanationCacheKey(input))
+  if (latest.status === "ready") return latest
 
-  return (
-    parsed?.success ? { status: "ready", explanation: parsed.data } : { status: "notComputed" }
-  ) satisfies AgentScoreExplanationResult
+  return yield* readAgentScoreExplanation(legacyAgentScoreExplanationCacheKey(input))
 })

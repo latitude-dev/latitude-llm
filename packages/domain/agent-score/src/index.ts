@@ -600,6 +600,7 @@ export {
   type AgentScoreExplanationResult,
   cacheAgentScoreExplanation,
   getAgentScoreExplanation,
+  getLatestAgentScoreExplanation,
 } from "./use-cases/get-agent-score-explanation.ts"
 export {
   type GetSessionAssessmentInput,

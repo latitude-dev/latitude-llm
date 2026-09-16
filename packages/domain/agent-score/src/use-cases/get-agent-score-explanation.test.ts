@@ -1,16 +1,20 @@
 import { CacheError, CacheStore, OrganizationId, ProjectId } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { agentScoreExplanationCacheKey } from "../entities/agent-score-explanation.ts"
-import { getAgentScoreExplanation } from "./get-agent-score-explanation.ts"
+import {
+  agentScoreExplanationCacheKey,
+  latestAgentScoreExplanationCacheKey,
+} from "../entities/agent-score-explanation.ts"
+import { getAgentScoreExplanation, getLatestAgentScoreExplanation } from "./get-agent-score-explanation.ts"
 
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
+const DATE = "2026-09-12"
 
 const EXPLANATION = {
   organizationId: ORGANIZATION_ID as string,
   projectId: PROJECT_ID as string,
-  date: "2026-09-12",
+  date: DATE,
   scoringVersion: "agent-score@1.0.0",
   computedAt: "2026-09-12T04:00:00.000Z",
   window: { stepDays: 28, from: "2026-08-15T04:00:00.000Z", to: "2026-09-12T04:00:00.000Z" },
@@ -69,15 +73,39 @@ const withCachedValue = (value: string | null | Effect.Effect<string | null, Cac
 
 const read = (value: string | null | Effect.Effect<string | null, CacheError>) =>
   Effect.runPromise(
-    getAgentScoreExplanation({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID }).pipe(
+    getAgentScoreExplanation({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, date: DATE }).pipe(
       Effect.provide(withCachedValue(value)),
+    ),
+  )
+
+const readLatest = (value: string | null | Effect.Effect<string | null, CacheError>) =>
+  Effect.runPromise(
+    getLatestAgentScoreExplanation({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID }).pipe(
+      Effect.provide(withCachedValue(value)),
+    ),
+  )
+
+const withCachedEntries = (entries: Record<string, string>) =>
+  Layer.succeed(CacheStore, {
+    get: (key: string) => Effect.succeed(entries[key] ?? null),
+    set: () => Effect.void,
+    delete: () => Effect.void,
+  })
+
+const readLatestWithEntries = (entries: Record<string, string>) =>
+  Effect.runPromise(
+    getLatestAgentScoreExplanation({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID }).pipe(
+      Effect.provide(withCachedEntries(entries)),
     ),
   )
 
 describe("getAgentScoreExplanation", () => {
   it("reads the key under the organization prefix", () => {
-    expect(agentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID })).toBe(
-      `org:${ORGANIZATION_ID}:agent-score:explanation:${PROJECT_ID}`,
+    expect(agentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, date: DATE })).toBe(
+      `org:${ORGANIZATION_ID}:agent-score:explanation:${PROJECT_ID}:${DATE}`,
+    )
+    expect(latestAgentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID })).toBe(
+      `org:${ORGANIZATION_ID}:agent-score:latest-explanation:${PROJECT_ID}`,
     )
   })
 
@@ -86,6 +114,33 @@ describe("getAgentScoreExplanation", () => {
 
     expect(result.status).toBe("ready")
     expect(result.status === "ready" && result.explanation.eligibleSessionCount).toBe(5037)
+  })
+
+  it("returns the latest published explanation independently from the current date", async () => {
+    const result = await readLatest(JSON.stringify(EXPLANATION))
+
+    expect(result.status).toBe("ready")
+    expect(result.status === "ready" && result.explanation.date).toBe(DATE)
+  })
+
+  it("falls back to the legacy project key when the latest key misses", async () => {
+    const result = await readLatestWithEntries({
+      [`org:${ORGANIZATION_ID}:agent-score:explanation:${PROJECT_ID}`]: JSON.stringify(EXPLANATION),
+    })
+
+    expect(result.status).toBe("ready")
+    expect(result.status === "ready" && result.explanation.date).toBe(DATE)
+  })
+
+  it("prefers the latest published key over the legacy project key", async () => {
+    const result = await readLatestWithEntries({
+      [latestAgentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID })]: JSON.stringify(
+        { ...EXPLANATION, eligibleSessionCount: 1 },
+      ),
+      [`org:${ORGANIZATION_ID}:agent-score:explanation:${PROJECT_ID}`]: JSON.stringify(EXPLANATION),
+    })
+
+    expect(result.status === "ready" && result.explanation.eligibleSessionCount).toBe(1)
   })
 
   it("reads an entry from an incompatible shape as a miss rather than handing the page a hole", async () => {
