@@ -94,6 +94,101 @@ const decision = (overrides: Partial<FlaggerScreeningDecision> = {}): FlaggerScr
 })
 
 describe("SessionAssessmentBulkTelemetrySourceLive", () => {
+  it("limits concurrent telemetry source reads to two", async () => {
+    let activeReads = 0
+    let maxActiveReads = 0
+    let completedReads = 0
+    let resolveFirstTwoReads!: () => void
+    const firstTwoReads = new Promise<void>((resolve) => {
+      resolveFirstTwoReads = resolve
+    })
+    let releaseReads!: () => void
+    const readsReleased = new Promise<void>((resolve) => {
+      releaseReads = resolve
+    })
+    const read = <Value>(value: Value) =>
+      Effect.gen(function* () {
+        activeReads += 1
+        maxActiveReads = Math.max(maxActiveReads, activeReads)
+        if (activeReads === 2) resolveFirstTwoReads()
+        yield* Effect.promise(() => readsReleased)
+        activeReads -= 1
+        completedReads += 1
+        return value
+      })
+    const sessionRepository = createFakeSessionRepository({
+      listDetailsBySessionIds: () => Effect.succeed([session]),
+    }).repository
+    const baseSpans = createFakeSpanRepository().repository
+    const spanRepository = {
+      ...baseSpans,
+      listByTraceIds: (): ReturnType<typeof baseSpans.listByTraceIds> => read([]),
+      listGenerationFactsByTraceIds: (): ReturnType<typeof baseSpans.listGenerationFactsByTraceIds> => read([]),
+      listToolCallFactsByTraceIds: (): ReturnType<typeof baseSpans.listToolCallFactsByTraceIds> => read([]),
+    }
+    const baseMemory = createFakeMemoryRepository().repository
+    const memoryRepository = {
+      ...baseMemory,
+      readMemoryEventsBySessionIds: (): ReturnType<typeof baseMemory.readMemoryEventsBySessionIds> => read([]),
+    }
+    const baseAnalyses = createFakeSessionAnalysisRepository().repository
+    const analysisRepository = {
+      ...baseAnalyses,
+      listLatestBySessions: (): ReturnType<typeof baseAnalyses.listLatestBySessions> => read([]),
+    }
+    const baseMoments = createFakeSessionSemanticMomentRepository().repository
+    const momentRepository = {
+      ...baseMoments,
+      listBySessions: (): ReturnType<typeof baseMoments.listBySessions> => read([]),
+    }
+    const baseLabels = createFakeSessionMomentLabelRepository().repository
+    const labelRepository = {
+      ...baseLabels,
+      listBySessions: (): ReturnType<typeof baseLabels.listBySessions> => read([]),
+    }
+    const baseScreening = createFakeFlaggerScreeningDecisionRepository().repository
+    const screeningRepository = {
+      ...baseScreening,
+      listLatestBySessions: (): ReturnType<typeof baseScreening.listLatestBySessions> => read([]),
+    }
+    const dependencies = Layer.mergeAll(
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      Layer.succeed(SessionRepository, sessionRepository),
+      Layer.succeed(SpanRepository, spanRepository),
+      Layer.succeed(SessionAnalysisRepository, analysisRepository),
+      Layer.succeed(SessionSemanticMomentRepository, momentRepository),
+      Layer.succeed(SessionMomentLabelRepository, labelRepository),
+      Layer.succeed(FlaggerScreeningDecisionRepository, screeningRepository),
+      Layer.succeed(MemoryRepository, memoryRepository),
+    )
+    const result = Effect.gen(function* () {
+      const source = yield* SessionAssessmentBulkTelemetrySource
+      return yield* source.read({ organizationId, projectId, sessionIds: [sessionId], cutoff })
+    }).pipe(Effect.provide(SessionAssessmentBulkTelemetrySourceLive.pipe(Layer.provideMerge(dependencies))))
+
+    const resultPromise = Effect.runPromise(result)
+    let firstTwoReadsTimeout: ReturnType<typeof setTimeout> | undefined
+
+    try {
+      await Promise.race([
+        firstTwoReads,
+        new Promise<never>((_, reject) => {
+          firstTwoReadsTimeout = setTimeout(() => {
+            reject(new Error("Expected two telemetry source reads to start"))
+          }, 1_000)
+        }),
+      ])
+      expect(maxActiveReads).toBe(2)
+    } finally {
+      if (firstTwoReadsTimeout) clearTimeout(firstTwoReadsTimeout)
+      releaseReads()
+      await resultPromise
+    }
+
+    expect(completedReads).toBe(8)
+    expect(maxActiveReads).toBe(2)
+  })
+
   it("loads each ClickHouse source once for the whole batch", async () => {
     const reads = {
       sessions: 0,
