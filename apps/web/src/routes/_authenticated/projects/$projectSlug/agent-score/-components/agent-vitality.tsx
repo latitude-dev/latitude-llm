@@ -152,11 +152,7 @@ export function AgentVitality({
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={12} className="w-80 max-w-80 p-0">
             {activeSection ? (
-              <VitalityHoverContent
-                section={activeSection}
-                snapshot={snapshot}
-                explanation={snapshot?.date === date ? explanation : null}
-              />
+              <VitalityHoverContent section={activeSection} snapshot={snapshot} explanation={explanation} />
             ) : null}
           </TooltipContent>
         </TooltipRoot>

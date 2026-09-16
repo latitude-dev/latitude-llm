@@ -42,6 +42,14 @@ describe("agentScoreExplanationForSnapshot", () => {
     expect(agentScoreExplanationForSnapshot({ explanation, date: "2026-09-13", snapshot })).toBeNull()
   })
 
+  it("keeps a latest available score's explanation when it matches that score date", () => {
+    const latestExplanation = { ...explanation, date: "2026-09-11" }
+
+    expect(agentScoreExplanationForSnapshot({ explanation: latestExplanation, date: "2026-09-11", snapshot })).toBe(
+      latestExplanation,
+    )
+  })
+
   it("hides a cached explanation from a different scoring version", () => {
     expect(
       agentScoreExplanationForSnapshot({

@@ -55,12 +55,11 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
   const date = scoreData?.date ?? new Date().toISOString().slice(0, 10)
   const isCurrentSnapshot = isCurrentAgentScoreSnapshot(snapshot, date)
   const hasStaleSnapshot = isStaleAgentScoreSnapshot(snapshot, date)
-  const currentSnapshot = isCurrentSnapshot ? snapshot : null
-  const cachedExplanation = explanationQuery.data?.explanation ?? null
+  const cachedExplanation = explanationQuery.data?.currentExplanation ?? null
   const explanation = agentScoreExplanationForSnapshot({
-    explanation: cachedExplanation,
-    date,
-    snapshot: currentSnapshot,
+    explanation: explanationQuery.data?.explanation ?? null,
+    date: snapshot?.date ?? date,
+    snapshot,
   })
   const isRefreshing = scoreQuery.isRefetching || historyQuery.isRefetching || explanationQuery.isRefetching
   const refresh = async () => {
@@ -164,7 +163,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
               : SCORE_DIMENSION_ORDER.map((dimension) => {
                   const meta = DIMENSION_META[dimension]
                   const evidence = explanation
-                    ? buildDimensionEvidence({ dimension, snapshot: currentSnapshot, explanation })
+                    ? buildDimensionEvidence({ dimension, snapshot, explanation })
                     : EMPTY_EVIDENCE
                   const affected = [...evidence.affected].sort(
                     (left, right) => Number(Boolean(left.signalId)) - Number(Boolean(right.signalId)),
@@ -175,15 +174,15 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                       id={dimension}
                       title={meta.title}
                       description={meta.description}
-                      score={currentSnapshot?.dimensions[dimension]?.score ?? null}
+                      score={snapshot?.dimensions[dimension]?.score ?? null}
                       projectSlug={project.slug}
                       affected={affected}
                       healthy={evidence.healthy}
                       coverage={evidence.coverageGaps}
                       emptyAffectedMessage={
                         explanation
-                          ? "No material issues affected this score in the current window."
-                          : "Evidence has not been prepared for the current window yet."
+                          ? "No material issues affected this score."
+                          : "Evidence has not been prepared for the latest score yet."
                       }
                     />
                   )

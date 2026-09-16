@@ -216,18 +216,28 @@ export const toAgentScoreExplanation = ({
 }
 
 /**
- * Organization-prefixed, as every scoped cache key must be, and keyed by project rather than by date.
+ * Organization-prefixed, as every scoped cache key must be, and keyed by the score date.
  *
- * Not a date key on purpose: a date key is what a snapshot has, and this is a cache. It expires, it
- * is rebuilt, and nothing may read it as a record of what a past day looked like.
+ * A project may not publish a score today. Keeping each day's cached explanation separate lets the
+ * page show today's readiness beside the latest published score's breakdown.
  */
 export const agentScoreExplanationCacheKey = ({
+  organizationId,
+  projectId,
+  date,
+}: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly date: string
+}): string => `org:${organizationId}:agent-score:explanation:${projectId}:${date}`
+
+export const latestAgentScoreExplanationCacheKey = ({
   organizationId,
   projectId,
 }: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-}): string => `org:${organizationId}:agent-score:explanation:${projectId}`
+}): string => `org:${organizationId}:agent-score:latest-explanation:${projectId}`
 
 /** Longer than the daily cycle so a warm entry always exists, short enough that a stopped job shows through. */
 export const AGENT_SCORE_EXPLANATION_TTL_SECONDS = 26 * 60 * 60

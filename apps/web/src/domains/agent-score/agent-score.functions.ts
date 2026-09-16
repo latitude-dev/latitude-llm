@@ -3,6 +3,7 @@ import {
   type AgentScoreSnapshot,
   getAgentScoreExplanation,
   getLatestAgentScore,
+  getLatestAgentScoreExplanation,
   LAUNCH_AGENT_SCORE_ARTIFACT,
   listAgentScoreHistory,
 } from "@domain/agent-score"
@@ -87,6 +88,7 @@ export const getProjectAgentScoreHistory = createServerFn({ method: "GET" })
 export interface AgentScoreExplanationRecord {
   readonly status: "ready" | "notComputed"
   readonly explanation: AgentScoreExplanation | null
+  readonly currentExplanation: AgentScoreExplanation | null
 }
 
 /**
@@ -101,16 +103,32 @@ export const getProjectAgentScoreExplanation = createServerFn({ method: "GET" })
   .inputValidator(projectInput)
   .handler(async ({ data, context }): Promise<AgentScoreExplanationRecord> => {
     const orgId = await resolveOrgScope(context)
-    const result = await Effect.runPromise(
-      getAgentScoreExplanation({ organizationId: orgId, projectId: ProjectId(data.projectId) }).pipe(
-        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+    const projectId = ProjectId(data.projectId)
+    const latest = await Effect.runPromise(
+      getLatestAgentScore({ organizationId: orgId, projectId }).pipe(
+        withScopedPostgres(AgentScoreSnapshotRepositoryLive, getPostgresClient(), orgId),
         withTracing,
       ),
     )
+    const [currentResult, latestResult] = await Promise.all([
+      Effect.runPromise(
+        getAgentScoreExplanation({ organizationId: orgId, projectId, date: latest.date }).pipe(
+          Effect.provide(RedisCacheStoreLive(getRedisClient())),
+          withTracing,
+        ),
+      ),
+      Effect.runPromise(
+        getLatestAgentScoreExplanation({ organizationId: orgId, projectId }).pipe(
+          Effect.provide(RedisCacheStoreLive(getRedisClient())),
+          withTracing,
+        ),
+      ),
+    ])
 
     return {
-      status: result.status,
-      explanation: result.status === "ready" ? result.explanation : null,
+      status: latestResult.status,
+      explanation: latestResult.status === "ready" ? latestResult.explanation : null,
+      currentExplanation: currentResult.status === "ready" ? currentResult.explanation : null,
     }
   })
 

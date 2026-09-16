@@ -354,9 +354,14 @@ const getAgentScoreCauses = agentScoreOperation({
     Effect.gen(function* () {
       const projectRepo = yield* ProjectRepository
       const project = yield* projectRepo.findBySlug(input.params.projectSlug)
+      const current = yield* getCurrentAgentScore({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+      })
       const result = yield* getAgentScoreExplanation({
         organizationId: OrganizationId(ctx.organization.id as string),
         projectId: ProjectId(project.id as string),
+        date: current.date,
       })
 
       return {
