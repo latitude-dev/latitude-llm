@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.103 - 2026-09-16
+
+### Agent Score
+
+- Split the explanation cache into per-date entries plus a latest-published entry, so a day without a published score shows today's readiness beside the latest score breakdown instead of stale readiness or an empty breakdown. Fixed the refresh check to compare against today's explanation and added a legacy-key fallback so pre-split cached breakdowns survive the rollout (ref: #4664).
+
 ## v0.3.102 - 2026-09-16
 
 ### Agent Score
