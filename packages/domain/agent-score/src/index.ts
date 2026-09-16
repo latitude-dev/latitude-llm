@@ -253,6 +253,7 @@ export {
 } from "./pagination/session-assessment-cursor.ts"
 export {
   type AgentScoreSnapshotHistoryScope,
+  type AgentScoreSnapshotLatestScope,
   AgentScoreSnapshotRepository,
   type AgentScoreSnapshotRepositoryShape,
 } from "./ports/agent-score-snapshot-repository.ts"
@@ -592,6 +593,7 @@ export {
   AGENT_SCORE_HISTORY_DEFAULT_DAYS,
   type CurrentAgentScore,
   getCurrentAgentScore,
+  getLatestAgentScore,
   listAgentScoreHistory,
 } from "./use-cases/get-agent-score.ts"
 export {

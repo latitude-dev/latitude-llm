@@ -5,7 +5,13 @@ import type {
   AgentScoreExplanationRecord,
   AgentScoreRecord,
 } from "../../../../../../domains/agent-score/agent-score.functions.ts"
-import { formatCount, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
+import {
+  formatCount,
+  formatDateTime,
+  formatFullDate,
+  SCORE_DIMENSION_ORDER,
+  type ScoreDimensionKey,
+} from "./agent-score-format.ts"
 import { type VitalityRingSection, VitalityScoreRing } from "./score-ring.tsx"
 import { VitalityHoverContent } from "./vitality-hover-content.tsx"
 
@@ -39,18 +45,38 @@ function ScoreDelta({ value }: { readonly value: number | null }) {
 function VitalityDetails({
   snapshot,
   delta,
+  date,
 }: {
   readonly snapshot: AgentScoreRecord | null
   readonly delta: number | null
+  readonly date: string
 }) {
-  if (!snapshot) return <Text.H6 color="foregroundMuted">Score not ready</Text.H6>
+  if (!snapshot) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <Text.H6 color="foregroundMuted">Score not ready</Text.H6>
+        <Text.H7 color="foregroundMuted">No score was published today.</Text.H7>
+      </div>
+    )
+  }
+
+  const isCurrent = snapshot.date === date
+  const scoreDate = formatFullDate(snapshot.date)
 
   return (
-    <div className="flex flex-row flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
-      <Text.H6 color="foregroundMuted">Last {snapshot.windowDays} days</Text.H6>
-      <Text.H6 color="foregroundMuted">·</Text.H6>
-      <Text.H6 color="foregroundMuted">{formatCount(snapshot.eligibleSessionCount)} sessions</Text.H6>
-      <ScoreDelta value={delta} />
+    <div className="flex flex-col items-center gap-1">
+      {!isCurrent ? <Text.H6B>Latest available</Text.H6B> : null}
+      <div className="flex flex-row flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
+        <Text.H6 color="foregroundMuted">
+          {snapshot.windowDays}-day window ending {scoreDate}
+        </Text.H6>
+        <Text.H6 color="foregroundMuted">·</Text.H6>
+        <Text.H6 color="foregroundMuted">{formatCount(snapshot.eligibleSessionCount)} sessions</Text.H6>
+        <ScoreDelta value={delta} />
+      </div>
+      <Text.H7 color="foregroundMuted">Score date: {scoreDate} UTC</Text.H7>
+      <Text.H7 color="foregroundMuted">Computed: {formatDateTime(snapshot.createdAt)}</Text.H7>
+      {!isCurrent ? <Text.H7 color="foregroundMuted">No score was published today.</Text.H7> : null}
     </div>
   )
 }
@@ -77,12 +103,14 @@ function AgentVitalitySkeleton() {
 
 export function AgentVitality({
   snapshot,
+  date,
   history,
   dimensionWeights,
   explanation,
   isLoading,
 }: {
   readonly snapshot: AgentScoreRecord | null
+  readonly date: string
   readonly history: readonly AgentScoreRecord[] | undefined
   readonly dimensionWeights: Readonly<Record<ScoreDimensionKey, number>> | undefined
   readonly isLoading: boolean
@@ -124,7 +152,11 @@ export function AgentVitality({
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={12} className="w-80 max-w-80 p-0">
             {activeSection ? (
-              <VitalityHoverContent section={activeSection} snapshot={snapshot} explanation={explanation} />
+              <VitalityHoverContent
+                section={activeSection}
+                snapshot={snapshot}
+                explanation={snapshot?.date === date ? explanation : null}
+              />
             ) : null}
           </TooltipContent>
         </TooltipRoot>
@@ -133,7 +165,7 @@ export function AgentVitality({
         <div className="flex flex-row items-center gap-1.5">
           <Text.H5M>Agent vitality</Text.H5M>
         </div>
-        <VitalityDetails snapshot={snapshot} delta={delta} />
+        <VitalityDetails snapshot={snapshot} delta={delta} date={date} />
       </div>
     </div>
   )

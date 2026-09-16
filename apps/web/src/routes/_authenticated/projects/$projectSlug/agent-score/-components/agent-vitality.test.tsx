@@ -12,6 +12,7 @@ afterEach(() => {
 const interval = { lower: 50, upper: 80 }
 const snapshot: AgentScoreRecord = {
   date: "2026-09-12",
+  createdAt: "2026-09-12T04:30:00.000Z",
   score: 66.3,
   interval,
   dimensions: {
@@ -32,7 +33,14 @@ const dimensionWeights = { outcome: 0.35, reliability: 0.25, cost: 0.15, speed: 
 describe("AgentVitality", () => {
   it("renders a score-shaped placeholder while loading", () => {
     render(
-      <AgentVitality explanation={null} snapshot={null} history={undefined} dimensionWeights={undefined} isLoading />,
+      <AgentVitality
+        explanation={null}
+        snapshot={null}
+        date="2026-09-12"
+        history={undefined}
+        dimensionWeights={undefined}
+        isLoading
+      />,
     )
 
     expect(screen.getByLabelText("Loading Agent Score").getAttribute("aria-busy")).toBe("true")
@@ -48,6 +56,7 @@ describe("AgentVitality", () => {
       <AgentVitality
         explanation={null}
         snapshot={currentSnapshot}
+        date="2026-09-12"
         history={[previousSnapshot]}
         dimensionWeights={dimensionWeights}
         isLoading={false}
@@ -65,6 +74,7 @@ describe("AgentVitality", () => {
       <AgentVitality
         explanation={null}
         snapshot={snapshot}
+        date="2026-09-12"
         history={[olderSnapshot, previousSnapshot]}
         dimensionWeights={dimensionWeights}
         isLoading={false}
@@ -79,6 +89,7 @@ describe("AgentVitality", () => {
       <AgentVitality
         explanation={null}
         snapshot={null}
+        date="2026-09-12"
         history={[]}
         dimensionWeights={dimensionWeights}
         isLoading={false}
@@ -87,7 +98,43 @@ describe("AgentVitality", () => {
 
     expect(screen.getByText("Agent vitality")).toBeDefined()
     expect(screen.getByText("Score not ready")).toBeDefined()
+    expect(screen.getByText("No score was published today.")).toBeDefined()
     expect(screen.getByText("—")).toBeDefined()
+  })
+
+  it("labels an older score as the latest available snapshot", () => {
+    render(
+      <AgentVitality
+        explanation={null}
+        snapshot={{ ...snapshot, date: "2026-09-11" }}
+        date="2026-09-12"
+        history={[]}
+        dimensionWeights={dimensionWeights}
+        isLoading={false}
+      />,
+    )
+
+    expect(screen.getByText("Latest available")).toBeDefined()
+    expect(screen.getByText("Score date: Sep 11, 2026 UTC")).toBeDefined()
+    expect(screen.getByText("Computed: Sep 12, 2026 at 4:30 AM UTC")).toBeDefined()
+    expect(screen.getByText("No score was published today.")).toBeDefined()
+  })
+
+  it("shows the computation timestamp without stale wording for today’s score", () => {
+    render(
+      <AgentVitality
+        explanation={null}
+        snapshot={snapshot}
+        date="2026-09-12"
+        history={[]}
+        dimensionWeights={dimensionWeights}
+        isLoading={false}
+      />,
+    )
+
+    expect(screen.getByText("Computed: Sep 12, 2026 at 4:30 AM UTC")).toBeDefined()
+    expect(screen.queryByText("Latest available")).toBeNull()
+    expect(screen.queryByText("No score was published today.")).toBeNull()
   })
 
   it("keeps the hover card open after the tooltip opening delay", () => {
@@ -96,6 +143,7 @@ describe("AgentVitality", () => {
       <AgentVitality
         explanation={null}
         snapshot={snapshot}
+        date="2026-09-12"
         history={[]}
         dimensionWeights={dimensionWeights}
         isLoading={false}
@@ -121,6 +169,7 @@ describe("AgentVitality", () => {
       <AgentVitality
         explanation={null}
         snapshot={snapshot}
+        date="2026-09-12"
         history={[]}
         dimensionWeights={dimensionWeights}
         isLoading={false}

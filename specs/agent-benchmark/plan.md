@@ -1421,10 +1421,12 @@ Each row is a gate the previous checklist asserted and the code does not current
   decomposition that new evidence has already invalidated. Re-running a date that has a snapshot is a
   no-op rather than an update, which is what makes the row immutable in practice and not only by
   intent.
-- **D12. The page never substitutes an older snapshot.** If today's snapshot was not published, the
-  current score is unavailable and says which floor blocked it. Older snapshots stay in the trend.
-  The public operation behaves the same way: an explicit unavailable state, not a 404 and not the
-  most recent row.
+- **D12. The page uses the latest published snapshot as its headline.** If today's snapshot was not
+  published, the headline labels that score as latest available, includes its score date and exact
+  computation timestamp, and says no score was published today. Today's readiness and evidence remain
+  separate: they do not lower or explain the stale score, and unavailable current evidence remains
+  unavailable. The trend preserves missing-day gaps. The public operation keeps its explicit
+  today-only unavailable contract; the latest-available fallback belongs to the page.
 - **D13. PR 6 ships behind a feature flag and the flag is a separate decision from the merge.** The
   two remaining gates need production traffic that does not exist yet. Holding the code back until it
   does would mean a month of drift against a moving codebase for no review benefit. The flag comes

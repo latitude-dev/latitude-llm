@@ -63,6 +63,19 @@ const find = (date: string, scope: { org?: OrganizationId; project?: ProjectId }
     scope.org ?? ORG_A,
   )
 
+const findLatest = (throughDate: string, scope: { org?: OrganizationId; project?: ProjectId } = {}) =>
+  run(
+    Effect.gen(function* () {
+      const repository = yield* AgentScoreSnapshotRepository
+      return yield* repository.findLatest({
+        organizationId: scope.org ?? ORG_A,
+        projectId: scope.project ?? PROJECT_A,
+        throughDate,
+      })
+    }),
+    scope.org ?? ORG_A,
+  )
+
 afterEach(async () => {
   await pg.db.delete(agentScoreSnapshots)
 })
@@ -104,6 +117,26 @@ describe("AgentScoreSnapshotRepositoryLive", () => {
     expect(await find("2026-01-01")).toBeNull()
   })
 
+  it("returns no latest snapshot when the project has not published one", async () => {
+    expect(await findLatest("2026-09-29")).toBeNull()
+  })
+
+  it("returns the newest snapshot through the requested date, including snapshots older than history", async () => {
+    await insert(snapshot({ date: "2026-01-01", score: 40 }))
+    await insert(snapshot({ date: "2026-09-27", score: 60 }))
+    await insert(snapshot({ date: "2026-09-29", score: 80 }))
+
+    expect((await findLatest("2026-09-29"))?.score).toBe(80)
+    expect((await findLatest("2026-01-02"))?.score).toBe(40)
+  })
+
+  it("excludes snapshots after the requested through date", async () => {
+    await insert(snapshot({ date: "2026-09-28", score: 60 }))
+    await insert(snapshot({ date: "2026-09-30", score: 80 }))
+
+    expect((await findLatest("2026-09-29"))?.score).toBe(60)
+  })
+
   it("returns history oldest first, inside the requested dates", async () => {
     for (const date of ["2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27"]) {
       await insert(snapshot({ date }))
@@ -130,6 +163,16 @@ describe("AgentScoreSnapshotRepositoryLive", () => {
 
     expect(await find("2026-09-29", { org: ORG_B, project: PROJECT_B })).not.toBeNull()
     expect(await find("2026-09-29", { org: ORG_A, project: PROJECT_B })).toBeNull()
+  })
+
+  it("does not select another tenant or project's newer snapshot", async () => {
+    await insert(snapshot({ date: "2026-09-28", score: 60 }))
+    await insert(snapshot({ date: "2026-09-29", projectId: PROJECT_B, score: 80 }))
+    await insert(snapshot({ date: "2026-09-29", organizationId: ORG_B, score: 90 }), ORG_B)
+
+    expect((await findLatest("2026-09-29"))?.score).toBe(60)
+    expect(await findLatest("2026-09-29", { project: PROJECT_B })).not.toBeNull()
+    expect(await findLatest("2026-09-29", { org: ORG_B })).not.toBeNull()
   })
 
   it("lets two projects publish the same date", async () => {

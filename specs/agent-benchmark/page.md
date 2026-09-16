@@ -20,9 +20,12 @@ The page is first in the Observe group, above Sessions. It is project-scoped and
 snapshots for the headline and history. Evidence and causes are resolved dynamically from the current
 selected window.
 
-The headline uses the current UTC date's snapshot. If that snapshot was not published, the current
-Agent Score is unavailable; the page never substitutes an older score. Older snapshots remain in the
-trend.
+The headline uses the latest published snapshot. The page compares that snapshot's date with the
+current UTC date. When they differ, it labels the headline "Latest available", shows the score date
+and exact computation timestamp, and says that no score was published today. The five dimension
+sections and readiness table remain today's evidence; they do not use stale score values or claim to
+explain the older headline. Older snapshots remain in the trend without synthetic points for missing
+dates.
 
 ## Level one
 
@@ -260,6 +263,12 @@ dimension's coverage or confidence gate fails. It still shows:
 
 Each dimension lists the observations available so far and the exact condition blocking publication.
 No candidate or partial dimension number is shown.
+
+When a prior score is available but today has no published snapshot, the prior composite remains the
+headline as the latest available score. The adjacent readiness table is titled "Requirements for
+today's computation", gives the current UTC date, and says that the requirements do not describe the
+score beside it. If today's explanation is not available, the table preserves its unavailable or
+loading state rather than showing requirements from the older snapshot.
 
 Modeled effect and fix-gain ranking wait for enough evidence. Exact money and time observations do
 not.
