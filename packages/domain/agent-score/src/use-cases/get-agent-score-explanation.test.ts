@@ -85,6 +85,20 @@ const readLatest = (value: string | null | Effect.Effect<string | null, CacheErr
     ),
   )
 
+const withCachedEntries = (entries: Record<string, string>) =>
+  Layer.succeed(CacheStore, {
+    get: (key: string) => Effect.succeed(entries[key] ?? null),
+    set: () => Effect.void,
+    delete: () => Effect.void,
+  })
+
+const readLatestWithEntries = (entries: Record<string, string>) =>
+  Effect.runPromise(
+    getLatestAgentScoreExplanation({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID }).pipe(
+      Effect.provide(withCachedEntries(entries)),
+    ),
+  )
+
 describe("getAgentScoreExplanation", () => {
   it("reads the key under the organization prefix", () => {
     expect(agentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, date: DATE })).toBe(
@@ -107,6 +121,26 @@ describe("getAgentScoreExplanation", () => {
 
     expect(result.status).toBe("ready")
     expect(result.status === "ready" && result.explanation.date).toBe(DATE)
+  })
+
+  it("falls back to the legacy project key when the latest key misses", async () => {
+    const result = await readLatestWithEntries({
+      [`org:${ORGANIZATION_ID}:agent-score:explanation:${PROJECT_ID}`]: JSON.stringify(EXPLANATION),
+    })
+
+    expect(result.status).toBe("ready")
+    expect(result.status === "ready" && result.explanation.date).toBe(DATE)
+  })
+
+  it("prefers the latest published key over the legacy project key", async () => {
+    const result = await readLatestWithEntries({
+      [latestAgentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID })]: JSON.stringify(
+        { ...EXPLANATION, eligibleSessionCount: 1 },
+      ),
+      [`org:${ORGANIZATION_ID}:agent-score:explanation:${PROJECT_ID}`]: JSON.stringify(EXPLANATION),
+    })
+
+    expect(result.status === "ready" && result.explanation.eligibleSessionCount).toBe(1)
   })
 
   it("reads an entry from an incompatible shape as a miss rather than handing the page a hole", async () => {

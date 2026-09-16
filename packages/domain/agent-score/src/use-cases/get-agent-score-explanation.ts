@@ -92,9 +92,21 @@ export const getAgentScoreExplanation = Effect.fn("agentScore.getExplanation")(f
   return yield* readAgentScoreExplanation(agentScoreExplanationCacheKey(input))
 })
 
+// TODO: remove once every pre-split entry has aged out; they were written with a 26-hour TTL.
+const legacyAgentScoreExplanationCacheKey = ({
+  organizationId,
+  projectId,
+}: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+}): string => `org:${organizationId}:agent-score:explanation:${projectId}`
+
 export const getLatestAgentScoreExplanation = Effect.fn("agentScore.getLatestExplanation")(function* (input: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
 }) {
-  return yield* readAgentScoreExplanation(latestAgentScoreExplanationCacheKey(input))
+  const latest = yield* readAgentScoreExplanation(latestAgentScoreExplanationCacheKey(input))
+  if (latest.status === "ready") return latest
+
+  return yield* readAgentScoreExplanation(legacyAgentScoreExplanationCacheKey(input))
 })
