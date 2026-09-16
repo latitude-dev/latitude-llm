@@ -25,6 +25,7 @@ export const signals = latitudeSchema.table(
     filters: jsonb("filters").$type<FilterSet>(), // nullable FilterSet pre-gate; only meaningful alongside an evaluation
     assigneeId: cuid("assignee_id", { default: false }), // nullable; user (org member) assigned to triage this issue. No FK (repo convention); not auto-generated.
     priority: varchar("priority", { length: 16 }).$type<SignalPriority>(), // nullable; manual triage priority (low/medium/high/urgent). Null = unset.
+    bundleKey: varchar("bundle_key", { length: 200 }), // nullable; exact cross-session bucket a deterministic detector claimed (`flaggerBundleKey`). Unique per project among live rows, so discovery can resolve a repeat failure without an embedding round-trip. Null = clustered by meaning.
     centroid: jsonb("centroid").$type<SignalCentroid>(), // nullable; canonical running weighted sum of clustered score feedback embeddings (discovered signals only — user-created evaluation-backed signals have none). `centroidEmbedding` stores the derived normalized pgvector used for search.
     // No IVFFlat/HNSW index: signals per project are expected in the hundreds to low thousands, so an
     // exact sequential scan over the project-scoped subset outperforms an approximate index (and
@@ -74,5 +75,12 @@ export const signals = latitudeSchema.table(
     index("signals_search_document_idx").using("gin", t.searchDocument),
     // Organization-unique (D15), spanning projects. Soft-delete-aware: a deleted signal frees its slug for reuse.
     uniqueIndex("signals_unique_slug_per_org_idx").on(t.organizationId, t.slug).where(sql`${t.deletedAt} IS NULL`),
+    // Discovery's exact lookup, and the guarantee behind it: one live issue per
+    // bucket per project. Partial on both columns so the overwhelming majority of
+    // rows (no bundle key) never enter the index, and so a soft-deleted issue
+    // releases its bucket for reuse.
+    uniqueIndex("signals_unique_bundle_key_per_project_idx")
+      .on(t.organizationId, t.projectId, t.bundleKey)
+      .where(sql`${t.deletedAt} IS NULL AND ${t.bundleKey} IS NOT NULL`),
   ],
 )

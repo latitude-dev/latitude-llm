@@ -141,6 +141,7 @@ CREATE TABLE scores
     `flagger_finding_key` Nullable(String) CODEC(ZSTD(1)),
     `flagger_path` Nullable(String) CODEC(ZSTD(1)),
     `flagger_finding_kind` Nullable(String) CODEC(ZSTD(1)),
+    `flagger_bundle_key` Nullable(String) CODEC(ZSTD(1)),
     `simulation_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     `issue_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     `value` Float32 CODEC(Gorilla(4), ZSTD(1)),

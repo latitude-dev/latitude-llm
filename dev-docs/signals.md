@@ -272,6 +272,23 @@ Execution rules:
 - the assign-to-signal path must lock the canonical signal row before recomputing and saving the centroid so parallel score assignments into the same signal do not lose centroid contributions
 - muted, resolved, and ignored signals are still valid discovery match candidates; new occurrences keep attaching (and reopen resolved signals) instead of spawning duplicates
 
+### Deterministic bundling
+
+A score written by a deterministic detector carries `metadata.flaggerBundleKey` — the failure class the detector already named (see [`./flaggers.md`](./flaggers.md#bundle-keys-deterministic-detections-skip-the-embedding)). For those scores discovery takes an exact path instead of steps 5–10 above:
+
+1. the outer Redis lock is keyed on the bundle key rather than `sha256(feedback)` — a deterministic herd shares the bucket, not the sentence, so hashing the feedback would let two occurrences of one failure race each other into two issues
+2. `SignalRepository.findByBundleKey` resolves the project's live issue for that bucket, promoted or not
+3. a hit assigns; a miss takes the project lock, re-checks, and creates an issue that claims the key
+
+No embedding search, no rerank, no AI call. The guarantee is a partial unique index on `(organization_id, project_id, bundle_key) WHERE deleted_at IS NULL AND bundle_key IS NOT NULL`: one live issue per bucket per project. Soft-delete frees the bucket for reuse, which is what makes deleting an issue a real reset rather than a permanent hole.
+
+Two consequences follow from the key being exact:
+
+- **Consolidation skips bundled candidates.** Consolidation exists to repair fragmentation the embedding caused, and a bundled candidate cannot fragment. Absorbing one would also loop: the loser is soft-deleted, releasing its bucket, so the next occurrence recreates the same candidate for the next pass to absorb.
+- **A bundled score never joins a semantically similar issue it did not create.** That is the point — a detector's bucket is its own, and letting fuzzy matching redirect it would strand the key and re-fragment on the next occurrence.
+
+The promotion gate still applies unchanged, so a bucket seen in one session stays invisible exactly like any other candidate.
+
 ### Bounded locked serialization
 
 Postgres pgvector search is canonical, but concurrent workers can still both observe no sufficiently similar signal before either creates a new row. A fuzzy no-match result is therefore not sufficient authority to create a new issue.

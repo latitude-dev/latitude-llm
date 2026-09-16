@@ -146,6 +146,8 @@ export interface ToolCallErrorFinding {
   readonly recovered?: boolean
   readonly sameSubjectRecovered?: boolean
   readonly terminal?: boolean
+  /** Stable class of the failure, volatile detail stripped. Only set for `kind: "error"`. */
+  readonly errorClass?: string
 }
 
 interface SuccessfulToolResponse {
@@ -274,6 +276,7 @@ export function collectToolCallErrorFindings(
           toolCallId,
           responseMessageIndex: msgIdx,
           responsePartIndex: partIndex,
+          errorClass: classifyToolError(part.response),
         })
       } else if (toolCallId) {
         successfulCallIds.add(toolCallId)
@@ -318,21 +321,31 @@ export function collectToolCallErrorFindings(
 }
 
 /**
- * Flags the first defect the run did NOT work through. A tool error the agent
- * retried or moved past is invisible to the user — a coding agent produces them
- * by the dozen — and raising a signal for one costs a clustering pass, a naming
- * generation and a row in someone's triage list. Structural defects (malformed,
- * duplicate, undeclared, unknown id) always flag: they are bugs in how the
- * agent calls tools, not transient failures.
+ * Flags the defect that best represents the run: the first one it did not work
+ * through, and otherwise the first recovered one. A recovered error is still a
+ * broken integration the owner wants to know about — it is quieter, not absent —
+ * and `flaggerBundleKey` is what keeps a tool that fails the same way all day to
+ * one issue rather than one per occurrence.
  */
 export function detectToolCallErrorsFlagger(
   conversation: ToolErrorConversation,
 ): DeterministicFlaggerMatch<ToolCallErrorFindingKind> {
-  const finding = collectToolCallErrorFindings(conversation).find(
-    (candidate) => candidate.kind !== "error" || candidate.recovered !== true,
-  )
+  const findings = collectToolCallErrorFindings(conversation)
+  const finding = selectRepresentativeToolCallErrorFinding(findings)
   return finding ? match(finding.kind, finding.feedback, finding.messageIndex) : NO_MATCH
 }
+
+const isUnrecoveredToolDefect = <
+  Finding extends { readonly kind: ToolCallErrorFindingKind; readonly recovered?: boolean },
+>(
+  finding: Finding,
+): boolean => finding.kind !== "error" || finding.recovered !== true
+
+export const selectRepresentativeToolCallErrorFinding = <
+  Finding extends { readonly kind: ToolCallErrorFindingKind; readonly recovered?: boolean },
+>(
+  findings: readonly Finding[],
+): Finding | null => findings.find(isUnrecoveredToolDefect) ?? findings[0] ?? null
 
 function toNonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null
@@ -422,6 +435,103 @@ export function extractToolErrorSnippet(response: unknown): string | null {
   }
 
   return truncate(toNonEmptyString(response.message) ?? toNonEmptyString(response.status))
+}
+
+/** Class used when a failed response carries no usable status, code or prose. */
+export const UNSPECIFIED_TOOL_ERROR_CLASS = "unspecified"
+
+/**
+ * Longest failure class kept. Long enough to separate "connection reset by peer"
+ * from "connection refused", short enough that a stack trace cannot become a class
+ * of its own.
+ */
+const TOOL_ERROR_CLASS_MAX_LENGTH = 48
+
+/**
+ * Fragments that differ between two occurrences of the *same* failure: ids, hashes,
+ * timestamps, quoted payloads, urls and paths. Stripped before classing so a tool
+ * that fails the same way a thousand times lands on one class.
+ */
+const VOLATILE_ERROR_FRAGMENTS: readonly RegExp[] = [
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+  /\b[0-9a-f]{8,}\b/gi,
+  /\b[a-z][a-z0-9+.-]*:\/\/\S+/gi,
+  /~?(?:\/[A-Za-z0-9_.-]+){2,}/g,
+  /"[^"]*"|'[^']*'/g,
+]
+
+const slugifyErrorClass = (value: string): string | null => {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+  if (slug === "") return null
+  return slug.length > TOOL_ERROR_CLASS_MAX_LENGTH
+    ? slug.slice(0, TOOL_ERROR_CLASS_MAX_LENGTH).replace(/-+$/, "")
+    : slug
+}
+
+const normalizeToolErrorMessage = (message: string): string | null => {
+  let normalized = message
+  for (const fragment of VOLATILE_ERROR_FRAGMENTS) normalized = normalized.replace(fragment, " ")
+  // Digits go last and wholesale: a retry count, a byte size and a line number are
+  // all noise, and any status worth keeping was already read from its own field.
+  return slugifyErrorClass(normalized.replace(/\d+/g, " "))
+}
+
+const toDeclaredHttpStatus = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isInteger(value) && value >= 100 && value <= 599) return value
+  if (typeof value !== "string") return null
+  const trimmed = value.trim()
+  return /^[1-5]\d{2}$/.test(trimmed) ? Number(trimmed) : null
+}
+
+const readErrorClassFields = (record: Record<string, unknown>): string | null => {
+  const status =
+    toDeclaredHttpStatus(record.status) ?? toDeclaredHttpStatus(record.statusCode) ?? toDeclaredHttpStatus(record.code)
+  if (status !== null) return `http-${status}`
+  // A non-numeric `code` is the vendor's own name for the failure (ECONNRESET,
+  // rate_limited); it beats anything guessable from the prose.
+  const code = toNonEmptyString(record.code) ?? toNonEmptyString(record.type)
+  return code === null ? null : slugifyErrorClass(code)
+}
+
+/**
+ * The failure class a tool response belongs to: the same tool failing the same way
+ * yields the same string however the message is worded. This is what bundles repeat
+ * failures into one issue instead of one per occurrence.
+ */
+export function classifyToolError(response: unknown): string {
+  if (typeof response === "string") {
+    const trimmed = response.trim()
+    if (trimmed === "") return UNSPECIFIED_TOOL_ERROR_CLASS
+    try {
+      return classifyToolError(JSON.parse(trimmed))
+    } catch {
+      return normalizeToolErrorMessage(trimmed) ?? UNSPECIFIED_TOOL_ERROR_CLASS
+    }
+  }
+
+  if (Array.isArray(response)) {
+    for (const entry of response) {
+      const classified = classifyToolError(entry)
+      if (classified !== UNSPECIFIED_TOOL_ERROR_CLASS) return classified
+    }
+    return UNSPECIFIED_TOOL_ERROR_CLASS
+  }
+
+  if (isRecord(response)) {
+    const own = readErrorClassFields(response)
+    if (own !== null) return own
+    const error = response.error
+    if (isRecord(error)) {
+      const nested = readErrorClassFields(error)
+      if (nested !== null) return nested
+    }
+  }
+
+  const snippet = extractToolErrorSnippet(response)
+  return (snippet === null ? null : normalizeToolErrorMessage(snippet)) ?? UNSPECIFIED_TOOL_ERROR_CLASS
 }
 
 export function toolResponseIndicatesFailure(

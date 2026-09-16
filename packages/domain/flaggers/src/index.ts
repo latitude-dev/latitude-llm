@@ -86,6 +86,7 @@ export {
   taskOutcomeVerdictKindSchema,
   taskOutcomeVerdictSchema,
 } from "./entities/task-outcome-verdict.ts"
+export { FLAGGER_BUNDLE_KEY_MAX_LENGTH, flaggerBundleKey } from "./flagger-bundle-key.ts"
 export {
   DETERMINISTIC_FLAGGER_INSTRUCTIONS,
   FLAGGER_DISPLAY,
@@ -134,6 +135,7 @@ export { FLAGGER_STRATEGY_SLUGS } from "./flagger-strategies/types.ts"
 export type { ToolExpectedStatusContract } from "./helpers.ts"
 export {
   buildFlaggerFinding,
+  classifyToolError,
   collectOutputSchemaDamageFindings,
   collectToolCallErrorFindings,
   type DeterministicFlaggerMatch,
@@ -144,8 +146,10 @@ export {
   EMPTY_TOOL_EXPECTED_STATUS_CONTRACT,
   type OutputSchemaDamageFinding,
   type OutputSchemaDamageKind,
+  selectRepresentativeToolCallErrorFinding,
   type ToolCallErrorFinding,
   type ToolCallErrorFindingKind,
+  UNSPECIFIED_TOOL_ERROR_CLASS,
 } from "./helpers.ts"
 export {
   gatherSessionHintsUseCase,

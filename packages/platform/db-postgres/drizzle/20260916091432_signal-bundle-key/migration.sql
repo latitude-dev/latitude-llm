@@ -1,0 +1,2 @@
+ALTER TABLE "latitude"."signals" ADD COLUMN "bundle_key" varchar(200);--> statement-breakpoint
+CREATE UNIQUE INDEX "signals_unique_bundle_key_per_project_idx" ON "latitude"."signals" ("organization_id","project_id","bundle_key") WHERE "deleted_at" IS NULL AND "bundle_key" IS NOT NULL;

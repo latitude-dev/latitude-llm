@@ -4,7 +4,9 @@ import {
   buildMessageFlaggerFindingRead,
   collectToolCallErrorFindings,
   detectToolCallErrorsFlagger,
+  selectRepresentativeToolCallErrorFinding,
   type ToolCallErrorFinding,
+  type ToolCallErrorFindingKind,
 } from "../helpers.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
@@ -55,15 +57,21 @@ const toFindingDraft = (finding: ToolCallErrorFinding): ToolCallErrorFindingDraf
         ...(finding.recovered !== undefined ? { recovered: finding.recovered } : {}),
         ...(finding.sameSubjectRecovered !== undefined ? { sameSubjectRecovered: finding.sameSubjectRecovered } : {}),
         ...(finding.terminal !== undefined ? { terminal: finding.terminal } : {}),
+        ...(finding.errorClass !== undefined ? { errorClass: finding.errorClass } : {}),
       }
   }
 }
 
 const selectDiscoveryFinding = (findings: readonly FlaggerFinding[]): FlaggerFinding | null =>
-  findings.find(
-    (finding) =>
-      finding.flaggerSlug === "tool-call-errors" && (finding.findingKind !== "error" || finding.recovered !== true),
-  ) ?? null
+  selectRepresentativeToolCallErrorFinding(
+    findings.filter((finding) => finding.flaggerSlug === "tool-call-errors").map(toSelectableFinding),
+  )?.finding ?? null
+
+const toSelectableFinding = (finding: FlaggerFinding) => ({
+  finding,
+  kind: finding.findingKind as ToolCallErrorFindingKind,
+  ...("recovered" in finding && finding.recovered !== undefined ? { recovered: finding.recovered } : {}),
+})
 
 /**
  * Deterministic-only strategy. Inspects tool-call / tool-response pairs in the

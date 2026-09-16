@@ -2,6 +2,7 @@ import { type CacheError, ProjectId, type RepositoryError } from "@domain/shared
 import { type CryptoError, hash } from "@repo/utils"
 import { Effect } from "effect"
 import {
+  SIGNAL_DISCOVERY_BUNDLE_LOCK_KEY,
   SIGNAL_DISCOVERY_FEEDBACK_LOCK_KEY,
   SIGNAL_DISCOVERY_FEEDBACK_LOCK_TTL_SECONDS,
   SIGNAL_DISCOVERY_PROJECT_LOCK_KEY,
@@ -28,6 +29,8 @@ export interface AssignOrCreateSignalInput {
   readonly normalizedEmbedding: readonly number[]
   readonly rawFeedback?: string
   readonly rawNormalizedEmbedding?: readonly number[]
+  /** Set only by deterministic detectors; see `findBundledSignalId`. */
+  readonly bundleKey?: string
 }
 
 export type AssignOrCreateSignalResult =
@@ -81,6 +84,23 @@ const findAssignedSignalId = (
     return retrieval.matchedSignalId
   })
 
+/**
+ * The exact path, and the reason a repeat failure does not fan out into a pile of
+ * near-identical issues: a detector that already named the failure class matches on
+ * that name, not on an embedding of the sentence it wrote about it. Two occurrences
+ * of one broken tool differ in the ids and counts their messages quote, which is
+ * exactly what the embedding is sensitive to and the key is not.
+ */
+const findBundledSignalId = (input: AssignOrCreateSignalInput, bundleKey: string) =>
+  Effect.gen(function* () {
+    const signalRepository = yield* SignalRepository
+    const bundled = yield* signalRepository.findByBundleKey({
+      projectId: ProjectId(input.projectId),
+      bundleKey,
+    })
+    return bundled?.id ?? null
+  })
+
 const findAssignedSignalIdWithFallback = (input: AssignOrCreateSignalInput) =>
   Effect.gen(function* () {
     const feedbackAssignedSignalId = yield* findAssignedSignalId(input, {
@@ -121,17 +141,31 @@ export const assignOrCreateSignalUseCase = (input: AssignOrCreateSignalInput) =>
     yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
 
-    const feedbackHash = yield* hash(input.feedback)
+    const bundleKey = input.bundleKey
+    if (bundleKey !== undefined) yield* Effect.annotateCurrentSpan("bundleKey", bundleKey)
+
+    // The bucket, not the sentence: identical feedback is what the feedback lock
+    // serializes, and a deterministic detector's feedback is not identical across
+    // occurrences even when the failure is.
+    const outerLockKey =
+      bundleKey === undefined
+        ? SIGNAL_DISCOVERY_FEEDBACK_LOCK_KEY(yield* hash(input.feedback))
+        : SIGNAL_DISCOVERY_BUNDLE_LOCK_KEY(bundleKey)
+
+    const findExistingSignalId = (candidateInput: AssignOrCreateSignalInput) =>
+      bundleKey === undefined
+        ? findAssignedSignalIdWithFallback(candidateInput)
+        : findBundledSignalId(candidateInput, bundleKey)
 
     return yield* withSignalDiscoveryLock(
       {
         organizationId: input.organizationId,
         projectId: ProjectId(input.projectId),
-        lockKey: SIGNAL_DISCOVERY_FEEDBACK_LOCK_KEY(feedbackHash),
+        lockKey: outerLockKey,
         ttlSeconds: SIGNAL_DISCOVERY_FEEDBACK_LOCK_TTL_SECONDS,
       },
       Effect.gen(function* () {
-        const feedbackAssignedSignalId = yield* findAssignedSignalIdWithFallback(input)
+        const feedbackAssignedSignalId = yield* findExistingSignalId(input)
         if (feedbackAssignedSignalId !== null) {
           return yield* assignToSignal(input, feedbackAssignedSignalId)
         }
@@ -149,7 +183,7 @@ export const assignOrCreateSignalUseCase = (input: AssignOrCreateSignalInput) =>
               return { action: "skipped" as const, reason: eligibility.reason }
             }
 
-            const projectAssignedSignalId = yield* findAssignedSignalIdWithFallback(input)
+            const projectAssignedSignalId = yield* findExistingSignalId(input)
             if (projectAssignedSignalId !== null) {
               return yield* assignToSignal(input, projectAssignedSignalId)
             }

@@ -41,6 +41,7 @@ const seedSignal = (input: {
   /** Omitted means promoted at creation, which is what every read expects to see. Null makes the row a discovered candidate, provenance included. */
   readonly promotedAt?: Date | null
   readonly deletedAt?: Date
+  readonly bundleKey?: string
   readonly clusteredAt?: Date
   readonly centroidEmbedding?: readonly number[]
   readonly scoreEvidence?: SignalScoreEvidence[]
@@ -61,6 +62,7 @@ const seedSignal = (input: {
     mutedAt: input.mutedAt ?? null,
     promotedAt: input.promotedAt === undefined ? input.createdAt : input.promotedAt,
     deletedAt: input.deletedAt ?? null,
+    bundleKey: input.bundleKey ?? null,
     ...(input.clusteredAt ? { clusteredAt: input.clusteredAt } : {}),
     // `signals_centroid_embedding_consistency_check` requires a materialized
     // embedding to be backed by a model-stamped centroid with positive mass.
@@ -917,5 +919,83 @@ describe("SignalRepositoryLive.save promotion latch", () => {
     )
 
     expect((await load(id))?.promotedAt?.toISOString()).toBe(PROMOTED_AT.toISOString())
+  })
+})
+
+describe("SignalRepository.findByBundleKey", () => {
+  // One key per case: the unique index is global to the project, so sharing a key
+  // across cases would make them collide with each other rather than with intent.
+  const bundleKeyFor = (caseName: string) => `tool-call-errors:error:${caseName}:http-503`
+
+  it("resolves a candidate, which is what lets a bucket accumulate the sessions that promote it", async () => {
+    const bundleKey = bundleKeyFor("candidate")
+    await seedSignal({
+      id: "sig-bundle-candidatezzzz",
+      slug: "LAT-BND1",
+      createdAt: WINDOW_FROM,
+      promotedAt: null,
+      bundleKey,
+    })
+
+    const found = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).findByBundleKey({ projectId: PROJECT_ID, bundleKey })
+      }),
+    )
+
+    expect(found?.id).toBe("sig-bundle-candidatezzzz")
+  })
+
+  it("misses a soft-deleted issue, which is what frees the bucket for reuse", async () => {
+    const bundleKey = bundleKeyFor("deleted")
+    await seedSignal({
+      id: "sig-bundle-deletedzzzzzz",
+      slug: "LAT-BND2",
+      createdAt: WINDOW_FROM,
+      bundleKey,
+      deletedAt: WINDOW_TO,
+    })
+
+    const found = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).findByBundleKey({ projectId: PROJECT_ID, bundleKey })
+      }),
+    )
+
+    expect(found).toBeNull()
+  })
+
+  it("misses another project's bucket", async () => {
+    const bundleKey = bundleKeyFor("other-project")
+    await seedSignal({ id: "sig-bundle-otherzzzzzzzz", slug: "LAT-BND3", createdAt: WINDOW_FROM, bundleKey })
+
+    const found = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).findByBundleKey({
+          projectId: ProjectId("proj-elsewhere".padEnd(24, "y").slice(0, 24)),
+          bundleKey,
+        })
+      }),
+    )
+
+    expect(found).toBeNull()
+  })
+
+  // The guarantee behind the exact path: discovery races cannot end with two live
+  // issues claiming one bucket, whatever the application layer does.
+  it("refuses a second live issue for the same bucket", async () => {
+    const bundleKey = bundleKeyFor("duplicate")
+    await seedSignal({ id: "sig-bundle-firstzzzzzzzz", slug: "LAT-BND4", createdAt: WINDOW_FROM, bundleKey })
+
+    await expect(
+      seedSignal({ id: "sig-bundle-secondzzzzzzz", slug: "LAT-BND5", createdAt: WINDOW_FROM, bundleKey }),
+    ).rejects.toThrow()
+  })
+
+  it("leaves issues without a bucket out of the constraint entirely", async () => {
+    await seedSignal({ id: "sig-nobundle-1zzzzzzzzzz", slug: "LAT-BND6", createdAt: WINDOW_FROM })
+    await expect(
+      seedSignal({ id: "sig-nobundle-2zzzzzzzzzz", slug: "LAT-BND7", createdAt: WINDOW_FROM }),
+    ).resolves.toBeDefined()
   })
 })

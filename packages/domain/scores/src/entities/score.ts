@@ -26,6 +26,9 @@ export type AnnotationAnchorTextFormat = (typeof ANNOTATION_ANCHOR_TEXT_FORMATS)
 export const flaggerFindingKeySchema = z.string().regex(/^[0-9a-f]{64}$/)
 export type FlaggerFindingKey = z.infer<typeof flaggerFindingKeySchema>
 
+export const flaggerBundleKeySchema = z.string().min(1).max(200)
+export type FlaggerBundleKey = z.infer<typeof flaggerBundleKeySchema>
+
 export const flaggerPathSchema = z.enum(["deterministic", "sampled"])
 export type FlaggerPath = z.infer<typeof flaggerPathSchema>
 
@@ -124,6 +127,8 @@ export const annotationScoreMetadataSchema = baseScoreMetadataSchema
     flaggerSlug: z.string().optional(), // slug of the automatic flagger that authored this annotation (only set for flagger-created `sourceId: "SYSTEM"` rows); lets the UI name the flagger and link to its project settings
     flaggerTraceId: z.string().optional(), // Latitude trace of the flagger generation that produced this annotation (flagger rows only, and only when the decision came from a captured LLM call); the way back from a detection to the decision behind it
     flaggerFindingKey: flaggerFindingKeySchema.optional(), // stable calculated finding selected for deterministic discovery
+    flaggerBundleKey: flaggerBundleKeySchema.optional(), // cross-session bucket a deterministic finding belongs to; issue discovery treats it as the exact match key instead of clustering the feedback prose
+    flaggerFindingKind: z.string().min(1).optional(), // the deterministic finding's own kind (error, malformed, duplicate, …); `safetyFindingKind` is the Safety-specific sibling and both project onto the same ClickHouse column
     scoringArtifactVersion: scoringArtifactVersionSchema.optional(), // prompt, judge configuration, and result-schema version for persisted model evidence
     flaggerPath: flaggerPathSchema.optional(), // whether the persisted result came from a deterministic reader or sampled model call
     safetyFindingKind: safetyFindingKindSchema.optional(), // structured Safety result; exposure, defense, and confirmed harm are distinguished here rather than re-read from feedback text

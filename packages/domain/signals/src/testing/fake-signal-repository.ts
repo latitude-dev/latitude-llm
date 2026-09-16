@@ -64,6 +64,15 @@ export const createFakeSignalRepository = (
         return withLifecycle(issue)
       }),
 
+    findByBundleKey: ({ projectId, bundleKey }) =>
+      Effect.sync(
+        () =>
+          [...issues.values()].find(
+            (issue) =>
+              issue.projectId === projectId && issue.bundleKey === bundleKey && (issue.deletedAt ?? null) === null,
+          ) ?? null,
+      ),
+
     findByIdForUpdate: (id) =>
       Effect.gen(function* () {
         const issue = issues.get(id)
