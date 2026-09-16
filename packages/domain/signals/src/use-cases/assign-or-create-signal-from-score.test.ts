@@ -354,6 +354,71 @@ describe("assignOrCreateSignalUseCase bundling", () => {
     expect(searched).toEqual([])
   })
 
+  // The real reranker scores two records of one deterministic failure as barely
+  // related, because their names are placeholders. Adoption must not depend on it:
+  // against the live pipeline a 0.99-cosine match was rejected and duplicated.
+  it("adopts even when the reranker rejects every candidate", async () => {
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const legacy: Signal = {
+      id: SignalId("rrrrrrrrrrrrrrrrrrrrrrrr"),
+      organizationId,
+      projectId,
+      slug: "tool-failure-rerank",
+      name: "Tool failure",
+      description: "fetch_user keeps failing",
+      source: "flagger",
+      origin: "system",
+      scoreEvidence: [],
+      assigneeId: null,
+      priority: null,
+      bundleKey: null,
+      centroid: null,
+      clusteredAt: null,
+      promotedAt: new Date("2026-03-01T00:00:00.000Z"),
+      resolvedAt: null,
+      ignoredAt: null,
+      regressedAt: null,
+      mutedAt: null,
+      feedback: null,
+      deletedAt: null,
+      createdAt: new Date("2026-03-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-01T00:00:00.000Z"),
+    }
+    const { repository: signalRepository, issues } = createFakeSignalRepository([legacy], {
+      hybridSearch: () =>
+        Effect.succeed([{ signalId: legacy.id, name: legacy.name, description: legacy.description, score: 1 }]),
+    })
+    const outbox = createRecordingOutbox()
+    const score = makeScore("a")
+    scores.set(score.id, score)
+
+    const { layer: hostileAi } = createFakeAI({
+      rerank: ({ documents }) => Effect.succeed(documents.map((_, index) => ({ index, relevanceScore: 0 }))),
+    })
+
+    const result = await Effect.runPromise(
+      assignOrCreateSignalUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        feedback: score.feedback,
+        normalizedEmbedding: makeEmbedding(0),
+        bundleKey: BUNDLE_KEY,
+      }).pipe(
+        Effect.provide(hostileAi),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(OutboxEventWriter, outbox.service),
+        Effect.provide(supportLayer()),
+      ),
+    )
+
+    expect(result).toMatchObject({ action: "assigned", signalId: legacy.id })
+    expect(issues.size).toBe(1)
+    expect(issues.get(legacy.id)?.bundleKey).toBe(BUNDLE_KEY)
+  })
+
   it("keeps the bundle key within the column's bound", () => {
     expect(BUNDLE_KEY.length).toBeLessThanOrEqual(SIGNAL_BUNDLE_KEY_MAX_LENGTH)
   })

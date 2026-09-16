@@ -101,6 +101,39 @@ const findBundledSignalId = (input: AssignOrCreateSignalInput, bundleKey: string
     return bundled?.id ?? null
   })
 
+/**
+ * The issue a bucket should adopt, chosen by vector search alone.
+ *
+ * Deliberately skips the rerank stage the fuzzy path uses. Rerank disambiguates
+ * issues by name and description, and a deterministic candidate's name is a
+ * placeholder built from one occurrence — so it scores two records of the *same*
+ * failure as barely related and the bucket opens a duplicate beside the issue it
+ * should have joined. Measured against the real pipeline: a 0.99-cosine match was
+ * rejected and duplicated.
+ *
+ * Taking the top admitted candidate is the same judgement `rerankSignalCandidates`
+ * already makes when the provider is unreachable — search thresholds have filtered
+ * to high-confidence matches, so the best-scored one is the best available.
+ */
+const findBundleAdoptionCandidateId = (input: AssignOrCreateSignalInput) =>
+  Effect.gen(function* () {
+    const signalRepository = yield* SignalRepository
+    const search = (feedback: string, normalizedEmbedding: readonly number[]) =>
+      signalRepository.hybridSearch({
+        projectId: ProjectId(input.projectId),
+        query: feedback,
+        normalizedEmbedding,
+        includeUnpromoted: true,
+      })
+
+    const enriched = yield* search(input.feedback, input.normalizedEmbedding)
+    if (enriched.length > 0) return enriched[0]?.signalId ?? null
+
+    if (input.rawFeedback === undefined || input.rawNormalizedEmbedding === undefined) return null
+    const raw = yield* search(input.rawFeedback, input.rawNormalizedEmbedding)
+    return raw[0]?.signalId ?? null
+  })
+
 const findAssignedSignalIdWithFallback = (input: AssignOrCreateSignalInput) =>
   Effect.gen(function* () {
     const feedbackAssignedSignalId = yield* findAssignedSignalId(input, {
@@ -164,7 +197,7 @@ export const assignOrCreateSignalUseCase = (input: AssignOrCreateSignalInput) =>
             const bundled = yield* findBundledSignalId(candidateInput, bundleKey)
             if (bundled !== null) return bundled
 
-            const fuzzy = yield* findAssignedSignalIdWithFallback(candidateInput)
+            const fuzzy = yield* findBundleAdoptionCandidateId(candidateInput)
             if (fuzzy === null) return null
 
             // Accepted only if the key is actually claimed. A fuzzy match that
