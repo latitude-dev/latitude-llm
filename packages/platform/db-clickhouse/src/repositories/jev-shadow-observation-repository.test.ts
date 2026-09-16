@@ -191,4 +191,41 @@ describe("JevShadowObservationRepositoryLive", () => {
       ),
     ).rejects.toMatchObject({ _tag: "RepositoryError", operation: "JevShadowObservationRepository.save" })
   })
+
+  it("cancels a stalled insert before later client work", async () => {
+    let activeRequests = 0
+    let insertAborted = false
+    const stalledClient = {
+      insert: ({ abort_signal }: { readonly abort_signal?: AbortSignal }) =>
+        new Promise<void>((_resolve, reject) => {
+          activeRequests += 1
+          abort_signal?.addEventListener(
+            "abort",
+            () => {
+              insertAborted = true
+              activeRequests -= 1
+              reject(abort_signal.reason)
+            },
+            { once: true },
+          )
+        }),
+      query: async () => {
+        if (activeRequests > 0) throw new Error("ClickHouse connection remains occupied")
+        return "baseline"
+      },
+    } as unknown as ClickHouseClient
+
+    const exit = await Effect.runPromiseExit(
+      Effect.gen(function* () {
+        const repository = yield* JevShadowObservationRepository
+        yield* repository.save(makeObservation())
+      })
+        .pipe(withClickHouse(JevShadowObservationRepositoryLive, stalledClient, organizationId))
+        .pipe(Effect.timeout("2 seconds")),
+    )
+
+    expect(exit._tag).toBe("Failure")
+    expect(insertAborted).toBe(true)
+    await expect(stalledClient.query({ query: "SELECT 1" })).resolves.toBe("baseline")
+  })
 })

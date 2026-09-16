@@ -1,5 +1,5 @@
 import { JevShadowDecisionProvider } from "@domain/flaggers"
-import { Effect, type Layer } from "effect"
+import { Effect, Fiber, type Layer } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   createJevShadowDecisionProvider,
@@ -181,6 +181,32 @@ describe("Jev shadow decision provider", () => {
     }
 
     await expect(decide(fetch, { timeoutMs: 1 })).resolves.toMatchObject({ kind: "failure", errorCategory: "timeout" })
+  })
+
+  it("aborts the request while reading a response body when interrupted", async () => {
+    let signal: AbortSignal | undefined
+    let bodyReadStarted: (() => void) | undefined
+    const bodyReadStartedPromise = new Promise<void>((resolve) => {
+      bodyReadStarted = resolve
+    })
+    const fetch: typeof globalThis.fetch = async (_url, init) => {
+      signal = init?.signal as AbortSignal
+      return {
+        ok: true,
+        json: () =>
+          new Promise((_resolve, reject) => {
+            bodyReadStarted?.()
+            signal?.addEventListener("abort", () => reject(signal?.reason), { once: true })
+          }),
+      } as Response
+    }
+    const provider = createJevShadowDecisionProvider({ apiKey, fetch })
+    const fiber = Effect.runFork(provider.decide(input))
+
+    await bodyReadStartedPromise
+    await Effect.runPromise(Fiber.interrupt(fiber))
+
+    expect(signal?.aborted).toBe(true)
   })
 
   it("provides a safe authentication failure from the unconfigured layer", async () => {

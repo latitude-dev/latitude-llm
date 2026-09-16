@@ -20,9 +20,9 @@ export const ChSqlClientLive = (client: ClickHouseClient, organizationId: Organi
   Layer.succeed(ChSqlClient, {
     organizationId,
     transaction: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
-    query: <T>(fn: (client: ClickHouseClient, organizationId: OrganizationId) => Promise<T>) =>
+    query: <T>(fn: (client: ClickHouseClient, organizationId: OrganizationId, signal: AbortSignal) => Promise<T>) =>
       Effect.tryPromise({
-        try: () => fn(client, organizationId),
+        try: (signal) => fn(client, organizationId, signal),
         catch: (error) => toRepositoryError(error, "query"),
       }).pipe(
         Effect.retry({

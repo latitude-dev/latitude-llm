@@ -45,11 +45,12 @@ import {
 import { parseEnvOptional } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
 import { Context as ActivityContext } from "@temporalio/activity"
-import { Effect, Layer } from "effect"
-import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { Cause, Effect, Layer } from "effect"
+import { getClickhouseClient, getJevShadowPostgresClient, getPostgresClient, getRedisClient } from "../clients.ts"
 import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 const logger = createLogger("workflows-flagger-session")
+const JEV_SHADOW_FEATURE_FLAG_TIMEOUT_MS = 1_000
 
 const currentActivityAttempt = () => {
   try {
@@ -82,7 +83,7 @@ type HasJevShadowFeatureFlag = (organizationId: string) => Effect.Effect<boolean
 
 const hasJevShadowFeatureFlag: HasJevShadowFeatureFlag = (organizationId) =>
   hasFeatureFlagUseCase({ identifier: "jevFlaggerShadow" }).pipe(
-    withPostgres(FeatureFlagRepositoryLive, getPostgresClient(), OrganizationId(organizationId)),
+    withPostgres(FeatureFlagRepositoryLive, getJevShadowPostgresClient(), OrganizationId(organizationId)),
   )
 
 export const isJevShadowEnabledForOrganization = (
@@ -94,8 +95,10 @@ export const isJevShadowEnabledForOrganization = (
     const apiKey = yield* parseEnvOptional("LAT_JEV_API_KEY", "string")
     if (globalEnabled !== true || apiKey === undefined) return false
 
-    return yield* hasFeatureFlag(organizationId).pipe(Effect.catch(() => Effect.succeed(false)))
-  }).pipe(Effect.catch(() => Effect.succeed(false)))
+    return yield* hasFeatureFlag(organizationId).pipe(Effect.timeout(JEV_SHADOW_FEATURE_FLAG_TIMEOUT_MS))
+  }).pipe(
+    Effect.catchCause((cause) => (Cause.hasInterruptsOnly(cause) ? Effect.failCause(cause) : Effect.succeed(false))),
+  )
 
 const rateLimitBucket = (reason: FlaggerClassificationReason, hasPositiveHints: boolean) => {
   if (reason === "hinted") return { bucket: "hinted", limit: FLAGGER_HINTED_RATE_LIMIT }

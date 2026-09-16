@@ -49,7 +49,7 @@ export const JevShadowObservationRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           yield* chSqlClient
-            .query(async (client, organizationId) => {
+            .query(async (client, organizationId, signal) => {
               if (observation.organizationId !== organizationId) {
                 throw new Error("Jev shadow observation organization does not match the ClickHouse scope")
               }
@@ -57,6 +57,7 @@ export const JevShadowObservationRepositoryLive = Layer.effect(
                 table: "flagger_jev_shadow_observations",
                 values: [toInsertRow(observation)],
                 format: "JSONEachRow",
+                abort_signal: signal,
               })
             })
             .pipe(Effect.mapError((error) => toRepositoryError(error, "JevShadowObservationRepository.save")))

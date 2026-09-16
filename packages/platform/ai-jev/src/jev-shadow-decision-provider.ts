@@ -13,7 +13,7 @@ import { z } from "zod"
 export const DEFAULT_JEV_BASE_URL = "https://api.typesafe.ai"
 export const DEFAULT_JEV_MODEL = "jev-latest"
 export const DEFAULT_JEV_TIMEOUT_MS = 2_000
-export const MAX_JEV_TIMEOUT_MS = 25_000
+export const MAX_JEV_TIMEOUT_MS = 2_000
 
 const provider = "typesafe-ai"
 
@@ -101,33 +101,6 @@ const parseSuccessResponse = (args: {
   })
 }
 
-const parseResponseBody = (args: {
-  readonly response: Response
-  readonly timeoutSignal: AbortSignal
-  readonly questionId: string
-  readonly requestedModel: string
-  readonly startedAt: number
-}): Effect.Effect<JevShadowProviderResult> =>
-  Effect.tryPromise(() => Promise.resolve().then(() => args.response.json() as Promise<unknown>)).pipe(
-    Effect.map((body) =>
-      parseSuccessResponse({
-        body,
-        questionId: args.questionId,
-        requestedModel: args.requestedModel,
-        startedAt: args.startedAt,
-      }),
-    ),
-    Effect.catch(() =>
-      Effect.sync(() =>
-        failure({
-          errorCategory: bodyReadFailureCategory(args.timeoutSignal),
-          requestedModel: args.requestedModel,
-          startedAt: args.startedAt,
-        }),
-      ),
-    ),
-  )
-
 export const createJevShadowDecisionProvider = (
   options: JevShadowDecisionProviderClientOptions,
 ): JevShadowDecisionProviderShape => {
@@ -150,30 +123,44 @@ export const createJevShadowDecisionProvider = (
           return failure({ errorCategory: "provider", requestedModel: model, startedAt })
         }
 
-        const response = yield* Effect.tryPromise((signal) =>
-          Promise.resolve().then(() =>
-            fetchClient(requestUrl(baseUrl), {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${options.apiKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                state: input.state,
-                model,
-                questions: {
-                  [input.question.id]: {
-                    type: "noul",
-                    instructions: input.question.prompt,
-                  },
-                },
-              }),
-              signal: AbortSignal.any([signal, timeoutSignal]),
-            }),
-          ),
-        ).pipe(Effect.catch(() => Effect.succeed(null)))
+        const requestResult = yield* Effect.tryPromise((signal) =>
+          Promise.resolve().then(async () => {
+            let response: Response
 
-        if (response === null) {
+            try {
+              response = await fetchClient(requestUrl(baseUrl), {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${options.apiKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  state: input.state,
+                  model,
+                  questions: {
+                    [input.question.id]: {
+                      type: "noul",
+                      instructions: input.question.prompt,
+                    },
+                  },
+                }),
+                signal: AbortSignal.any([signal, timeoutSignal]),
+              })
+            } catch {
+              return { kind: "network-failure" as const }
+            }
+
+            if (!response.ok) return { kind: "response" as const, response }
+
+            try {
+              return { kind: "success" as const, body: await response.json() }
+            } catch {
+              return { kind: "body-read-failure" as const }
+            }
+          }),
+        ).pipe(Effect.catch(() => Effect.succeed({ kind: "network-failure" as const })))
+
+        if (requestResult.kind === "network-failure") {
           return failure({
             errorCategory: networkFailureCategory(timeoutSignal),
             requestedModel: model,
@@ -181,13 +168,24 @@ export const createJevShadowDecisionProvider = (
           })
         }
 
-        if (!response.ok) {
-          return failure({ errorCategory: responseCategory(response.status), requestedModel: model, startedAt })
+        if (requestResult.kind === "body-read-failure") {
+          return failure({
+            errorCategory: bodyReadFailureCategory(timeoutSignal),
+            requestedModel: model,
+            startedAt,
+          })
         }
 
-        return yield* parseResponseBody({
-          response,
-          timeoutSignal,
+        if (requestResult.kind === "response") {
+          return failure({
+            errorCategory: responseCategory(requestResult.response.status),
+            requestedModel: model,
+            startedAt,
+          })
+        }
+
+        return parseSuccessResponse({
+          body: requestResult.body,
           questionId: input.question.id,
           requestedModel: model,
           startedAt,
