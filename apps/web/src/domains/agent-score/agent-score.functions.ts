@@ -2,7 +2,7 @@ import {
   type AgentScoreExplanation,
   type AgentScoreSnapshot,
   getAgentScoreExplanation,
-  getCurrentAgentScore,
+  getLatestAgentScore,
   LAUNCH_AGENT_SCORE_ARTIFACT,
   listAgentScoreHistory,
 } from "@domain/agent-score"
@@ -26,9 +26,10 @@ export interface AgentScoreRecord {
   readonly windowDays: number
   readonly eligibleSessionCount: number
   readonly policyCap: number | null
+  readonly createdAt: string
 }
 
-interface CurrentAgentScoreRecord {
+interface ProjectAgentScoreRecord {
   readonly available: boolean
   readonly date: string
   readonly snapshot: AgentScoreRecord | null
@@ -44,6 +45,7 @@ const toRecord = (snapshot: AgentScoreSnapshot): AgentScoreRecord => ({
   windowDays: snapshot.windowDays,
   eligibleSessionCount: snapshot.eligibleSessionCount,
   policyCap: snapshot.policyCap ?? null,
+  createdAt: snapshot.createdAt.toISOString(),
 })
 
 const projectInput = z.object({ projectId: z.string() })
@@ -51,19 +53,19 @@ const AGENT_SCORE_REFRESH_THROTTLE_MS = 5 * 60_000
 
 export const getProjectAgentScore = createServerFn({ method: "GET" })
   .inputValidator(projectInput)
-  .handler(async ({ data, context }): Promise<CurrentAgentScoreRecord> => {
+  .handler(async ({ data, context }): Promise<ProjectAgentScoreRecord> => {
     const orgId = await resolveOrgScope(context)
-    const current = await Effect.runPromise(
-      getCurrentAgentScore({ organizationId: orgId, projectId: ProjectId(data.projectId) }).pipe(
+    const latest = await Effect.runPromise(
+      getLatestAgentScore({ organizationId: orgId, projectId: ProjectId(data.projectId) }).pipe(
         withScopedPostgres(AgentScoreSnapshotRepositoryLive, getPostgresClient(), orgId),
         withTracing,
       ),
     )
 
     return {
-      available: current.available,
-      date: current.date,
-      snapshot: current.available ? toRecord(current.snapshot) : null,
+      available: latest.available,
+      date: latest.date,
+      snapshot: latest.available ? toRecord(latest.snapshot) : null,
       dimensionWeights: LAUNCH_AGENT_SCORE_ARTIFACT.compositeWeights,
     }
   })

@@ -14,7 +14,12 @@ import type { useRouteProject } from "../../-route-data.ts"
 import { formatCount, SCORE_DIMENSION_ORDER } from "./agent-score-format.ts"
 import {
   agentScoreExplanationForSnapshot,
+  agentScoreRefreshCompleted,
   agentScoreRefreshMarker,
+  agentScoreSnapshotMarker,
+  agentVitalityIsLoading,
+  isCurrentAgentScoreSnapshot,
+  isStaleAgentScoreSnapshot,
   waitForAgentScoreRefresh,
 } from "./agent-score-refresh.ts"
 import { AgentVitality } from "./agent-vitality.tsx"
@@ -27,26 +32,41 @@ type RouteProject = ReturnType<typeof useRouteProject>
 
 const EMPTY_EVIDENCE: DimensionEvidence = { affected: [], coverageGaps: [], healthy: [], context: [] }
 
+const scoreTrendIsLoading = ({
+  isReloading,
+  isHistoryLoading,
+  isExplanationLoading,
+  isCurrentSnapshot,
+}: {
+  readonly isReloading: boolean
+  readonly isHistoryLoading: boolean
+  readonly isExplanationLoading: boolean
+  readonly isCurrentSnapshot: boolean
+}): boolean => isReloading || isHistoryLoading || (!isCurrentSnapshot && isExplanationLoading)
+
 export function AgentScorePage({ project }: { readonly project: RouteProject }) {
   const { toast } = useToast()
   const [isReloading, setIsReloading] = useState(false)
   const scoreQuery = useProjectAgentScore(project.id)
   const historyQuery = useProjectAgentScoreHistory(project.id)
   const explanationQuery = useProjectAgentScoreExplanation(project.id)
-  const current = scoreQuery.data
-  const snapshot = current?.snapshot ?? null
-  const date = current?.date ?? new Date().toISOString().slice(0, 10)
+  const scoreData = scoreQuery.data
+  const snapshot = scoreData?.snapshot ?? null
+  const date = scoreData?.date ?? new Date().toISOString().slice(0, 10)
+  const isCurrentSnapshot = isCurrentAgentScoreSnapshot(snapshot, date)
+  const hasStaleSnapshot = isStaleAgentScoreSnapshot(snapshot, date)
+  const currentSnapshot = isCurrentSnapshot ? snapshot : null
   const cachedExplanation = explanationQuery.data?.explanation ?? null
   const explanation = agentScoreExplanationForSnapshot({
     explanation: cachedExplanation,
     date,
-    snapshot,
+    snapshot: currentSnapshot,
   })
   const isRefreshing = scoreQuery.isRefetching || historyQuery.isRefetching || explanationQuery.isRefetching
   const refresh = async () => {
     if (isReloading) return
     const previousMarker = agentScoreRefreshMarker({ snapshot, explanation: cachedExplanation })
-    const previousSnapshotMarker = `${snapshot?.date ?? "none"}:${snapshot?.score ?? "none"}`
+    const previousSnapshotMarker = agentScoreSnapshotMarker(snapshot)
     const previousExplanationTime = cachedExplanation?.computedAt
     setIsReloading(true)
     try {
@@ -57,12 +77,17 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
           const [scoreResult, explanationResult] = await Promise.all([scoreQuery.refetch(), explanationQuery.refetch()])
           const nextSnapshot = scoreResult.data?.snapshot ?? null
           const nextExplanation = explanationResult.data?.explanation ?? null
-          const nextSnapshotMarker = `${nextSnapshot?.date ?? "none"}:${nextSnapshot?.score ?? "none"}`
           const nextMarker = agentScoreRefreshMarker({ snapshot: nextSnapshot, explanation: nextExplanation })
-          const snapshotChanged = nextSnapshotMarker !== previousSnapshotMarker
-          const explanationChanged = nextExplanation?.computedAt !== previousExplanationTime
-          const explanationFinished = nextExplanation?.publication.status === "withheld" || nextSnapshot !== null
-          return snapshotChanged || (explanationChanged && explanationFinished) ? nextMarker : previousMarker
+          const refreshDate = scoreResult.data?.date ?? date
+          return agentScoreRefreshCompleted({
+            previousSnapshotMarker,
+            previousExplanationTime,
+            date: refreshDate,
+            snapshot: nextSnapshot,
+            explanation: nextExplanation,
+          })
+            ? nextMarker
+            : previousMarker
         },
       })
       await historyQuery.refetch()
@@ -110,16 +135,27 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
           <div className="flex flex-row gap-3 @max-[64rem]:flex-col">
             <AgentVitality
               snapshot={snapshot}
+              date={date}
               history={historyQuery.data}
-              dimensionWeights={current?.dimensionWeights}
+              dimensionWeights={scoreData?.dimensionWeights}
               explanation={explanation}
-              isLoading={isReloading || scoreQuery.isLoading || (!snapshot && explanationQuery.isLoading)}
+              isLoading={agentVitalityIsLoading(
+                snapshot,
+                isReloading || scoreQuery.isLoading || explanationQuery.isLoading,
+              )}
             />
             <ScoreTrend
               endDate={date}
+              isCurrentSnapshot={isCurrentSnapshot}
+              hasStaleSnapshot={hasStaleSnapshot}
               history={historyQuery.data}
               explanation={explanation}
-              isLoading={isReloading || historyQuery.isLoading || (!snapshot && explanationQuery.isLoading)}
+              isLoading={scoreTrendIsLoading({
+                isReloading,
+                isHistoryLoading: historyQuery.isLoading,
+                isExplanationLoading: explanationQuery.isLoading,
+                isCurrentSnapshot,
+              })}
             />
           </div>
 
@@ -129,7 +165,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
               : SCORE_DIMENSION_ORDER.map((dimension) => {
                   const meta = DIMENSION_META[dimension]
                   const evidence = explanation
-                    ? buildDimensionEvidence({ dimension, snapshot, explanation })
+                    ? buildDimensionEvidence({ dimension, snapshot: currentSnapshot, explanation })
                     : EMPTY_EVIDENCE
                   const affected = [...evidence.affected].sort(
                     (left, right) => Number(Boolean(left.signalId)) - Number(Boolean(right.signalId)),
@@ -140,7 +176,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                       id={dimension}
                       title={meta.title}
                       description={meta.description}
-                      score={snapshot?.dimensions[dimension]?.score ?? null}
+                      score={currentSnapshot?.dimensions[dimension]?.score ?? null}
                       projectSlug={project.slug}
                       affected={affected}
                       healthy={evidence.healthy}

@@ -6,7 +6,7 @@ import type {
   AgentScoreRecord,
 } from "../../../../../../domains/agent-score/agent-score.functions.ts"
 import { ChartHeader } from "../../-components/chart-header.tsx"
-import { formatCount, formatDate } from "./agent-score-format.ts"
+import { formatCount, formatDate, formatFullDate } from "./agent-score-format.ts"
 import { type AgentScoreReadinessView, agentScoreReadiness, type DimensionReadinessRow } from "./score-readiness.ts"
 
 const DAY_MS = 86_400_000
@@ -65,29 +65,33 @@ function DimensionReadiness({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-1 flex-col justify-center divide-y divide-border">
-        {readiness.rows.map((row) => (
-          <div
-            key={row.dimension}
-            className="grid min-h-8 grid-cols-[minmax(7.5rem,1fr)_minmax(9rem,1.35fr)_auto] items-center gap-3 py-1.5"
-          >
-            <Text.H6B noWrap>{row.label}</Text.H6B>
-            <span className="flex min-w-0 items-center gap-1.5">
-              <ReadinessIcon state={row.state} />
-              <Text.H6 color={row.state === "actionNeeded" ? "warningMutedForeground" : "foregroundMuted"} noWrap>
-                {row.status}
-              </Text.H6>
-            </span>
-            {row.value ? (
-              <Text.H6 className="shrink-0 tabular-nums" noWrap>
-                {row.value}
-              </Text.H6>
-            ) : (
-              <span />
-            )}
-          </div>
-        ))}
-      </div>
+      <table className="w-full table-fixed border-collapse">
+        <colgroup>
+          <col className="w-1/4" />
+          <col />
+          <col className="w-1/4" />
+        </colgroup>
+        <tbody>
+          {readiness.rows.map((row) => (
+            <tr key={row.dimension} className="border-t border-border first:border-t-0">
+              <td className="py-1.5 pr-3 align-middle">
+                <Text.H6B>{row.label}</Text.H6B>
+              </td>
+              <td className="min-w-0 py-1.5 pr-3 align-middle">
+                <span className="flex min-w-0 items-start gap-1.5">
+                  <ReadinessIcon state={row.state} />
+                  <Text.H6 color={row.state === "actionNeeded" ? "warningMutedForeground" : "foregroundMuted"}>
+                    {row.status}
+                  </Text.H6>
+                </span>
+              </td>
+              <td className="py-1.5 text-right align-middle">
+                {row.value ? <Text.H6 className="tabular-nums">{row.value}</Text.H6> : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       <Text.H7 color="foregroundMuted">
         Collecting items update automatically. Scores publish when all five dimensions are ready.
       </Text.H7>
@@ -95,7 +99,15 @@ function DimensionReadiness({
   )
 }
 
-function ScoreReadiness({ explanation }: { readonly explanation: AgentScoreExplanationRecord["explanation"] }) {
+function ScoreReadiness({
+  explanation,
+  date,
+  hasStaleSnapshot,
+}: {
+  readonly explanation: AgentScoreExplanationRecord["explanation"]
+  readonly date: string
+  readonly hasStaleSnapshot: boolean
+}) {
   const readiness = agentScoreReadiness(explanation)
   const summary =
     readiness.kind === "sessions"
@@ -105,11 +117,21 @@ function ScoreReadiness({ explanation }: { readonly explanation: AgentScoreExpla
         : undefined
 
   return (
-    <>
-      <div className="flex flex-row items-center justify-between gap-3">
-        <Text.H6 color="foregroundMuted">Score readiness</Text.H6>
-        {summary ? <Text.H6 color="foregroundMuted">{summary}</Text.H6> : null}
+    <div className="flex min-h-[200px] flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <Text.H6 color="foregroundMuted">Requirements for today’s computation</Text.H6>
+        <Text.H7 color="foregroundMuted">{formatFullDate(date)} UTC</Text.H7>
+        {hasStaleSnapshot ? (
+          <Text.H7 color="foregroundMuted">
+            These requirements do not describe the score shown beside this table.
+          </Text.H7>
+        ) : null}
       </div>
+      {summary ? (
+        <Text.H6 color="foregroundMuted" className="self-end">
+          {summary}
+        </Text.H6>
+      ) : null}
       {readiness.kind === "sessions" ? (
         <div className="flex flex-1 flex-col justify-center gap-4">
           <div className="flex flex-col gap-1">
@@ -132,17 +154,21 @@ function ScoreReadiness({ explanation }: { readonly explanation: AgentScoreExpla
           <Text.H6 color="foregroundMuted">Refresh to evaluate the latest sessions.</Text.H6>
         </div>
       )}
-    </>
+    </div>
   )
 }
 
 export function ScoreTrend({
   endDate,
+  isCurrentSnapshot,
+  hasStaleSnapshot,
   history,
   explanation,
   isLoading,
 }: {
   readonly endDate: string
+  readonly isCurrentSnapshot: boolean
+  readonly hasStaleSnapshot: boolean
   readonly history: readonly AgentScoreRecord[] | undefined
   readonly explanation: AgentScoreExplanationRecord["explanation"]
   readonly isLoading: boolean
@@ -170,7 +196,7 @@ export function ScoreTrend({
         <div className="flex flex-1 p-4">
           <Skeleton className="min-h-[200px] w-full flex-1 rounded-lg" />
         </div>
-      ) : hasScores ? (
+      ) : isCurrentSnapshot && hasScores ? (
         <>
           <ChartHeader
             title="Score evolution"
@@ -202,7 +228,7 @@ export function ScoreTrend({
         </>
       ) : (
         <div className="p-6">
-          <ScoreReadiness explanation={explanation} />
+          <ScoreReadiness explanation={explanation} date={endDate} hasStaleSnapshot={hasStaleSnapshot} />
         </div>
       )}
     </div>

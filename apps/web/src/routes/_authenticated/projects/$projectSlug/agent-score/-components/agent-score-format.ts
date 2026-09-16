@@ -9,3 +9,18 @@ export const formatPercent = (value: number, digits = 1): string => `${(value * 
 
 export const formatDate = (date: string): string =>
   new Date(`${date}T00:00:00.000Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })
+
+export const formatFullDate = (date: string): string =>
+  new Date(`${date}T00:00:00.000Z`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+
+export const formatDateTime = (date: string): string => {
+  const value = new Date(date)
+  const day = value.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+  const time = value.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", timeZone: "UTC" })
+  return `${day} at ${time} UTC`
+}
