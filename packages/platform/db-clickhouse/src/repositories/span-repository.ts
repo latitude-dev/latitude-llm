@@ -1278,7 +1278,6 @@ export const SpanRepositoryLive = Layer.effect(
                 chSqlClient
                   .query(async (client) => {
                     const result = await client.query({
-                      // Read one trace at a time: span ids are trace-scoped, so this prevents cross-pair payload reads.
                       query: `SELECT trace_id, span_id, input_messages, output_messages, tool_definitions
                             FROM (
                               SELECT trace_id, span_id, input_messages, output_messages, tool_definitions, ingested_at
