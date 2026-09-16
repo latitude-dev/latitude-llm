@@ -64,7 +64,7 @@ class MembersClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> InvitedMember:
         """
-        Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
+        Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user). Only organization owners and admins can invite members.
 
         Parameters
         ----------
@@ -252,7 +252,7 @@ class AsyncMembersClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> InvitedMember:
         """
-        Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
+        Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user). Only organization owners and admins can invite members.
 
         Parameters
         ----------
