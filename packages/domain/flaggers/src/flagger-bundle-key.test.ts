@@ -47,6 +47,23 @@ describe("classifyToolError", () => {
   it("falls back to a shared class rather than inventing one per response", () => {
     expect(classifyToolError({ ok: false })).toBe("unspecified")
   })
+
+  it("gives a message of pure separators the shared fallback class", () => {
+    expect(classifyToolError({ error: `${"-".repeat(50_000)}!` })).toBe("unspecified")
+    expect(classifyToolError("-".repeat(50_000))).toBe("unspecified")
+  })
+
+  // The scan limit is a work bound, not a classifier change: the slug keeps only
+  // its first 48 characters, so truncating the input far above that must leave
+  // the answer identical.
+  it("classes an oversized message exactly as it classes a short one", () => {
+    const short = classifyToolError({ error: "connection refused by upstream" })
+    const padded = classifyToolError({ error: `connection refused by upstream ${"padding ".repeat(200_000)}` })
+
+    expect(short).toBe("connection-refused-by-upstream")
+    expect(padded.startsWith("connection-refused-by-upstream")).toBe(true)
+    expect(padded.length).toBeLessThanOrEqual(FLAGGER_BUNDLE_KEY_MAX_LENGTH)
+  })
 })
 
 describe("flaggerBundleKey", () => {

@@ -460,19 +460,34 @@ const VOLATILE_ERROR_FRAGMENTS: readonly RegExp[] = [
   /"[^"]*"|'[^']*'/g,
 ]
 
+/**
+ * Characters of raw message scanned before classing. A tool may return a megabyte
+ * of prose, and only the first 48 characters of the resulting slug survive — so
+ * this bounds the regex work without changing any realistic classification.
+ * Without it the string-response path is unbounded: `extractToolErrorSnippet`
+ * caps the object path at `ERROR_SNIPPET_MAX_LENGTH`, but a bare string reaches
+ * normalization whole.
+ */
+const TOOL_ERROR_MESSAGE_SCAN_LIMIT = 1_000
+
+// Hand-rolled rather than /^-+|-+$/: an anchored `-+$` backtracks quadratically
+// on a long run of dashes, and this runs on tool output we do not control.
+const trimSeparators = (value: string): string => {
+  let start = 0
+  let end = value.length
+  while (start < end && value.charCodeAt(start) === 45) start++
+  while (end > start && value.charCodeAt(end - 1) === 45) end--
+  return value.slice(start, end)
+}
+
 const slugifyErrorClass = (value: string): string | null => {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+  const slug = trimSeparators(value.toLowerCase().replace(/[^a-z0-9]+/g, "-"))
   if (slug === "") return null
-  return slug.length > TOOL_ERROR_CLASS_MAX_LENGTH
-    ? slug.slice(0, TOOL_ERROR_CLASS_MAX_LENGTH).replace(/-+$/, "")
-    : slug
+  return slug.length > TOOL_ERROR_CLASS_MAX_LENGTH ? trimSeparators(slug.slice(0, TOOL_ERROR_CLASS_MAX_LENGTH)) : slug
 }
 
 const normalizeToolErrorMessage = (message: string): string | null => {
-  let normalized = message
+  let normalized = message.slice(0, TOOL_ERROR_MESSAGE_SCAN_LIMIT)
   for (const fragment of VOLATILE_ERROR_FRAGMENTS) normalized = normalized.replace(fragment, " ")
   // Digits go last and wholesale: a retry count, a byte size and a line number are
   // all noise, and any status worth keeping was already read from its own field.
