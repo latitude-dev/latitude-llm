@@ -103,40 +103,44 @@ export const toolCallErrorBundlingFixture: LiveSeedFixtureDefinition = {
         ] as const)
       : ([] as const)
 
-    // The terminal case ends at the failed call with no further assistant turn.
-    // Anything trailing — even an apology — is output content, which makes
-    // `hasUsableCompletion` true and the finding `recovered`, so a fixture that
-    // signs off politely silently stops covering terminal behaviour.
-    const answerSpans = recovered
-      ? ([
-          {
-            ...createChatSpan(rng, {
-              label: "tool-recovery",
-              inputMessages: [
-                userPrompt,
-                assistantToolCall,
-                toolResult,
-                fallbackToolCall,
-                toolResponseMessage(fallbackCallId, fallbackOutput),
-              ],
-              outputMessages: [
-                assistantTextMessage(
-                  `Warehouse pickup is allowed for ${orderId}; I used the carrier policy service because the pickup policy service was unavailable.`,
-                ),
-              ],
-              durationRangeMs: [800, 1_300] as const,
-              usageProfile: "low" as const,
-            }),
-            parentLabel: "invoke-agent",
-            offsetMs: planningSpan.durationMs + toolSpan.durationMs + 1_600,
-          },
-        ] as const)
-      : ([] as const)
+    // Both branches keep a closing span, and it is load-bearing for a reason that
+    // is easy to get wrong twice. The flagger analyses the *last responsive span's
+    // input window*, so dropping this span would drop the failed tool response out
+    // of the analysed conversation entirely and the detector would see nothing at
+    // all — no finding, recovered or otherwise.
+    //
+    // What separates the two branches is the assistant's output, not the span's
+    // presence: any non-empty text is output content, which makes
+    // `hasUsableCompletion` true and the finding `recovered`. The terminal branch
+    // therefore returns empty — the agent gave up, which is what a terminal tool
+    // failure actually looks like.
+    const answerSpan = {
+      ...createChatSpan(rng, {
+        label: recovered ? "tool-recovery" : "tool-giveup",
+        inputMessages: recovered
+          ? [
+              userPrompt,
+              assistantToolCall,
+              toolResult,
+              fallbackToolCall,
+              toolResponseMessage(fallbackCallId, fallbackOutput),
+            ]
+          : [userPrompt, assistantToolCall, toolResult],
+        outputMessages: [
+          assistantTextMessage(
+            recovered
+              ? `Warehouse pickup is allowed for ${orderId}; I used the carrier policy service because the pickup policy service was unavailable.`
+              : "",
+          ),
+        ],
+        durationRangeMs: [800, 1_300] as const,
+        usageProfile: "low" as const,
+      }),
+      parentLabel: "invoke-agent",
+      offsetMs: planningSpan.durationMs + toolSpan.durationMs + (recovered ? 1_600 : 0),
+    } as const
 
-    const lastSpan = answerSpans[0]
-    const wrapperDurationMs =
-      (lastSpan ? lastSpan.offsetMs + lastSpan.durationMs : planningSpan.durationMs + toolSpan.durationMs) +
-      rng.int(40, 120)
+    const wrapperDurationMs = answerSpan.offsetMs + answerSpan.durationMs + rng.int(40, 120)
 
     return createSingleTraceCase({
       rng,
@@ -156,7 +160,7 @@ export const toolCallErrorBundlingFixture: LiveSeedFixtureDefinition = {
         planningSpan,
         toolSpan,
         ...fallbackSpans,
-        ...answerSpans,
+        answerSpan,
       ],
       startDelayRangeMs: [2_000, 3_600],
       traits: {
