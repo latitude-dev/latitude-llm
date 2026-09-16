@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.3.102 - 2026-09-16
+
+### Agent Score
+
+- Batched ClickHouse generation fact and content reads and restricted content queries to selected spans, reducing memory pressure during score calculation (ref: #4635).
+- Updated the web page to show the latest published score when today's score is unavailable, with clear date labels and separate readiness evidence for today. Fixed refresh completion checks and date handling (ref: #4661).
+
 ## v0.3.101 - 2026-09-15
 
 ### Agent Score
