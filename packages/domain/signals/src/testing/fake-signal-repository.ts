@@ -73,6 +73,21 @@ export const createFakeSignalRepository = (
           ) ?? null,
       ),
 
+    adoptBundleKey: ({ signalId, bundleKey }) =>
+      Effect.sync(() => {
+        const issue = issues.get(signalId)
+        if (!issue || (issue.deletedAt ?? null) !== null || issue.bundleKey !== null || issue.source !== "flagger") {
+          return false
+        }
+        if (
+          [...issues.values()].some((other) => other.projectId === issue.projectId && other.bundleKey === bundleKey)
+        ) {
+          return false
+        }
+        issues.set(signalId, { ...issue, bundleKey })
+        return true
+      }),
+
     findByIdForUpdate: (id) =>
       Effect.gen(function* () {
         const issue = issues.get(id)

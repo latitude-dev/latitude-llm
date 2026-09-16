@@ -992,6 +992,56 @@ describe("SignalRepository.findByBundleKey", () => {
     ).rejects.toThrow()
   })
 
+  it("claims a bucket for an unkeyed detector issue, and only once", async () => {
+    const bundleKey = bundleKeyFor("adopt")
+    await seedSignal({ id: "sig-adopt-legacyzzzzzzzz", slug: "LAT-ADP1", createdAt: WINDOW_FROM, source: "flagger" })
+
+    const claimed = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).adoptBundleKey({
+          signalId: SignalId("sig-adopt-legacyzzzzzzzz"),
+          bundleKey,
+        })
+      }),
+    )
+    expect(claimed).toBe(true)
+
+    // Re-claiming with a different bucket must not steal the issue.
+    const stolen = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).adoptBundleKey({
+          signalId: SignalId("sig-adopt-legacyzzzzzzzz"),
+          bundleKey: bundleKeyFor("adopt-other"),
+        })
+      }),
+    )
+    expect(stolen).toBe(false)
+
+    const found = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).findByBundleKey({ projectId: PROJECT_ID, bundleKey })
+      }),
+    )
+    expect(found?.id).toBe("sig-adopt-legacyzzzzzzzz")
+  })
+
+  // A hand-built or annotation-clustered issue is not a detector bucket, so a
+  // deterministic key must never attach to it.
+  it("refuses to claim a bucket for a non-detector issue", async () => {
+    await seedSignal({ id: "sig-adopt-customzzzzzzz", slug: "LAT-ADP2", createdAt: WINDOW_FROM, source: "custom" })
+
+    const claimed = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).adoptBundleKey({
+          signalId: SignalId("sig-adopt-customzzzzzzz"),
+          bundleKey: bundleKeyFor("adopt-custom"),
+        })
+      }),
+    )
+
+    expect(claimed).toBe(false)
+  })
+
   it("leaves issues without a bucket out of the constraint entirely", async () => {
     await seedSignal({ id: "sig-nobundle-1zzzzzzzzzz", slug: "LAT-BND6", createdAt: WINDOW_FROM })
     await expect(

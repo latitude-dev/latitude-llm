@@ -1,4 +1,4 @@
-import { type CacheError, ProjectId, type RepositoryError } from "@domain/shared"
+import { type CacheError, ProjectId, type RepositoryError, SignalId } from "@domain/shared"
 import { type CryptoError, hash } from "@repo/utils"
 import { Effect } from "effect"
 import {
@@ -152,10 +152,33 @@ export const assignOrCreateSignalUseCase = (input: AssignOrCreateSignalInput) =>
         ? SIGNAL_DISCOVERY_FEEDBACK_LOCK_KEY(yield* hash(input.feedback))
         : SIGNAL_DISCOVERY_BUNDLE_LOCK_KEY(bundleKey)
 
+    // On a bundle miss, fall back to the fuzzy path once and adopt the key onto
+    // whatever it resolves to. Issues discovered before bundling existed carry no
+    // key, so an exact-only lookup would open a duplicate beside every one of
+    // them; adoption converges each bucket onto its existing issue on the first
+    // occurrence and takes the exact path from then on.
     const findExistingSignalId = (candidateInput: AssignOrCreateSignalInput) =>
       bundleKey === undefined
         ? findAssignedSignalIdWithFallback(candidateInput)
-        : findBundledSignalId(candidateInput, bundleKey)
+        : Effect.gen(function* () {
+            const bundled = yield* findBundledSignalId(candidateInput, bundleKey)
+            if (bundled !== null) return bundled
+
+            const fuzzy = yield* findAssignedSignalIdWithFallback(candidateInput)
+            if (fuzzy === null) return null
+
+            // Accepted only if the key is actually claimed. A fuzzy match that
+            // already carries a different key *is* another bucket, and merging two
+            // buckets is the one thing an exact key exists to prevent — so a failed
+            // claim means this bucket opens its own issue instead.
+            const signalRepository = yield* SignalRepository
+            const adopted = yield* signalRepository.adoptBundleKey({
+              signalId: SignalId(fuzzy),
+              bundleKey,
+            })
+            yield* Effect.annotateCurrentSpan("bundleKeyAdopted", adopted)
+            return adopted ? fuzzy : null
+          })
 
     return yield* withSignalDiscoveryLock(
       {

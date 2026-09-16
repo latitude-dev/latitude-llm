@@ -138,6 +138,24 @@ export interface SignalRepositoryShape {
     readonly bundleKey: string
   }): Effect.Effect<Signal | null, RepositoryError, SqlClient>
   /**
+   * Stamps a bundle key onto an issue that predates one, returning whether it
+   * claimed it.
+   *
+   * Issues discovered before deterministic bundling existed carry no key, so the
+   * exact lookup misses them and would open a second issue for a failure that
+   * already has one. Rather than backfill keys we cannot re-derive — the key comes
+   * from the finding, and only the score's feedback text was persisted — the first
+   * occurrence after the change adopts the key onto whatever the fuzzy path
+   * resolves to, and every later occurrence takes the exact path.
+   *
+   * Guarded in SQL so the claim is atomic and cannot steal a key: only an
+   * unkeyed, live, detector-authored issue is eligible.
+   */
+  adoptBundleKey(input: {
+    readonly signalId: SignalId
+    readonly bundleKey: string
+  }): Effect.Effect<boolean, RepositoryError, SqlClient>
+  /**
    * Serves two callers with opposite needs. Discovery passes
    * `includeUnpromoted: true` so a new score can cluster into a candidate; the
    * signals-list search box does not, so a candidate never surfaces as a hit.

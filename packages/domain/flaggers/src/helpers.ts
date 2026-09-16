@@ -434,6 +434,11 @@ export function extractToolErrorSnippet(response: unknown): string | null {
     if (inner) return truncate(inner)
   }
 
+  if (Array.isArray(response.errors) && response.errors.length > 0) {
+    const fromErrors = extractToolErrorSnippet(response.errors[0])
+    if (fromErrors) return fromErrors
+  }
+
   return truncate(toNonEmptyString(response.message) ?? toNonEmptyString(response.status))
 }
 
@@ -542,6 +547,14 @@ export function classifyToolError(response: unknown): string {
     if (isRecord(error)) {
       const nested = readErrorClassFields(error)
       if (nested !== null) return nested
+    }
+    // `toolResponseIndicatesFailure` accepts a non-empty `errors` array, so a
+    // response shaped that way is a failure whose detail lives nowhere else.
+    // Without this every such failure classes as `unspecified` and two unrelated
+    // ones share a bucket.
+    if (Array.isArray(response.errors) && response.errors.length > 0) {
+      const first = classifyToolError(response.errors[0])
+      if (first !== UNSPECIFIED_TOOL_ERROR_CLASS) return first
     }
   }
 

@@ -8,11 +8,32 @@ import { UNSPECIFIED_TOOL_ERROR_CLASS } from "./helpers.ts"
 export const FLAGGER_BUNDLE_KEY_MAX_LENGTH = 200
 
 const SEGMENT_MAX_LENGTH = 64
+const SEGMENT_DIGEST_LENGTH = 8
 
+/**
+ * 32-bit FNV-1a. A bucketing discriminator, not a security boundary — it only has
+ * to make two distinct names that share a prefix produce distinct segments.
+ */
+const digest = (value: string): string => {
+  let h = 0x811c9dc5
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return h.toString(36).padStart(SEGMENT_DIGEST_LENGTH, "0").slice(0, SEGMENT_DIGEST_LENGTH)
+}
+
+/**
+ * Bounds a segment without letting two distinct values collapse onto one bucket.
+ * A tool name has no declared maximum, and plain prefix truncation would file
+ * failures from unrelated tools sharing a long prefix under one issue — silently,
+ * which is the worst way for an "exact" key to be wrong.
+ */
 const segment = (value: string | undefined, fallback: string): string => {
   const trimmed = (value ?? "").trim()
   if (trimmed === "") return fallback
-  return trimmed.length > SEGMENT_MAX_LENGTH ? trimmed.slice(0, SEGMENT_MAX_LENGTH) : trimmed
+  if (trimmed.length <= SEGMENT_MAX_LENGTH) return trimmed
+  return `${trimmed.slice(0, SEGMENT_MAX_LENGTH - SEGMENT_DIGEST_LENGTH - 1)}-${digest(trimmed)}`
 }
 
 /**

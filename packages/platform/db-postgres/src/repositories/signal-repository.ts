@@ -805,6 +805,27 @@ const signalRepositoryCoreLive = Layer.effect(
           )
         }),
 
+      adoptBundleKey: ({ signalId, bundleKey }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db
+              .update(signals)
+              .set({ bundleKey })
+              .where(
+                and(
+                  eq(signals.organizationId, organizationId),
+                  eq(signals.id, signalId),
+                  isNull(signals.deletedAt),
+                  isNull(signals.bundleKey),
+                  eq(signals.source, "flagger"),
+                ),
+              )
+              .returning({ id: signals.id }),
+          )
+          return rows.length > 0
+        }),
+
       claimReopenOnOccurrence: ({ signalId, occurredAt, now }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

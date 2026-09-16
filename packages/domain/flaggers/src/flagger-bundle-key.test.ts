@@ -48,6 +48,21 @@ describe("classifyToolError", () => {
     expect(classifyToolError({ ok: false })).toBe("unspecified")
   })
 
+  // `toolResponseIndicatesFailure` treats a non-empty `errors` array as a failure,
+  // so leaving it unclassified would file every such failure under one bucket.
+  it("classes an errors array instead of collapsing it to the fallback", () => {
+    const timeout = classifyToolError({ errors: [{ message: "timeout contacting upstream" }] })
+    const notFound = classifyToolError({ errors: [{ message: "record not found" }] })
+
+    expect(timeout).toBe("timeout-contacting-upstream")
+    expect(notFound).toBe("record-not-found")
+    expect(timeout).not.toBe(notFound)
+  })
+
+  it("reads a declared status inside an errors array", () => {
+    expect(classifyToolError({ errors: [{ statusCode: 429, message: "slow down" }] })).toBe("http-429")
+  })
+
   it("gives a message of pure separators the shared fallback class", () => {
     expect(classifyToolError({ error: `${"-".repeat(50_000)}!` })).toBe("unspecified")
     expect(classifyToolError("-".repeat(50_000))).toBe("unspecified")
@@ -131,6 +146,24 @@ describe("flaggerBundleKey", () => {
         feedback: "irrelevant",
       }),
     ).toBe("tool-call-errors:duplicate:fetch_user")
+  })
+
+  it("keeps two long tool names sharing a prefix in different buckets", () => {
+    const base = {
+      findingKey: "a".repeat(64),
+      flaggerSlug: "tool-call-errors" as const,
+      findingKind: "error" as const,
+      toolCallId: "call-1",
+      messageIndex: 0,
+      responseMessageIndex: 1,
+      feedback: "irrelevant",
+      errorClass: "http-503",
+    }
+    const prefix = "mcp__composio__".concat("x".repeat(80))
+
+    expect(flaggerBundleKey({ ...base, toolName: `${prefix}_alpha` })).not.toBe(
+      flaggerBundleKey({ ...base, toolName: `${prefix}_beta` }),
+    )
   })
 
   it("stays within the stored bound when the tool name is absurd", () => {

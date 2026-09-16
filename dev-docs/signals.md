@@ -278,9 +278,20 @@ A score written by a deterministic detector carries `metadata.flaggerBundleKey` 
 
 1. the outer Redis lock is keyed on the bundle key rather than `sha256(feedback)` — a deterministic herd shares the bucket, not the sentence, so hashing the feedback would let two occurrences of one failure race each other into two issues
 2. `SignalRepository.findByBundleKey` resolves the project's live issue for that bucket, promoted or not
-3. a hit assigns; a miss takes the project lock, re-checks, and creates an issue that claims the key
+3. a hit assigns, skipping hybrid search and rerank entirely
+4. a miss falls back to the fuzzy path once and tries to claim the key on whatever it resolves to (see **Adoption** below); failing that, it takes the project lock and creates an issue that claims the key
 
-No embedding search, no rerank, no AI call. The guarantee is a partial unique index on `(organization_id, project_id, bundle_key) WHERE deleted_at IS NULL AND bundle_key IS NOT NULL`: one live issue per bucket per project. Soft-delete frees the bucket for reuse, which is what makes deleting an issue a real reset rather than a permanent hole.
+The **repeat** occurrence — the one that happens all day — costs a single indexed lookup. The first occurrence of an unseen bucket still pays retrieval, once.
+
+Feedback embedding is **not** skipped: `embedScoreFeedback` runs ahead of assignment for every score, and `assignScoreToSignalUseCase` folds that vector into the issue's centroid. A bundled issue is never *matched* by its centroid, but the centroid still feeds the Related-issues panel, so dropping it would silently degrade that surface. Skipping the embed on a bundle hit is a possible optimisation, not a property of the current path.
+
+The guarantee is a partial unique index on `(organization_id, project_id, bundle_key) WHERE deleted_at IS NULL AND bundle_key IS NOT NULL`: one live issue per bucket per project. Soft-delete frees the bucket for reuse, which is what makes deleting an issue a real reset rather than a permanent hole.
+
+#### Adoption
+
+Issues discovered before bundling existed carry no key, so an exact-only lookup would miss them and open a duplicate beside every one. The key cannot be backfilled — it derives from the finding, and only the score's feedback text was persisted — so the first occurrence after the change adopts it instead: `SignalRepository.adoptBundleKey` stamps the key in one guarded statement (`bundle_key IS NULL AND source = 'flagger' AND deleted_at IS NULL`), and every later occurrence takes the exact path.
+
+The fuzzy match is accepted **only if the claim succeeds**. A match that already carries a different key is itself another bucket, and merging two buckets is precisely what the key exists to prevent — so a failed claim means this bucket opens its own issue.
 
 Two consequences follow from the key being exact:
 

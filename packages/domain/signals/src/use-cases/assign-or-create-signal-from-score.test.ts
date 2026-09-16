@@ -13,6 +13,7 @@ import {
   OrganizationId,
   ProjectId,
   ScoreId,
+  SignalId,
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
@@ -22,6 +23,7 @@ import { createFakeSessionRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { SIGNAL_BUNDLE_KEY_MAX_LENGTH } from "../constants.ts"
+import type { Signal } from "../entities/signal.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { createFakeSignalRepository } from "../testing/fake-signal-repository.ts"
 import { assignOrCreateSignalUseCase } from "./assign-or-create-signal-from-score.ts"
@@ -107,7 +109,11 @@ const runDiscovery = (input: {
   readonly signalRepository: ReturnType<typeof createFakeSignalRepository>["repository"]
   readonly outbox: ReturnType<typeof createRecordingOutbox>["service"]
 }) => {
-  const { layer: aiLayer } = createFakeAI()
+  // The fake reranks nothing by default, which would make every fuzzy lookup miss.
+  const { layer: aiLayer } = createFakeAI({
+    rerank: ({ documents }) =>
+      Effect.succeed(documents.map((_, index) => ({ index, relevanceScore: index === 0 ? 0.9 : 0.1 }))),
+  })
   return Effect.runPromise(
     assignOrCreateSignalUseCase({
       organizationId,
@@ -182,8 +188,11 @@ describe("assignOrCreateSignalUseCase bundling", () => {
     expect(firstResult).toMatchObject({ action: "created" })
     expect(secondResult).toMatchObject({ action: "assigned" })
     expect(issues.size).toBe(1)
-    expect(hybridSearchCalls).toEqual([])
     expect([...issues.values()][0]?.bundleKey).toBe(BUNDLE_KEY)
+    // The first occurrence of an unseen bucket still consults search once, so it can
+    // adopt an issue that predates bundling. Once the key is claimed the second
+    // occurrence resolves exactly, which is the case that repeats all day.
+    expect(hybridSearchCalls).toEqual([first.feedback, first.feedback])
   })
 
   it("keeps two failure classes apart", async () => {
@@ -227,7 +236,13 @@ describe("assignOrCreateSignalUseCase bundling", () => {
       outbox: outbox.service,
     })
 
+    // The second bucket fuzzy-matches the first issue, but that issue already owns
+    // a key, so the claim fails and the class keeps its own issue.
     expect(issues.size).toBe(2)
+    expect([...issues.values()].map((issue) => issue.bundleKey).sort()).toEqual([
+      "tool-call-errors:error:fetch_user:http-404",
+      "tool-call-errors:error:fetch_user:http-503",
+    ])
   })
 
   it("still clusters by meaning when the score carries no bucket", async () => {
@@ -261,6 +276,82 @@ describe("assignOrCreateSignalUseCase bundling", () => {
     // Twice: the fuzzy path re-runs retrieval under the project lock before it is
     // allowed to create. Bundled scores skip both.
     expect(hybridSearchCalls).toEqual(["The assistant was rude.", "The assistant was rude."])
+  })
+
+  it("adopts the bucket onto an issue that predates bundling instead of duplicating it", async () => {
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const legacy: Signal = {
+      id: SignalId("llllllllllllllllllllllll"),
+      organizationId,
+      projectId,
+      slug: "tool-failure",
+      name: "Tool failure",
+      description: "fetch_user keeps failing",
+      source: "flagger",
+      origin: "system",
+      scoreEvidence: [],
+      assigneeId: null,
+      priority: null,
+      bundleKey: null,
+      centroid: null,
+      clusteredAt: null,
+      promotedAt: new Date("2026-03-01T00:00:00.000Z"),
+      resolvedAt: null,
+      ignoredAt: null,
+      regressedAt: null,
+      mutedAt: null,
+      feedback: null,
+      deletedAt: null,
+      createdAt: new Date("2026-03-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-01T00:00:00.000Z"),
+    }
+    const { repository: signalRepository, issues } = createFakeSignalRepository([legacy], {
+      hybridSearch: () =>
+        Effect.succeed([{ signalId: legacy.id, name: legacy.name, description: legacy.description, score: 1 }]),
+    })
+    const outbox = createRecordingOutbox()
+
+    const first = makeScore("a")
+    const second = makeScore("b")
+    scores.set(first.id, first)
+    scores.set(second.id, second)
+
+    const firstResult = await runDiscovery({
+      scoreId: first.id,
+      feedback: first.feedback,
+      embeddingSeed: 0,
+      bundleKey: BUNDLE_KEY,
+      scoreRepository,
+      signalRepository,
+      outbox: outbox.service,
+    })
+
+    expect(firstResult).toMatchObject({ action: "assigned", signalId: legacy.id })
+    expect(issues.size).toBe(1)
+    expect(issues.get(legacy.id)?.bundleKey).toBe(BUNDLE_KEY)
+
+    // Now keyed, so the second occurrence resolves exactly and never consults search.
+    const searched: string[] = []
+    const { repository: keyedRepository } = createFakeSignalRepository([...issues.values()], {
+      hybridSearch: ({ query }) =>
+        Effect.sync(() => {
+          searched.push(query)
+          return []
+        }),
+    })
+
+    const secondResult = await runDiscovery({
+      scoreId: second.id,
+      feedback: second.feedback,
+      embeddingSeed: 1024,
+      bundleKey: BUNDLE_KEY,
+      scoreRepository,
+      signalRepository: keyedRepository,
+      outbox: outbox.service,
+    })
+
+    expect(secondResult).toMatchObject({ action: "assigned", signalId: legacy.id })
+    expect(searched).toEqual([])
   })
 
   it("keeps the bundle key within the column's bound", () => {
