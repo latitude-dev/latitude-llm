@@ -55,7 +55,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
   const date = scoreData?.date ?? new Date().toISOString().slice(0, 10)
   const isCurrentSnapshot = isCurrentAgentScoreSnapshot(snapshot, date)
   const hasStaleSnapshot = isStaleAgentScoreSnapshot(snapshot, date)
-  const cachedExplanation = explanationQuery.data?.currentExplanation ?? null
+  const currentExplanation = explanationQuery.data?.currentExplanation ?? null
   const explanation = agentScoreExplanationForSnapshot({
     explanation: explanationQuery.data?.explanation ?? null,
     date: snapshot?.date ?? date,
@@ -64,9 +64,9 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
   const isRefreshing = scoreQuery.isRefetching || historyQuery.isRefetching || explanationQuery.isRefetching
   const refresh = async () => {
     if (isReloading) return
-    const previousMarker = agentScoreRefreshMarker({ snapshot, explanation: cachedExplanation })
+    const previousMarker = agentScoreRefreshMarker({ snapshot, explanation: currentExplanation })
     const previousSnapshotMarker = agentScoreSnapshotMarker(snapshot)
-    const previousExplanationTime = cachedExplanation?.computedAt
+    const previousExplanationTime = currentExplanation?.computedAt
     setIsReloading(true)
     try {
       const { date: refreshDate } = await refreshProjectAgentScore({ data: { projectId: project.id } })
@@ -75,7 +75,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
         refetch: async () => {
           const [scoreResult, explanationResult] = await Promise.all([scoreQuery.refetch(), explanationQuery.refetch()])
           const nextSnapshot = scoreResult.data?.snapshot ?? null
-          const nextExplanation = explanationResult.data?.explanation ?? null
+          const nextExplanation = explanationResult.data?.currentExplanation ?? null
           const nextMarker = agentScoreRefreshMarker({ snapshot: nextSnapshot, explanation: nextExplanation })
           return agentScoreRefreshCompleted({
             previousSnapshotMarker,
@@ -147,7 +147,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
               isCurrentSnapshot={isCurrentSnapshot}
               hasStaleSnapshot={hasStaleSnapshot}
               history={historyQuery.data}
-              explanation={explanation}
+              explanation={currentExplanation}
               isLoading={scoreTrendIsLoading({
                 isReloading,
                 isHistoryLoading: historyQuery.isLoading,
