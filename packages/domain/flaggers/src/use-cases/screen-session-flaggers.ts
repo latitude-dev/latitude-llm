@@ -626,8 +626,6 @@ interface BuildInitialScreeningDecisionInput {
 }
 
 const toSelection = ({
-  attempt: _attempt,
-  version: _version,
   outcome: _outcome,
   createdAt: _createdAt,
   ...selection
