@@ -22,15 +22,16 @@ export type AgentScoreExplanationResult =
  * failed write is logged and swallowed by the caller rather than failing the job, since a missing
  * cache entry costs a page a recomputation and a missing snapshot costs a day of history.
  */
-export const cacheAgentScoreExplanation = Effect.fn("agentScore.cacheExplanation")(function* (
-  result: AgentScoreResult,
-) {
-  const explanation = toAgentScoreExplanation(result)
+export const cacheAgentScoreExplanation = Effect.fn("agentScore.cacheExplanation")(function* (input: {
+  readonly result: AgentScoreResult
+  readonly date: string
+}) {
+  const explanation = toAgentScoreExplanation(input)
   if (!explanation) return false
 
   const cache = yield* CacheStore
   yield* cache.set(
-    agentScoreExplanationCacheKey({ organizationId: result.organizationId, projectId: result.projectId }),
+    agentScoreExplanationCacheKey({ organizationId: input.result.organizationId, projectId: input.result.projectId }),
     JSON.stringify(explanation),
     { ttlSeconds: AGENT_SCORE_EXPLANATION_TTL_SECONDS },
   )

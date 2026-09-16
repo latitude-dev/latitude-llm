@@ -46,7 +46,7 @@ export const agentScoreRefreshCompleted = ({
   const snapshotIsCurrent = isCurrentAgentScoreSnapshot(snapshot, date)
   const snapshotChanged = snapshotIsCurrent && agentScoreSnapshotMarker(snapshot) !== previousSnapshotMarker
   const explanationChanged = explanation?.computedAt !== previousExplanationTime
-  const explanationIsCurrent = explanation?.window.to.slice(0, 10) === date
+  const explanationIsCurrent = explanation?.date === date
   if (snapshotChanged) return true
   if (!explanation || !explanationChanged || !explanationIsCurrent) return false
   return snapshotIsCurrent || explanation.publication.status === "withheld"
@@ -61,7 +61,7 @@ export const agentScoreExplanationForSnapshot = ({
   readonly date: string
   readonly snapshot: Pick<AgentScoreRecord, "scoringVersion"> | null
 }): AgentScoreExplanationRecord["explanation"] => {
-  if (explanation?.window.to.slice(0, 10) !== date) return null
+  if (explanation?.date !== date) return null
   if (snapshot && explanation.scoringVersion !== snapshot.scoringVersion) return null
   return explanation
 }

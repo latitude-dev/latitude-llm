@@ -116,7 +116,7 @@ export const getProjectAgentScoreExplanation = createServerFn({ method: "GET" })
 
 export const refreshProjectAgentScore = createServerFn({ method: "POST" })
   .inputValidator(projectInput)
-  .handler(async ({ data, context }): Promise<{ enqueued: true }> => {
+  .handler(async ({ data, context }): Promise<{ enqueued: true; date: string }> => {
     const orgId = await resolveOrgScope(context)
     const publisher = await getQueuePublisher()
     const projectId = ProjectId(data.projectId)
@@ -139,5 +139,5 @@ export const refreshProjectAgentScore = createServerFn({ method: "POST" })
         )
         .pipe(withTracing),
     )
-    return { enqueued: true }
+    return { enqueued: true, date }
   })

@@ -117,6 +117,7 @@ const speedWindowGateSchema = z.object({
 export const agentScoreExplanationSchema = z.object({
   organizationId: z.string().min(1),
   projectId: z.string().min(1),
+  date: z.string().min(1),
   scoringVersion: z.string().min(1),
   computedAt: z.string().min(1),
   window: z.object({ stepDays: z.number(), from: z.string(), to: z.string() }),
@@ -160,12 +161,19 @@ export const agentScoreExplanationSchema = z.object({
 export type AgentScoreExplanation = z.infer<typeof agentScoreExplanationSchema>
 
 /** Turns a completed window computation into the shape the page and the cache both use. */
-export const toAgentScoreExplanation = (result: AgentScoreResult): AgentScoreExplanation | null => {
+export const toAgentScoreExplanation = ({
+  result,
+  date,
+}: {
+  readonly result: AgentScoreResult
+  readonly date: string
+}): AgentScoreExplanation | null => {
   if (!result.coverage || !result.native || !result.readiness) return null
 
   return {
     organizationId: result.organizationId,
     projectId: result.projectId,
+    date,
     scoringVersion: result.scoringVersion,
     computedAt: new Date().toISOString(),
     window: {

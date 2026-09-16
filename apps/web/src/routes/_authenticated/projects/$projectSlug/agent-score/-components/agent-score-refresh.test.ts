@@ -19,10 +19,11 @@ const snapshot = {
 }
 
 const explanation = (date: string, status: "published" | "withheld", computedAt: string) =>
-  ({ window: { to: `${date}T23:59:59.999Z` }, publication: { status }, computedAt }) as unknown as Explanation
+  ({ date, window: { to: `${date}T23:59:59.999Z` }, publication: { status }, computedAt }) as unknown as Explanation
 
 describe("agentScoreExplanationForSnapshot", () => {
   const explanation = {
+    date: "2026-09-12",
     scoringVersion: "agent-score-v1-provisional",
     publication: { status: "published" },
     window: { to: "2026-09-12T04:00:00.000Z" },
@@ -121,7 +122,7 @@ describe("agentScoreRefreshCompleted", () => {
     ).toBe(false)
   })
 
-  it("uses the refreshed server date across UTC midnight", () => {
+  it("finishes when the queued date matches the published snapshot", () => {
     expect(
       agentScoreRefreshCompleted({
         previousSnapshotMarker,
@@ -163,6 +164,31 @@ describe("agentScoreRefreshCompleted", () => {
         date: "2026-09-12",
         snapshot,
         explanation: explanation("2026-09-12", "published", "2026-09-12T03:00:00.000Z"),
+      }),
+    ).toBe(true)
+  })
+
+  it("keeps the queued date when the server date changes at UTC midnight", () => {
+    const queuedDate = "2026-09-12"
+    const currentServerDate = "2026-09-13"
+    const withheldExplanation = {
+      date: queuedDate,
+      window: { to: "2026-09-13T00:00:00.000Z" },
+      publication: { status: "withheld" },
+      computedAt: "2026-09-13T00:01:00.000Z",
+    } as unknown as Explanation
+
+    expect(isCurrentAgentScoreSnapshot({ date: queuedDate }, currentServerDate)).toBe(false)
+    expect(
+      agentScoreExplanationForSnapshot({ explanation: withheldExplanation, date: queuedDate, snapshot: null }),
+    ).toBe(withheldExplanation)
+    expect(
+      agentScoreRefreshCompleted({
+        previousSnapshotMarker,
+        previousExplanationTime,
+        date: queuedDate,
+        snapshot: null,
+        explanation: withheldExplanation,
       }),
     ).toBe(true)
   })

@@ -70,7 +70,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
     const previousExplanationTime = cachedExplanation?.computedAt
     setIsReloading(true)
     try {
-      await refreshProjectAgentScore({ data: { projectId: project.id } })
+      const { date: refreshDate } = await refreshProjectAgentScore({ data: { projectId: project.id } })
       const completed = await waitForAgentScoreRefresh({
         previousMarker,
         refetch: async () => {
@@ -78,7 +78,6 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
           const nextSnapshot = scoreResult.data?.snapshot ?? null
           const nextExplanation = explanationResult.data?.explanation ?? null
           const nextMarker = agentScoreRefreshMarker({ snapshot: nextSnapshot, explanation: nextExplanation })
-          const refreshDate = scoreResult.data?.date ?? date
           return agentScoreRefreshCompleted({
             previousSnapshotMarker,
             previousExplanationTime,

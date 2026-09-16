@@ -10,6 +10,7 @@ const PROJECT_ID = ProjectId("p".repeat(24))
 const EXPLANATION = {
   organizationId: ORGANIZATION_ID as string,
   projectId: PROJECT_ID as string,
+  date: "2026-09-12",
   scoringVersion: "agent-score@1.0.0",
   computedAt: "2026-09-12T04:00:00.000Z",
   window: { stepDays: 28, from: "2026-08-15T04:00:00.000Z", to: "2026-09-12T04:00:00.000Z" },
@@ -89,6 +90,7 @@ describe("getAgentScoreExplanation", () => {
 
   it("reads an entry from an incompatible shape as a miss rather than handing the page a hole", async () => {
     expect(await read("{}")).toEqual({ status: "notComputed" })
+    expect(await read(JSON.stringify({ ...EXPLANATION, date: undefined }))).toEqual({ status: "notComputed" })
     expect(await read(JSON.stringify({ ...EXPLANATION, coverage: undefined }))).toEqual({ status: "notComputed" })
   })
 
