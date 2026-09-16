@@ -279,7 +279,6 @@ describe("Members routes — invite authorization", () => {
 
     expect(response.status).toBe(403)
 
-    // Invitation must not have been created.
     const rows = await listMembersJson(app, createOAuthAuthHeaders(tenant.oauthAccessToken))
     expect(rows.map((r) => r.email)).not.toContain("should-not-invite@example.com")
   })
