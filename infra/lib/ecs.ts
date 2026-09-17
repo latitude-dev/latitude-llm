@@ -474,7 +474,7 @@ function createTaskDefinition(
           { name: "LAT_TRUSTED_ORIGINS", value: trustedOrigins },
           { name: "LAT_CORS_ALLOWED_ORIGINS", value: webUrl },
           ...(config.name === "production" ? [{ name: "VITE_LAT_GTM_CONTAINER_ID", value: "GTM-5NWGV24H" }] : []),
-          ...(config.name === "production" ? [{ name: "LAT_JEV_FLAGGER_SHADOW_ENABLED", value: "true" }] : []),
+          { name: "LAT_JEV_FLAGGER_SHADOW_ENABLED", value: "true" },
           { name: "DD_TRACE_ENABLED", value: "true" },
           { name: "DD_ENV", value: config.name },
           { name: "DD_SERVICE", value: serviceConfig.name },
