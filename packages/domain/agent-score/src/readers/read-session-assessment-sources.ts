@@ -1,6 +1,7 @@
 import type { SessionMomentLabel, SessionSemanticMoment } from "@domain/conversation-intelligence"
 import {
   buildFlaggerSessionContext,
+  classifyToolError,
   emptyResponseStrategy,
   extractUserTextMessages,
   FLAGGER_DISPLAY,
@@ -377,6 +378,97 @@ const readSpanFindings = (
   }
 }
 
+const toolSpanReferences = (call: SessionToolCallFact) => {
+  if (call.toolCallId === "") {
+    const reference = { kind: "span" as const, traceId: call.traceId, spanId: call.spanId }
+    return { anchor: reference, destination: reference }
+  }
+
+  return {
+    anchor: {
+      kind: "toolCall" as const,
+      traceId: call.traceId,
+      toolCallId: call.toolCallId,
+      ...(call.toolName ? { toolName: call.toolName } : {}),
+    },
+    destination: { kind: "toolCall" as const, traceId: call.traceId, toolCallId: call.toolCallId },
+  }
+}
+
+const toolStatusFinding = ({
+  call,
+  toolCalls,
+  hasCompletion,
+}: {
+  readonly call: SessionToolCallFact
+  readonly toolCalls: readonly SessionToolCallFact[]
+  readonly hasCompletion: boolean
+}): AssessmentFinding => {
+  const detail = call.statusMessage.trim() || call.errorType.trim()
+  const references = toolSpanReferences(call)
+
+  return {
+    evidenceKey: `span:${call.spanId}:tool-failure:${classifyToolError(detail)}`,
+    label: `${call.toolName || "Tool call"} failed`,
+    ...(detail ? { description: detail } : {}),
+    source: "metric",
+    metricId: "tools.call_failed",
+    signalIds: [],
+    scoreIds: [],
+    occurrenceCount: 1,
+    chronology: { occurredAt: call.endTime },
+    anchors: [references.anchor],
+    destinations: [references.destination],
+    independentHumanEvidence: false,
+    kind: "toolFailure",
+    recovered: hasCompletion,
+    sameSubjectRecovered: laterSameToolSucceeded({ failed: call, toolCalls }),
+    terminal: !hasCompletion,
+  }
+}
+
+const readToolStatusFindings = ({
+  toolCalls,
+  deterministic,
+  hasCompletion,
+}: {
+  readonly toolCalls: readonly SessionToolCallFact[]
+  readonly deterministic: readonly AssessmentFinding[]
+  readonly hasCompletion: boolean
+}): { readonly findings: AssessmentFinding[]; readonly readers: AssessmentReaderFact[] } => {
+  const contentDetected = new Set(
+    deterministic.flatMap((finding) =>
+      finding.kind === "toolFailure"
+        ? finding.anchors.flatMap((anchor) => (anchor.kind === "toolCall" ? [anchor.toolCallId] : []))
+        : [],
+    ),
+  )
+
+  const findings = toolCalls.flatMap((call): AssessmentFinding[] => {
+    if (call.statusCode !== "error") return []
+    if (call.toolCallId !== "" && contentDetected.has(call.toolCallId)) return []
+    return [toolStatusFinding({ call, toolCalls, hasCompletion })]
+  })
+
+  const statusless = toolCalls.filter((call) => call.statusCode === "unset").length
+
+  return {
+    findings,
+    readers: [
+      {
+        readerId: "tools.call_status",
+        label: "Tool span status",
+        scoreDimensions: ["reliability", "cost", "speed"],
+        applicable: toolCalls.length > 0,
+        findingCount: findings.length,
+        readableCount: toolCalls.length - statusless,
+        totalCount: toolCalls.length,
+        ...(statusless > 0 ? { limitation: "missingTelemetry" as const } : {}),
+      },
+    ] satisfies AssessmentReaderFact[],
+  }
+}
+
 const scoreAnchors = (score: Score) => {
   const anchors: SessionEvidenceAnchor[] = [{ kind: "score", scoreId: score.id }]
   const destinations: SessionEvidenceDestination[] = [{ kind: "score", scoreId: score.id }]
@@ -580,6 +672,38 @@ const retrySpanIdsThrough = ({
     : candidates.slice(0, successfulIndex + 1).map((generation) => generation.spanId as string)
 }
 
+const retryToolSpanIdsThrough = ({
+  failed,
+  toolCalls,
+}: {
+  readonly failed: SessionToolCallFact
+  readonly toolCalls: readonly SessionToolCallFact[]
+}): string[] => {
+  if (failed.normalizedToolName === "") return []
+
+  const candidates = toolCalls
+    .filter(
+      (call) =>
+        call.traceId === failed.traceId &&
+        call.spanId !== failed.spanId &&
+        call.normalizedToolName === failed.normalizedToolName &&
+        call.startTime.getTime() >= failed.endTime.getTime(),
+    )
+    .sort(
+      (left, right) => left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
+    )
+  const successfulIndex = candidates.findIndex((call) => call.statusCode === "ok")
+  return successfulIndex < 0 ? [] : candidates.slice(0, successfulIndex + 1).map((call) => call.spanId as string)
+}
+
+const laterSameToolSucceeded = ({
+  failed,
+  toolCalls,
+}: {
+  readonly failed: SessionToolCallFact
+  readonly toolCalls: readonly SessionToolCallFact[]
+}): boolean => retryToolSpanIdsThrough({ failed, toolCalls }).length > 0
+
 const recoveredProviderIncident = (
   finding: Extract<AssessmentFinding, { readonly kind: "providerError" }>,
   generations: readonly SessionGenerationFact[],
@@ -602,28 +726,48 @@ const recoveredProviderIncident = (
     : [{ traceId: anchor.traceId, spanId: anchor.spanId, kind: finding.findingKind, retrySpanIds }]
 }
 
+const failedToolCall = (
+  finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
+  toolCalls: readonly SessionToolCallFact[],
+): SessionToolCallFact | undefined => {
+  for (const anchor of finding.anchors) {
+    if (anchor.kind === "toolCall") {
+      const byCallId = toolCalls.find(
+        (toolCall) => toolCall.traceId === anchor.traceId && toolCall.toolCallId === anchor.toolCallId,
+      )
+      if (byCallId) return byCallId
+    }
+    if (anchor.kind === "span") {
+      const bySpanId = toolCalls.find(
+        (toolCall) => toolCall.traceId === anchor.traceId && toolCall.spanId === anchor.spanId,
+      )
+      if (bySpanId) return bySpanId
+    }
+  }
+  return undefined
+}
+
 const recoveredToolIncident = (
   finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
   generations: readonly SessionGenerationFact[],
   toolCalls: readonly SessionToolCallFact[],
 ): RecoveredIncident[] => {
   if (!finding.recovered || finding.terminal) return []
-  const anchor = finding.anchors.find((candidate) => candidate.kind === "toolCall")
-  if (anchor?.kind !== "toolCall") return []
-  const failed = toolCalls.find(
-    (toolCall) => toolCall.traceId === anchor.traceId && toolCall.toolCallId === anchor.toolCallId,
-  )
+  const failed = failedToolCall(finding, toolCalls)
   if (!failed) return []
-  const retrySpanIds = retrySpanIdsThrough({
-    generations,
-    traceId: anchor.traceId,
-    after: failed.endTime,
-  })
+  const retrySpanIds = [
+    ...retryToolSpanIdsThrough({ failed, toolCalls }),
+    ...retrySpanIdsThrough({
+      generations,
+      traceId: failed.traceId,
+      after: failed.endTime,
+    }),
+  ]
   return retrySpanIds.length === 0
     ? []
     : [
         {
-          traceId: anchor.traceId,
+          traceId: failed.traceId,
           spanId: failed.spanId,
           kind: "toolFailure",
           retrySpanIds,
@@ -631,12 +775,6 @@ const recoveredToolIncident = (
       ]
 }
 
-/**
- * The recovered incidents Cost and Speed may charge, with the retries that got past them.
- *
- * The retry set ends at the successful generation and contains only LLM completion spans. The
- * failed span itself is deliberately absent because its cost belongs to Reliability.
- */
 const recoveredIncidentsFrom = (
   findings: readonly AssessmentFinding[],
   generations: readonly SessionGenerationFact[],
@@ -729,10 +867,16 @@ export interface ReadSessionAssessmentSourcesInput {
 
 export const readSessionAssessmentSources = (input: ReadSessionAssessmentSourcesInput) =>
   Effect.gen(function* () {
+    const hasCompletion = hasUsableAssistantCompletion(input.session.outputMessages)
     const deterministic = yield* readDeterministicFindings(input.session, input.spans)
     const spanFindings = readSpanFindings(input.session, input.spans, deterministic.findings)
+    const toolStatusFindings = readToolStatusFindings({
+      toolCalls: input.toolCalls,
+      deterministic: deterministic.findings,
+      hasCompletion,
+    })
     const findings = [
-      ...(hasUsableAssistantCompletion(input.session.outputMessages)
+      ...(hasCompletion
         ? [
             {
               evidenceKey: `session:${input.session.sessionId}:usable-completion`,
@@ -752,6 +896,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
         : []),
       ...deterministic.findings,
       ...spanFindings.findings,
+      ...toolStatusFindings.findings,
       ...readScoreFindings(input.scores, input.signals, input.screeningDecisions),
       ...readMomentFindings(input.moments),
     ]
@@ -762,7 +907,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       toolCalls: input.toolCalls,
       memoryEvents: input.memoryEvents,
       countTokens,
-      completed: hasUsableAssistantCompletion(input.session.outputMessages),
+      completed: hasCompletion,
       recoveredIncidents: recoveredIncidentsFrom(findings, input.generations, input.toolCalls),
       recoveredStructuralDefects: recoveredDefectsFrom(findings, input.toolCalls),
       toolDefinitions: surfaces.definitions,
@@ -778,7 +923,12 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       observedMicrocents: input.session.costTotalMicrocents,
       observedDurationNs: input.session.durationNs,
       findings,
-      readers: [...deterministic.readers, ...spanFindings.readers, ...costEvidence.readers],
+      readers: [
+        ...deterministic.readers,
+        ...spanFindings.readers,
+        ...toolStatusFindings.readers,
+        ...costEvidence.readers,
+      ],
       screeningDecisions: input.screeningDecisions,
       scoringEligibleSignalIds: [...scoringEligibleSignalIds(input.signals)],
       costEvidence: {

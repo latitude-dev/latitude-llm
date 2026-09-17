@@ -324,11 +324,15 @@ This compares the same produced output rather than rewarding short answers.
 - Cost family: recovery when recovered.
 - Evidence role: terminal endpoint when unrecovered; inefficient-call and recovery evidence when
   recovered.
-- Reader: the shared deterministic error-finding reader used by `tool-call-errors`.
+- Reader: the union of the deterministic response-content reader used by `tool-call-errors` and
+  `execute_tool` span status.
 
-A tool response is a failure only when the response contract or structured payload establishes it.
-The current blanket treatment of every HTTP 400 through 499 status as expected is not sufficient;
-the reader needs a caller-declared expected-status contract before it can exclude one.
+A tool response is a failure when its response contract or structured payload establishes it, or
+when its `execute_tool` span has error status. The span signal covers tools that return plain-text
+error results; findings from both sources are deduplicated by tool-call identity. An unset span
+status is unexamined telemetry, not evidence of a successful call. The current blanket treatment of
+every HTTP 400 through 499 status as expected is not sufficient; the content reader needs a
+caller-declared expected-status contract before it can exclude one.
 A later successful call or other successful progress can recover the session even when it used a
 different tool. Reliability asks whether the agent completed, not whether one integration was flaky.
 

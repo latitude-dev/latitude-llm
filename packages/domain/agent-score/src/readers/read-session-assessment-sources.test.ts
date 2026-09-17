@@ -481,6 +481,153 @@ describe("readSessionAssessmentSources", () => {
     ).toMatchObject({ adverseUnits: 325 })
   })
 
+  it("reads a tool failure the instrumentation recorded on the span with a plain-text result", async () => {
+    const failedCall = toolCall("m", "call-429", 0, 10, {
+      toolName: "get_booking",
+      normalizedToolName: "get_booking",
+      statusCode: "error",
+      statusMessage: "429 rate limited by carrier feed (LH): retry after 6s",
+      errorType: "Error",
+    })
+    const retryCall = toolCall("n", "call-429-retry", 11, 20, {
+      toolName: "get_booking",
+      normalizedToolName: "get_booking",
+    })
+    const root = generation("l", 0, 30, {
+      parentSpanId: "",
+      operation: "invoke_agent",
+      provider: "",
+      model: "",
+      costTotalMicrocents: 0,
+      pricingState: "notSpendBearing",
+    })
+    const failedToolSpan = generation("m", 0, 10, {
+      parentSpanId: root.spanId,
+      operation: "execute_tool",
+      statusCode: "error",
+      costTotalMicrocents: 0,
+      pricingState: "notSpendBearing",
+    })
+    const retryToolSpan = generation("n", 11, 20, {
+      parentSpanId: root.spanId,
+      operation: "execute_tool",
+      costTotalMicrocents: 0,
+      pricingState: "notSpendBearing",
+    })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-429", name: "get_booking", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [
+            {
+              type: "tool_call_response",
+              id: "call-429",
+              response: "429 rate limited by carrier feed (LH): retry after 6s",
+            },
+          ],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-429-retry", name: "get_booking", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-429-retry", response: "Booking LH1234 confirmed" }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "Your booking is confirmed" }] },
+      ]),
+      [],
+      { generations: [root, failedToolSpan, retryToolSpan], toolCalls: [failedCall, retryCall] },
+    )
+
+    expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toMatchObject([
+      {
+        metricId: "tools.call_failed",
+        recovered: true,
+        sameSubjectRecovered: true,
+        terminal: false,
+        description: "429 rate limited by carrier feed (LH): retry after 6s",
+      },
+    ])
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "recovery.recovered_incident_rate"),
+    ).toMatchObject({ adverseUnits: 1 })
+    expect(
+      resolveSessionAssessment(result).dimensions.find((summary) => summary.scoreDimension === "reliability"),
+    ).toMatchObject({ recoveredIncidentCount: 1 })
+    expect(result.costEvidence).toMatchObject({
+      measuredAvoidableNs: 9_000_000,
+      avoidableNsByCause: { "recovered:toolFailure": 9_000_000 },
+    })
+  })
+
+  it("reports one tool failure when both the response body and the span status carry it", async () => {
+    const failedCall = toolCall("o", "call-both", 0, 10, { statusCode: "error", statusMessage: "timeout" })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-both", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-both", response: { error: "timeout" } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] },
+      ]),
+      [],
+      { toolCalls: [failedCall] },
+    )
+
+    expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
+  })
+
+  it("counts a tool retried in place, with no generation between the failure and the retry", async () => {
+    const failedCall = toolCall("q", "", 0, 10, { statusCode: "error", statusMessage: "503 upstream unavailable" })
+    const retryCall = toolCall("r", "", 11, 20)
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
+      toolCalls: [failedCall, retryCall],
+    })
+
+    expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "recovery.recovered_incident_rate"),
+    ).toMatchObject({ adverseUnits: 1 })
+  })
+
+  it("does not treat a tool call with unset status as a successful retry", async () => {
+    const failedCall = toolCall("u", "", 0, 10, { statusCode: "error", statusMessage: "upstream unavailable" })
+    const unexaminedCall = toolCall("v", "", 11, 20, { statusCode: "unset" })
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
+      toolCalls: [failedCall, unexaminedCall],
+    })
+
+    expect(result.findings.find((finding) => finding.kind === "toolFailure")).toMatchObject({
+      sameSubjectRecovered: false,
+    })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "recovery.recovered_incident_rate"),
+    ).toMatchObject({ adverseUnits: 0 })
+  })
+
+  it("does not read a tool call whose instrumentation set no status as examined", async () => {
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
+      toolCalls: [toolCall("s", "call-unset", 0, 10, { statusCode: "unset" })],
+    })
+
+    expect(result.readers.find((reader) => reader.readerId === "tools.call_status")).toMatchObject({
+      applicable: true,
+      findingCount: 0,
+      readableCount: 0,
+      totalCount: 1,
+      limitation: "missingTelemetry",
+    })
+  })
+
   it("resolves a recovered structural defect to the matching tool span", async () => {
     const original = toolCall("j", "call-duplicate", 0, 10)
     const duplicate = toolCall("k", "call-duplicate", 11, 20)
