@@ -1125,10 +1125,16 @@ describe("readSessionAssessmentSources", () => {
     const anchoredSpanIds = failures.flatMap((finding) =>
       finding.anchors.flatMap((anchor) => (anchor.kind === "span" ? [anchor.spanId] : [])),
     )
+    const evidenceKeys = failures.map((finding) => finding.evidenceKey)
+    const resolvedFailures = resolveSessionAssessment(result).items.filter(
+      (item) => item.metricId === "tools.call_failed",
+    )
 
     expect(failures).toHaveLength(2)
     expect(anchoredSpanIds).toEqual(expect.arrayContaining([contentFailedCall.spanId, statusFailedCall.spanId]))
     expect(new Set(anchoredSpanIds).size).toBe(2)
+    expect(new Set(evidenceKeys).size).toBe(2)
+    expect(resolvedFailures).toHaveLength(2)
   })
 
   it("keeps conflicting reused-ID content and status failures as distinct incidents", async () => {

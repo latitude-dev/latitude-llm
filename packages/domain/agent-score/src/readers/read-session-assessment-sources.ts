@@ -565,6 +565,7 @@ const resolveDeterministicToolReferences = (
     const references = toolSpanReferences(matchingCall)
     return {
       ...finding,
+      evidenceKey: `span:${toolSpanIdentity(matchingCall)}:tool-failure:${finding.evidenceKey}`,
       anchors: [
         ...references.anchors,
         ...finding.anchors.filter((anchor) => anchor.kind !== "toolCall" && anchor.kind !== "span"),
