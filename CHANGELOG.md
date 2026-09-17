@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.3.105 - 2026-09-17
+
+### Agent Score
+
+- Restored the breakdown for the latest published score when the latest explanation pointer misses, by reading the dated explanation for the snapshot date. Refresh now backfills missing snapshot evidence with a forced recompute, and the page waits for both today and snapshot evidence. The latest pointer only moves forward so a late older backfill cannot replace newer evidence (ref: #4668).
+
+### Flaggers
+
+- Added the Jev shadow classification pilot for `frustration` and `refusal`. It runs beside the baseline classifier with the already loaded session context and records an advisory-only observation in ClickHouse without changing classification results, scores, or billing. It requires `LAT_JEV_FLAGGER_SHADOW_ENABLED`, `LAT_JEV_API_KEY`, and the per-organization `jevFlaggerShadow` flag (ref: #4663).
+
 ## v0.3.104 - 2026-09-17
 
 ### MCP Auth
