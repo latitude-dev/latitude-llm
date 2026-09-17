@@ -899,6 +899,30 @@ describe("readSessionAssessmentSources", () => {
     })
   })
 
+  it("uses the first completed recovery when tool and generation retries overlap", async () => {
+    const failedCall = toolCall("d", "call-primary", 0, 10, {
+      statusCode: "error",
+      statusMessage: "upstream unavailable",
+    })
+    const fallbackCall = toolCall("f", "call-fast-fallback", 20, 30)
+    const slowAnswer = generation("e", 11, 100, { costTotalMicrocents: 500 })
+    const fallbackToolSpan = generation("f", 20, 30, {
+      operation: "execute_tool",
+      costTotalMicrocents: 200,
+    })
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
+      generations: [slowAnswer, fallbackToolSpan],
+      toolCalls: [failedCall, fallbackCall],
+    })
+
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
+    ).toMatchObject({
+      adverseUnits: 200,
+      observations: [expect.objectContaining({ atomId: `generation:${traceId}:${fallbackToolSpan.spanId}` })],
+    })
+  })
+
   it("does not treat a tool call with unset status as a successful retry", async () => {
     const failedCall = toolCall("u", "", 0, 10, { statusCode: "error", statusMessage: "upstream unavailable" })
     const unexaminedCall = toolCall("v", "", 11, 20, { statusCode: "unset" })

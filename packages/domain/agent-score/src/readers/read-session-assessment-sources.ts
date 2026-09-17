@@ -808,8 +808,8 @@ const retryProgressSpansThrough = ({
       })),
   ].sort(
     (left, right) =>
-      left.startTime.getTime() - right.startTime.getTime() ||
       left.endTime.getTime() - right.endTime.getTime() ||
+      left.startTime.getTime() - right.startTime.getTime() ||
       left.traceId.localeCompare(right.traceId) ||
       left.spanId.localeCompare(right.spanId),
   )
