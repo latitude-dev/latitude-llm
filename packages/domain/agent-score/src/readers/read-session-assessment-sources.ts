@@ -503,6 +503,12 @@ const alignedRetainedResponseMatch = ({
   return orderedMatches[orderedMatches.length - position.total + position.occurrence]
 }
 
+const retainedConversationStartsAtSessionInput = (session: SessionDetail): boolean =>
+  session.inputMessages.length > 0 &&
+  session.inputMessages.every(
+    (message, index) => JSON.stringify(message) === JSON.stringify(session.lastInputMessages[index]),
+  )
+
 const uniqueAlignedToolCallForFinding = (
   finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
   indexed: ReadonlyMap<string, readonly SessionToolCallFact[]>,
@@ -515,6 +521,7 @@ const uniqueAlignedToolCallForFinding = (
   if (anchor?.kind !== "toolCall") return uniqueMatch
   const position = retainedToolCallPosition(finding, anchor, session)
   if (!position) return uniqueMatch
+  if (!retainedConversationStartsAtSessionInput(session)) return undefined
   return alignedRetainedResponseMatch({ finding, anchor, session, orderedMatches: [uniqueMatch] })
 }
 
@@ -552,10 +559,14 @@ const resolveDeterministicToolReferences = (
         const remainingFindings = (findingCountByIdentity.get(identity) ?? 0) - matchedCount
         const responsePosition = retainedToolCallPosition(finding, anchor, session)
         const responseMatch = alignedRetainedResponseMatch({ finding, anchor, session, orderedMatches })
+        const responseMatchIsUnambiguous =
+          responseMatch !== undefined &&
+          (retainedConversationStartsAtSessionInput(session) ||
+            (responsePosition !== undefined && orderedMatches.length > responsePosition.total))
         matchingCall =
-          responseMatch && !matchedSpanIdentities.has(toolSpanIdentity(responseMatch))
+          responseMatchIsUnambiguous && !matchedSpanIdentities.has(toolSpanIdentity(responseMatch))
             ? responseMatch
-            : responsePosition && responsePosition.total > orderedMatches.length
+            : responseMatch !== undefined || (responsePosition && responsePosition.total > orderedMatches.length)
               ? undefined
               : matches.length <= remainingFindings
                 ? matches[0]

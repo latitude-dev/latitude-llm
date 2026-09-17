@@ -22,7 +22,7 @@ const session = (outputMessages: SessionDetail["outputMessages"]): SessionDetail
     traceIds: [traceId],
     systemInstructions: [],
     lastInputMessages: [{ role: "user", parts: [{ type: "text", content: "Help" }] }],
-    inputMessages: [],
+    inputMessages: [{ role: "user", parts: [{ type: "text", content: "Help" }] }],
     outputMessages,
     tags: [],
     definedTools: [],
@@ -992,6 +992,47 @@ describe("readSessionAssessmentSources", () => {
     expect(failure).toBeDefined()
     expect(failure?.anchors).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ kind: "span", spanId: capturedRetry.spanId })]),
+    )
+  })
+
+  it("does not map a retained reused-ID failure to a singleton span from before the retained window", async () => {
+    const olderFailure = toolCall("y", "call-reused", 0, 10, {
+      statusCode: "error",
+      statusMessage: "older timeout",
+    })
+    const retained = session([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "retained" } }],
+      },
+      {
+        role: "tool",
+        parts: [{ type: "tool_call_response", id: "call-reused", response: { error: "new timeout" } }],
+      },
+      { role: "assistant", parts: [{ type: "text", content: "No result" }] },
+    ])
+    const result = await read(
+      {
+        ...retained,
+        inputMessages: [{ role: "user", parts: [{ type: "text", content: "Earlier request" }] }],
+        lastInputMessages: [{ role: "user", parts: [{ type: "text", content: "Retained request" }] }],
+      },
+      [],
+      { toolCalls: [olderFailure] },
+    )
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+    const unresolvedContent = failures.find((finding) => !finding.anchors.some((anchor) => anchor.kind === "span"))
+
+    expect(failures).toHaveLength(2)
+    expect(unresolvedContent).toBeDefined()
+    expect(failures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          anchors: expect.arrayContaining([
+            expect.objectContaining({ kind: "span", traceId, spanId: olderFailure.spanId }),
+          ]),
+        }),
+      ]),
     )
   })
 
