@@ -1,7 +1,12 @@
 import { persistedIncludedCreditsForPlan } from "@domain/billing"
 import type { EventsPublisher } from "@domain/events"
-import type { QueueConsumer, QueuePublishError } from "@domain/queue"
-import { OrganizationId, type StorageDiskPort } from "@domain/shared"
+import { NonRetryableTaskError, type QueueConsumer, type QueuePublishError } from "@domain/queue"
+import {
+  causesIndicateMissingStorageObject,
+  OrganizationId,
+  type StorageDiskPort,
+  type StorageError,
+} from "@domain/shared"
 import { processIngestedSpansUseCase } from "@domain/spans"
 import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
@@ -120,6 +125,14 @@ export const createSpanIngestionWorker = ({
           ),
           Effect.catchTag("RedactionError", (error) =>
             Effect.sync(() => logger.error("Dropping batch after redaction failure; not retrying", error)),
+          ),
+          // Every retry re-reads the same once-generated fileKey, so a missing object never self-heals.
+          Effect.catchTag(
+            "StorageError",
+            (error): Effect.Effect<never, StorageError | NonRetryableTaskError> =>
+              causesIndicateMissingStorageObject(error.cause)
+                ? Effect.fail(new NonRetryableTaskError({ reason: error.message, cause: error }))
+                : Effect.fail(error),
           ),
           Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
           withPostgres(postgresLayers, postgresClient, OrganizationId(organizationId)),
