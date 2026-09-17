@@ -18,6 +18,14 @@ export {
   FLAGGER_SCREENING_RETENTION_DAYS,
   FLAGGER_SCREENING_SELECTION_REASONS,
   type FlaggerSamplingSource,
+  JEV_PRECLASSIFIER_DECISIONS,
+  JEV_PRECLASSIFIER_ENABLED,
+  JEV_PRECLASSIFIER_OPERATION_TIMEOUT_MS,
+  JEV_PRECLASSIFIER_POLICY_VERSION,
+  JEV_PRECLASSIFIER_RETENTION_DAYS,
+  JEV_PRECLASSIFIER_STATE_BUILDER_VERSION,
+  JEV_PRECLASSIFIER_STRATEGY_SLUGS,
+  JEV_PRECLASSIFIER_THRESHOLD,
   JEV_SHADOW_DECISIONS,
   JEV_SHADOW_ENABLED,
   JEV_SHADOW_FRUSTRATION_QUESTION_VERSION,
@@ -80,6 +88,12 @@ export {
   flaggerScreeningSelectionReasonSchema,
   flaggerScreeningSelectionSchema,
 } from "./entities/flagger-screening-decision.ts"
+export {
+  type JevPreclassifierDecision,
+  type JevPreclassifierObservation,
+  jevPreclassifierDecisionSchema,
+  jevPreclassifierObservationSchema,
+} from "./entities/jev-preclassifier-observation.ts"
 export {
   type JevShadowDecision,
   type JevShadowObservation,
@@ -188,6 +202,11 @@ export {
   type SessionHintKind,
 } from "./hints/types.ts"
 export {
+  JEV_PRECLASSIFIER_STRATEGIES,
+  type JevPreclassifierStrategy,
+  type JevPreclassifierStrategySlug,
+} from "./jev-preclassifier-strategies.ts"
+export {
   getJevShadowStrategy,
   JEV_SHADOW_STRATEGIES,
   type JevShadowStrategy,
@@ -212,7 +231,12 @@ export {
   type FlaggerScreeningDecisionRepositoryShape,
 } from "./ports/flagger-screening-decision-repository.ts"
 export {
+  JevPreclassifierObservationRepository,
+  type JevPreclassifierObservationRepositoryShape,
+} from "./ports/jev-preclassifier-observation-repository.ts"
+export {
   JEV_SHADOW_PROVIDER_FAILURE_KINDS,
+  type JevDecisionProviderManyRequest,
   JevShadowDecisionProvider,
   type JevShadowDecisionProviderRequest,
   type JevShadowDecisionProviderShape,
@@ -296,6 +320,11 @@ export {
   annotateTraceForFlaggerUseCase,
 } from "./use-cases/run-flagger-annotator.ts"
 export {
+  type RunJevPreclassifierInput,
+  type RunJevPreclassifierResult,
+  runJevPreclassifierUseCase,
+} from "./use-cases/run-jev-preclassifier.ts"
+export {
   type RunJevShadowInput,
   type RunJevShadowResult,
   runJevShadowUseCase,
@@ -309,6 +338,7 @@ export {
   type CheckFlaggerLlmRateLimit,
   type FlaggerClassificationReason,
   type FlaggerClassificationRequest,
+  type PendingFlaggerClassificationRequest,
   type ScreenSessionFlaggersDeps,
   type ScreenSessionFlaggersError,
   type ScreenSessionFlaggersInput,
