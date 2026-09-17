@@ -432,13 +432,19 @@ const failedToolSpanIdentities = (
   const identities = new Set<string>()
   for (const finding of findings) {
     if (finding.kind !== "toolFailure") continue
+    const spanAnchors = finding.anchors.filter((anchor) => anchor.kind === "span")
+    if (spanAnchors.length > 0) {
+      for (const anchor of spanAnchors) identities.add(toolSpanIdentity(anchor))
+      continue
+    }
     for (const anchor of finding.anchors) {
-      if (anchor.kind === "span") identities.add(toolSpanIdentity(anchor))
       if (anchor.kind !== "toolCall") continue
-      for (const call of toolCalls) {
-        if (call.traceId === anchor.traceId && call.toolCallId === anchor.toolCallId) {
-          identities.add(toolSpanIdentity(call))
-        }
+      const matches = toolCalls.filter(
+        (call) => call.traceId === anchor.traceId && call.toolCallId === anchor.toolCallId,
+      )
+      if (matches.length === 1) {
+        const match = matches[0]
+        if (match) identities.add(toolSpanIdentity(match))
       }
     }
   }
@@ -450,9 +456,26 @@ const resolveDeterministicToolReferences = (
   toolCalls: readonly SessionToolCallFact[],
 ): AssessmentFinding[] => {
   const indexed = toolCallsById(toolCalls)
+  const occurrenceByIdentity = new Map<string, number>()
   return findings.map((finding) => {
     if (finding.kind !== "toolFailure") return finding
-    const matchingCall = uniqueToolCallForFinding(finding, indexed)
+    let matchingCall = uniqueToolCallForFinding(finding, indexed)
+    if (!matchingCall) {
+      const toolCallAnchors = finding.anchors.filter((anchor) => anchor.kind === "toolCall")
+      const anchor = toolCallAnchors.length === 1 ? toolCallAnchors[0] : undefined
+      if (anchor?.kind === "toolCall") {
+        const identity = toolCallIdentity(anchor)
+        const occurrence = occurrenceByIdentity.get(identity) ?? 0
+        const matches = (indexed.get(anchor.toolCallId) ?? [])
+          .filter((call) => call.traceId === anchor.traceId)
+          .sort(
+            (left, right) =>
+              left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
+          )
+        matchingCall = matches[occurrence]
+        occurrenceByIdentity.set(identity, occurrence + 1)
+      }
+    }
     if (!matchingCall) return finding
     const references = toolSpanReferences(matchingCall)
     return {
@@ -528,11 +551,16 @@ const readToolStatusFindings = ({
   for (const [index, finding] of deterministic.entries()) {
     if (finding.kind !== "toolFailure") continue
     const uniqueMatch = uniqueToolCallForFinding(finding, indexedToolCalls)
+    const spanIdentities = finding.anchors.flatMap((anchor) =>
+      anchor.kind === "span" ? [`span:${toolSpanIdentity(anchor)}`] : [],
+    )
     const identities = new Set(
-      finding.anchors.flatMap((anchor) => {
-        if (anchor.kind !== "toolCall") return []
-        return [toolCallIdentity(uniqueMatch ?? anchor)]
-      }),
+      spanIdentities.length > 0
+        ? spanIdentities
+        : finding.anchors.flatMap((anchor) => {
+            if (anchor.kind !== "toolCall") return []
+            return [uniqueMatch ? `span:${toolSpanIdentity(uniqueMatch)}` : `call:${toolCallIdentity(anchor)}`]
+          }),
     )
     for (const identity of identities) {
       contentDetected.set(identity, [...(contentDetected.get(identity) ?? []), index])
@@ -542,8 +570,12 @@ const readToolStatusFindings = ({
   const reconciledDeterministic = [...deterministic]
   const findings = toolCalls.flatMap((call): AssessmentFinding[] => {
     if (call.statusCode !== "error") return []
-    const identity = toolCallIdentity(call)
-    const matchingContent = call.toolCallId === "" ? undefined : contentDetected.get(identity)?.shift()
+    const spanMatch = contentDetected.get(`span:${toolSpanIdentity(call)}`)?.shift()
+    const callMatch =
+      spanMatch === undefined && call.toolCallId !== ""
+        ? contentDetected.get(`call:${toolCallIdentity(call)}`)?.shift()
+        : undefined
+    const matchingContent = spanMatch ?? callMatch
     const statusFinding = toolStatusFinding({ call, generations, toolCalls, failedToolSpans, hasCompletion })
     if (matchingContent !== undefined) {
       const contentFinding = reconciledDeterministic[matchingContent]

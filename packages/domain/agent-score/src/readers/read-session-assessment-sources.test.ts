@@ -911,6 +911,49 @@ describe("readSessionAssessmentSources", () => {
     })
   })
 
+  it("matches a content failure to one span when a successful retry reuses its call ID", async () => {
+    const failedCall = toolCall("y", "call-reused", 0, 10, {
+      statusCode: "error",
+      statusMessage: "timeout",
+    })
+    const successfulRetry = toolCall("z", "call-reused", 11, 20)
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "first" } }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { error: "timeout" } }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "retry" } }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { results: ["found"] } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "Found it" }] },
+      ]),
+      [],
+      { toolCalls: [failedCall, successfulRetry] },
+    )
+    const failure = result.findings.find((finding) => finding.kind === "toolFailure")
+
+    expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
+    expect(failure).toMatchObject({
+      anchors: expect.arrayContaining([expect.objectContaining({ kind: "span", traceId, spanId: failedCall.spanId })]),
+      recovered: true,
+      sameSubjectRecovered: true,
+      terminal: false,
+    })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "recovery.recovered_incident_rate"),
+    ).toMatchObject({ adverseUnits: 1 })
+  })
+
   it("keeps a final failed tool call terminal when no successful progress follows", async () => {
     const failedCall = toolCall("p", "call-terminal-status", 0, 10, {
       statusCode: "error",
