@@ -996,6 +996,42 @@ describe("readSessionAssessmentSources", () => {
     )
   })
 
+  it("uses span status when a reused-ID response window is truncated", async () => {
+    const truncatedSuccessfulCall = toolCall("y", "call-reused", 0, 10)
+    const retainedFailedCall = toolCall("z", "call-reused", 11, 20, {
+      statusCode: "error",
+      statusMessage: "timeout",
+    })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "retained" } }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { error: "timeout" } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "No results found" }] },
+      ]),
+      [],
+      { toolCalls: [truncatedSuccessfulCall, retainedFailedCall] },
+    )
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toMatchObject({
+      anchors: expect.arrayContaining([
+        expect.objectContaining({ kind: "span", traceId, spanId: retainedFailedCall.spanId }),
+      ]),
+      recovered: false,
+      terminal: true,
+    })
+    expect(failures[0]?.anchors).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "span", spanId: truncatedSuccessfulCall.spanId })]),
+    )
+  })
+
   it("matches multiple reused-ID content failures to distinct spans", async () => {
     const contentFailedCall = toolCall("y", "call-reused", 0, 10)
     const statusFailedCall = toolCall("z", "call-reused", 11, 20, {
@@ -1068,9 +1104,13 @@ describe("readSessionAssessmentSources", () => {
     const anchoredSpanIds = failures.flatMap((finding) =>
       finding.anchors.flatMap((anchor) => (anchor.kind === "span" ? [anchor.spanId] : [])),
     )
+    const contentFailure = failures.find((finding) =>
+      finding.anchors.some((anchor) => anchor.kind === "span" && anchor.spanId === contentFailedCall.spanId),
+    )
 
     expect(failures).toHaveLength(2)
     expect(anchoredSpanIds).toEqual(expect.arrayContaining([contentFailedCall.spanId, statusFailedCall.spanId]))
+    expect(contentFailure).toMatchObject({ recovered: false, sameSubjectRecovered: false, terminal: true })
   })
 
   it("matches reused-ID content failures to their originating trace", async () => {

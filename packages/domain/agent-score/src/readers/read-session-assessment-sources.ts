@@ -463,18 +463,19 @@ const failedToolSpanIdentities = (
   return identities
 }
 
-const toolResponseOccurrence = (
+const retainedToolResponsePosition = (
   finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
   anchor: Extract<SessionEvidenceAnchor, { readonly kind: "toolCall" }>,
   session: SessionDetail,
-): number | undefined => {
+): { readonly occurrence: number; readonly total: number } | undefined => {
   if (anchor.messageIndex === undefined) return undefined
   const responseAnchor = finding.anchors.find(
     (candidate) => candidate.kind === "message" && candidate.messageIndex === anchor.messageIndex,
   )
-  let occurrence = 0
+  let targetOccurrence: number | undefined
+  let total = 0
   const messages = sessionConversationMessages(session)
-  for (let messageIndex = 0; messageIndex <= anchor.messageIndex; messageIndex++) {
+  for (let messageIndex = 0; messageIndex < messages.length; messageIndex++) {
     const message = messages[messageIndex]
     if (!message) continue
     const parts = Array.isArray(message.parts) ? message.parts : []
@@ -488,11 +489,27 @@ const toolResponseOccurrence = (
         (responseAnchor?.kind !== "message" ||
           responseAnchor.partIndex === undefined ||
           responseAnchor.partIndex === partIndex)
-      if (isTarget) return occurrence
-      occurrence++
+      if (isTarget) targetOccurrence = total
+      total++
     }
   }
-  return undefined
+  return targetOccurrence === undefined ? undefined : { occurrence: targetOccurrence, total }
+}
+
+const alignedRetainedResponseMatch = ({
+  finding,
+  anchor,
+  session,
+  orderedMatches,
+}: {
+  readonly finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>
+  readonly anchor: Extract<SessionEvidenceAnchor, { readonly kind: "toolCall" }>
+  readonly session: SessionDetail
+  readonly orderedMatches: readonly SessionToolCallFact[]
+}): SessionToolCallFact | undefined => {
+  const position = retainedToolResponsePosition(finding, anchor, session)
+  if (!position || position.total !== orderedMatches.length) return undefined
+  return orderedMatches[position.occurrence]
 }
 
 const resolveDeterministicToolReferences = (
@@ -527,8 +544,7 @@ const resolveDeterministicToolReferences = (
         const matches = orderedMatches.filter((call) => !matchedSpanIdentities.has(toolSpanIdentity(call)))
         const matchedCount = matchedCountByIdentity.get(identity) ?? 0
         const remainingFindings = (findingCountByIdentity.get(identity) ?? 0) - matchedCount
-        const responseOccurrence = toolResponseOccurrence(finding, anchor, session)
-        const responseMatch = responseOccurrence === undefined ? undefined : orderedMatches[responseOccurrence]
+        const responseMatch = alignedRetainedResponseMatch({ finding, anchor, session, orderedMatches })
         matchingCall =
           responseMatch && !matchedSpanIdentities.has(toolSpanIdentity(responseMatch))
             ? responseMatch
@@ -570,7 +586,13 @@ const toolStatusFinding = ({
 }): Extract<AssessmentFinding, { readonly kind: "toolFailure" }> & { readonly sameSubjectRecovered: boolean } => {
   const detail = call.statusMessage.trim() || call.errorType.trim()
   const references = toolSpanReferences(call)
-  const recovered = hasCompletion && successfulProgressAfter({ failed: call, generations, toolCalls, failedToolSpans })
+  const lifecycle = toolFailureLifecycle({
+    call,
+    generations,
+    toolCalls,
+    failedToolSpans,
+    hasCompletion,
+  })
 
   return {
     evidenceKey: `span:${call.traceId}:${call.spanId}:tool-failure:${classifyToolError(detail)}`,
@@ -586,9 +608,7 @@ const toolStatusFinding = ({
     destinations: references.destinations,
     independentHumanEvidence: false,
     kind: "toolFailure",
-    recovered,
-    sameSubjectRecovered: laterSameToolSucceeded({ failed: call, toolCalls, failedToolSpans }),
-    terminal: !recovered,
+    ...lifecycle,
   }
 }
 
@@ -630,7 +650,15 @@ const readToolStatusFindings = ({
     }
   }
 
-  const reconciledDeterministic = [...deterministic]
+  const reconciledDeterministic = deterministic.map((finding): AssessmentFinding => {
+    if (finding.kind !== "toolFailure") return finding
+    const call = failedToolCall(finding, toolCalls)
+    if (!call) return finding
+    return {
+      ...finding,
+      ...toolFailureLifecycle({ call, generations, toolCalls, failedToolSpans, hasCompletion }),
+    }
+  })
   const findings = toolCalls.flatMap((call): AssessmentFinding[] => {
     if (call.statusCode !== "error") return []
     const spanMatch = contentDetected.get(`span:${toolSpanIdentity(call)}`)?.shift()
@@ -987,6 +1015,27 @@ const successfulProgressAfter = ({
   readonly toolCalls: readonly SessionToolCallFact[]
   readonly failedToolSpans: ReadonlySet<string>
 }): boolean => retryProgressSpansThrough({ failed, generations, toolCalls, failedToolSpans }).length > 0
+
+const toolFailureLifecycle = ({
+  call,
+  generations,
+  toolCalls,
+  failedToolSpans,
+  hasCompletion,
+}: {
+  readonly call: SessionToolCallFact
+  readonly generations: readonly SessionGenerationFact[]
+  readonly toolCalls: readonly SessionToolCallFact[]
+  readonly failedToolSpans: ReadonlySet<string>
+  readonly hasCompletion: boolean
+}) => {
+  const recovered = hasCompletion && successfulProgressAfter({ failed: call, generations, toolCalls, failedToolSpans })
+  return {
+    recovered,
+    sameSubjectRecovered: laterSameToolSucceeded({ failed: call, toolCalls, failedToolSpans }),
+    terminal: !recovered,
+  }
+}
 
 const recoveredProviderIncident = (
   finding: Extract<AssessmentFinding, { readonly kind: "providerError" }>,
