@@ -463,7 +463,7 @@ const failedToolSpanIdentities = (
   return identities
 }
 
-const retainedToolResponsePosition = (
+const retainedToolCallPosition = (
   finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
   anchor: Extract<SessionEvidenceAnchor, { readonly kind: "toolCall" }>,
   session: SessionDetail,
@@ -474,6 +474,7 @@ const retainedToolResponsePosition = (
   )
   let targetOccurrence: number | undefined
   let total = 0
+  const pendingCalls: number[] = []
   const messages = sessionConversationMessages(session)
   for (let messageIndex = 0; messageIndex < messages.length; messageIndex++) {
     const message = messages[messageIndex]
@@ -482,15 +483,20 @@ const retainedToolResponsePosition = (
     for (let partIndex = 0; partIndex < parts.length; partIndex++) {
       const part = parts[partIndex]
       if (typeof part !== "object" || part === null) continue
-      if (!("type" in part) || part.type !== "tool_call_response") continue
       if (!("id" in part) || typeof part.id !== "string" || part.id.trim() !== anchor.toolCallId) continue
+      if ("type" in part && part.type === "tool_call") {
+        pendingCalls.push(total)
+        total++
+        continue
+      }
+      if (!("type" in part) || part.type !== "tool_call_response") continue
+      const callOccurrence = pendingCalls.shift()
       const isTarget =
         messageIndex === anchor.messageIndex &&
         (responseAnchor?.kind !== "message" ||
           responseAnchor.partIndex === undefined ||
           responseAnchor.partIndex === partIndex)
-      if (isTarget) targetOccurrence = total
-      total++
+      if (isTarget) targetOccurrence = callOccurrence
     }
   }
   return targetOccurrence === undefined ? undefined : { occurrence: targetOccurrence, total }
@@ -507,9 +513,9 @@ const alignedRetainedResponseMatch = ({
   readonly session: SessionDetail
   readonly orderedMatches: readonly SessionToolCallFact[]
 }): SessionToolCallFact | undefined => {
-  const position = retainedToolResponsePosition(finding, anchor, session)
-  if (!position || position.total !== orderedMatches.length) return undefined
-  return orderedMatches[position.occurrence]
+  const position = retainedToolCallPosition(finding, anchor, session)
+  if (!position || position.total > orderedMatches.length) return undefined
+  return orderedMatches[orderedMatches.length - position.total + position.occurrence]
 }
 
 const resolveDeterministicToolReferences = (
@@ -870,7 +876,7 @@ const isSuccessfulGeneration = (generation: SessionGenerationFact): boolean => {
   return (
     generation.statusCode !== "error" &&
     endpoint.providerError === null &&
-    endpoint.finishReasons.every((reason) => reason.classification === "clean")
+    endpoint.finishReasons.every((reason) => reason.classification === "clean" && reason.kind !== "toolContinuation")
   )
 }
 
