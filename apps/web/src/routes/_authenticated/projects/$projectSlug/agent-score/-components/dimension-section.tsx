@@ -36,9 +36,24 @@ const DESTINATIONS = {
   signals: "/projects/$projectSlug/signals",
 } as const
 
+/**
+ * The Sessions list, filtered to the sessions a row kept as examples.
+ *
+ * `sessions` is the one destination with no page of its own to open: a finding kind is not a
+ * filterable session property, so the row carries the ids it was built from instead. The filter
+ * panel opens with them, which is what keeps the list honest about being a sample of the row's
+ * reach rather than all of it.
+ */
+export const exampleSessionsSearch = (sessionIds: readonly string[]) => ({
+  tab: "sessions",
+  filters: JSON.stringify({ sessionId: [{ op: "in", value: [...sessionIds] }] }),
+  filtersOpen: true,
+})
+
 function EvidenceRow({ row, projectSlug }: { readonly row: DimensionEvidenceRow; readonly projectSlug: string }) {
   const destination = row.destination && row.destination !== "sessions" ? DESTINATIONS[row.destination] : undefined
-  const actionable = row.signalId !== undefined || destination !== undefined
+  const exampleSessionIds = row.exampleSessionIds ?? []
+  const actionable = row.signalId !== undefined || destination !== undefined || exampleSessionIds.length > 0
   const content = (
     <FindingRow
       label={row.label}
@@ -70,6 +85,18 @@ function EvidenceRow({ row, projectSlug }: { readonly row: DimensionEvidenceRow;
   if (destination) {
     return (
       <Link to={destination} params={{ projectSlug }} aria-label={row.label}>
+        {content}
+      </Link>
+    )
+  }
+  if (exampleSessionIds.length > 0) {
+    return (
+      <Link
+        to="/projects/$projectSlug"
+        params={{ projectSlug }}
+        search={exampleSessionsSearch(exampleSessionIds)}
+        aria-label={`${row.label}, example sessions`}
+      >
         {content}
       </Link>
     )

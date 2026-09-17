@@ -1,5 +1,6 @@
 import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostMetricCatalog } from "../entities/cost-metric-catalog.ts"
+import type { CostMetricReading } from "../entities/cost-metric-reading.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
 import type { NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
 import { aggregateSessionCost, type CostFamilyDenominators } from "./aggregate-session-cost.ts"
@@ -70,6 +71,9 @@ export interface WindowFold {
    * project, not what it cost each session, and keeping the breakdown resident would undo the point
    * of folding. Reliability is absent because its causes do not add up; overlapping terminal
    * findings need the session-level sets that `selectReliabilityEndpoint` already returns.
+   *
+   * Only causes that charged something appear. A metric read as healthy is evidence the window was
+   * measured, which coverage already reports, and never a cause with a zero effect.
    */
   readonly costCauseUnits: ReadonlyMap<string, { readonly family: CostFamily; readonly penalizedUnits: number }>
   readonly speedCauseNs: ReadonlyMap<string, number>
@@ -88,6 +92,47 @@ export const EMPTY_WINDOW_FOLD: WindowFold = {
   familyCoverage: emptyFamilyCoverage(),
   costCauseUnits: new Map(),
   speedCauseNs: new Map(),
+}
+
+/**
+ * Adds one session's Cost claims to the window's running totals, in the family's own units.
+ *
+ * A metric read as healthy resolves to a zero penalty, and a metric whose family had nothing
+ * eligible charges against nothing. Neither is recorded: a cause with a zero effect would reach the
+ * page as a row naming zero wasted tokens beside the rows that name real ones, and the page cannot
+ * tell somebody a metric came back clean while listing it as something the score is affected by.
+ */
+const recordCostCauses = ({
+  costCauseUnits,
+  penaltiesByMetric,
+  readings,
+  denominators,
+}: {
+  readonly costCauseUnits: Map<string, { readonly family: CostFamily; readonly penalizedUnits: number }>
+  readonly penaltiesByMetric: ReadonlyMap<string, number>
+  readonly readings: readonly CostMetricReading[]
+  readonly denominators: CostFamilyDenominators
+}): void => {
+  const readingOf = new Map(readings.map((reading) => [reading.metricId, reading]))
+  for (const [metricId, penalty] of penaltiesByMetric) {
+    const reading = readingOf.get(metricId)
+    if (!reading) continue
+    const penalizedUnits = penalty * denominators[reading.family]
+    if (penalizedUnits <= 0) continue
+    const existing = costCauseUnits.get(metricId)
+    costCauseUnits.set(metricId, {
+      family: reading.family,
+      penalizedUnits: (existing?.penalizedUnits ?? 0) + penalizedUnits,
+    })
+  }
+}
+
+/** Same rule as Cost: a Speed claim that found no avoidable time did not cause anything. */
+const recordSpeedCauses = (speedCauseNs: Map<string, number>, avoidableNsByCause: Readonly<Record<string, number>>) => {
+  for (const [cause, avoidableNs] of Object.entries(avoidableNsByCause)) {
+    if (avoidableNs <= 0) continue
+    speedCauseNs.set(cause, (speedCauseNs.get(cause) ?? 0) + avoidableNs)
+  }
 }
 
 /**
@@ -142,22 +187,15 @@ export const foldWindowBatch = ({
       withheld += 1
     } else {
       published += 1
-      const familyOf = new Map((session.costEvidence?.readings ?? []).map((reading) => [reading.metricId, reading]))
-      for (const [metricId, penalty] of aggregate.penaltiesByMetric) {
-        const reading = familyOf.get(metricId)
-        if (!reading) continue
-        const eligibleUnits = denominators[reading.family]
-        const existing = costCauseUnits.get(metricId)
-        costCauseUnits.set(metricId, {
-          family: reading.family,
-          penalizedUnits: (existing?.penalizedUnits ?? 0) + penalty * eligibleUnits,
-        })
-      }
+      recordCostCauses({
+        costCauseUnits,
+        penaltiesByMetric: aggregate.penaltiesByMetric,
+        readings: session.costEvidence?.readings ?? [],
+        denominators,
+      })
     }
     if (session.costEvidence?.criticalPathComplete) {
-      for (const [cause, avoidableNs] of Object.entries(session.costEvidence.avoidableNsByCause)) {
-        speedCauseNs.set(cause, (speedCauseNs.get(cause) ?? 0) + avoidableNs)
-      }
+      recordSpeedCauses(speedCauseNs, session.costEvidence.avoidableNsByCause)
     }
     added.push(foldSessionContribution({ session, denominators, artifact, catalog }))
   }

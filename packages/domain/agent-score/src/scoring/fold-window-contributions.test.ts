@@ -60,3 +60,59 @@ describe("foldWindowBatch", () => {
     expect(fold.speedCauseNs.get("latency:throughput")).toBe(250)
   })
 })
+
+describe("foldWindowBatch cost causes", () => {
+  const healthySession = (sessionId: string): NormalizedSessionAssessmentInput => ({
+    sessionId: SessionId(sessionId),
+    hasReadableUserTask: true,
+    observedMicrocents: 0,
+    observedDurationNs: 1_000,
+    findings: [],
+    readers: [],
+    screeningDecisions: [],
+    scoringEligibleSignalIds: [],
+    costEvidence: {
+      readings: [
+        {
+          metricId: "tools.repeated_call",
+          family: "tools",
+          rawUnit: "toolCalls",
+          aggregation: "eventRate",
+          applicability: "applicable",
+          readability: "readable",
+          // Inside the curve's healthy band, so the metric resolves to a zero penalty.
+          rawValue: 0,
+          eligibleUnits: 10,
+          adverseUnits: 0,
+          observations: [],
+          limitations: [],
+        },
+      ],
+      workloadStratum: "test",
+      denominators: { spend: 0, context: 0, tools: 10, memory: 0, recovery: 0 },
+      observedCriticalPathNs: 1_000,
+      criticalPathComplete: true,
+      measuredAvoidableNs: 0,
+      estimatedAvoidableNs: 0,
+      measuredAvoidableMicrocents: 0,
+      estimatedAvoidableMicrocents: 0,
+      avoidableNsByCause: { "latency:throughput": 0 },
+    },
+  })
+
+  // A metric read as healthy used to reach the page as an "affected by" row reading "0 call
+  // equivalents": measured, clean, and painted as a cause.
+  it("does not record a cause for a metric that penalized nothing", () => {
+    const fold = foldWindowBatch({
+      fold: EMPTY_WINDOW_FOLD,
+      sessions: [healthySession("session-1")],
+      denominatorsFor: () => ({ spend: 0, context: 0, tools: 10, memory: 0, recovery: 0 }),
+      artifact: LAUNCH_COST_SCORING_ARTIFACT,
+      catalog: PROVISIONAL_COST_METRIC_CATALOG,
+    })
+
+    expect(fold.foldedSessionCount).toBe(1)
+    expect([...fold.costCauseUnits.keys()]).toEqual([])
+    expect([...fold.speedCauseNs.keys()]).toEqual([])
+  })
+})

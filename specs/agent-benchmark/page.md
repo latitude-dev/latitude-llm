@@ -75,9 +75,11 @@ into a dollar claim.
 
 The evidence list contains only metrics with readable observations and promoted signals with an
 eligible occurrence in the selected window. Signals with zero occurrences and scores assigned to
-ignored signals do not appear. Items whose effect is not yet measurable remain visible and say so.
-A signal that informs several dimensions can appear in each applicable dimension section. This is a
-presentation choice and does not duplicate the occurrence in estimation or attribution.
+ignored signals do not appear, and neither does a metric that was read and penalized nothing: a
+healthy reading is coverage, reported as coverage, and never a cause whose effect is zero. Items
+whose effect is not yet measurable remain visible and say so. A signal that informs several
+dimensions can appear in each applicable dimension section. This is a presentation choice and does
+not duplicate the occurrence in estimation or attribution.
 
 Native inputs and causes are labelled as current evidence from the live selected window. They
 explain present behavior but do not claim to reproduce the immutable snapshot, whose stored contract
@@ -218,6 +220,12 @@ coverage context.
 
 A signal row links to its signal page. That page already owns examples, lifecycle, dispatch, and
 resolution. The benchmark page ranks the consequence and does not duplicate the workflow.
+
+The Sessions destination has no page keyed by a finding kind, because a terminal failure or an
+Outcome issue is not a filterable session property. Rows that lead there carry a capped sample of
+the session ids they were built from and open the Sessions list filtered to exactly those, with the
+filter panel open so the list reads as a sample of the row's reach rather than all of it. A row that
+kept no example sessions links nowhere, which stays the honest default.
 
 ## Recommendations
 

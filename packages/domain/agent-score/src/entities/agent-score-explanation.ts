@@ -18,6 +18,7 @@ const causeRowSchema = z.object({
   signalId: z.string().optional(),
   observationCount: z.number(),
   destination: z.enum(CAUSE_DESTINATIONS).optional(),
+  exampleSessionIds: z.array(z.string()).readonly().optional(),
 })
 
 const dimensionAttributionSchema = z.object({
@@ -39,6 +40,7 @@ const observedCauseSchema = z.object({
   observationCount: z.number(),
   signalId: z.string().optional(),
   destination: z.enum(CAUSE_DESTINATIONS).optional(),
+  exampleSessionIds: z.array(z.string()).readonly().optional(),
 })
 
 const issueRowSchema = z.object({
@@ -50,6 +52,8 @@ const issueRowSchema = z.object({
   examinedSessions: z.number(),
   examinedAdverseSessions: z.number(),
   ranked: z.boolean(),
+  /** Optional so a cached explanation written before the field existed still parses. */
+  exampleSessionIds: z.array(z.string()).readonly().optional(),
 })
 
 const windowIssuesSchema = z.object({
