@@ -85,7 +85,9 @@ export const recoverySpendClaims = ({
   return recovered.flatMap((incident) =>
     incident.retrySpans.flatMap(({ traceId, spanId }) => {
       const exactMicrocents = billedBySpan.get(`${traceId}:${spanId}`)
-      return exactMicrocents === undefined ? [] : [{ spanId, cause: `recovered:${incident.kind}`, exactMicrocents }]
+      return exactMicrocents === undefined
+        ? []
+        : [{ traceId, spanId, cause: `recovered:${incident.kind}`, exactMicrocents }]
     }),
   )
 }

@@ -19,13 +19,14 @@ const RECOVERABLE_SPEND_BASE = {
  * bound instead of a point.
  */
 export interface AttributableSpendClaim {
+  readonly traceId: string
   readonly spanId: string
   readonly cause: string
   readonly exactMicrocents?: number
   readonly boundedMicrocents?: { readonly lower: number; readonly upper: number }
 }
 
-const claimAtomId = (claim: AttributableSpendClaim): string => `generation:${claim.spanId}`
+const claimAtomId = (claim: AttributableSpendClaim): string => `generation:${claim.traceId}:${claim.spanId}`
 
 /**
  * `cost.recoverable_spend_share` — recoverable microcents over priced spend.
@@ -55,12 +56,12 @@ export const readRecoverableSpend = ({
 
   const limitations: CostReadingLimitation[] = coverage.complete ? [] : ["missingPricing"]
   const billedBySpan = new Map<string, number>(
-    generations.map((generation) => [generation.spanId as string, generation.costTotalMicrocents]),
+    generations.map((generation) => [`${generation.traceId}:${generation.spanId}`, generation.costTotalMicrocents]),
   )
 
   const unioned = new Map<string, { readonly claim: AttributableSpendClaim; lower: number; upper: number }>()
   for (const claim of claims) {
-    const billed = billedBySpan.get(claim.spanId)
+    const billed = billedBySpan.get(`${claim.traceId}:${claim.spanId}`)
     if (billed === undefined || billed <= 0) continue
     const lower = Math.min(billed, Math.max(0, claim.exactMicrocents ?? claim.boundedMicrocents?.lower ?? 0))
     const upper = Math.min(billed, Math.max(lower, claim.exactMicrocents ?? claim.boundedMicrocents?.upper ?? 0))
@@ -83,7 +84,7 @@ export const readRecoverableSpend = ({
     adverseUnits: pointMicrocents,
     observations: [...unioned.entries()].map(([atomId, entry]) => ({
       atomId,
-      eligibleUnits: billedBySpan.get(entry.claim.spanId) ?? 0,
+      eligibleUnits: billedBySpan.get(`${entry.claim.traceId}:${entry.claim.spanId}`) ?? 0,
       adverseUnits: entry.lower,
     })),
     evidence: bounded ? "modeled" : "confirmed",

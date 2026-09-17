@@ -290,7 +290,7 @@ describe("readSessionAssessmentSources", () => {
       result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
     ).toMatchObject({
       adverseUnits: 250,
-      observations: [expect.objectContaining({ atomId: `generation:${successful.spanId}` })],
+      observations: [expect.objectContaining({ atomId: `generation:${successful.traceId}:${successful.spanId}` })],
     })
   })
 
