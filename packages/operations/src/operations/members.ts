@@ -3,12 +3,13 @@ import {
   type Invitation,
   inviteMemberUseCase,
   listMembersUseCase,
+  MembershipRepository,
   type MembershipRole,
   type MemberWithUser,
   removeMemberUseCase,
   updateMemberRoleUseCase,
 } from "@domain/organizations"
-import { MembershipId, UserId } from "@domain/shared"
+import { ForbiddenError, MembershipId, UserId } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { createRoute, z } from "@hono/zod-openapi"
 import {
@@ -188,7 +189,7 @@ const inviteMember = memberEndpoint({
     sdkMethod: "invite",
     summary: "Invite a member",
     description:
-      "Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).",
+      "Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user). Only organization owners and admins can invite members.",
     security: PROTECTED_SECURITY,
     request: { body: jsonBody(InviteRequestSchema) },
     responses: typedResponses({ status: 201, schema: InvitedMemberSchema, description: "Invitation created" }),
@@ -198,6 +199,15 @@ const inviteMember = memberEndpoint({
   execute: (input, ctx) =>
     Effect.gen(function* () {
       const inviterUserId = yield* requireOAuthUserId(ctx.auth)
+
+      const membershipRepo = yield* MembershipRepository
+      const isAdmin = yield* membershipRepo.isAdmin(ctx.organization.id, inviterUserId)
+      if (!isAdmin) {
+        return yield* new ForbiddenError({
+          message: "Only organization owners and admins can invite members",
+        })
+      }
+
       const { email, role } = input.body
 
       const webUrl = yield* parseEnv("LAT_WEB_URL", "string")
