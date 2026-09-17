@@ -1035,6 +1035,44 @@ describe("readSessionAssessmentSources", () => {
     expect(new Set(anchoredSpanIds).size).toBe(2)
   })
 
+  it("keeps conflicting reused-ID content and status failures as distinct incidents", async () => {
+    const contentFailedCall = toolCall("y", "call-reused", 0, 10)
+    const statusFailedCall = toolCall("z", "call-reused", 11, 20, {
+      statusCode: "error",
+      statusMessage: "transport failure",
+    })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "first" } }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { error: "invalid response" } }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "retry" } }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { results: ["found"] } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "Found it" }] },
+      ]),
+      [],
+      { toolCalls: [contentFailedCall, statusFailedCall] },
+    )
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+    const anchoredSpanIds = failures.flatMap((finding) =>
+      finding.anchors.flatMap((anchor) => (anchor.kind === "span" ? [anchor.spanId] : [])),
+    )
+
+    expect(failures).toHaveLength(2)
+    expect(anchoredSpanIds).toEqual(expect.arrayContaining([contentFailedCall.spanId, statusFailedCall.spanId]))
+  })
+
   it("keeps a final failed tool call terminal when no successful progress follows", async () => {
     const failedCall = toolCall("p", "call-terminal-status", 0, 10, {
       statusCode: "error",

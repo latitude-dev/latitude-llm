@@ -175,15 +175,27 @@ const toolCallReferences = (
   if (!("toolCallId" in finding) || !finding.toolCallId) {
     return { anchors: base.anchors, destinations: base.destinations }
   }
+  const responseAnchor =
+    finding.findingKind === "error"
+      ? [
+          {
+            kind: "message" as const,
+            traceId,
+            messageIndex: finding.responseMessageIndex,
+            ...(finding.responsePartIndex !== undefined ? { partIndex: finding.responsePartIndex } : {}),
+          },
+        ]
+      : []
   return {
     anchors: [
       ...base.anchors,
+      ...responseAnchor,
       {
         kind: "toolCall" as const,
         traceId,
         toolCallId: finding.toolCallId,
         ...("toolName" in finding && finding.toolName ? { toolName: finding.toolName } : {}),
-        messageIndex: finding.messageIndex,
+        messageIndex: finding.findingKind === "error" ? finding.responseMessageIndex : finding.messageIndex,
       },
     ],
     destinations: [...base.destinations, { kind: "toolCall" as const, traceId, toolCallId: finding.toolCallId }],
@@ -451,9 +463,42 @@ const failedToolSpanIdentities = (
   return identities
 }
 
+const toolResponseOccurrence = (
+  finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
+  anchor: Extract<SessionEvidenceAnchor, { readonly kind: "toolCall" }>,
+  session: SessionDetail,
+): number | undefined => {
+  if (anchor.messageIndex === undefined) return undefined
+  const responseAnchor = finding.anchors.find(
+    (candidate) => candidate.kind === "message" && candidate.messageIndex === anchor.messageIndex,
+  )
+  let occurrence = 0
+  const messages = sessionConversationMessages(session)
+  for (let messageIndex = 0; messageIndex <= anchor.messageIndex; messageIndex++) {
+    const message = messages[messageIndex]
+    if (!message) continue
+    const parts = Array.isArray(message.parts) ? message.parts : []
+    for (let partIndex = 0; partIndex < parts.length; partIndex++) {
+      const part = parts[partIndex]
+      if (typeof part !== "object" || part === null) continue
+      if (!("type" in part) || part.type !== "tool_call_response") continue
+      if (!("id" in part) || typeof part.id !== "string" || part.id.trim() !== anchor.toolCallId) continue
+      const isTarget =
+        messageIndex === anchor.messageIndex &&
+        (responseAnchor?.kind !== "message" ||
+          responseAnchor.partIndex === undefined ||
+          responseAnchor.partIndex === partIndex)
+      if (isTarget) return occurrence
+      occurrence++
+    }
+  }
+  return undefined
+}
+
 const resolveDeterministicToolReferences = (
   findings: readonly AssessmentFinding[],
   toolCalls: readonly SessionToolCallFact[],
+  session: SessionDetail,
 ): AssessmentFinding[] => {
   const indexed = toolCallsById(toolCalls)
   const findingCountByIdentity = new Map<string, number>()
@@ -475,19 +520,25 @@ const resolveDeterministicToolReferences = (
       const anchor = toolCallAnchors.length === 1 ? toolCallAnchors[0] : undefined
       if (anchor?.kind === "toolCall") {
         const identity = toolCallIdentity(anchor)
-        const matches = (indexed.get(anchor.toolCallId) ?? [])
+        const orderedMatches = (indexed.get(anchor.toolCallId) ?? [])
           .filter((call) => call.traceId === anchor.traceId)
           .sort(
             (left, right) =>
               left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
           )
-          .filter((call) => !matchedSpanIdentities.has(toolSpanIdentity(call)))
+        const matches = orderedMatches.filter((call) => !matchedSpanIdentities.has(toolSpanIdentity(call)))
         const matchedCount = matchedCountByIdentity.get(identity) ?? 0
         const remainingFindings = (findingCountByIdentity.get(identity) ?? 0) - matchedCount
+        const responseOccurrence = toolResponseOccurrence(finding, anchor, session)
+        const responseMatch = responseOccurrence === undefined ? undefined : orderedMatches[responseOccurrence]
         matchingCall =
-          matches.length <= remainingFindings
-            ? matches[0]
-            : (matches.find((call) => call.statusCode === "error") ?? matches[0])
+          responseMatch &&
+          responseMatch.traceId === anchor.traceId &&
+          !matchedSpanIdentities.has(toolSpanIdentity(responseMatch))
+            ? responseMatch
+            : matches.length <= remainingFindings
+              ? matches[0]
+              : (matches.find((call) => call.statusCode === "error") ?? matches[0])
         matchedCountByIdentity.set(identity, matchedCount + 1)
         if (matchingCall) matchedSpanIdentities.add(toolSpanIdentity(matchingCall))
       }
@@ -1102,7 +1153,11 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
   Effect.gen(function* () {
     const hasCompletion = hasUsableAssistantCompletion(input.session.outputMessages)
     const deterministic = yield* readDeterministicFindings(input.session, input.spans)
-    const deterministicFindings = resolveDeterministicToolReferences(deterministic.findings, input.toolCalls)
+    const deterministicFindings = resolveDeterministicToolReferences(
+      deterministic.findings,
+      input.toolCalls,
+      input.session,
+    )
     const spanFindings = readSpanFindings(input.session, input.spans, deterministicFindings)
     const toolStatusFindings = readToolStatusFindings({
       generations: input.generations,
