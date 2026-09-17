@@ -695,6 +695,31 @@ describe("readSessionAssessmentSources", () => {
     ).toEqual(expect.arrayContaining([traceId, otherTraceId]))
   })
 
+  it("keeps evidence keys distinct when traces reuse a tool span ID", async () => {
+    const otherTraceId = TraceId("u".repeat(32))
+    const primaryFailure = toolCall("v", "call-primary", 0, 10, {
+      statusCode: "error",
+      statusMessage: "timeout",
+    })
+    const otherFailure = toolCall("v", "call-other", 0, 10, {
+      traceId: otherTraceId,
+      statusCode: "error",
+      statusMessage: "timeout",
+    })
+    const value = session([{ role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] }])
+    const result = await read({ ...value, traceIds: [traceId, otherTraceId] }, [], {
+      toolCalls: [primaryFailure, otherFailure],
+    })
+    const evidenceKeys = result.findings
+      .filter((finding) => finding.kind === "toolFailure")
+      .map((finding) => finding.evidenceKey)
+
+    expect(evidenceKeys).toEqual([
+      `span:${traceId}:${primaryFailure.spanId}:tool-failure:timeout`,
+      `span:${otherTraceId}:${otherFailure.spanId}:tool-failure:timeout`,
+    ])
+  })
+
   it("preserves a status failure when spans in one trace reuse a tool-call ID", async () => {
     const firstFailure = toolCall("y", "call-reused", 0, 10, {
       statusCode: "error",
@@ -722,7 +747,9 @@ describe("readSessionAssessmentSources", () => {
     const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
 
     expect(failures).toHaveLength(2)
-    expect(failures.find((finding) => finding.evidenceKey.startsWith(`span:${secondFailure.spanId}:`))).toMatchObject({
+    expect(
+      failures.find((finding) => finding.evidenceKey.startsWith(`span:${traceId}:${secondFailure.spanId}:`)),
+    ).toMatchObject({
       anchors: expect.arrayContaining([
         expect.objectContaining({ kind: "span", traceId, spanId: secondFailure.spanId }),
         expect.objectContaining({ kind: "toolCall", traceId, toolCallId: "call-reused" }),

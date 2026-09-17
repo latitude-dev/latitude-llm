@@ -415,7 +415,7 @@ const toolStatusFinding = ({
   const recovered = hasCompletion && successfulProgressAfter({ failed: call, generations, toolCalls })
 
   return {
-    evidenceKey: `span:${call.spanId}:tool-failure:${classifyToolError(detail)}`,
+    evidenceKey: `span:${call.traceId}:${call.spanId}:tool-failure:${classifyToolError(detail)}`,
     label: `${call.toolName || "Tool call"} failed`,
     ...(detail ? { description: detail } : {}),
     source: "metric",
