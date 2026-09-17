@@ -300,6 +300,48 @@ describe("nameClusterUseCase", () => {
     }
   })
 
+  it("strips lone UTF-16 surrogates from naming prompts, whether from the raw summary or from truncation splitting a pair", async () => {
+    const prompts: string[] = []
+    const ai: AIShape = {
+      generate: <T>(input: GenerateInput<T>) => {
+        prompts.push(input.prompt)
+        const object = input.prompt.includes("Candidates:")
+          ? { name: "Order Status", description: "Users check on the status of an order they placed." }
+          : { candidates: [{ theme: "order status", examples: [0] }] }
+        return Effect.succeed({ object: object as T, tokens: 10, duration: 1 } satisfies GenerateResult<T>)
+      },
+      embed: () => Effect.die("embed not used"),
+      rerank: () => Effect.die("rerank not used"),
+    }
+
+    // A lone high surrogate (\uD83D) already present in the persisted summary —
+    // Bedrock rejects "lone leading surrogate in hex escape" if this reaches the prompt.
+    const rawLoneSurrogate = "before \uD83D order status after"
+    {
+      const { effect } = runNameCluster({
+        seedObservations: [observation({ projectionMetadata: { summary: rawLoneSurrogate } })],
+        ai,
+      })
+      await Effect.runPromise(effect)
+    }
+
+    // Each "😀" is a surrogate pair (😀 — two UTF-16 code units). Repeating it
+    // past the sample cap forces `middleTruncate`'s head/tail slice to land mid-pair.
+    const emojiOversized = "😀".repeat(TAXONOMY_NAMING_SAMPLE_CHAR_CAP)
+    {
+      const { effect } = runNameCluster({
+        seedObservations: [observation({ projectionMetadata: { summary: emojiOversized } })],
+        ai,
+      })
+      await Effect.runPromise(effect)
+    }
+
+    expect(prompts.length).toBeGreaterThan(0)
+    for (const prompt of prompts) {
+      expect(hasLoneSurrogate(prompt)).toBe(false)
+    }
+  })
+
   // Interior + root modes are named from already-named children (no direct
   // members), and their modeContext is also parameterized/hardcoded — cover them
   // too so an edit to the interior `umbrella` string or the root prompt can't
@@ -704,3 +746,7 @@ describe("nameClusterUseCase", () => {
     expect(clusters.clusters.get(clusterId)?.name).toBe("Order Status")
   })
 })
+
+function hasLoneSurrogate(text: string): boolean {
+  return /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(text)
+}
