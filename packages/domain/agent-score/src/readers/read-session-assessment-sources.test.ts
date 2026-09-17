@@ -644,6 +644,10 @@ describe("readSessionAssessmentSources", () => {
       statusCode: "error",
       statusMessage: "timeout",
     })
+    const retry = generation("x", 11, 20, {
+      traceId: laterTraceId,
+      costTotalMicrocents: 325,
+    })
     const value = session([
       {
         role: "assistant",
@@ -655,9 +659,25 @@ describe("readSessionAssessmentSources", () => {
       },
       { role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] },
     ])
-    const result = await read({ ...value, traceIds: [traceId, laterTraceId] }, [], { toolCalls: [failedCall] })
+    const result = await read({ ...value, traceIds: [traceId, laterTraceId] }, [], {
+      generations: [retry],
+      toolCalls: [failedCall],
+    })
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
 
-    expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toMatchObject({
+      anchors: expect.arrayContaining([
+        expect.objectContaining({ kind: "span", traceId, spanId: failedCall.spanId }),
+        expect.objectContaining({ kind: "toolCall", traceId, toolCallId: failedCall.toolCallId }),
+      ]),
+      destinations: expect.arrayContaining([
+        expect.objectContaining({ kind: "toolCall", traceId, toolCallId: failedCall.toolCallId }),
+      ]),
+    })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
+    ).toMatchObject({ adverseUnits: 325 })
   })
 
   it("does not deduplicate matching tool-call IDs from different traces", async () => {

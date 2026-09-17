@@ -399,6 +399,55 @@ const toolSpanReferences = (call: SessionToolCallFact) => {
 const toolCallIdentity = ({ traceId, toolCallId }: { readonly traceId: string; readonly toolCallId: string }): string =>
   `${traceId}:${toolCallId}`
 
+const toolCallsById = (toolCalls: readonly SessionToolCallFact[]): Map<string, SessionToolCallFact[]> => {
+  const indexed = new Map<string, SessionToolCallFact[]>()
+  for (const call of toolCalls) {
+    if (call.toolCallId === "") continue
+    const matches = indexed.get(call.toolCallId) ?? []
+    matches.push(call)
+    indexed.set(call.toolCallId, matches)
+  }
+  return indexed
+}
+
+const uniqueToolCallForFinding = (
+  finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
+  indexed: ReadonlyMap<string, readonly SessionToolCallFact[]>,
+): SessionToolCallFact | undefined => {
+  const toolCallIds = new Set(
+    finding.anchors.flatMap((anchor) => (anchor.kind === "toolCall" ? [anchor.toolCallId] : [])),
+  )
+  if (toolCallIds.size !== 1) return undefined
+  const matches = indexed.get([...toolCallIds][0] ?? "") ?? []
+  return matches.length === 1 ? matches.at(0) : undefined
+}
+
+const resolveDeterministicToolReferences = (
+  findings: readonly AssessmentFinding[],
+  toolCalls: readonly SessionToolCallFact[],
+): AssessmentFinding[] => {
+  const indexed = toolCallsById(toolCalls)
+  return findings.map((finding) => {
+    if (finding.kind !== "toolFailure") return finding
+    const matchingCall = uniqueToolCallForFinding(finding, indexed)
+    if (!matchingCall) return finding
+    const references = toolSpanReferences(matchingCall)
+    return {
+      ...finding,
+      anchors: [
+        ...references.anchors,
+        ...finding.anchors.filter((anchor) => anchor.kind !== "toolCall" && anchor.kind !== "span"),
+      ],
+      destinations: [
+        ...references.destinations,
+        ...finding.destinations.filter(
+          (destination) => destination.kind !== "toolCall" && destination.kind !== "span",
+        ),
+      ],
+    }
+  })
+}
+
 const toolStatusFinding = ({
   call,
   generations,
@@ -445,22 +494,15 @@ const readToolStatusFindings = ({
   readonly deterministic: readonly AssessmentFinding[]
   readonly hasCompletion: boolean
 }): { readonly findings: AssessmentFinding[]; readonly readers: AssessmentReaderFact[] } => {
-  const toolCallsById = new Map<string, SessionToolCallFact[]>()
-  for (const call of toolCalls) {
-    if (call.toolCallId === "") continue
-    const matches = toolCallsById.get(call.toolCallId) ?? []
-    matches.push(call)
-    toolCallsById.set(call.toolCallId, matches)
-  }
+  const indexedToolCalls = toolCallsById(toolCalls)
 
   const contentDetected = new Map<string, number>()
   for (const finding of deterministic) {
     if (finding.kind !== "toolFailure") continue
+    const uniqueMatch = uniqueToolCallForFinding(finding, indexedToolCalls)
     const identities = new Set(
       finding.anchors.flatMap((anchor) => {
         if (anchor.kind !== "toolCall") return []
-        const matchingCalls = toolCallsById.get(anchor.toolCallId) ?? []
-        const uniqueMatch = matchingCalls.length === 1 ? matchingCalls.at(0) : undefined
         return [toolCallIdentity(uniqueMatch ?? anchor)]
       }),
     )
@@ -917,11 +959,12 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
   Effect.gen(function* () {
     const hasCompletion = hasUsableAssistantCompletion(input.session.outputMessages)
     const deterministic = yield* readDeterministicFindings(input.session, input.spans)
-    const spanFindings = readSpanFindings(input.session, input.spans, deterministic.findings)
+    const deterministicFindings = resolveDeterministicToolReferences(deterministic.findings, input.toolCalls)
+    const spanFindings = readSpanFindings(input.session, input.spans, deterministicFindings)
     const toolStatusFindings = readToolStatusFindings({
       generations: input.generations,
       toolCalls: input.toolCalls,
-      deterministic: deterministic.findings,
+      deterministic: deterministicFindings,
       hasCompletion,
     })
     const findings = [
@@ -943,7 +986,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
             },
           ]
         : []),
-      ...deterministic.findings,
+      ...deterministicFindings,
       ...spanFindings.findings,
       ...toolStatusFindings.findings,
       ...readScoreFindings(input.scores, input.signals, input.screeningDecisions),
