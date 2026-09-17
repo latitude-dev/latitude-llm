@@ -1073,6 +1073,52 @@ describe("readSessionAssessmentSources", () => {
     expect(anchoredSpanIds).toEqual(expect.arrayContaining([contentFailedCall.spanId, statusFailedCall.spanId]))
   })
 
+  it("matches reused-ID content failures to their originating trace", async () => {
+    const laterTraceId = TraceId("u".repeat(32))
+    const contentFailedCall = toolCall("y", "call-reused", 0, 10)
+    const laterStatusFailure = toolCall("z", "call-reused", 11, 20, {
+      traceId: laterTraceId,
+      statusCode: "error",
+      statusMessage: "transport failure",
+    })
+    const value = session([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "first" } }],
+      },
+      {
+        role: "tool",
+        parts: [{ type: "tool_call_response", id: "call-reused", response: { error: "invalid response" } }],
+      },
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "retry" } }],
+      },
+      {
+        role: "tool",
+        parts: [{ type: "tool_call_response", id: "call-reused", response: { results: ["found"] } }],
+      },
+      { role: "assistant", parts: [{ type: "text", content: "Found it" }] },
+    ])
+    const result = await read({ ...value, traceIds: [traceId, laterTraceId] }, [], {
+      toolCalls: [contentFailedCall, laterStatusFailure],
+    })
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+    const anchoredSpans = failures.flatMap((finding) =>
+      finding.anchors.flatMap((anchor) =>
+        anchor.kind === "span" ? [{ traceId: anchor.traceId, spanId: anchor.spanId }] : [],
+      ),
+    )
+
+    expect(failures).toHaveLength(2)
+    expect(anchoredSpans).toEqual(
+      expect.arrayContaining([
+        { traceId, spanId: contentFailedCall.spanId },
+        { traceId: laterTraceId, spanId: laterStatusFailure.spanId },
+      ]),
+    )
+  })
+
   it("keeps a final failed tool call terminal when no successful progress follows", async () => {
     const failedCall = toolCall("p", "call-terminal-status", 0, 10, {
       statusCode: "error",

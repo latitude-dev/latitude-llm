@@ -520,21 +520,17 @@ const resolveDeterministicToolReferences = (
       const anchor = toolCallAnchors.length === 1 ? toolCallAnchors[0] : undefined
       if (anchor?.kind === "toolCall") {
         const identity = toolCallIdentity(anchor)
-        const orderedMatches = (indexed.get(anchor.toolCallId) ?? [])
-          .filter((call) => call.traceId === anchor.traceId)
-          .sort(
-            (left, right) =>
-              left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
-          )
+        const orderedMatches = (indexed.get(anchor.toolCallId) ?? []).sort(
+          (left, right) =>
+            left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
+        )
         const matches = orderedMatches.filter((call) => !matchedSpanIdentities.has(toolSpanIdentity(call)))
         const matchedCount = matchedCountByIdentity.get(identity) ?? 0
         const remainingFindings = (findingCountByIdentity.get(identity) ?? 0) - matchedCount
         const responseOccurrence = toolResponseOccurrence(finding, anchor, session)
         const responseMatch = responseOccurrence === undefined ? undefined : orderedMatches[responseOccurrence]
         matchingCall =
-          responseMatch &&
-          responseMatch.traceId === anchor.traceId &&
-          !matchedSpanIdentities.has(toolSpanIdentity(responseMatch))
+          responseMatch && !matchedSpanIdentities.has(toolSpanIdentity(responseMatch))
             ? responseMatch
             : matches.length <= remainingFindings
               ? matches[0]
