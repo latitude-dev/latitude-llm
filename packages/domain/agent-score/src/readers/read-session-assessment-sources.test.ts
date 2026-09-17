@@ -826,7 +826,7 @@ describe("readSessionAssessmentSources", () => {
       toolName: "cached_search",
       normalizedToolName: "cached_search",
     })
-    const root = generation("c", 0, 30, {
+    const root = generation("c", 0, 40, {
       parentSpanId: "",
       operation: "invoke_agent",
       provider: "",
@@ -844,11 +844,14 @@ describe("readSessionAssessmentSources", () => {
     const fallbackToolSpan = generation("e", 11, 20, {
       parentSpanId: root.spanId,
       operation: "execute_tool",
-      costTotalMicrocents: 0,
-      pricingState: "notSpendBearing",
+      costTotalMicrocents: 200,
+    })
+    const laterAnswer = generation("f", 21, 30, {
+      parentSpanId: root.spanId,
+      costTotalMicrocents: 500,
     })
     const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
-      generations: [root, failedToolSpan, fallbackToolSpan],
+      generations: [root, failedToolSpan, fallbackToolSpan, laterAnswer],
       toolCalls: [failedCall, fallbackCall],
     })
 
@@ -860,9 +863,39 @@ describe("readSessionAssessmentSources", () => {
     expect(
       result.costEvidence?.readings.find((reading) => reading.metricId === "recovery.recovered_incident_rate"),
     ).toMatchObject({ adverseUnits: 1 })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
+    ).toMatchObject({
+      adverseUnits: 200,
+      observations: [expect.objectContaining({ atomId: `generation:${traceId}:${fallbackToolSpan.spanId}` })],
+    })
     expect(result.costEvidence).toMatchObject({
       measuredAvoidableNs: 9_000_000,
       avoidableNsByCause: { "recovered:toolFailure": 9_000_000 },
+    })
+  })
+
+  it("stops tool recovery attribution at an earlier successful generation", async () => {
+    const failedCall = toolCall("d", "call-primary", 0, 10, {
+      statusCode: "error",
+      statusMessage: "upstream unavailable",
+    })
+    const laterToolCall = toolCall("f", "call-later-tool", 21, 30)
+    const recoveredAnswer = generation("e", 11, 20, { costTotalMicrocents: 200 })
+    const laterToolSpan = generation("f", 21, 30, {
+      operation: "execute_tool",
+      costTotalMicrocents: 500,
+    })
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
+      generations: [recoveredAnswer, laterToolSpan],
+      toolCalls: [failedCall, laterToolCall],
+    })
+
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
+    ).toMatchObject({
+      adverseUnits: 200,
+      observations: [expect.objectContaining({ atomId: `generation:${traceId}:${recoveredAnswer.spanId}` })],
     })
   })
 
