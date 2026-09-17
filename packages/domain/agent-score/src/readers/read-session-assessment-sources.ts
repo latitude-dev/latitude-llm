@@ -456,7 +456,17 @@ const resolveDeterministicToolReferences = (
   toolCalls: readonly SessionToolCallFact[],
 ): AssessmentFinding[] => {
   const indexed = toolCallsById(toolCalls)
-  const occurrenceByIdentity = new Map<string, number>()
+  const findingCountByIdentity = new Map<string, number>()
+  for (const finding of findings) {
+    if (finding.kind !== "toolFailure" || uniqueToolCallForFinding(finding, indexed)) continue
+    const anchors = finding.anchors.filter((anchor) => anchor.kind === "toolCall")
+    const anchor = anchors.length === 1 ? anchors[0] : undefined
+    if (anchor?.kind !== "toolCall") continue
+    const identity = toolCallIdentity(anchor)
+    findingCountByIdentity.set(identity, (findingCountByIdentity.get(identity) ?? 0) + 1)
+  }
+  const matchedCountByIdentity = new Map<string, number>()
+  const matchedSpanIdentities = new Set<string>()
   return findings.map((finding) => {
     if (finding.kind !== "toolFailure") return finding
     let matchingCall = uniqueToolCallForFinding(finding, indexed)
@@ -465,16 +475,21 @@ const resolveDeterministicToolReferences = (
       const anchor = toolCallAnchors.length === 1 ? toolCallAnchors[0] : undefined
       if (anchor?.kind === "toolCall") {
         const identity = toolCallIdentity(anchor)
-        const occurrence = occurrenceByIdentity.get(identity) ?? 0
         const matches = (indexed.get(anchor.toolCallId) ?? [])
           .filter((call) => call.traceId === anchor.traceId)
           .sort(
             (left, right) =>
               left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
           )
-        const failedMatches = matches.filter((call) => call.statusCode === "error")
-        matchingCall = failedMatches[occurrence] ?? matches[occurrence]
-        occurrenceByIdentity.set(identity, occurrence + 1)
+          .filter((call) => !matchedSpanIdentities.has(toolSpanIdentity(call)))
+        const matchedCount = matchedCountByIdentity.get(identity) ?? 0
+        const remainingFindings = (findingCountByIdentity.get(identity) ?? 0) - matchedCount
+        matchingCall =
+          matches.length <= remainingFindings
+            ? matches[0]
+            : (matches.find((call) => call.statusCode === "error") ?? matches[0])
+        matchedCountByIdentity.set(identity, matchedCount + 1)
+        if (matchingCall) matchedSpanIdentities.add(toolSpanIdentity(matchingCall))
       }
     }
     if (!matchingCall) return finding
