@@ -197,6 +197,7 @@
         "group": "Observe",
         "pages": [
           "observability/overview",
+          "observability/agent-score",
           "observability/sessions",
           "observability/users",
           "observability/tools",
@@ -374,7 +375,7 @@
       "tagId": "GTM-5NWGV24H"
     },
     "posthog": {
-      "apiKey": "phc_BWYPiCdzp7A2mGD3PsrXamcxmemNNctkLYMNDHmmYJJb",
+      "apiKey": "phc_BWYPiCdzp7a2MGD3PsrXamcxmemNNctkLYMNDHmmYJJb",
       "sessionRecording": true
     }
   }

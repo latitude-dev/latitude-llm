@@ -1,0 +1,85 @@
+---
+title: Agent Score
+description: Measure your production agent across outcome, reliability, cost, speed, and safety.
+---
+
+# Agent Score
+
+Agent Score is a project-level score from 0 to 100 that summarizes how your agent behaves in production. It combines five dimensions calculated from real sessions:
+
+| Dimension | What it measures |
+| --- | --- |
+| **Outcome** | Whether users accomplished what they came for |
+| **Reliability** | Whether the agent completed sessions without terminal operational failures |
+| **Cost** | How efficiently the agent used model spend and context |
+| **Speed** | How quickly the agent completed user-visible work |
+| **Safety** | Whether the agent avoided causing harm |
+
+Open your project and select **Agent Score** under **Observe**.
+
+## Read the score
+
+The page shows the overall score, each dimension score, and the evidence behind them. Scores use a 0 to 100 scale and include a 95% confidence range.
+
+Use the dimension sections to see:
+
+- issues that lowered the score
+- healthy evidence
+- links to affected signals and the relevant investigation page
+- evidence coverage when a score is not ready
+
+The trend chart shows published scores from the last 7 or 30 days. Missing dates are gaps, not zeroes.
+
+## Scoring window
+
+Latitude calculates Agent Score daily from the shortest window with at least 200 eligible sessions:
+
+1. 7 days
+2. 14 days
+3. 21 days
+4. 28 days
+
+Eligible sessions are production sessions with LLM activity. Simulations are excluded. If the project has fewer than 200 eligible sessions in 28 days, Latitude withholds the score until enough evidence is available.
+
+## Publication requirements
+
+Latitude publishes the overall score only when all five dimensions have enough usable evidence. It does not average the dimensions that are ready or fill missing dimensions with a default value.
+
+When a score is not ready, the page shows what evidence is still missing. Common reasons include:
+
+- fewer than 200 eligible sessions
+- too few readable outcomes or safety judgments
+- incomplete operational, cost, or critical-path timing data
+
+A score can also use the latest available published snapshot when today's evidence is not ready. The page labels the score date so you can distinguish the latest score from today's readiness.
+
+## How the overall score is weighted
+
+| Dimension | Weight |
+| --- | --- |
+| Outcome | 35% |
+| Reliability | 25% |
+| Cost | 15% |
+| Speed | 15% |
+| Safety | 10% |
+
+Each dimension has its own estimator and coverage requirements. The weights do not redistribute when a dimension is unavailable.
+
+## Investigate a low score
+
+1. Open the affected dimension.
+2. Review the issues listed under **Affected by**.
+3. Follow an issue to its signal or the linked investigation page.
+4. Inspect representative sessions to identify the behavior, tool, model, or workflow causing the drop.
+5. Fix the underlying problem and watch the trend after new production sessions arrive.
+
+<Note>
+Agent Score is still provisionally calibrated. Treat it as a structured production-health benchmark, then use the evidence in each dimension to decide what to investigate.
+</Note>
+
+## Related
+
+- [Sessions](./sessions): Review complete agent interactions
+- [Signals](../signals/overview): Investigate recurring failure patterns
+- [Cost](./cost): Analyze model spend and caching
+- [Tools](./tools): Review tool reliability and latency
