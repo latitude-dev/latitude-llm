@@ -1252,10 +1252,11 @@ describe("readSessionAssessmentSources", () => {
       statusMessage: "upstream unavailable",
     })
     const retryGeneration = generation("q", 11, 20, {
-      finishReasons: ["tool_calls"],
+      finishReasons: [],
       costTotalMicrocents: 325,
     })
     const failedRetry = toolCall("r", "call-retry", 21, 30, {
+      parentSpanId: retryGeneration.spanId,
       statusCode: "error",
       statusMessage: "upstream still unavailable",
     })

@@ -871,13 +871,34 @@ const readMomentFindings = (facts: SessionMomentFacts): AssessmentFinding[] => {
   })
 }
 
+const generationOutputHasToolCall = (generation: SessionGenerationFact): boolean =>
+  generation.content?.outputMessages.some(
+    (message) =>
+      Array.isArray(message.parts) &&
+      message.parts.some(
+        (part) => typeof part === "object" && part !== null && "type" in part && part.type === "tool_call",
+      ),
+  ) ?? false
+
 const isSuccessfulGeneration = (generation: SessionGenerationFact): boolean => {
   const endpoint = classifySpanEndpoint(generation)
   return (
     generation.statusCode !== "error" &&
     endpoint.providerError === null &&
-    endpoint.finishReasons.every((reason) => reason.classification === "clean" && reason.kind !== "toolContinuation")
+    endpoint.finishReasons.every((reason) => reason.classification === "clean")
   )
+}
+
+const isSuccessfulToolRecoveryGeneration = (
+  generation: SessionGenerationFact,
+  toolCalls: readonly SessionToolCallFact[],
+): boolean => {
+  const endpoint = classifySpanEndpoint(generation)
+  const continuedIntoTool =
+    endpoint.finishReasons.some((reason) => reason.classification === "clean" && reason.kind === "toolContinuation") ||
+    toolCalls.some((call) => call.traceId === generation.traceId && call.parentSpanId === generation.spanId) ||
+    generationOutputHasToolCall(generation)
+  return !continuedIntoTool && isSuccessfulGeneration(generation)
 }
 
 const retrySpansThrough = ({
@@ -982,7 +1003,7 @@ const retryProgressSpansThrough = ({
         spanId: generation.spanId as string,
         startTime: generation.startTime,
         endTime: generation.endTime,
-        successful: isSuccessfulGeneration(generation),
+        successful: isSuccessfulToolRecoveryGeneration(generation, toolCalls),
       })),
   ].sort(
     (left, right) =>
