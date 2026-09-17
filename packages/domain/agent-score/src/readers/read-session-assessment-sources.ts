@@ -445,11 +445,24 @@ const readToolStatusFindings = ({
   readonly deterministic: readonly AssessmentFinding[]
   readonly hasCompletion: boolean
 }): { readonly findings: AssessmentFinding[]; readonly readers: AssessmentReaderFact[] } => {
+  const toolCallsById = new Map<string, SessionToolCallFact[]>()
+  for (const call of toolCalls) {
+    if (call.toolCallId === "") continue
+    const matches = toolCallsById.get(call.toolCallId) ?? []
+    matches.push(call)
+    toolCallsById.set(call.toolCallId, matches)
+  }
+
   const contentDetected = new Map<string, number>()
   for (const finding of deterministic) {
     if (finding.kind !== "toolFailure") continue
     const identities = new Set(
-      finding.anchors.flatMap((anchor) => (anchor.kind === "toolCall" ? [toolCallIdentity(anchor)] : [])),
+      finding.anchors.flatMap((anchor) => {
+        if (anchor.kind !== "toolCall") return []
+        const matchingCalls = toolCallsById.get(anchor.toolCallId) ?? []
+        const uniqueMatch = matchingCalls.length === 1 ? matchingCalls.at(0) : undefined
+        return [toolCallIdentity(uniqueMatch ?? anchor)]
+      }),
     )
     for (const identity of identities) contentDetected.set(identity, (contentDetected.get(identity) ?? 0) + 1)
   }

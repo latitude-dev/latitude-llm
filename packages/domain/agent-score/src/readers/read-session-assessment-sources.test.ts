@@ -638,6 +638,28 @@ describe("readSessionAssessmentSources", () => {
     expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
   })
 
+  it("deduplicates a content failure against its unique tool span in an earlier trace", async () => {
+    const laterTraceId = TraceId("u".repeat(32))
+    const failedCall = toolCall("w", "call-earlier-trace", 0, 10, {
+      statusCode: "error",
+      statusMessage: "timeout",
+    })
+    const value = session([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-earlier-trace", name: "search", arguments: {} }],
+      },
+      {
+        role: "tool",
+        parts: [{ type: "tool_call_response", id: "call-earlier-trace", response: { error: "timeout" } }],
+      },
+      { role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] },
+    ])
+    const result = await read({ ...value, traceIds: [traceId, laterTraceId] }, [], { toolCalls: [failedCall] })
+
+    expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
+  })
+
   it("does not deduplicate matching tool-call IDs from different traces", async () => {
     const otherTraceId = TraceId("u".repeat(32))
     const primaryFailure = toolCall("w", "call-shared", 0, 10, {
