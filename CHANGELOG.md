@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.104 - 2026-09-17
+
+### MCP Auth
+
+- Served OAuth discovery JSON at root well-known URLs instead of 307 redirect, so strict MCP clients such as Cloudflare portal complete discovery (ref: 89a9875).
+
+### Security
+
+- Required admin/owner role for POST /v1/members invite, so non-admin members cannot mint admin invitations (ref: GHSA-cc29-29hq-cgc8).
+
+### Telemetry
+
+- Stopped provider error text leak under no-content capture and fixed first_trace_at write through repository so RLS permits it (ref: #4667).
+
+### Signals
+
+- Reported recovered tool errors bundled by failure class with one live issue per bucket per project (ref: #4662).
+
 ## v0.3.103 - 2026-09-16
 
 ### Agent Score
