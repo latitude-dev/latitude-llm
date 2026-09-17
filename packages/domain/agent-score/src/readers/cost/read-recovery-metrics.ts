@@ -79,8 +79,12 @@ export const recoverySpendClaims = ({
   readonly recovered: readonly RecoveredIncident[]
   readonly generations: readonly SessionGenerationFact[]
 }): AttributableSpendClaim[] => {
-  const billedBySpan = new Map(
-    generations.map((generation) => [`${generation.traceId}:${generation.spanId}`, generation.costTotalMicrocents]),
+  const billedBySpan = new Map<string, number>(
+    generations.flatMap((generation) =>
+      generation.pricingState === "providerReported" || generation.pricingState === "registryEstimated"
+        ? [[`${generation.traceId}:${generation.spanId}`, generation.costTotalMicrocents] as const]
+        : [],
+    ),
   )
   return recovered.flatMap((incident) =>
     incident.retrySpans.flatMap(({ traceId, spanId }) => {

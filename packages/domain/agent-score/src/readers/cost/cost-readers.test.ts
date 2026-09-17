@@ -709,6 +709,22 @@ describe("recovery readers", () => {
     ).toEqual([{ traceId: "trace-1", spanId: "retry", cause: "recovered:rateLimit", exactMicrocents: 375 }])
   })
 
+  it("excludes non-spend-bearing retry spans from spend claims", () => {
+    expect(
+      recoverySpendClaims({
+        recovered: [incident],
+        generations: [
+          generation({
+            spanId: SpanId("retry"),
+            pricingState: "notSpendBearing",
+            costTotalMicrocents: 375,
+          }),
+        ],
+      }),
+    ).toEqual([])
+    expect(recoveryAvoidableNs({ recovered: [incident], paths: [path] })).toBe(400 * 1_000_000)
+  })
+
   it("takes only the marginal path time the retries actually held", () => {
     expect(recoveryAvoidableNs({ recovered: [incident], paths: [path] })).toBe(400 * 1_000_000)
   })
