@@ -748,6 +748,55 @@ describe("readSessionAssessmentSources", () => {
     ).toMatchObject({ adverseUnits: 1 })
   })
 
+  it("counts a successful different-tool fallback as recovery", async () => {
+    const failedCall = toolCall("d", "call-primary", 0, 10, {
+      statusCode: "error",
+      statusMessage: "upstream unavailable",
+    })
+    const fallbackCall = toolCall("e", "call-fallback", 11, 20, {
+      toolName: "cached_search",
+      normalizedToolName: "cached_search",
+    })
+    const root = generation("c", 0, 30, {
+      parentSpanId: "",
+      operation: "invoke_agent",
+      provider: "",
+      model: "",
+      costTotalMicrocents: 0,
+      pricingState: "notSpendBearing",
+    })
+    const failedToolSpan = generation("d", 0, 10, {
+      parentSpanId: root.spanId,
+      operation: "execute_tool",
+      statusCode: "error",
+      costTotalMicrocents: 0,
+      pricingState: "notSpendBearing",
+    })
+    const fallbackToolSpan = generation("e", 11, 20, {
+      parentSpanId: root.spanId,
+      operation: "execute_tool",
+      costTotalMicrocents: 0,
+      pricingState: "notSpendBearing",
+    })
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
+      generations: [root, failedToolSpan, fallbackToolSpan],
+      toolCalls: [failedCall, fallbackCall],
+    })
+
+    expect(result.findings.find((finding) => finding.kind === "toolFailure")).toMatchObject({
+      recovered: true,
+      sameSubjectRecovered: false,
+      terminal: false,
+    })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "recovery.recovered_incident_rate"),
+    ).toMatchObject({ adverseUnits: 1 })
+    expect(result.costEvidence).toMatchObject({
+      measuredAvoidableNs: 9_000_000,
+      avoidableNsByCause: { "recovered:toolFailure": 9_000_000 },
+    })
+  })
+
   it("does not treat a tool call with unset status as a successful retry", async () => {
     const failedCall = toolCall("u", "", 0, 10, { statusCode: "error", statusMessage: "upstream unavailable" })
     const unexaminedCall = toolCall("v", "", 11, 20, { statusCode: "unset" })

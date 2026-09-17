@@ -693,17 +693,17 @@ const retrySpansThrough = ({
 const retryToolSpansThrough = ({
   failed,
   toolCalls,
+  normalizedToolName,
 }: {
   readonly failed: SessionToolCallFact
   readonly toolCalls: readonly SessionToolCallFact[]
+  readonly normalizedToolName?: string
 }) => {
-  if (failed.normalizedToolName === "") return []
-
   const candidates = toolCalls
     .filter(
       (call) =>
         (call.traceId !== failed.traceId || call.spanId !== failed.spanId) &&
-        call.normalizedToolName === failed.normalizedToolName &&
+        (normalizedToolName === undefined || call.normalizedToolName === normalizedToolName) &&
         call.startTime.getTime() >= failed.endTime.getTime(),
     )
     .sort(
@@ -724,7 +724,9 @@ const laterSameToolSucceeded = ({
 }: {
   readonly failed: SessionToolCallFact
   readonly toolCalls: readonly SessionToolCallFact[]
-}): boolean => retryToolSpansThrough({ failed, toolCalls }).length > 0
+}): boolean =>
+  failed.normalizedToolName !== "" &&
+  retryToolSpansThrough({ failed, toolCalls, normalizedToolName: failed.normalizedToolName }).length > 0
 
 const successfulProgressAfter = ({
   failed,
@@ -735,7 +737,8 @@ const successfulProgressAfter = ({
   readonly generations: readonly SessionGenerationFact[]
   readonly toolCalls: readonly SessionToolCallFact[]
 }): boolean =>
-  laterSameToolSucceeded({ failed, toolCalls }) || retrySpansThrough({ generations, after: failed.endTime }).length > 0
+  retryToolSpansThrough({ failed, toolCalls }).length > 0 ||
+  retrySpansThrough({ generations, after: failed.endTime }).length > 0
 
 const recoveredProviderIncident = (
   finding: Extract<AssessmentFinding, { readonly kind: "providerError" }>,
