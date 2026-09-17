@@ -66,6 +66,18 @@ export const agentScoreExplanationForSnapshot = ({
   return explanation
 }
 
+export const agentScoreSnapshotEvidenceCompleted = ({
+  needsSnapshotEvidence,
+  previousSnapshotExplanationTime,
+  snapshotExplanation,
+}: {
+  readonly needsSnapshotEvidence: boolean
+  readonly previousSnapshotExplanationTime: string | undefined
+  readonly snapshotExplanation: AgentScoreExplanationRecord["explanation"]
+}): boolean =>
+  !needsSnapshotEvidence ||
+  (snapshotExplanation !== null && snapshotExplanation.computedAt !== previousSnapshotExplanationTime)
+
 export const waitForAgentScoreRefresh = async ({
   previousMarker,
   refetch,

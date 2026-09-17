@@ -3,6 +3,7 @@ import type { AgentScoreExplanationRecord } from "../../../../../../domains/agen
 import {
   agentScoreExplanationForSnapshot,
   agentScoreRefreshCompleted,
+  agentScoreSnapshotEvidenceCompleted,
   agentScoreSnapshotMarker,
   agentVitalityIsLoading,
   isCurrentAgentScoreSnapshot,
@@ -58,6 +59,50 @@ describe("agentScoreExplanationForSnapshot", () => {
         snapshot,
       }),
     ).toBeNull()
+  })
+})
+
+describe("agentScoreSnapshotEvidenceCompleted", () => {
+  const snapshotExplanation = { computedAt: "2026-09-15T04:00:00.000Z" } as unknown as Explanation
+
+  it("is done when no backfill was needed", () => {
+    expect(
+      agentScoreSnapshotEvidenceCompleted({
+        needsSnapshotEvidence: false,
+        previousSnapshotExplanationTime: undefined,
+        snapshotExplanation: null,
+      }),
+    ).toBe(true)
+  })
+
+  it("waits while the backfilled evidence has not arrived", () => {
+    expect(
+      agentScoreSnapshotEvidenceCompleted({
+        needsSnapshotEvidence: true,
+        previousSnapshotExplanationTime: undefined,
+        snapshotExplanation: null,
+      }),
+    ).toBe(false)
+  })
+
+  it("waits while the evidence timestamp is unchanged", () => {
+    expect(
+      agentScoreSnapshotEvidenceCompleted({
+        needsSnapshotEvidence: true,
+        previousSnapshotExplanationTime: "2026-09-15T04:00:00.000Z",
+        snapshotExplanation,
+      }),
+    ).toBe(false)
+  })
+
+  it("finishes when the backfilled evidence arrives", () => {
+    expect(
+      agentScoreSnapshotEvidenceCompleted({
+        needsSnapshotEvidence: true,
+        previousSnapshotExplanationTime: undefined,
+        snapshotExplanation,
+      }),
+    ).toBe(true)
   })
 })
 
