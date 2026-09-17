@@ -648,21 +648,21 @@ const isSuccessfulGeneration = (generation: SessionGenerationFact): boolean => {
   )
 }
 
-const retrySpanIdsThrough = ({
+const retrySpansThrough = ({
   generations,
   traceId,
   after,
   successfulSpanId,
 }: {
   readonly generations: readonly SessionGenerationFact[]
-  readonly traceId: string
+  readonly traceId?: string
   readonly after: Date
   readonly successfulSpanId?: string
-}): string[] => {
+}) => {
   const candidates = generations
     .filter(
       (generation) =>
-        generation.traceId === traceId &&
+        (traceId === undefined || generation.traceId === traceId) &&
         isLlmCompletionOperation(generation.operation) &&
         generation.startTime.getTime() >= after.getTime(),
     )
@@ -677,23 +677,25 @@ const retrySpanIdsThrough = ({
     : candidates.findIndex(isSuccessfulGeneration)
   return successfulIndex < 0
     ? []
-    : candidates.slice(0, successfulIndex + 1).map((generation) => generation.spanId as string)
+    : candidates.slice(0, successfulIndex + 1).map((generation) => ({
+        traceId: generation.traceId,
+        spanId: generation.spanId as string,
+      }))
 }
 
-const retryToolSpanIdsThrough = ({
+const retryToolSpansThrough = ({
   failed,
   toolCalls,
 }: {
   readonly failed: SessionToolCallFact
   readonly toolCalls: readonly SessionToolCallFact[]
-}): string[] => {
+}) => {
   if (failed.normalizedToolName === "") return []
 
   const candidates = toolCalls
     .filter(
       (call) =>
-        call.traceId === failed.traceId &&
-        call.spanId !== failed.spanId &&
+        (call.traceId !== failed.traceId || call.spanId !== failed.spanId) &&
         call.normalizedToolName === failed.normalizedToolName &&
         call.startTime.getTime() >= failed.endTime.getTime(),
     )
@@ -701,7 +703,12 @@ const retryToolSpanIdsThrough = ({
       (left, right) => left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
     )
   const successfulIndex = candidates.findIndex((call) => call.statusCode === "ok")
-  return successfulIndex < 0 ? [] : candidates.slice(0, successfulIndex + 1).map((call) => call.spanId as string)
+  return successfulIndex < 0
+    ? []
+    : candidates.slice(0, successfulIndex + 1).map((call) => ({
+        traceId: call.traceId,
+        spanId: call.spanId as string,
+      }))
 }
 
 const laterSameToolSucceeded = ({
@@ -710,7 +717,7 @@ const laterSameToolSucceeded = ({
 }: {
   readonly failed: SessionToolCallFact
   readonly toolCalls: readonly SessionToolCallFact[]
-}): boolean => retryToolSpanIdsThrough({ failed, toolCalls }).length > 0
+}): boolean => retryToolSpansThrough({ failed, toolCalls }).length > 0
 
 const successfulProgressAfter = ({
   failed,
@@ -721,8 +728,7 @@ const successfulProgressAfter = ({
   readonly generations: readonly SessionGenerationFact[]
   readonly toolCalls: readonly SessionToolCallFact[]
 }): boolean =>
-  laterSameToolSucceeded({ failed, toolCalls }) ||
-  retrySpanIdsThrough({ generations, traceId: failed.traceId, after: failed.endTime }).length > 0
+  laterSameToolSucceeded({ failed, toolCalls }) || retrySpansThrough({ generations, after: failed.endTime }).length > 0
 
 const recoveredProviderIncident = (
   finding: Extract<AssessmentFinding, { readonly kind: "providerError" }>,
@@ -735,15 +741,15 @@ const recoveredProviderIncident = (
     (generation) => generation.traceId === anchor.traceId && generation.spanId === anchor.spanId,
   )
   if (!failed) return []
-  const retrySpanIds = retrySpanIdsThrough({
+  const retrySpans = retrySpansThrough({
     generations,
     traceId: anchor.traceId,
     after: failed.endTime,
     successfulSpanId: finding.successfulSpanId,
   })
-  return retrySpanIds.length === 0
+  return retrySpans.length === 0
     ? []
-    : [{ traceId: anchor.traceId, spanId: anchor.spanId, kind: finding.findingKind, retrySpanIds }]
+    : [{ traceId: anchor.traceId, spanId: anchor.spanId, kind: finding.findingKind, retrySpans }]
 }
 
 const failedToolCall = (
@@ -775,22 +781,21 @@ const recoveredToolIncident = (
   if (!finding.recovered || finding.terminal) return []
   const failed = failedToolCall(finding, toolCalls)
   if (!failed) return []
-  const retrySpanIds = [
-    ...retryToolSpanIdsThrough({ failed, toolCalls }),
-    ...retrySpanIdsThrough({
+  const retrySpans = [
+    ...retryToolSpansThrough({ failed, toolCalls }),
+    ...retrySpansThrough({
       generations,
-      traceId: failed.traceId,
       after: failed.endTime,
     }),
   ]
-  return retrySpanIds.length === 0
+  return retrySpans.length === 0
     ? []
     : [
         {
           traceId: failed.traceId,
           spanId: failed.spanId,
           kind: "toolFailure",
-          retrySpanIds,
+          retrySpans,
         },
       ]
 }

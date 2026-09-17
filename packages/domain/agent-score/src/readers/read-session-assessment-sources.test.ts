@@ -481,6 +481,58 @@ describe("readSessionAssessmentSources", () => {
     ).toMatchObject({ adverseUnits: 325 })
   })
 
+  it("attributes tool recovery to progress in a later trace", async () => {
+    const otherTraceId = TraceId("u".repeat(32))
+    const failedCall = toolCall("h", "call-cross-trace", 0, 10, {
+      statusCode: "error",
+      statusMessage: "upstream unavailable",
+    })
+    const root = generation("i", 11, 30, {
+      traceId: otherTraceId,
+      parentSpanId: "",
+      operation: "invoke_agent",
+      provider: "",
+      model: "",
+      costTotalMicrocents: 0,
+      pricingState: "notSpendBearing",
+    })
+    const retry = generation("j", 12, 20, {
+      traceId: otherTraceId,
+      parentSpanId: root.spanId,
+      costTotalMicrocents: 325,
+    })
+    const value = session([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-cross-trace", name: "search", arguments: {} }],
+      },
+      {
+        role: "tool",
+        parts: [{ type: "tool_call_response", id: "call-cross-trace", response: "No results" }],
+      },
+      { role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] },
+    ])
+    const result = await read({ ...value, traceIds: [traceId, otherTraceId] }, [], {
+      generations: [root, retry],
+      toolCalls: [failedCall],
+    })
+
+    expect(result.findings.find((finding) => finding.kind === "toolFailure")).toMatchObject({
+      recovered: true,
+      terminal: false,
+    })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "recovery.recovered_incident_rate"),
+    ).toMatchObject({ adverseUnits: 1 })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
+    ).toMatchObject({ adverseUnits: 325 })
+    expect(result.costEvidence).toMatchObject({
+      measuredAvoidableNs: 8_000_000,
+      avoidableNsByCause: { "recovered:toolFailure": 8_000_000 },
+    })
+  })
+
   it("reads a tool failure the instrumentation recorded on the span with a plain-text result", async () => {
     const failedCall = toolCall("m", "call-429", 0, 10, {
       toolName: "get_booking",

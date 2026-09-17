@@ -651,7 +651,12 @@ describe("recovery readers", () => {
     },
   ]
   const path = buildTraceCriticalPath({ traceId: "trace-1", spans })
-  const incident = { traceId: "trace-1", spanId: "failed", kind: "rateLimit", retrySpanIds: ["retry"] }
+  const incident = {
+    traceId: "trace-1",
+    spanId: "failed",
+    kind: "rateLimit",
+    retrySpans: [{ traceId: "trace-1", spanId: "retry" }],
+  }
 
   it("is a session-grained rate over completed sessions", () => {
     expect(valid(readRecoveredIncidentRate({ completed: true, recovered: [incident] }))).toMatchObject({

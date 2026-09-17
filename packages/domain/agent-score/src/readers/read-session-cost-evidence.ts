@@ -289,15 +289,19 @@ const recoverySpeedClaims = ({
 }): SpeedAvoidableClaim[] => {
   const pathsByTrace = new Map(criticalPath.traces.map((path) => [path.traceId, path]))
   return incidents.flatMap((incident) => {
-    const path = pathsByTrace.get(incident.traceId)
-    if (!path || path.completeness === "notApplicable") return []
-    return incident.retrySpanIds.map((spanId) => ({
-      traceId: incident.traceId,
-      spanId,
-      cause: `recovered:${incident.kind}`,
-      removedNs: marginalCriticalPathNs({ path, spanId }),
-      evidence: "confirmed" as const,
-    }))
+    return incident.retrySpans.flatMap(({ traceId, spanId }) => {
+      const path = pathsByTrace.get(traceId)
+      if (!path || path.completeness === "notApplicable") return []
+      return [
+        {
+          traceId,
+          spanId,
+          cause: `recovered:${incident.kind}`,
+          removedNs: marginalCriticalPathNs({ path, spanId }),
+          evidence: "confirmed" as const,
+        },
+      ]
+    })
   })
 }
 
