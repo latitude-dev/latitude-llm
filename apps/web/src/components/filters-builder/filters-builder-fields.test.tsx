@@ -46,21 +46,28 @@ function renderFilters(filters: FilterSet, onFiltersChange = vi.fn()) {
 
 describe("FiltersBuilderFields", () => {
   it("shows exact session ID filters and lets users remove one", () => {
+    const firstSessionId = "905c68ca4ece118dc599d7800911214a"
+    const secondSessionId = "6a3eeea33a0491b1a7953eca399bce71"
     const onFiltersChange = renderFilters({
-      sessionId: [{ op: "in", value: ["session-a", "session-b"] }],
+      sessionId: [{ op: "in", value: [firstSessionId, secondSessionId] }],
     })
 
     expect(screen.getByRole("button", { name: "Session ID" }).getAttribute("aria-expanded")).toBe("true")
-    expect(screen.queryByText("session-a")).not.toBeNull()
-    expect(screen.queryByText("session-b")).not.toBeNull()
+    expect(screen.queryByText(firstSessionId)).not.toBeNull()
+    expect(screen.queryByText(secondSessionId)).not.toBeNull()
 
-    const firstChip = screen.getByText("session-a").closest("[data-slot='combobox-chip']")
+    const firstLabel = screen.getByText(firstSessionId)
+    expect(firstLabel.className).toContain("truncate")
+    expect(firstLabel.getAttribute("title")).toBe(firstSessionId)
+
+    const firstChip = firstLabel.closest("[data-slot='combobox-chip']")
+    expect(firstChip?.className).toContain("max-w-full")
     const removeButton = firstChip?.querySelector("button")
     expect(removeButton).toBeInstanceOf(HTMLButtonElement)
     fireEvent.click(removeButton as HTMLButtonElement)
 
     expect(onFiltersChange).toHaveBeenCalledWith({
-      sessionId: [{ op: "in", value: ["session-b"] }],
+      sessionId: [{ op: "in", value: [secondSessionId] }],
     })
   })
 
