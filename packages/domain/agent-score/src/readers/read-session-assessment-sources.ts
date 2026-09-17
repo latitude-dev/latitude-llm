@@ -883,7 +883,9 @@ const isSuccessfulToolRecoveryGeneration = (
   toolCalls: readonly SessionToolCallFact[],
 ): boolean => {
   const endpoint = classifySpanEndpoint(generation)
-  if (endpoint.finishReasons.length === 0 && generation.content === null) return false
+  if (endpoint.finishReasons.length === 0 && !hasUsableAssistantCompletion(generation.content?.outputMessages ?? [])) {
+    return false
+  }
   const continuedIntoTool =
     endpoint.finishReasons.some((reason) => reason.classification === "clean" && reason.kind === "toolContinuation") ||
     toolCalls.some((call) => call.traceId === generation.traceId && call.parentSpanId === generation.spanId) ||

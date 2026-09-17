@@ -1329,14 +1329,27 @@ describe("readSessionAssessmentSources", () => {
     ).toMatchObject({ recoveredIncidentCount: 0, unrecoveredIncidentCount: 2 })
   })
 
-  it("does not recover through a truncated generation with no finish reason", async () => {
+  it.each([
+    { label: "truncated output", content: null },
+    {
+      label: "empty captured output",
+      content: {
+        inputMessages: [{ role: "user" as const, parts: [{ type: "text" as const, content: "Retry" }] }],
+        outputMessages: [],
+        toolDefinitions: [],
+      },
+    },
+  ] satisfies readonly {
+    label: string
+    content: SessionGenerationFact["content"]
+  }[])("does not recover through a generation with $label and no finish reason", async ({ content }) => {
     const initialFailure = toolCall("p", "call-initial", 0, 10, {
       statusCode: "error",
       statusMessage: "upstream unavailable",
     })
     const truncatedRetryGeneration = generation("q", 11, 20, {
       finishReasons: [],
-      content: null,
+      content,
       costTotalMicrocents: 325,
     })
     const failedRetry = toolCall("r", "call-retry", 21, 30, {
