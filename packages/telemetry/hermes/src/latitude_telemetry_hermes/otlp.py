@@ -148,9 +148,7 @@ def _resource_attrs(service_name: Optional[str] = None) -> List[Dict[str, Any]]:
 
 
 def _status_message(span: _Span, options: _EncodeOptions) -> Optional[str]:
-    """The status message is gated like `error.message`, and takes the same budget and
-    redactor: a provider error routinely quotes the request it rejected, so it carries
-    prompt text. The status code and `error.type` still classify the failure with content off."""
+    """Gated like `error.message`: a provider error often quotes the request it rejected."""
     if not span.error_message or not options.allow_content:
         return None
     message = _budget(span.error_message, options.max_content_chars)
