@@ -7,7 +7,7 @@ import {
   LAUNCH_AGENT_SCORE_ARTIFACT,
   listAgentScoreHistory,
 } from "@domain/agent-score"
-import { ProjectId, type ScoreDimension } from "@domain/shared"
+import { type OrganizationId, ProjectId, type ScoreDimension } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AgentScoreSnapshotRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -110,6 +110,7 @@ export const getProjectAgentScoreExplanation = createServerFn({ method: "GET" })
         withTracing,
       ),
     )
+    const snapshotDate = latest.available ? latest.snapshot.date : null
     const [currentResult, latestResult] = await Promise.all([
       Effect.runPromise(
         getAgentScoreExplanation({ organizationId: orgId, projectId, date: latest.date }).pipe(
@@ -123,39 +124,104 @@ export const getProjectAgentScoreExplanation = createServerFn({ method: "GET" })
           withTracing,
         ),
       ),
-    ])
+    ] as const)
+    const snapshotResult =
+      snapshotDate && snapshotDate !== latest.date
+        ? await Effect.runPromise(
+            getAgentScoreExplanation({ organizationId: orgId, projectId, date: snapshotDate }).pipe(
+              Effect.provide(RedisCacheStoreLive(getRedisClient())),
+              withTracing,
+            ),
+          )
+        : null
+    const snapshotExplanation = snapshotResult && snapshotResult.status === "ready" ? snapshotResult.explanation : null
+    const latestExplanation = latestResult.status === "ready" ? latestResult.explanation : null
+    const explanation =
+      snapshotDate && latestExplanation?.date === snapshotDate
+        ? latestExplanation
+        : (snapshotExplanation ?? latestExplanation)
 
     return {
-      status: latestResult.status,
-      explanation: latestResult.status === "ready" ? latestResult.explanation : null,
+      status: explanation ? ("ready" as const) : latestResult.status,
+      explanation: explanation ?? null,
       currentExplanation: currentResult.status === "ready" ? currentResult.explanation : null,
     }
   })
 
+const snapshotEvidenceMissing = async ({
+  organizationId,
+  projectId,
+  snapshotDate,
+}: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ReturnType<typeof ProjectId>
+  readonly snapshotDate: string
+}): Promise<boolean> => {
+  const dated = await Effect.runPromise(
+    getAgentScoreExplanation({ organizationId, projectId, date: snapshotDate }).pipe(
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
+      withTracing,
+    ),
+  )
+  if (dated.status === "ready" && dated.explanation.date === snapshotDate) return false
+  const latestReady = await Effect.runPromise(
+    getLatestAgentScoreExplanation({ organizationId, projectId }).pipe(
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
+      withTracing,
+    ),
+  )
+  return !(latestReady.status === "ready" && latestReady.explanation.date === snapshotDate)
+}
+
 export const refreshProjectAgentScore = createServerFn({ method: "POST" })
-  .inputValidator(projectInput)
+  .inputValidator(
+    projectInput.extend({
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional(),
+    }),
+  )
   .handler(async ({ data, context }): Promise<{ enqueued: true; date: string }> => {
     const orgId = await resolveOrgScope(context)
     const publisher = await getQueuePublisher()
     const projectId = ProjectId(data.projectId)
-    const date = new Date().toISOString().slice(0, 10)
-    await Effect.runPromise(
-      publisher
-        .publish(
-          "agent-score",
-          "snapshotProject",
-          {
-            organizationId: orgId,
-            projectId,
-            date,
-            force: true,
-          },
-          {
-            dedupeKey: `org:${orgId}:agent-score:refresh:${projectId}:${date}`,
-            leadingThrottleMs: AGENT_SCORE_REFRESH_THROTTLE_MS,
-          },
-        )
-        .pipe(withTracing),
-    )
+    const date = data.date ?? new Date().toISOString().slice(0, 10)
+    const publish = (taskDate: string) =>
+      Effect.runPromise(
+        publisher
+          .publish(
+            "agent-score",
+            "snapshotProject",
+            {
+              organizationId: orgId,
+              projectId,
+              date: taskDate,
+              force: true,
+            },
+            {
+              dedupeKey: `org:${orgId}:agent-score:refresh:${projectId}:${taskDate}`,
+              leadingThrottleMs: AGENT_SCORE_REFRESH_THROTTLE_MS,
+            },
+          )
+          .pipe(withTracing),
+      )
+    await publish(date)
+    if (!data.date) {
+      const latest = await Effect.runPromise(
+        getLatestAgentScore({ organizationId: orgId, projectId }).pipe(
+          withScopedPostgres(AgentScoreSnapshotRepositoryLive, getPostgresClient(), orgId),
+          withTracing,
+        ),
+      )
+      const snapshotDate = latest.available ? latest.snapshot.date : null
+      if (
+        snapshotDate &&
+        snapshotDate !== date &&
+        (await snapshotEvidenceMissing({ organizationId: orgId, projectId, snapshotDate }))
+      ) {
+        await publish(snapshotDate)
+      }
+    }
     return { enqueued: true, date }
   })

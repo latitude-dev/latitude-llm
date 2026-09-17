@@ -64,9 +64,14 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
   const isRefreshing = scoreQuery.isRefetching || historyQuery.isRefetching || explanationQuery.isRefetching
   const refresh = async () => {
     if (isReloading) return
-    const previousMarker = agentScoreRefreshMarker({ snapshot, explanation: currentExplanation })
+    const needsSnapshotEvidence = snapshot !== null && explanation === null
+    const previousMarker = [
+      agentScoreRefreshMarker({ snapshot, explanation: currentExplanation }),
+      explanation?.computedAt ?? "none",
+    ].join(":")
     const previousSnapshotMarker = agentScoreSnapshotMarker(snapshot)
     const previousExplanationTime = currentExplanation?.computedAt
+    const previousSnapshotExplanationTime = explanation?.computedAt
     setIsReloading(true)
     try {
       const { date: refreshDate } = await refreshProjectAgentScore({ data: { projectId: project.id } })
@@ -76,16 +81,26 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
           const [scoreResult, explanationResult] = await Promise.all([scoreQuery.refetch(), explanationQuery.refetch()])
           const nextSnapshot = scoreResult.data?.snapshot ?? null
           const nextExplanation = explanationResult.data?.currentExplanation ?? null
-          const nextMarker = agentScoreRefreshMarker({ snapshot: nextSnapshot, explanation: nextExplanation })
-          return agentScoreRefreshCompleted({
+          const nextSnapshotExplanation = agentScoreExplanationForSnapshot({
+            explanation: explanationResult.data?.explanation ?? null,
+            date: nextSnapshot?.date ?? refreshDate,
+            snapshot: nextSnapshot,
+          })
+          const nextMarker = [
+            agentScoreRefreshMarker({ snapshot: nextSnapshot, explanation: nextExplanation }),
+            nextSnapshotExplanation?.computedAt ?? "none",
+          ].join(":")
+          const todayDone = agentScoreRefreshCompleted({
             previousSnapshotMarker,
             previousExplanationTime,
             date: refreshDate,
             snapshot: nextSnapshot,
             explanation: nextExplanation,
           })
-            ? nextMarker
-            : previousMarker
+          const snapshotEvidenceDone =
+            !needsSnapshotEvidence ||
+            (nextSnapshotExplanation !== null && nextSnapshotExplanation.computedAt !== previousSnapshotExplanationTime)
+          return todayDone && snapshotEvidenceDone ? nextMarker : previousMarker
         },
       })
       await historyQuery.refetch()
