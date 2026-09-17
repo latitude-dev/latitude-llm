@@ -48,7 +48,7 @@ export type ConsolidateSignalCandidatesResult =
     }
   | {
       readonly action: "skipped"
-      readonly reason: "not-found" | "promoted" | "no-neighbors" | "raced"
+      readonly reason: "not-found" | "promoted" | "bundled" | "no-neighbors" | "raced"
     }
 
 export type ConsolidateSignalCandidatesError = CacheError | RepositoryError | SignalDiscoveryLockUnavailableError
@@ -153,6 +153,13 @@ export const consolidateSignalCandidatesUseCase = (input: ConsolidateSignalCandi
     if (source.signal.promotedAt !== null) {
       return { action: "skipped", reason: "promoted" } satisfies ConsolidateSignalCandidatesResult
     }
+    // A bundled candidate cannot be a fragment — every occurrence of its bucket is
+    // already on it — and absorbing one would be a loop: the loser is soft-deleted,
+    // which releases its bucket, so the next occurrence opens the same candidate
+    // again for the next pass to absorb.
+    if (source.signal.bundleKey !== null) {
+      return { action: "skipped", reason: "bundled" } satisfies ConsolidateSignalCandidatesResult
+    }
 
     const neighbors = yield* signals.findSimilarByCentroid({
       projectId,
@@ -209,7 +216,8 @@ export const consolidateSignalCandidatesUseCase = (input: ConsolidateSignalCandi
               signal !== null &&
               signal.projectId === input.projectId &&
               signal.promotedAt === null &&
-              signal.deletedAt == null,
+              signal.deletedAt == null &&
+              signal.bundleKey === null,
           )
 
           if (live.length < 2) {

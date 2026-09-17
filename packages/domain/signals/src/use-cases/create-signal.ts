@@ -83,6 +83,8 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
           filters: parsed.filters ?? null,
           assigneeId: null,
           priority: parsed.priority ?? null,
+          // Only a deterministic detector claims a bucket; a hand-built issue never does.
+          bundleKey: null,
           centroid: null,
           clusteredAt: null,
           // A signal somebody built deliberately needs no evidence to be real.

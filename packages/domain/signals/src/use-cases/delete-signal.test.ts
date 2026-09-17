@@ -32,6 +32,7 @@ const makeUserSignal = (id: string): Signal => ({
   filters: null,
   assigneeId: null,
   priority: null,
+  bundleKey: null,
   centroid: null,
   clusteredAt: null,
   // User-created signals are born promoted.

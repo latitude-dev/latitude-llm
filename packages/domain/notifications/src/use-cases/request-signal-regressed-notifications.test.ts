@@ -38,6 +38,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
     scoreEvidence: [],
     assigneeId: null,
     priority: null,
+    bundleKey: null,
     centroid: null,
     clusteredAt: null,
     // A signal can only regress after someone resolved it, which means someone

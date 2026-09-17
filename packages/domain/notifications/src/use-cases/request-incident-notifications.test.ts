@@ -58,6 +58,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   scoreEvidence: [],
   assigneeId: null,
   priority: null,
+  bundleKey: null,
   centroid: {
     base: [1, 0],
     mass: 1,
