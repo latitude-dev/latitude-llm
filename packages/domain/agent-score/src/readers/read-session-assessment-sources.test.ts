@@ -673,6 +673,41 @@ describe("readSessionAssessmentSources", () => {
     ).toEqual(expect.arrayContaining([traceId, otherTraceId]))
   })
 
+  it("preserves a status failure when spans in one trace reuse a tool-call ID", async () => {
+    const firstFailure = toolCall("y", "call-reused", 0, 10, {
+      statusCode: "error",
+      statusMessage: "timeout",
+    })
+    const secondFailure = toolCall("z", "call-reused", 11, 20, {
+      statusCode: "error",
+      statusMessage: "rate limited",
+    })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { error: "timeout" } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] },
+      ]),
+      [],
+      { toolCalls: [firstFailure, secondFailure] },
+    )
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+
+    expect(failures).toHaveLength(2)
+    expect(failures.find((finding) => finding.evidenceKey.startsWith(`span:${secondFailure.spanId}:`))).toMatchObject({
+      anchors: expect.arrayContaining([
+        expect.objectContaining({ kind: "span", traceId, spanId: secondFailure.spanId }),
+        expect.objectContaining({ kind: "toolCall", traceId, toolCallId: "call-reused" }),
+      ]),
+    })
+  })
+
   it("keeps a final failed tool call terminal when no successful progress follows", async () => {
     const failedCall = toolCall("p", "call-terminal-status", 0, 10, {
       statusCode: "error",

@@ -379,19 +379,20 @@ const readSpanFindings = (
 }
 
 const toolSpanReferences = (call: SessionToolCallFact) => {
+  const span = { kind: "span" as const, traceId: call.traceId, spanId: call.spanId }
   if (call.toolCallId === "") {
-    const reference = { kind: "span" as const, traceId: call.traceId, spanId: call.spanId }
-    return { anchor: reference, destination: reference }
+    return { anchors: [span], destinations: [span] }
   }
 
+  const toolCall = {
+    kind: "toolCall" as const,
+    traceId: call.traceId,
+    toolCallId: call.toolCallId,
+    ...(call.toolName ? { toolName: call.toolName } : {}),
+  }
   return {
-    anchor: {
-      kind: "toolCall" as const,
-      traceId: call.traceId,
-      toolCallId: call.toolCallId,
-      ...(call.toolName ? { toolName: call.toolName } : {}),
-    },
-    destination: { kind: "toolCall" as const, traceId: call.traceId, toolCallId: call.toolCallId },
+    anchors: [span, toolCall],
+    destinations: [{ kind: "toolCall" as const, traceId: call.traceId, toolCallId: call.toolCallId }],
   }
 }
 
@@ -423,8 +424,8 @@ const toolStatusFinding = ({
     scoreIds: [],
     occurrenceCount: 1,
     chronology: { occurredAt: call.endTime },
-    anchors: [references.anchor],
-    destinations: [references.destination],
+    anchors: references.anchors,
+    destinations: references.destinations,
     independentHumanEvidence: false,
     kind: "toolFailure",
     recovered,
@@ -444,17 +445,23 @@ const readToolStatusFindings = ({
   readonly deterministic: readonly AssessmentFinding[]
   readonly hasCompletion: boolean
 }): { readonly findings: AssessmentFinding[]; readonly readers: AssessmentReaderFact[] } => {
-  const contentDetected = new Set(
-    deterministic.flatMap((finding) =>
-      finding.kind === "toolFailure"
-        ? finding.anchors.flatMap((anchor) => (anchor.kind === "toolCall" ? [toolCallIdentity(anchor)] : []))
-        : [],
-    ),
-  )
+  const contentDetected = new Map<string, number>()
+  for (const finding of deterministic) {
+    if (finding.kind !== "toolFailure") continue
+    const identities = new Set(
+      finding.anchors.flatMap((anchor) => (anchor.kind === "toolCall" ? [toolCallIdentity(anchor)] : [])),
+    )
+    for (const identity of identities) contentDetected.set(identity, (contentDetected.get(identity) ?? 0) + 1)
+  }
 
   const findings = toolCalls.flatMap((call): AssessmentFinding[] => {
     if (call.statusCode !== "error") return []
-    if (call.toolCallId !== "" && contentDetected.has(toolCallIdentity(call))) return []
+    const identity = toolCallIdentity(call)
+    const matchingContentCount = call.toolCallId === "" ? 0 : (contentDetected.get(identity) ?? 0)
+    if (matchingContentCount > 0) {
+      contentDetected.set(identity, matchingContentCount - 1)
+      return []
+    }
     return [toolStatusFinding({ call, generations, toolCalls, hasCompletion })]
   })
 
