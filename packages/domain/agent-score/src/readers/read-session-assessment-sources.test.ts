@@ -954,6 +954,48 @@ describe("readSessionAssessmentSources", () => {
     ).toMatchObject({ adverseUnits: 1 })
   })
 
+  it("matches a sparse reused-ID content failure to the span whose status failed", async () => {
+    const successfulCall = toolCall("y", "call-reused", 0, 10)
+    const failedCall = toolCall("z", "call-reused", 11, 20, {
+      statusCode: "error",
+      statusMessage: "timeout",
+    })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "first" } }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { results: ["first"] } }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "retry" } }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { error: "timeout" } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "No results found" }] },
+      ]),
+      [],
+      { toolCalls: [successfulCall, failedCall] },
+    )
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toMatchObject({
+      anchors: expect.arrayContaining([expect.objectContaining({ kind: "span", traceId, spanId: failedCall.spanId })]),
+      recovered: false,
+      terminal: true,
+    })
+    expect(failures[0]?.anchors).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "span", spanId: successfulCall.spanId })]),
+    )
+  })
+
   it("keeps a final failed tool call terminal when no successful progress follows", async () => {
     const failedCall = toolCall("p", "call-terminal-status", 0, 10, {
       statusCode: "error",

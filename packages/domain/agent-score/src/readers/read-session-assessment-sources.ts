@@ -472,7 +472,8 @@ const resolveDeterministicToolReferences = (
             (left, right) =>
               left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
           )
-        matchingCall = matches[occurrence]
+        const failedMatches = matches.filter((call) => call.statusCode === "error")
+        matchingCall = failedMatches[occurrence] ?? matches[occurrence]
         occurrenceByIdentity.set(identity, occurrence + 1)
       }
     }
