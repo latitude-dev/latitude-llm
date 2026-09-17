@@ -440,9 +440,7 @@ const resolveDeterministicToolReferences = (
       ],
       destinations: [
         ...references.destinations,
-        ...finding.destinations.filter(
-          (destination) => destination.kind !== "toolCall" && destination.kind !== "span",
-        ),
+        ...finding.destinations.filter((destination) => destination.kind !== "toolCall" && destination.kind !== "span"),
       ],
     }
   })
