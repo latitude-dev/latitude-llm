@@ -399,6 +399,9 @@ const toolSpanReferences = (call: SessionToolCallFact) => {
 const toolCallIdentity = ({ traceId, toolCallId }: { readonly traceId: string; readonly toolCallId: string }): string =>
   `${traceId}:${toolCallId}`
 
+const toolSpanIdentity = ({ traceId, spanId }: { readonly traceId: string; readonly spanId: string }): string =>
+  `${traceId}:${spanId}`
+
 const toolCallsById = (toolCalls: readonly SessionToolCallFact[]): Map<string, SessionToolCallFact[]> => {
   const indexed = new Map<string, SessionToolCallFact[]>()
   for (const call of toolCalls) {
@@ -420,6 +423,26 @@ const uniqueToolCallForFinding = (
   if (toolCallIds.size !== 1) return undefined
   const matches = indexed.get([...toolCallIds][0] ?? "") ?? []
   return matches.length === 1 ? matches.at(0) : undefined
+}
+
+const failedToolSpanIdentities = (
+  findings: readonly AssessmentFinding[],
+  toolCalls: readonly SessionToolCallFact[],
+): Set<string> => {
+  const identities = new Set<string>()
+  for (const finding of findings) {
+    if (finding.kind !== "toolFailure") continue
+    for (const anchor of finding.anchors) {
+      if (anchor.kind === "span") identities.add(toolSpanIdentity(anchor))
+      if (anchor.kind !== "toolCall") continue
+      for (const call of toolCalls) {
+        if (call.traceId === anchor.traceId && call.toolCallId === anchor.toolCallId) {
+          identities.add(toolSpanIdentity(call))
+        }
+      }
+    }
+  }
+  return identities
 }
 
 const resolveDeterministicToolReferences = (
@@ -450,16 +473,18 @@ const toolStatusFinding = ({
   call,
   generations,
   toolCalls,
+  failedToolSpans,
   hasCompletion,
 }: {
   readonly call: SessionToolCallFact
   readonly generations: readonly SessionGenerationFact[]
   readonly toolCalls: readonly SessionToolCallFact[]
+  readonly failedToolSpans: ReadonlySet<string>
   readonly hasCompletion: boolean
 }): Extract<AssessmentFinding, { readonly kind: "toolFailure" }> & { readonly sameSubjectRecovered: boolean } => {
   const detail = call.statusMessage.trim() || call.errorType.trim()
   const references = toolSpanReferences(call)
-  const recovered = hasCompletion && successfulProgressAfter({ failed: call, generations, toolCalls })
+  const recovered = hasCompletion && successfulProgressAfter({ failed: call, generations, toolCalls, failedToolSpans })
 
   return {
     evidenceKey: `span:${call.traceId}:${call.spanId}:tool-failure:${classifyToolError(detail)}`,
@@ -476,7 +501,7 @@ const toolStatusFinding = ({
     independentHumanEvidence: false,
     kind: "toolFailure",
     recovered,
-    sameSubjectRecovered: laterSameToolSucceeded({ failed: call, toolCalls }),
+    sameSubjectRecovered: laterSameToolSucceeded({ failed: call, toolCalls, failedToolSpans }),
     terminal: !recovered,
   }
 }
@@ -497,6 +522,7 @@ const readToolStatusFindings = ({
   readonly readers: AssessmentReaderFact[]
 } => {
   const indexedToolCalls = toolCallsById(toolCalls)
+  const failedToolSpans = failedToolSpanIdentities(deterministic, toolCalls)
 
   const contentDetected = new Map<string, number[]>()
   for (const [index, finding] of deterministic.entries()) {
@@ -518,7 +544,7 @@ const readToolStatusFindings = ({
     if (call.statusCode !== "error") return []
     const identity = toolCallIdentity(call)
     const matchingContent = call.toolCallId === "" ? undefined : contentDetected.get(identity)?.shift()
-    const statusFinding = toolStatusFinding({ call, generations, toolCalls, hasCompletion })
+    const statusFinding = toolStatusFinding({ call, generations, toolCalls, failedToolSpans, hasCompletion })
     if (matchingContent !== undefined) {
       const contentFinding = reconciledDeterministic[matchingContent]
       if (contentFinding?.kind === "toolFailure") {
@@ -763,10 +789,12 @@ const retrySpansThrough = ({
 const retryToolSpansThrough = ({
   failed,
   toolCalls,
+  failedToolSpans,
   normalizedToolName,
 }: {
   readonly failed: SessionToolCallFact
   readonly toolCalls: readonly SessionToolCallFact[]
+  readonly failedToolSpans: ReadonlySet<string>
   readonly normalizedToolName?: string
 }) => {
   const candidates = toolCalls
@@ -779,7 +807,9 @@ const retryToolSpansThrough = ({
     .sort(
       (left, right) => left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
     )
-  const successfulIndex = candidates.findIndex((call) => call.statusCode === "ok")
+  const successfulIndex = candidates.findIndex(
+    (call) => call.statusCode === "ok" && !failedToolSpans.has(toolSpanIdentity(call)),
+  )
   return successfulIndex < 0
     ? []
     : candidates.slice(0, successfulIndex + 1).map((call) => ({
@@ -792,10 +822,12 @@ const retryProgressSpansThrough = ({
   failed,
   generations,
   toolCalls,
+  failedToolSpans,
 }: {
   readonly failed: SessionToolCallFact
   readonly generations: readonly SessionGenerationFact[]
   readonly toolCalls: readonly SessionToolCallFact[]
+  readonly failedToolSpans: ReadonlySet<string>
 }) => {
   const candidates = [
     ...toolCalls
@@ -809,7 +841,7 @@ const retryProgressSpansThrough = ({
         spanId: call.spanId as string,
         startTime: call.startTime,
         endTime: call.endTime,
-        successful: call.statusCode === "ok",
+        successful: call.statusCode === "ok" && !failedToolSpans.has(toolSpanIdentity(call)),
       })),
     ...generations
       .filter(
@@ -839,22 +871,27 @@ const retryProgressSpansThrough = ({
 const laterSameToolSucceeded = ({
   failed,
   toolCalls,
+  failedToolSpans,
 }: {
   readonly failed: SessionToolCallFact
   readonly toolCalls: readonly SessionToolCallFact[]
+  readonly failedToolSpans: ReadonlySet<string>
 }): boolean =>
   failed.normalizedToolName !== "" &&
-  retryToolSpansThrough({ failed, toolCalls, normalizedToolName: failed.normalizedToolName }).length > 0
+  retryToolSpansThrough({ failed, toolCalls, failedToolSpans, normalizedToolName: failed.normalizedToolName }).length >
+    0
 
 const successfulProgressAfter = ({
   failed,
   generations,
   toolCalls,
+  failedToolSpans,
 }: {
   readonly failed: SessionToolCallFact
   readonly generations: readonly SessionGenerationFact[]
   readonly toolCalls: readonly SessionToolCallFact[]
-}): boolean => retryProgressSpansThrough({ failed, generations, toolCalls }).length > 0
+  readonly failedToolSpans: ReadonlySet<string>
+}): boolean => retryProgressSpansThrough({ failed, generations, toolCalls, failedToolSpans }).length > 0
 
 const recoveredProviderIncident = (
   finding: Extract<AssessmentFinding, { readonly kind: "providerError" }>,
@@ -903,11 +940,12 @@ const recoveredToolIncident = (
   finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
   generations: readonly SessionGenerationFact[],
   toolCalls: readonly SessionToolCallFact[],
+  failedToolSpans: ReadonlySet<string>,
 ): RecoveredIncident[] => {
   if (!finding.recovered || finding.terminal) return []
   const failed = failedToolCall(finding, toolCalls)
   if (!failed) return []
-  const retrySpans = retryProgressSpansThrough({ failed, generations, toolCalls })
+  const retrySpans = retryProgressSpansThrough({ failed, generations, toolCalls, failedToolSpans })
   return retrySpans.length === 0
     ? []
     : [
@@ -924,12 +962,14 @@ const recoveredIncidentsFrom = (
   findings: readonly AssessmentFinding[],
   generations: readonly SessionGenerationFact[],
   toolCalls: readonly SessionToolCallFact[],
-): RecoveredIncident[] =>
-  findings.flatMap((finding): RecoveredIncident[] => {
+): RecoveredIncident[] => {
+  const failedToolSpans = failedToolSpanIdentities(findings, toolCalls)
+  return findings.flatMap((finding): RecoveredIncident[] => {
     if (finding.kind === "providerError") return recoveredProviderIncident(finding, generations)
-    if (finding.kind === "toolFailure") return recoveredToolIncident(finding, generations, toolCalls)
+    if (finding.kind === "toolFailure") return recoveredToolIncident(finding, generations, toolCalls, failedToolSpans)
     return []
   })
+}
 
 const recoveredDefectsFrom = (
   findings: readonly AssessmentFinding[],

@@ -689,6 +689,89 @@ describe("readSessionAssessmentSources", () => {
     ).toMatchObject({ recoveredIncidentCount: 0, unrecoveredIncidentCount: 2 })
   })
 
+  it("does not recover a status failure through a content-failed tool span", async () => {
+    const failedCall = toolCall("o", "call-status-failure", 0, 10, {
+      statusCode: "error",
+      statusMessage: "upstream unavailable",
+    })
+    const failedRetry = toolCall("r", "call-content-failure", 11, 20)
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-status-failure", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-status-failure", response: "No inventory" }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-content-failure", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-content-failure", response: { error: "invalid response" } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "No results found" }] },
+      ]),
+      [],
+      { toolCalls: [failedCall, failedRetry] },
+    )
+    const initial = result.findings.find(
+      (finding) =>
+        finding.kind === "toolFailure" &&
+        finding.anchors.some((anchor) => anchor.kind === "span" && anchor.spanId === failedCall.spanId),
+    )
+
+    expect(initial).toMatchObject({ recovered: false, sameSubjectRecovered: false, terminal: true })
+  })
+
+  it("attributes recovery past a content-failed tool span to the later successful generation", async () => {
+    const failedCall = toolCall("o", "call-status-failure", 0, 10, {
+      statusCode: "error",
+      statusMessage: "upstream unavailable",
+    })
+    const failedRetry = toolCall("r", "call-content-failure", 11, 20)
+    const recoveredAnswer = generation("s", 21, 30, { costTotalMicrocents: 325 })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-status-failure", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-status-failure", response: "No inventory" }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-content-failure", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-content-failure", response: { error: "invalid response" } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] },
+      ]),
+      [],
+      { generations: [recoveredAnswer], toolCalls: [failedCall, failedRetry] },
+    )
+    const initial = result.findings.find(
+      (finding) =>
+        finding.kind === "toolFailure" &&
+        finding.anchors.some((anchor) => anchor.kind === "span" && anchor.spanId === failedCall.spanId),
+    )
+
+    expect(initial).toMatchObject({ recovered: true, sameSubjectRecovered: false, terminal: false })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
+    ).toMatchObject({
+      adverseUnits: 325,
+      observations: [expect.objectContaining({ atomId: `generation:${traceId}:${recoveredAnswer.spanId}` })],
+    })
+  })
+
   it("deduplicates a content failure against its unique tool span in an earlier trace", async () => {
     const laterTraceId = TraceId("u".repeat(32))
     const failedCall = toolCall("w", "call-earlier-trace", 0, 10, {
