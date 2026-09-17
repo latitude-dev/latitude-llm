@@ -13,6 +13,11 @@ export interface ProjectRepositoryShape {
   list(): Effect.Effect<readonly Project[], RepositoryError, SqlClient>
   listIncludingDeleted(): Effect.Effect<readonly Project[], RepositoryError, SqlClient>
   save(project: Project): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Stamps `firstTraceAt` only while it is still null, so a later trace never moves
+   * the milestone. Resolves to whether this call was the one that set it.
+   */
+  markFirstTraceAt(id: string, at: Date): Effect.Effect<boolean, RepositoryError, SqlClient>
   softDelete(id: string): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
   hardDelete(id: string): Effect.Effect<void, RepositoryError, SqlClient>
   existsByName(name: string): Effect.Effect<boolean, RepositoryError, SqlClient>

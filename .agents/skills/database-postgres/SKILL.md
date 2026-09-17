@@ -31,6 +31,7 @@ All Postgres access flows through `SqlClient`—a domain-level service that abst
 - Nested transactions share the same connection (pass-through proxy—no nested transaction overhead)
 - Domain errors propagate through Effect error channel; database errors become `RepositoryError`
 - On effect failure, `SqlClientLive` still awaits the Drizzle transaction promise so the connection returns to the pool; if the driver surfaces a **different** error than the Effect failure (for example rollback/commit), that secondary error is logged via `@repo/observability` while the original failure remains the propagated error
+- **Never write to an RLS table through `postgresClient.pool` or `.db`.** `app.current_organization_id` is set with `set_config(..., true)`, so it is transaction-local and a raw pool query has none: `get_current_organization_id()` returns `NULL`, the policy matches nothing, and the statement **updates zero rows and raises no error**. The runtime role (`latitude_app`) is not the table owner and no table uses `FORCE ROW LEVEL SECURITY`, so this passes locally as the owner and silently no-ops in every deployed environment. Add a repository method and go through `SqlClient`. Raw `pool` access is for the admin client (`getAdminPostgresClient()`), scripts, seeds and tables with no RLS (`outbox_events`)
 
 **Usage in boundaries (apps):**
 
