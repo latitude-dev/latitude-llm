@@ -397,15 +397,18 @@ const toolSpanReferences = (call: SessionToolCallFact) => {
 
 const toolStatusFinding = ({
   call,
+  generations,
   toolCalls,
   hasCompletion,
 }: {
   readonly call: SessionToolCallFact
+  readonly generations: readonly SessionGenerationFact[]
   readonly toolCalls: readonly SessionToolCallFact[]
   readonly hasCompletion: boolean
 }): AssessmentFinding => {
   const detail = call.statusMessage.trim() || call.errorType.trim()
   const references = toolSpanReferences(call)
+  const recovered = hasCompletion && successfulProgressAfter({ failed: call, generations, toolCalls })
 
   return {
     evidenceKey: `span:${call.spanId}:tool-failure:${classifyToolError(detail)}`,
@@ -421,17 +424,19 @@ const toolStatusFinding = ({
     destinations: [references.destination],
     independentHumanEvidence: false,
     kind: "toolFailure",
-    recovered: hasCompletion,
+    recovered,
     sameSubjectRecovered: laterSameToolSucceeded({ failed: call, toolCalls }),
-    terminal: !hasCompletion,
+    terminal: !recovered,
   }
 }
 
 const readToolStatusFindings = ({
+  generations,
   toolCalls,
   deterministic,
   hasCompletion,
 }: {
+  readonly generations: readonly SessionGenerationFact[]
   readonly toolCalls: readonly SessionToolCallFact[]
   readonly deterministic: readonly AssessmentFinding[]
   readonly hasCompletion: boolean
@@ -447,7 +452,7 @@ const readToolStatusFindings = ({
   const findings = toolCalls.flatMap((call): AssessmentFinding[] => {
     if (call.statusCode !== "error") return []
     if (call.toolCallId !== "" && contentDetected.has(call.toolCallId)) return []
-    return [toolStatusFinding({ call, toolCalls, hasCompletion })]
+    return [toolStatusFinding({ call, generations, toolCalls, hasCompletion })]
   })
 
   const statusless = toolCalls.filter((call) => call.statusCode === "unset").length
@@ -704,6 +709,18 @@ const laterSameToolSucceeded = ({
   readonly toolCalls: readonly SessionToolCallFact[]
 }): boolean => retryToolSpanIdsThrough({ failed, toolCalls }).length > 0
 
+const successfulProgressAfter = ({
+  failed,
+  generations,
+  toolCalls,
+}: {
+  readonly failed: SessionToolCallFact
+  readonly generations: readonly SessionGenerationFact[]
+  readonly toolCalls: readonly SessionToolCallFact[]
+}): boolean =>
+  laterSameToolSucceeded({ failed, toolCalls }) ||
+  retrySpanIdsThrough({ generations, traceId: failed.traceId, after: failed.endTime }).length > 0
+
 const recoveredProviderIncident = (
   finding: Extract<AssessmentFinding, { readonly kind: "providerError" }>,
   generations: readonly SessionGenerationFact[],
@@ -871,6 +888,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
     const deterministic = yield* readDeterministicFindings(input.session, input.spans)
     const spanFindings = readSpanFindings(input.session, input.spans, deterministic.findings)
     const toolStatusFindings = readToolStatusFindings({
+      generations: input.generations,
       toolCalls: input.toolCalls,
       deterministic: deterministic.findings,
       hasCompletion,

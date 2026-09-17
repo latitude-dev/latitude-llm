@@ -586,6 +586,33 @@ describe("readSessionAssessmentSources", () => {
     expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
   })
 
+  it("keeps a final failed tool call terminal when no successful progress follows", async () => {
+    const failedCall = toolCall("p", "call-terminal-status", 0, 10, {
+      statusCode: "error",
+      statusMessage: "upstream unavailable",
+    })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-terminal-status", name: "search", arguments: {} }],
+        },
+      ]),
+      [],
+      { toolCalls: [failedCall] },
+    )
+
+    expect(result.findings.find((finding) => finding.kind === "usableCompletion")).toBeDefined()
+    expect(result.findings.find((finding) => finding.kind === "toolFailure")).toMatchObject({
+      recovered: false,
+      sameSubjectRecovered: false,
+      terminal: true,
+    })
+    expect(
+      resolveSessionAssessment(result).dimensions.find((summary) => summary.scoreDimension === "reliability"),
+    ).toMatchObject({ unrecoveredIncidentCount: 1 })
+  })
+
   it("counts a tool retried in place, with no generation between the failure and the retry", async () => {
     const failedCall = toolCall("q", "", 0, 10, { statusCode: "error", statusMessage: "503 upstream unavailable" })
     const retryCall = toolCall("r", "", 11, 20)
