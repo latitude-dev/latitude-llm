@@ -37,12 +37,13 @@ Every bundled dependency is an independent toggle. Set `<dep>.enabled=false` and
 
 ## Secrets
 
-By default the chart renders a Secret from values. Optional secret env vars — AI provider keys (`LAT_VOYAGE_API_KEY`, `LAT_OPENAI_API_KEY`, ...), email transport passwords, OAuth client secrets — go in `secrets.extra` and are merged into that same Secret:
+By default the chart renders a Secret from values. Optional secret env vars — AI provider keys (`LAT_VOYAGE_API_KEY`, `LAT_OPENAI_API_KEY`, `LAT_JEV_API_KEY`, ...), email transport passwords, OAuth client secrets — go in `secrets.extra` and are merged into that same Secret:
 
 ```yaml
 secrets:
   extra:
     LAT_VOYAGE_API_KEY: pa-...
+    LAT_JEV_API_KEY: "..."
     LAT_SMTP_PASS: "..."
 ```
 
@@ -57,4 +58,4 @@ To manage secrets yourself, create a Secret and set `secrets.existingSecret` (ad
 
 ## Optional features
 
-The rest of the optional `LAT_*` env contract — email transport settings (required for magic-link sign-in), `LAT_AI_*` model selection, integrations — goes in `config.extraEnv` (standard `EnvVar` entries, `valueFrom` supported). Keep secret values out of `extraEnv` literals: use `secrets.extra` (or `valueFrom.secretKeyRef`) so they live in a Kubernetes Secret instead of the pod spec. See the [configuration reference](https://docs.latitude.so/deployment/configuration).
+The rest of the optional `LAT_*` env contract — email transport settings (required for magic-link sign-in), `LAT_AI_*` model selection, integrations, and non-secret Jev settings (`LAT_JEV_FLAGGER_SHADOW_ENABLED`, `LAT_JEV_BASE_URL`, `LAT_JEV_MODEL`, `LAT_JEV_TIMEOUT_MS`) — goes in `config.extraEnv` (standard `EnvVar` entries, `valueFrom` supported). Keep `LAT_JEV_API_KEY` and other secret values out of `extraEnv` literals: use `secrets.extra` (or `valueFrom.secretKeyRef`) so they live in a Kubernetes Secret instead of the pod spec. See the [configuration reference](https://docs.latitude.so/deployment/configuration).

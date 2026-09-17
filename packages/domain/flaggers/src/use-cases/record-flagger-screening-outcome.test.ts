@@ -20,6 +20,8 @@ const selection: FlaggerScreeningSelection = {
   inclusionProbability: 1,
   hintKinds: ["pattern:refusal"],
   retentionDays: 90,
+  attempt: 1,
+  version: 1,
 }
 
 describe("recordFlaggerScreeningOutcomeUseCase", () => {

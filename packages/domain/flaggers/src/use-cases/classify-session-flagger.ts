@@ -1,19 +1,21 @@
 import type { SafetyFindingKind } from "@domain/scores"
 import { NotFoundError, OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { SessionRepository, SpanRepository } from "@domain/spans"
-import { Effect } from "effect"
-import { FLAGGER_SCORING_ARTIFACT_VERSION } from "../constants.ts"
+import { Cause, Effect } from "effect"
+import { FLAGGER_SCORING_ARTIFACT_VERSION, JEV_SHADOW_OPERATION_TIMEOUT_MS } from "../constants.ts"
 import {
   buildFlaggerSessionContext,
   computeFlaggerAnchorContentHash,
   type FlaggerSessionContext,
 } from "../conversation.ts"
+import type { FlaggerScreeningSelection } from "../entities/flagger-screening-decision.ts"
 import { getFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 import type { FlaggerSlug } from "../flagger-strategies/types.ts"
 import type { SessionHint } from "../hints/types.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { isUserCentricReflagInapplicable } from "../reflag.ts"
 import { classifyConversationForFlaggerUseCase } from "./run-flagger.ts"
+import { runJevShadowUseCase } from "./run-jev-shadow.ts"
 
 export interface ClassifySessionFlaggerInput {
   readonly organizationId: string
@@ -23,6 +25,21 @@ export interface ClassifySessionFlaggerInput {
   readonly hints?: readonly SessionHint[] | undefined
   /** Screening generation this classification belongs to; persisted on the written score. */
   readonly analysisHash?: string | undefined
+  readonly jevShadow?:
+    | {
+        readonly enabled: true
+        readonly screeningSelection?: JevShadowScreeningSelection | undefined
+        readonly workflowId: string
+        readonly workflowRunId: string
+        readonly activityId: string
+        readonly activityAttempt: number
+      }
+    | undefined
+}
+
+type JevShadowScreeningSelection = Omit<FlaggerScreeningSelection, "attempt" | "version"> & {
+  readonly attempt?: number | undefined
+  readonly version?: number | undefined
 }
 
 /**
@@ -141,15 +158,21 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     return { matched: false, outcome: "indeterminate" } satisfies ClassifySessionFlaggerResult
   }
 
-  const result = yield* classifyConversationForFlaggerUseCase({
-    organizationId: input.organizationId,
-    projectId: input.projectId,
-    flaggerSlug: input.flaggerSlug,
-    conversation: context.conversation,
-    sessionId: input.sessionId,
-    traceId: context.latestTraceId,
-    hints: input.hints,
-  })
+  const [, result] = yield* Effect.all(
+    [
+      runJevShadow(input, context),
+      classifyConversationForFlaggerUseCase({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        flaggerSlug: input.flaggerSlug,
+        conversation: context.conversation,
+        sessionId: input.sessionId,
+        traceId: context.latestTraceId,
+        hints: input.hints,
+      }),
+    ],
+    { concurrency: 2 },
+  )
 
   // A verdict flagger's `success` and a Safety detector's non-negative finding
   // need the same anchors as a match: both persist a passed score.
@@ -195,3 +218,34 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     ...anchors,
   } satisfies ClassifySessionFlaggerResult
 })
+
+const runJevShadow = (input: ClassifySessionFlaggerInput, context: FlaggerSessionContext) => {
+  if (input.jevShadow?.enabled !== true) return Effect.void
+
+  const selection = input.jevShadow.screeningSelection
+  return runJevShadowUseCase({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    sessionId: input.sessionId,
+    flaggerSlug: input.flaggerSlug,
+    enabled: true,
+    context,
+    workflowId: input.jevShadow.workflowId,
+    workflowRunId: input.jevShadow.workflowRunId,
+    activityId: input.jevShadow.activityId,
+    activityAttempt: input.jevShadow.activityAttempt,
+    ...(selection === undefined
+      ? {}
+      : {
+          screeningDecision: {
+            ...selection,
+            attempt: selection.attempt ?? 1,
+            version: selection.version ?? 1,
+            createdAt: new Date(),
+          },
+        }),
+  }).pipe(
+    Effect.timeout(JEV_SHADOW_OPERATION_TIMEOUT_MS),
+    Effect.catchCause((cause) => (Cause.hasInterruptsOnly(cause) ? Effect.failCause(cause) : Effect.void)),
+  )
+}

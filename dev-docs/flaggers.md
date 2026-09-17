@@ -149,6 +149,12 @@ classifySessionFlagger ──(matched?)──► draftSessionFlaggerAnnotation �
 - **Adversarial review**: a second classifier call approves or rejects the proposed annotation — the primary precision guard.
 - On a confirmed match the use-case computes the **`contentHash`** (below) and returns it with the session metadata the draft/save steps need.
 
+### Jev shadow pilot
+
+The optional Jev shadow runs inside the existing `classifySessionFlagger` activity after strategy, enabled-row, applicability, and session-context gates, concurrently with the baseline classifier. It only supports `frustration` and `refusal`. It receives the already loaded context and the screening selection, then records an append-only advisory observation in ClickHouse. It never changes the baseline classifier, adversarial reviewer, score writes, or billing. The shadow path has a 3s outer timeout over the 2s provider limit, so a slow provider call still leaves headroom for the audit write.
+
+Three independent gates must all be true before a provider call: `LAT_JEV_FLAGGER_SHADOW_ENABLED` (default `false`), a configured `LAT_JEV_API_KEY`, and the per-organization `jevFlaggerShadow` feature flag. The first two gates run before the feature-flag lookup, so disabled global or API-key gates do not create or call its client. The lookup uses its own size-one bounded Postgres pool: it rejects immediately under load, has a 200ms acquisition limit, a 150ms statement limit, and a 400ms transaction limit. The activity has a 1s outer lookup timeout. Any lookup failure, timeout, or capacity rejection disables the shadow path. Provider and audit-write failures are contained, so they cannot fail or retry the baseline classification activity. The observation carries the Temporal workflow id, run id, activity id, and activity attempt for audit and retry correlation.
+
 Models resolve per stage via `resolveGenerationConfig` (`LAT_AI_FLAGGER_{CLASSIFIER,EXTRACTOR,ANNOTATOR}_*` env overrides): classifier haiku t0/512, extractor + annotator minimax. The classifier's feedback is normally final; the annotator LLM only runs as a fallback for a match without feedback text.
 
 ## Scores, anchors, and dedup

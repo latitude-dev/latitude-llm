@@ -1,6 +1,10 @@
 export { InvalidEnvValueError, MissingEnvValueError } from "@platform/env"
 // Re-export drizzle-orm helpers to ensure consistent type instances
 export { and, asc, desc, eq, inArray, max } from "drizzle-orm"
+export {
+  type BoundedReadPostgresConfig,
+  createBoundedReadPostgresClient,
+} from "./bounded-read-client.ts"
 export type { Operator, PostgresClient, PostgresConfig, PostgresDb } from "./client.ts"
 export {
   closePostgres,
