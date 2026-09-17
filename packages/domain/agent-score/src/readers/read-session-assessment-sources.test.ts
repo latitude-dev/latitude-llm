@@ -962,6 +962,39 @@ describe("readSessionAssessmentSources", () => {
     ).toMatchObject({ adverseUnits: 1 })
   })
 
+  it("does not map a reused-ID content failure to the sole captured retry span", async () => {
+    const capturedRetry = toolCall("z", "call-reused", 11, 20)
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "first" } }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { error: "timeout" } }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "retry" } }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { results: ["found"] } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "Found it" }] },
+      ]),
+      [],
+      { toolCalls: [capturedRetry] },
+    )
+    const failure = result.findings.find((finding) => finding.kind === "toolFailure")
+
+    expect(failure).toBeDefined()
+    expect(failure?.anchors).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "span", spanId: capturedRetry.spanId })]),
+    )
+  })
+
   it("matches a sparse reused-ID content failure to the span whose status failed", async () => {
     const successfulCall = toolCall("y", "call-reused", 0, 10)
     const failedCall = toolCall("z", "call-reused", 11, 20, {
@@ -1294,6 +1327,51 @@ describe("readSessionAssessmentSources", () => {
     expect(
       resolveSessionAssessment(result).dimensions.find((summary) => summary.scoreDimension === "reliability"),
     ).toMatchObject({ recoveredIncidentCount: 0, unrecoveredIncidentCount: 2 })
+  })
+
+  it("does not recover through a truncated generation with no finish reason", async () => {
+    const initialFailure = toolCall("p", "call-initial", 0, 10, {
+      statusCode: "error",
+      statusMessage: "upstream unavailable",
+    })
+    const truncatedRetryGeneration = generation("q", 11, 20, {
+      finishReasons: [],
+      content: null,
+      costTotalMicrocents: 325,
+    })
+    const failedRetry = toolCall("r", "call-retry", 21, 30, {
+      parentSpanId: "unrelated-parent",
+      statusCode: "error",
+      statusMessage: "upstream still unavailable",
+    })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-initial", name: "search", arguments: { q: "first" } }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-initial", response: "No results" }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-retry", name: "search", arguments: { q: "retry" } }],
+        },
+      ]),
+      [],
+      { generations: [truncatedRetryGeneration], toolCalls: [initialFailure, failedRetry] },
+    )
+    const initialFinding = result.findings.find(
+      (finding) =>
+        finding.kind === "toolFailure" &&
+        finding.anchors.some((anchor) => anchor.kind === "span" && anchor.spanId === initialFailure.spanId),
+    )
+
+    expect(initialFinding).toMatchObject({ recovered: false, sameSubjectRecovered: false, terminal: true })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
+    ).toMatchObject({ adverseUnits: 0 })
   })
 
   it("counts a tool retried in place, with no generation between the failure and the retry", async () => {
