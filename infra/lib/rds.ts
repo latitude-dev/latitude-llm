@@ -273,7 +273,7 @@ function createStandardInstance(
   const dbInstance = new aws.rds.Instance(`${name}-postgres`, {
     identifier: `${name}-postgres`,
     engine: "postgres",
-    engineVersion: "16.6",
+    engineVersion: "16.13",
     instanceClass: config.rds.instanceType!,
     allocatedStorage: 20,
     maxAllocatedStorage: 100,
