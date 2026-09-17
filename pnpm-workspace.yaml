@@ -46,7 +46,7 @@ catalog:
   "@temporalio/workflow": 1.17.5
   "@types/node": 22.14.1
   "@types/mustache": 4.2.6
-  "@types/pg": 8.16.0
+  "@types/pg": 8.23.1
   "@types/react": 19.2.14
   "@types/react-dom": 19.2.3
   "@typescript/native-preview": 7.0.0-dev.20260705.1
@@ -71,7 +71,7 @@ catalog:
   js-tiktoken: 1.0.21
   mustache: 4.2.0
   pdfjs-dist: 6.2.108
-  pg: 8.16.0
+  pg: 8.23.0
   quickjs-emscripten: 0.32.0
   react: 19.2.5
   react-dom: 19.2.5
