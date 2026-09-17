@@ -4,7 +4,7 @@ import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { OutboxEventWriterLive, type PostgresClient, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
-import { Cause, Effect, Layer } from "effect"
+import { Effect, Layer } from "effect"
 import { getPostgresClient } from "../clients.ts"
 import { provisionFlaggers } from "../services/provisioning.ts"
 
@@ -80,14 +80,13 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
           OrganizationId(payload.organizationId),
         ),
         withTracing,
-        // Swallowed on purpose — the milestone is analytics, never worth failing a job over.
-        // Logged, because the BullMQ dedupe key is the project id: a silent failure here is a
-        // project whose milestone never lands and nothing to say so.
-        Effect.catchCause((cause) =>
+        Effect.tapError((error) =>
           Effect.sync(() => {
-            logger.error(`First trace milestone failed for project ${payload.projectId}`, Cause.squash(cause))
+            logger.error(`First trace milestone failed for project ${payload.projectId}`, error)
           }),
         ),
+        // `ignore`, not `catchCause`: a defect must still fail the job rather than log as a completed run.
+        Effect.ignore,
       ),
   })
 }
