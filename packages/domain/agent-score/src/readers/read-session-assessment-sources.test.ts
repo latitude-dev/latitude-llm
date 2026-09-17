@@ -638,6 +638,57 @@ describe("readSessionAssessmentSources", () => {
     expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
   })
 
+  it("keeps a content-detected failure terminal when its apparent recovery span failed", async () => {
+    const failedCall = toolCall("o", "call-initial", 0, 10, { statusCode: "error", statusMessage: "timeout" })
+    const failedRetry = toolCall("r", "call-retry", 11, 20, {
+      statusCode: "error",
+      statusMessage: "invalid response",
+    })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-initial", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-initial", response: { error: "timeout" } }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-retry", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-retry", response: { results: [] } }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "No results found" }] },
+      ]),
+      [],
+      { toolCalls: [failedCall, failedRetry] },
+    )
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+
+    expect(failures).toHaveLength(2)
+    expect(failures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          anchors: expect.arrayContaining([expect.objectContaining({ kind: "span", spanId: failedCall.spanId })]),
+          recovered: false,
+          terminal: true,
+        }),
+        expect.objectContaining({
+          anchors: expect.arrayContaining([expect.objectContaining({ kind: "span", spanId: failedRetry.spanId })]),
+          recovered: false,
+          terminal: true,
+        }),
+      ]),
+    )
+    expect(
+      resolveSessionAssessment(result).dimensions.find((summary) => summary.scoreDimension === "reliability"),
+    ).toMatchObject({ recoveredIncidentCount: 0, unrecoveredIncidentCount: 2 })
+  })
+
   it("deduplicates a content failure against its unique tool span in an earlier trace", async () => {
     const laterTraceId = TraceId("u".repeat(32))
     const failedCall = toolCall("w", "call-earlier-trace", 0, 10, {

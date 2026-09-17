@@ -456,7 +456,7 @@ const toolStatusFinding = ({
   readonly generations: readonly SessionGenerationFact[]
   readonly toolCalls: readonly SessionToolCallFact[]
   readonly hasCompletion: boolean
-}): AssessmentFinding => {
+}): Extract<AssessmentFinding, { readonly kind: "toolFailure" }> & { readonly sameSubjectRecovered: boolean } => {
   const detail = call.statusMessage.trim() || call.errorType.trim()
   const references = toolSpanReferences(call)
   const recovered = hasCompletion && successfulProgressAfter({ failed: call, generations, toolCalls })
@@ -491,11 +491,15 @@ const readToolStatusFindings = ({
   readonly toolCalls: readonly SessionToolCallFact[]
   readonly deterministic: readonly AssessmentFinding[]
   readonly hasCompletion: boolean
-}): { readonly findings: AssessmentFinding[]; readonly readers: AssessmentReaderFact[] } => {
+}): {
+  readonly deterministic: AssessmentFinding[]
+  readonly findings: AssessmentFinding[]
+  readonly readers: AssessmentReaderFact[]
+} => {
   const indexedToolCalls = toolCallsById(toolCalls)
 
-  const contentDetected = new Map<string, number>()
-  for (const finding of deterministic) {
+  const contentDetected = new Map<string, number[]>()
+  for (const [index, finding] of deterministic.entries()) {
     if (finding.kind !== "toolFailure") continue
     const uniqueMatch = uniqueToolCallForFinding(finding, indexedToolCalls)
     const identities = new Set(
@@ -504,23 +508,36 @@ const readToolStatusFindings = ({
         return [toolCallIdentity(uniqueMatch ?? anchor)]
       }),
     )
-    for (const identity of identities) contentDetected.set(identity, (contentDetected.get(identity) ?? 0) + 1)
+    for (const identity of identities) {
+      contentDetected.set(identity, [...(contentDetected.get(identity) ?? []), index])
+    }
   }
 
+  const reconciledDeterministic = [...deterministic]
   const findings = toolCalls.flatMap((call): AssessmentFinding[] => {
     if (call.statusCode !== "error") return []
     const identity = toolCallIdentity(call)
-    const matchingContentCount = call.toolCallId === "" ? 0 : (contentDetected.get(identity) ?? 0)
-    if (matchingContentCount > 0) {
-      contentDetected.set(identity, matchingContentCount - 1)
+    const matchingContent = call.toolCallId === "" ? undefined : contentDetected.get(identity)?.shift()
+    const statusFinding = toolStatusFinding({ call, generations, toolCalls, hasCompletion })
+    if (matchingContent !== undefined) {
+      const contentFinding = reconciledDeterministic[matchingContent]
+      if (contentFinding?.kind === "toolFailure") {
+        reconciledDeterministic[matchingContent] = {
+          ...contentFinding,
+          recovered: statusFinding.recovered,
+          sameSubjectRecovered: statusFinding.sameSubjectRecovered,
+          terminal: statusFinding.terminal,
+        }
+      }
       return []
     }
-    return [toolStatusFinding({ call, generations, toolCalls, hasCompletion })]
+    return [statusFinding]
   })
 
   const statusless = toolCalls.filter((call) => call.statusCode === "unset").length
 
   return {
+    deterministic: reconciledDeterministic,
     findings,
     readers: [
       {
@@ -1024,7 +1041,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
             },
           ]
         : []),
-      ...deterministicFindings,
+      ...toolStatusFindings.deterministic,
       ...spanFindings.findings,
       ...toolStatusFindings.findings,
       ...readScoreFindings(input.scores, input.signals, input.screeningDecisions),
