@@ -61,7 +61,7 @@ CREATE TABLE flagger_jev_shadow_observations
     `recorded_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
 )
 ENGINE = ReplacingMergeTree(activity_attempt)
-PARTITION BY organization_id
+PARTITION BY (organization_id, toYYYYMM(observed_at))
 PRIMARY KEY (organization_id, project_id, session_id, flagger_slug, analysis_hash, observation_id)
 ORDER BY (organization_id, project_id, session_id, flagger_slug, analysis_hash, observation_id)
 SETTINGS index_granularity = 8192;

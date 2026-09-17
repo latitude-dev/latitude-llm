@@ -33,7 +33,7 @@ export const JEV_SHADOW_REFUSAL_QUESTION_VERSION = "jev-refusal-v1"
 export const JEV_SHADOW_POLICY_VERSION = "jev-shadow-policy-v1"
 export const JEV_SHADOW_STATE_BUILDER_VERSION = "jev-shadow-state-v1"
 export const JEV_SHADOW_RETENTION_DAYS = 90
-export const JEV_SHADOW_OPERATION_TIMEOUT_MS = 2_000
+export const JEV_SHADOW_OPERATION_TIMEOUT_MS = 3_000
 export const JEV_SHADOW_PROVIDER_FAILURE_KINDS = [
   "timeout",
   "authentication",

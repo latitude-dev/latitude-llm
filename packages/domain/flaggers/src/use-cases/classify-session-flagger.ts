@@ -158,17 +158,21 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     return { matched: false, outcome: "indeterminate" } satisfies ClassifySessionFlaggerResult
   }
 
-  yield* runJevShadow(input, context)
-
-  const result = yield* classifyConversationForFlaggerUseCase({
-    organizationId: input.organizationId,
-    projectId: input.projectId,
-    flaggerSlug: input.flaggerSlug,
-    conversation: context.conversation,
-    sessionId: input.sessionId,
-    traceId: context.latestTraceId,
-    hints: input.hints,
-  })
+  const [, result] = yield* Effect.all(
+    [
+      runJevShadow(input, context),
+      classifyConversationForFlaggerUseCase({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        flaggerSlug: input.flaggerSlug,
+        conversation: context.conversation,
+        sessionId: input.sessionId,
+        traceId: context.latestTraceId,
+        hints: input.hints,
+      }),
+    ],
+    { concurrency: 2 },
+  )
 
   // A verdict flagger's `success` and a Safety detector's non-negative finding
   // need the same anchors as a match: both persist a passed score.
