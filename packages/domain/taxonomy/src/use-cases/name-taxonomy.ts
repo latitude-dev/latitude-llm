@@ -126,6 +126,13 @@ const withNamingTimeout = <A, E, R>(effect: Effect.Effect<A, E, R>, durationMs =
 // reads as a tag to the model without being parseable as one.
 const defangTags = (text: string): string => text.replaceAll("<", "‹").replaceAll(">", "›")
 
+// JS strings are UTF-16 and a persisted observation summary can carry an
+// unpaired surrogate (e.g. a code-unit slice that split an emoji). Sent
+// verbatim, it breaks the model provider's JSON request encoding, so strip it
+// before the summary is used as a naming sample.
+const stripLoneSurrogates = (text: string): string =>
+  text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "�")
+
 const truncateSample = (sample: string, maxChars: number): string =>
   sample.length <= maxChars ? sample : `${sample.slice(0, maxChars)}…`
 
@@ -299,8 +306,10 @@ const readableObservationSummary = (value: unknown): string | null => {
   if (typeof value !== "string") return null
   const trimmed = value.trim()
   if (trimmed.length === 0) return null
-  return trimmed
+  return stripLoneSurrogates(trimmed)
 }
+
+export const readableObservationSummaryForTesting = readableObservationSummary
 
 const NAMING_SAMPLE_TRUNCATION_MARKER = "\n[...truncated...]\n"
 
