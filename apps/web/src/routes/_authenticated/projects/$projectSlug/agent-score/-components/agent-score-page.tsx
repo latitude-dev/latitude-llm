@@ -16,6 +16,7 @@ import {
   agentScoreExplanationForSnapshot,
   agentScoreRefreshCompleted,
   agentScoreRefreshMarker,
+  agentScoreSnapshotEvidenceCompleted,
   agentScoreSnapshotMarker,
   agentVitalityIsLoading,
   isCurrentAgentScoreSnapshot,
@@ -97,9 +98,11 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
             snapshot: nextSnapshot,
             explanation: nextExplanation,
           })
-          const snapshotEvidenceDone =
-            !needsSnapshotEvidence ||
-            (nextSnapshotExplanation !== null && nextSnapshotExplanation.computedAt !== previousSnapshotExplanationTime)
+          const snapshotEvidenceDone = agentScoreSnapshotEvidenceCompleted({
+            needsSnapshotEvidence,
+            previousSnapshotExplanationTime,
+            snapshotExplanation: nextSnapshotExplanation,
+          })
           return todayDone && snapshotEvidenceDone ? nextMarker : previousMarker
         },
       })

@@ -174,19 +174,12 @@ const snapshotEvidenceMissing = async ({
 }
 
 export const refreshProjectAgentScore = createServerFn({ method: "POST" })
-  .inputValidator(
-    projectInput.extend({
-      date: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/)
-        .optional(),
-    }),
-  )
+  .inputValidator(projectInput)
   .handler(async ({ data, context }): Promise<{ enqueued: true; date: string }> => {
     const orgId = await resolveOrgScope(context)
     const publisher = await getQueuePublisher()
     const projectId = ProjectId(data.projectId)
-    const date = data.date ?? new Date().toISOString().slice(0, 10)
+    const date = new Date().toISOString().slice(0, 10)
     const publish = (taskDate: string) =>
       Effect.runPromise(
         publisher
@@ -207,21 +200,19 @@ export const refreshProjectAgentScore = createServerFn({ method: "POST" })
           .pipe(withTracing),
       )
     await publish(date)
-    if (!data.date) {
-      const latest = await Effect.runPromise(
-        getLatestAgentScore({ organizationId: orgId, projectId }).pipe(
-          withScopedPostgres(AgentScoreSnapshotRepositoryLive, getPostgresClient(), orgId),
-          withTracing,
-        ),
-      )
-      const snapshotDate = latest.available ? latest.snapshot.date : null
-      if (
-        snapshotDate &&
-        snapshotDate !== date &&
-        (await snapshotEvidenceMissing({ organizationId: orgId, projectId, snapshotDate }))
-      ) {
-        await publish(snapshotDate)
-      }
+    const latest = await Effect.runPromise(
+      getLatestAgentScore({ organizationId: orgId, projectId }).pipe(
+        withScopedPostgres(AgentScoreSnapshotRepositoryLive, getPostgresClient(), orgId),
+        withTracing,
+      ),
+    )
+    const snapshotDate = latest.available ? latest.snapshot.date : null
+    if (
+      snapshotDate &&
+      snapshotDate !== date &&
+      (await snapshotEvidenceMissing({ organizationId: orgId, projectId, snapshotDate }))
+    ) {
+      await publish(snapshotDate)
     }
     return { enqueued: true, date }
   })

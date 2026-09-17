@@ -16,6 +16,32 @@ export type AgentScoreExplanationResult =
   | { readonly status: "notComputed" }
 
 /**
+ * The latest pointer only moves forward.
+ *
+ * Refresh can enqueue a forced recompute for an older snapshot date beside
+ * today's run, and queue jobs finish out of order. An older backfill must not
+ * reclobber the pointer once a newer explanation has landed. Dates are
+ * `YYYY-MM-DD`, so a plain string comparison orders them.
+ */
+export const shouldAdvanceLatestExplanation = ({
+  existingDate,
+  incomingDate,
+}: {
+  readonly existingDate: string | null
+  readonly incomingDate: string
+}): boolean => existingDate === null || incomingDate >= existingDate
+
+const readLatestExplanationDate = (cached: string | null): string | null => {
+  if (!cached) return null
+  try {
+    const parsed = JSON.parse(cached) as { readonly date?: unknown }
+    return typeof parsed.date === "string" ? parsed.date : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Stores an explanation the caller already has.
  *
  * The daily job calls this straight after writing the snapshot, because it has just done the work
@@ -41,13 +67,25 @@ export const cacheAgentScoreExplanation = Effect.fn("agentScore.cacheExplanation
     { ttlSeconds: AGENT_SCORE_EXPLANATION_TTL_SECONDS },
   )
   if (explanation.publication.status === "published") {
-    yield* cache.set(
-      latestAgentScoreExplanationCacheKey({
-        organizationId: input.result.organizationId,
-        projectId: input.result.projectId,
-      }),
-      JSON.stringify(explanation),
-    )
+    const existing = yield* cache
+      .get(
+        latestAgentScoreExplanationCacheKey({
+          organizationId: input.result.organizationId,
+          projectId: input.result.projectId,
+        }),
+      )
+      .pipe(Effect.catchTag("CacheError", () => Effect.succeed(null)))
+    if (
+      shouldAdvanceLatestExplanation({ existingDate: readLatestExplanationDate(existing), incomingDate: input.date })
+    ) {
+      yield* cache.set(
+        latestAgentScoreExplanationCacheKey({
+          organizationId: input.result.organizationId,
+          projectId: input.result.projectId,
+        }),
+        JSON.stringify(explanation),
+      )
+    }
   }
   return true
 })
