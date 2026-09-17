@@ -509,6 +509,20 @@ const retainedConversationStartsAtSessionInput = (session: SessionDetail): boole
     (message, index) => JSON.stringify(message) === JSON.stringify(session.lastInputMessages[index]),
   )
 
+const retainedConversationCutoff = (
+  session: SessionDetail,
+  generations: readonly SessionGenerationFact[],
+): Date | undefined =>
+  generations
+    .filter(
+      (generation) =>
+        isLlmCompletionOperation(generation.operation) &&
+        generation.content !== null &&
+        JSON.stringify(generation.content.outputMessages) === JSON.stringify(session.outputMessages),
+    )
+    .sort((left, right) => right.startTime.getTime() - left.startTime.getTime())
+    .at(0)?.startTime
+
 const uniqueAlignedToolCallForFinding = (
   finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
   indexed: ReadonlyMap<string, readonly SessionToolCallFact[]>,
@@ -529,8 +543,14 @@ const resolveDeterministicToolReferences = (
   findings: readonly AssessmentFinding[],
   toolCalls: readonly SessionToolCallFact[],
   session: SessionDetail,
+  generations: readonly SessionGenerationFact[],
 ): AssessmentFinding[] => {
-  const indexed = toolCallsById(toolCalls)
+  const retainedWindowComplete = retainedConversationStartsAtSessionInput(session)
+  const retainedCutoff = retainedConversationCutoff(session, generations)
+  const eligibleToolCalls = retainedCutoff
+    ? toolCalls.filter((call) => call.endTime.getTime() <= retainedCutoff.getTime())
+    : toolCalls
+  const indexed = toolCallsById(eligibleToolCalls)
   const findingCountByIdentity = new Map<string, number>()
   for (const finding of findings) {
     if (finding.kind !== "toolFailure" || uniqueAlignedToolCallForFinding(finding, indexed, session)) continue
@@ -550,19 +570,25 @@ const resolveDeterministicToolReferences = (
       const anchor = toolCallAnchors.length === 1 ? toolCallAnchors[0] : undefined
       if (anchor?.kind === "toolCall") {
         const identity = toolCallIdentity(anchor)
-        const orderedMatches = (indexed.get(anchor.toolCallId) ?? []).sort(
+        const allOrderedMatches = (indexed.get(anchor.toolCallId) ?? []).sort(
           (left, right) =>
             left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
         )
+        const responsePosition = retainedToolCallPosition(finding, anchor, session)
+        const traceMatches = allOrderedMatches.filter((call) => call.traceId === anchor.traceId)
+        const orderedMatches =
+          retainedWindowComplete && responsePosition && traceMatches.length === responsePosition.total
+            ? traceMatches
+            : allOrderedMatches
         const matches = orderedMatches.filter((call) => !matchedSpanIdentities.has(toolSpanIdentity(call)))
         const matchedCount = matchedCountByIdentity.get(identity) ?? 0
         const remainingFindings = (findingCountByIdentity.get(identity) ?? 0) - matchedCount
-        const responsePosition = retainedToolCallPosition(finding, anchor, session)
         const responseMatch = alignedRetainedResponseMatch({ finding, anchor, session, orderedMatches })
         const responseMatchIsUnambiguous =
           responseMatch !== undefined &&
-          (retainedConversationStartsAtSessionInput(session) ||
-            (responsePosition !== undefined && orderedMatches.length > responsePosition.total))
+          responsePosition !== undefined &&
+          ((retainedWindowComplete && orderedMatches.length === responsePosition.total) ||
+            (!retainedWindowComplete && retainedCutoff !== undefined && orderedMatches.length > responsePosition.total))
         matchingCall =
           responseMatchIsUnambiguous && !matchedSpanIdentities.has(toolSpanIdentity(responseMatch))
             ? responseMatch
@@ -746,6 +772,11 @@ const readScoreFindings = (
   scores: readonly Score[],
   signals: readonly SignalWithLifecycle[],
   screeningDecisions: NormalizedSessionAssessmentInput["screeningDecisions"],
+  evidenceAliases: readonly {
+    readonly sourceEvidenceKey: string
+    readonly targetEvidenceKey: string
+    readonly messageIndex?: number
+  }[] = [],
 ): AssessmentFinding[] => {
   const signalsById = new Map<string, SignalWithLifecycle>(signals.map((signal) => [signal.id, signal]))
   return scores.flatMap((score): AssessmentFinding[] => {
@@ -754,7 +785,17 @@ const readScoreFindings = (
     if (signal?.ignoredAt) return []
     const metadata = score.sourceType === "annotation" ? score.metadata : undefined
     const observationProbability = scoreObservationProbability(score, screeningDecisions)
-    const evidenceKey = metadata?.flaggerFindingKey ?? `score:${score.id}`
+    const aliasCandidates = metadata?.flaggerFindingKey
+      ? evidenceAliases.filter(
+          (alias) =>
+            alias.sourceEvidenceKey === metadata.flaggerFindingKey &&
+            (metadata.messageIndex === undefined || alias.messageIndex === metadata.messageIndex),
+        )
+      : []
+    const evidenceKey =
+      aliasCandidates.length === 1
+        ? (aliasCandidates[0]?.targetEvidenceKey ?? `score:${score.id}`)
+        : (metadata?.flaggerFindingKey ?? `score:${score.id}`)
     const signalIds = signal ? [signal.id] : []
     const references = scoreAnchors(score)
     const base = {
@@ -1220,7 +1261,19 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       deterministic.findings,
       input.toolCalls,
       input.session,
+      input.generations,
     )
+    const deterministicEvidenceAliases = deterministic.findings.flatMap((finding, index) => {
+      const resolved = deterministicFindings[index]
+      if (!resolved || resolved.evidenceKey === finding.evidenceKey) return []
+      return [
+        {
+          sourceEvidenceKey: finding.evidenceKey,
+          targetEvidenceKey: resolved.evidenceKey,
+          ...(finding.chronology.messageIndex !== undefined ? { messageIndex: finding.chronology.messageIndex } : {}),
+        },
+      ]
+    })
     const spanFindings = readSpanFindings(input.session, input.spans, deterministicFindings)
     const toolStatusFindings = readToolStatusFindings({
       generations: input.generations,
@@ -1250,7 +1303,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       ...toolStatusFindings.deterministic,
       ...spanFindings.findings,
       ...toolStatusFindings.findings,
-      ...readScoreFindings(input.scores, input.signals, input.screeningDecisions),
+      ...readScoreFindings(input.scores, input.signals, input.screeningDecisions, deterministicEvidenceAliases),
       ...readMomentFindings(input.moments),
     ]
 

@@ -384,6 +384,45 @@ describe("readSessionAssessmentSources", () => {
     })
   })
 
+  it("keeps a linked deterministic score on a span-scoped tool failure", async () => {
+    const failedCall = toolCall("k", "call-linked", 0, 10)
+    const value = session([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-linked", name: "search", arguments: { q: "linked" } }],
+      },
+      {
+        role: "tool",
+        parts: [{ type: "tool_call_response", id: "call-linked", response: { error: "timeout" } }],
+      },
+      { role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] },
+    ])
+    const deterministic = await read(value)
+    const selected = deterministic.findings.find((finding) => finding.kind === "toolFailure")
+    if (!selected) throw new Error("expected tool failure")
+    const linkedScore = score("score-linked", "signal-linked", {
+      flaggerSlug: "tool-call-errors",
+      flaggerPath: "deterministic",
+      flaggerFindingKey: selected.evidenceKey,
+      messageIndex: selected.chronology.messageIndex,
+    })
+    const resolved = resolveSessionAssessment(
+      await read(value, [], {
+        scores: [linkedScore],
+        signals: [signal("signal-linked")],
+        toolCalls: [failedCall],
+      }),
+    )
+    const failure = resolved.items.find((item) => item.metricId === "tools.call_failed")
+
+    expect(failure).toMatchObject({
+      scoreIds: ["score-linked"],
+      signalIds: ["signal-linked"],
+      groupKey: "signal:signal-linked",
+    })
+    expect(resolved.items.filter((item) => item.scoreIds.includes(ScoreId("score-linked")))).toHaveLength(1)
+  })
+
   it("groups overlapping active signals, excludes ignored signal scores, and exposes unexamined flaggers", async () => {
     const activeSignal = signal("signal-overlap")
     const ignoredSignal = signal("signal-ignored", true)
@@ -1036,6 +1075,48 @@ describe("readSessionAssessmentSources", () => {
     )
   })
 
+  it("does not suffix-align a retained failure to a telemetry-only call after the final response", async () => {
+    const actualFailure = toolCall("y", "call-reused", 10, 20, {
+      statusCode: "error",
+      statusMessage: "timeout",
+    })
+    const laterTelemetryCall = toolCall("z", "call-reused", 50, 60)
+    const retained = {
+      ...session([{ role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] }]),
+      lastInputMessages: [
+        { role: "user" as const, parts: [{ type: "text" as const, content: "Help" }] },
+        {
+          role: "assistant" as const,
+          parts: [{ type: "tool_call" as const, id: "call-reused", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool" as const,
+          parts: [{ type: "tool_call_response" as const, id: "call-reused", response: { error: "timeout" } }],
+        },
+      ],
+    }
+    const finalGeneration = generation("q", 30, 40, {
+      content: {
+        inputMessages: retained.lastInputMessages,
+        outputMessages: retained.outputMessages,
+        toolDefinitions: [],
+      },
+    })
+    const result = await read(retained, [], {
+      generations: [finalGeneration],
+      toolCalls: [actualFailure, laterTelemetryCall],
+    })
+    const failure = result.findings.find((finding) => finding.kind === "toolFailure")
+
+    expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
+    expect(failure?.anchors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "span", spanId: actualFailure.spanId })]),
+    )
+    expect(failure?.anchors).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "span", spanId: laterTelemetryCall.spanId })]),
+    )
+  })
+
   it("matches a sparse reused-ID content failure to the span whose status failed", async () => {
     const successfulCall = toolCall("y", "call-reused", 0, 10)
     const failedCall = toolCall("z", "call-reused", 11, 20, {
@@ -1084,8 +1165,8 @@ describe("readSessionAssessmentSources", () => {
       statusCode: "error",
       statusMessage: "timeout",
     })
-    const result = await read(
-      session([
+    const retained = {
+      ...session([
         {
           role: "assistant",
           parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "retained" } }],
@@ -1096,9 +1177,19 @@ describe("readSessionAssessmentSources", () => {
         },
         { role: "assistant", parts: [{ type: "text", content: "No results found" }] },
       ]),
-      [],
-      { toolCalls: [truncatedSuccessfulCall, retainedFailedCall] },
-    )
+      inputMessages: [{ role: "user" as const, parts: [{ type: "text" as const, content: "Earlier" }] }],
+    }
+    const finalGeneration = generation("x", 21, 30, {
+      content: {
+        inputMessages: retained.lastInputMessages,
+        outputMessages: retained.outputMessages,
+        toolDefinitions: [],
+      },
+    })
+    const result = await read(retained, [], {
+      generations: [finalGeneration],
+      toolCalls: [truncatedSuccessfulCall, retainedFailedCall],
+    })
     const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
 
     expect(failures).toHaveLength(1)
@@ -1120,8 +1211,8 @@ describe("readSessionAssessmentSources", () => {
       statusMessage: "timeout",
     })
     const retainedContentFailure = toolCall("z", "call-reused", 11, 20)
-    const result = await read(
-      session([
+    const retained = {
+      ...session([
         {
           role: "assistant",
           parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: { q: "retained" } }],
@@ -1132,9 +1223,19 @@ describe("readSessionAssessmentSources", () => {
         },
         { role: "assistant", parts: [{ type: "text", content: "No results found" }] },
       ]),
-      [],
-      { toolCalls: [truncatedStatusFailure, retainedContentFailure] },
-    )
+      inputMessages: [{ role: "user" as const, parts: [{ type: "text" as const, content: "Earlier" }] }],
+    }
+    const finalGeneration = generation("x", 21, 30, {
+      content: {
+        inputMessages: retained.lastInputMessages,
+        outputMessages: retained.outputMessages,
+        toolDefinitions: [],
+      },
+    })
+    const result = await read(retained, [], {
+      generations: [finalGeneration],
+      toolCalls: [truncatedStatusFailure, retainedContentFailure],
+    })
     const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
     const anchoredSpanIds = failures.flatMap((finding) =>
       finding.anchors.flatMap((anchor) => (anchor.kind === "span" ? [anchor.spanId] : [])),
