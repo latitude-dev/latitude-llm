@@ -694,7 +694,7 @@ class _Builder:
             return
         span.attrs["gen_ai.request.stream"] = True
         if watch.error:
-            span.attrs["hermes.stream.error"] = watch.error
+            span.attrs["hermes.stream.error:gated"] = watch.error
         if watch.first_delta_ms is None:
             return
         ttft_ms = max(0, watch.first_delta_ms - span.start_ms)
@@ -983,4 +983,4 @@ def _abandon(span: _Span, message: str, now: int) -> None:
     span.outcome = "error"
     span.error_message = message
     span.attrs["error.type"] = "abandoned"
-    span.attrs["error.message"] = message
+    span.attrs["error.message:gated"] = message

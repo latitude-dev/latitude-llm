@@ -120,7 +120,7 @@ Common to every span (`builder._context`):
 
 `interaction` root: `span.type`, `interaction.kind` (`user` / `subagent` / `background` / `auxiliary`), `user_prompt:gated` (from `user_message`, never scanned out of history), `gen_ai.input.messages:gated`, `gen_ai.output.messages:gated`, `gen_ai.system_instructions:gated`, `hermes.llm_calls`, `hermes.tool_calls`, `hermes.llm_calls_unreported`, `hermes.unknown_items`, `hermes.turn.outcome`, `hermes.turn.exit_reason`, `interaction.duration_ms`.
 
-`llm_request`: `gen_ai.operation.name=chat`, provider/model/`gen_ai.response.model`, `gen_ai.input.messages:gated`, `gen_ai.output.messages:gated`, `gen_ai.system_instructions:gated`, `gen_ai.tool.definitions:gated`, `gen_ai.request.max_tokens`, `gen_ai.request.stream`, `gen_ai.server.time_to_first_token`, the `gen_ai.usage.*` family, `gen_ai.response.finish_reasons`, `llm_request.call_index`, `llm_request.duration_ms`, `hermes.api_duration_s`, `hermes.retry_count`, `hermes.approx_input_tokens`, `hermes.message_count`, `hermes.tool_count`, `hermes.usage.state`, and on failure `error.type` / `error.message:gated` / `hermes.error.status_code` / `hermes.error.retryable` / `hermes.error.reason`.
+`llm_request`: `gen_ai.operation.name=chat`, provider/model/`gen_ai.response.model`, `gen_ai.input.messages:gated`, `gen_ai.output.messages:gated`, `gen_ai.system_instructions:gated`, `gen_ai.tool.definitions:gated`, `gen_ai.request.max_tokens`, `gen_ai.request.stream`, `gen_ai.server.time_to_first_token`, the `gen_ai.usage.*` family, `gen_ai.response.finish_reasons`, `llm_request.call_index`, `llm_request.duration_ms`, `hermes.api_duration_s`, `hermes.retry_count`, `hermes.approx_input_tokens`, `hermes.message_count`, `hermes.tool_count`, `hermes.usage.state`, `hermes.stream.error:gated`, and on failure `error.type` / `error.message:gated` / `hermes.error.status_code` / `hermes.error.retryable` / `hermes.error.reason`.
 
 Tool definitions are resolved **per call**, keeping the most trustworthy answer seen so far, and the span states which it is via `hermes.tool_definitions.source`:
 
@@ -222,6 +222,8 @@ Two independent controls, deliberately complementary:
 - **Attribute redaction** blanks a whole attribute the operator never wants to leave the machine (`LATITUDE_HERMES_REDACT_ATTRIBUTES`, exact key or `/regex/flags`, ported from `packages/telemetry/openclaw/src/redaction.ts`). A redacted key is **kept**, never dropped, so the Attributes panel still shows what the emitter sent — the same reasoning as `spans.md`'s "redaction never deletes an attribute". An unparseable pattern degrades to an exact-key match rather than throwing away the request.
 
 `LATITUDE_NO_CONTENT` remains the all-or-nothing switch: gated attributes are dropped entirely and `latitude.captured.content=false`.
+
+Error text is content, and the span's **status message** is gated with it. A provider routinely quotes the request it rejected, so a 400 body can carry the prompt verbatim; the status message is also the one string that reaches the wire outside `_encode_attrs`, so it takes the budget and the secret redactor in `_status_message` rather than travelling raw. With content off, `status.code` and the ungated `error.type` / `hermes.error.*` family still classify every failure — which is all the sibling emitters (`openclaw`, `claude-code`) ever send, since neither sets a status message at all.
 
 ## Hermes-internal imports
 
