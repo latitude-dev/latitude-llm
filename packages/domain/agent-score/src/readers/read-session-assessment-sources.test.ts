@@ -586,6 +586,41 @@ describe("readSessionAssessmentSources", () => {
     expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
   })
 
+  it("does not deduplicate matching tool-call IDs from different traces", async () => {
+    const otherTraceId = TraceId("u".repeat(32))
+    const primaryFailure = toolCall("w", "call-shared", 0, 10, {
+      statusCode: "error",
+      statusMessage: "timeout",
+    })
+    const otherFailure = toolCall("x", "call-shared", 0, 10, {
+      traceId: otherTraceId,
+      statusCode: "error",
+      statusMessage: "rate limited",
+    })
+    const value = session([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-shared", name: "search", arguments: {} }],
+      },
+      {
+        role: "tool",
+        parts: [{ type: "tool_call_response", id: "call-shared", response: { error: "timeout" } }],
+      },
+      { role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] },
+    ])
+    const result = await read({ ...value, traceIds: [otherTraceId, traceId] }, [], {
+      toolCalls: [primaryFailure, otherFailure],
+    })
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+
+    expect(failures).toHaveLength(2)
+    expect(
+      failures.flatMap((finding) =>
+        finding.anchors.flatMap((anchor) => (anchor.kind === "toolCall" ? [anchor.traceId] : [])),
+      ),
+    ).toEqual(expect.arrayContaining([traceId, otherTraceId]))
+  })
+
   it("keeps a final failed tool call terminal when no successful progress follows", async () => {
     const failedCall = toolCall("p", "call-terminal-status", 0, 10, {
       statusCode: "error",

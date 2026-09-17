@@ -395,6 +395,9 @@ const toolSpanReferences = (call: SessionToolCallFact) => {
   }
 }
 
+const toolCallIdentity = ({ traceId, toolCallId }: { readonly traceId: string; readonly toolCallId: string }): string =>
+  `${traceId}:${toolCallId}`
+
 const toolStatusFinding = ({
   call,
   generations,
@@ -444,14 +447,14 @@ const readToolStatusFindings = ({
   const contentDetected = new Set(
     deterministic.flatMap((finding) =>
       finding.kind === "toolFailure"
-        ? finding.anchors.flatMap((anchor) => (anchor.kind === "toolCall" ? [anchor.toolCallId] : []))
+        ? finding.anchors.flatMap((anchor) => (anchor.kind === "toolCall" ? [toolCallIdentity(anchor)] : []))
         : [],
     ),
   )
 
   const findings = toolCalls.flatMap((call): AssessmentFinding[] => {
     if (call.statusCode !== "error") return []
-    if (call.toolCallId !== "" && contentDetected.has(call.toolCallId)) return []
+    if (call.toolCallId !== "" && contentDetected.has(toolCallIdentity(call))) return []
     return [toolStatusFinding({ call, generations, toolCalls, hasCompletion })]
   })
 
