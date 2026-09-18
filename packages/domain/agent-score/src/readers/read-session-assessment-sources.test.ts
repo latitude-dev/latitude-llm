@@ -513,11 +513,9 @@ describe("readSessionAssessmentSources", () => {
 
   it("anchors a status failure without a call ID directly to its span", async () => {
     const failed = toolCall("q", "", 0, 10, { statusCode: "error" })
-    const result = await read(
-      session([{ role: "assistant", parts: [{ type: "text", content: "No result" }] }]),
-      [],
-      { toolCalls: [failed] },
-    )
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "No result" }] }]), [], {
+      toolCalls: [failed],
+    })
     const failure = result.findings.find((finding) => finding.kind === "toolFailure")
 
     expect(failure?.anchors).toEqual([{ kind: "span", traceId, spanId: failed.spanId }])
