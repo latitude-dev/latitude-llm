@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## v0.3.108 - 2026-09-18
+
+### Agent Score
+
+- Snapshot jobs no longer exhaust the ClickHouse query memory limit: the remaining trace-scoped span reads now run in bounded trace batches with the same single-thread settings as the generation-fact read, and the per-project eligibility subquery gained a partition bound so it stops scanning every month a project ever recorded. Snapshot job logs now carry the organization, project, and score date (ref: #4687).
+- The refresh poll now outlives the publish throttle and backs off after the first 30 seconds, so a refresh that takes longer than four minutes no longer tells the reader to retry into a throttled queue (ref: #4687).
+- Issue counts in the score breakdown now report observed sessions instead of inflated estimates, with rounding aligned across the resolver and the page (ref: #4685).
+
+### Backoffice
+
+- Project pages now show the Agent Score evidence behind each dimension, with a recalculate action that refreshes what is displayed (ref: #4686).
+
 ## v0.3.107 - 2026-09-18
 
 ### Agent Score
