@@ -11,12 +11,14 @@ import {
 import type { FlaggerSessionContext } from "../conversation.ts"
 import type { FlaggerScreeningSelectionReason } from "../entities/flagger-screening-decision.ts"
 import type { JevPreclassifierObservation } from "../entities/jev-preclassifier-observation.ts"
+import { isSafetySuiteSlug, SAFETY_SUITE_KEY } from "../entities/safety-suite.ts"
 import { JEV_PRECLASSIFIER_STRATEGIES, type JevPreclassifierStrategy } from "../jev-preclassifier-strategies.ts"
 import { JevPreclassifierObservationRepository } from "../ports/jev-preclassifier-observation-repository.ts"
 import { JevShadowDecisionProvider, type JevShadowProviderResult } from "../ports/jev-shadow-decision-provider.ts"
 import type { FlaggerCacheEntry } from "./get-project-flaggers.ts"
 import type {
   CheckFlaggerLlmRateLimit,
+  FlaggerSelectionEvidence,
   PendingFlaggerClassificationRequest,
   SessionFlaggerDecision,
 } from "./screen-session-flaggers.ts"
@@ -90,46 +92,75 @@ const unknownResult: JevShadowProviderResult = {
   outputTokens: null,
 }
 
-const gateWithPreclassifier = (args: {
+const aboveThreshold = (probability: number | null, threshold: number) =>
+  probability !== null && probability >= threshold
+
+const isSampledOutDrop = (decision: SessionFlaggerDecision) =>
+  decision.action === "dropped" && decision.reason === "sampled-out"
+
+const withPropensityCorrection = (
+  baseline: SessionFlaggerDecision,
+  probability: number | null,
+  threshold: number,
+): SessionFlaggerDecision => {
+  // Already examined (ordinary sample / hint / etc.) but Jev would also select
+  // with certainty → union inclusion is 1. Update evidence only; do not enqueue
+  // a duplicate classification.
+  if (
+    !aboveThreshold(probability, threshold) ||
+    baseline.action !== "classify" ||
+    baseline.selection?.inclusionProbability === 1
+  ) {
+    return baseline
+  }
+  const selection: FlaggerSelectionEvidence = {
+    reason: baseline.selection?.reason ?? selectionReason(baseline),
+    inclusionProbability: 1,
+  }
+  return { ...baseline, selection }
+}
+
+const buildJevGateIn = (args: {
+  readonly strategy: JevPreclassifierStrategy
+  readonly flagger: FlaggerCacheEntry
+}) => {
+  const selection: FlaggerSelectionEvidence = {
+    reason: "jev-preclassifier",
+    inclusionProbability: 1,
+  }
+  return {
+    decision: {
+      slug: args.strategy.slug,
+      action: "classify" as const,
+      reason: "jev-preclassifier" as const,
+      hintKinds: [],
+      selection,
+    } satisfies SessionFlaggerDecision,
+    classification: {
+      flaggerId: args.flagger.flaggerId,
+      flaggerSlug: args.strategy.slug,
+      reason: "jev-preclassifier" as const,
+    } satisfies PendingFlaggerClassificationRequest,
+  }
+}
+
+const isGateCandidate = (args: {
   readonly input: RunJevPreclassifierInput
   readonly strategy: JevPreclassifierStrategy
   readonly baseline: SessionFlaggerDecision
   readonly probability: number | null
-}) =>
-  Effect.gen(function* () {
-    const { input, strategy, baseline, probability } = args
-    if (
-      probability === null ||
-      probability < strategy.threshold ||
-      baseline.action !== "dropped" ||
-      baseline.reason !== "sampled-out"
-    ) {
-      return { decision: baseline, classification: null }
-    }
+}) => {
+  const { input, strategy, baseline, probability } = args
+  if (!aboveThreshold(probability, strategy.threshold) || !isSampledOutDrop(baseline)) return false
+  return input.flaggerBySlug.get(strategy.slug)?.enabled === true
+}
 
-    const flagger = input.flaggerBySlug.get(strategy.slug)
-    if (!flagger?.enabled) return { decision: baseline, classification: null }
-    const allowed = yield* input.checkRateLimit({
-      organizationId: input.organizationId,
-      flaggerSlug: strategy.slug,
-      reason: "jev-preclassifier",
-      hasPositiveHints: input.hasPositiveHints,
-    })
-    if (!allowed) return { decision: baseline, classification: null }
-
-    return {
-      decision: {
-        slug: strategy.slug,
-        action: "classify",
-        reason: "jev-preclassifier",
-        hintKinds: [],
-      } satisfies SessionFlaggerDecision,
-      classification: {
-        flaggerId: flagger.flaggerId,
-        flaggerSlug: strategy.slug,
-        reason: "jev-preclassifier",
-      } satisfies PendingFlaggerClassificationRequest,
-    }
+const checkJevRateLimit = (input: RunJevPreclassifierInput, flaggerSlug: string) =>
+  input.checkRateLimit({
+    organizationId: input.organizationId,
+    flaggerSlug,
+    reason: "jev-preclassifier",
+    hasPositiveHints: input.hasPositiveHints,
   })
 
 const preclassifierDecision = (probability: number | null, threshold: number) => {
@@ -137,7 +168,17 @@ const preclassifierDecision = (probability: number | null, threshold: number) =>
   return probability >= threshold ? ("gated-in" as const) : ("below-threshold" as const)
 }
 
-const evaluateStrategy = (args: {
+type StrategyEvaluation = {
+  readonly index: number
+  readonly strategy: JevPreclassifierStrategy
+  readonly baseline: SessionFlaggerDecision
+  readonly decision: SessionFlaggerDecision
+  readonly classification: PendingFlaggerClassificationRequest | null
+  readonly observation: JevPreclassifierObservation
+  readonly gateCandidate: boolean
+}
+
+const prepareStrategy = (args: {
   readonly input: RunJevPreclassifierInput
   readonly strategy: JevPreclassifierStrategy
   readonly result: JevShadowProviderResult
@@ -150,8 +191,8 @@ const evaluateStrategy = (args: {
     if (index < 0 || !baseline) return null
 
     const probability = result.kind === "success" ? result.probability : null
-    const gated = yield* gateWithPreclassifier({ input, strategy, baseline, probability })
-    const classifyAdded = gated.classification !== null
+    const decision = withPropensityCorrection(baseline, probability, strategy.threshold)
+    const gateCandidate = isGateCandidate({ input, strategy, baseline, probability })
     const observation: JevPreclassifierObservation = {
       observationId: yield* observationId(input, strategy.slug),
       organizationId: OrganizationId(input.organizationId),
@@ -178,13 +219,85 @@ const evaluateStrategy = (args: {
       latencyMs: result.latencyMs,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
-      classifyAdded,
-      selectionReason: classifyAdded ? "jev-preclassifier" : selectionReason(baseline),
+      classifyAdded: false,
+      selectionReason: selectionReason(decision),
       observedAt: new Date(),
       retentionDays: JEV_PRECLASSIFIER_RETENTION_DAYS,
     }
-    return { index, decision: gated.decision, classification: gated.classification, observation }
+    return {
+      index,
+      strategy,
+      baseline,
+      decision,
+      classification: null,
+      observation,
+      gateCandidate,
+    } satisfies StrategyEvaluation
   })
+
+const applyGate = (
+  evaluation: StrategyEvaluation,
+  input: RunJevPreclassifierInput,
+): StrategyEvaluation => {
+  const flagger = input.flaggerBySlug.get(evaluation.strategy.slug)
+  if (!flagger?.enabled) return evaluation
+  const gated = buildJevGateIn({ strategy: evaluation.strategy, flagger })
+  return {
+    ...evaluation,
+    decision: gated.decision,
+    classification: gated.classification,
+    observation: {
+      ...evaluation.observation,
+      classifyAdded: true,
+      selectionReason: "jev-preclassifier",
+    },
+  }
+}
+
+const resolveGates = (args: {
+  readonly input: RunJevPreclassifierInput
+  readonly evaluations: readonly (StrategyEvaluation | null)[]
+}) =>
+  Effect.gen(function* () {
+    const { input, evaluations } = args
+    const prepared = evaluations.filter((evaluation): evaluation is StrategyEvaluation => evaluation !== null)
+
+    // Safety suite members share one draw and one rate-limit bucket. Gating only
+    // a subset would leave the suite incomplete and burn budget the Safety
+    // estimator must then discard — so admit all sampled-out enabled members
+    // together under SAFETY_SUITE_KEY, and only when every one of them clears
+    // the Jev threshold.
+    const suitePrepared = prepared.filter((evaluation) => isSafetySuiteSlug(evaluation.strategy.slug))
+    const suiteSampledOutEnabled = suitePrepared.filter((evaluation) => {
+      if (!isSampledOutDrop(evaluation.baseline)) return false
+      return input.flaggerBySlug.get(evaluation.strategy.slug)?.enabled === true
+    })
+    const suiteCandidates = suitePrepared.filter((evaluation) => evaluation.gateCandidate)
+    const suiteGateSlugs = new Set<string>()
+    if (suiteCandidates.length > 0 && suiteCandidates.length === suiteSampledOutEnabled.length) {
+      const allowed = yield* checkJevRateLimit(input, SAFETY_SUITE_KEY)
+      if (allowed) {
+        for (const evaluation of suiteCandidates) suiteGateSlugs.add(evaluation.strategy.slug)
+      }
+    }
+
+    const nonSuiteCandidates = prepared.filter(
+      (evaluation) => evaluation.gateCandidate && !isSafetySuiteSlug(evaluation.strategy.slug),
+    )
+    const nonSuiteGateSlugs = new Set<string>()
+    for (const evaluation of nonSuiteCandidates) {
+      const allowed = yield* checkJevRateLimit(input, evaluation.strategy.slug)
+      if (allowed) nonSuiteGateSlugs.add(evaluation.strategy.slug)
+    }
+
+    return prepared.map((evaluation) => {
+      if (suiteGateSlugs.has(evaluation.strategy.slug) || nonSuiteGateSlugs.has(evaluation.strategy.slug)) {
+        return applyGate(evaluation, input)
+      }
+      return evaluation
+    })
+  })
+
 
 const meterJevPreclassifierCall = (results: Readonly<Record<string, JevShadowProviderResult>>) =>
   Effect.gen(function* () {
@@ -232,17 +345,17 @@ export const runJevPreclassifierUseCase = Effect.fn("flaggers.runJevPreclassifie
 
   const decisions = [...input.decisions]
   const classifications = [...input.classifications]
-  const evaluations = yield* Effect.forEach(strategies, (strategy) =>
-    evaluateStrategy({
+  const prepared = yield* Effect.forEach(strategies, (strategy) =>
+    prepareStrategy({
       input,
       strategy,
       result: results[strategy.question.id] ?? unknownResult,
       stateHash,
     }),
   )
+  const evaluations = yield* resolveGates({ input, evaluations: prepared })
   const observations: JevPreclassifierObservation[] = []
   for (const evaluation of evaluations) {
-    if (!evaluation) continue
     decisions[evaluation.index] = evaluation.decision
     if (evaluation.classification) classifications.push(evaluation.classification)
     observations.push(evaluation.observation)

@@ -153,6 +153,122 @@ describe("runJevPreclassifierUseCase", () => {
     })
   })
 
+  it("gates Safety suite members together under the shared safety-suite rate-limit bucket", async () => {
+    const rateLimitCalls: string[] = []
+    const { result, observations } = await run(
+      makeInput({
+        decisions: [
+          { slug: "jailbreaking", action: "dropped", reason: "sampled-out", hintKinds: [] },
+          { slug: "pii-leakage", action: "dropped", reason: "sampled-out", hintKinds: [] },
+        ],
+        classifications: [],
+        flaggerBySlug: new Map([
+          ["jailbreaking", { flaggerId: "jailbreaking-id", slug: "jailbreaking", enabled: true, sampling: 10 }],
+          ["pii-leakage", { flaggerId: "pii-leakage-id", slug: "pii-leakage", enabled: true, sampling: 10 }],
+        ]),
+        checkRateLimit: ({ flaggerSlug }) =>
+          Effect.sync(() => {
+            rateLimitCalls.push(flaggerSlug)
+            return true
+          }),
+      }),
+      {
+        probabilities: {
+          "flagger.jailbreaking": 0.9,
+          "flagger.pii-leakage": 0.8,
+        },
+      },
+    )
+
+    expect(rateLimitCalls).toEqual(["safety-suite"])
+    expect(result.classifications).toEqual(
+      expect.arrayContaining([
+        { flaggerId: "jailbreaking-id", flaggerSlug: "jailbreaking", reason: "jev-preclassifier" },
+        { flaggerId: "pii-leakage-id", flaggerSlug: "pii-leakage", reason: "jev-preclassifier" },
+      ]),
+    )
+    expect(result.classifications).toHaveLength(2)
+    expect(observations.find((observation) => observation.flaggerSlug === "jailbreaking")).toMatchObject({
+      classifyAdded: true,
+      selectionReason: "jev-preclassifier",
+    })
+    expect(observations.find((observation) => observation.flaggerSlug === "pii-leakage")).toMatchObject({
+      classifyAdded: true,
+      selectionReason: "jev-preclassifier",
+    })
+  })
+
+  it("does not gate a partial Safety suite when only one member clears the Jev threshold", async () => {
+    const rateLimitCalls: string[] = []
+    const { result } = await run(
+      makeInput({
+        decisions: [
+          { slug: "jailbreaking", action: "dropped", reason: "sampled-out", hintKinds: [] },
+          { slug: "pii-leakage", action: "dropped", reason: "sampled-out", hintKinds: [] },
+        ],
+        classifications: [],
+        flaggerBySlug: new Map([
+          ["jailbreaking", { flaggerId: "jailbreaking-id", slug: "jailbreaking", enabled: true, sampling: 10 }],
+          ["pii-leakage", { flaggerId: "pii-leakage-id", slug: "pii-leakage", enabled: true, sampling: 10 }],
+        ]),
+        checkRateLimit: ({ flaggerSlug }) =>
+          Effect.sync(() => {
+            rateLimitCalls.push(flaggerSlug)
+            return true
+          }),
+      }),
+      {
+        probabilities: {
+          "flagger.jailbreaking": 0.9,
+          "flagger.pii-leakage": 0.1,
+        },
+      },
+    )
+
+    expect(rateLimitCalls).toEqual([])
+    expect(result.classifications).toEqual([])
+    expect(result.decisions).toEqual([
+      { slug: "jailbreaking", action: "dropped", reason: "sampled-out", hintKinds: [] },
+      { slug: "pii-leakage", action: "dropped", reason: "sampled-out", hintKinds: [] },
+    ])
+  })
+
+  it("raises inclusionProbability to 1 for already-sampled Jev-positive decisions without duplicate classify", async () => {
+    const { result, observations } = await run(
+      makeInput({
+        decisions: [
+          {
+            slug: "frustration",
+            action: "classify",
+            reason: "sampled",
+            hintKinds: [],
+            selection: { reason: "ordinary-sample", inclusionProbability: 0.1 },
+          },
+        ],
+        classifications: [{ flaggerId: "frustration-id", flaggerSlug: "frustration", reason: "sampled" }],
+        flaggerBySlug: new Map([
+          ["frustration", { flaggerId: "frustration-id", slug: "frustration", enabled: true, sampling: 10 }],
+        ]),
+      }),
+      { probabilities: { "flagger.frustration": 0.9 } },
+    )
+
+    expect(result.classifications).toEqual([
+      { flaggerId: "frustration-id", flaggerSlug: "frustration", reason: "sampled" },
+    ])
+    expect(result.decisions[0]).toMatchObject({
+      slug: "frustration",
+      action: "classify",
+      reason: "sampled",
+      selection: { reason: "ordinary-sample", inclusionProbability: 1 },
+    })
+    expect(observations.find((observation) => observation.flaggerSlug === "frustration")).toMatchObject({
+      decision: "gated-in",
+      classifyAdded: false,
+      selectionReason: "ordinary-sample",
+    })
+  })
+
   it("does not return gated classifications when audit persistence fails", async () => {
     await expect(
       run(makeInput(), {
