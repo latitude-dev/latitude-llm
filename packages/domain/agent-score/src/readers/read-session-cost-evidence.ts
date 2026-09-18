@@ -289,19 +289,15 @@ const recoverySpeedClaims = ({
 }): SpeedAvoidableClaim[] => {
   const pathsByTrace = new Map(criticalPath.traces.map((path) => [path.traceId, path]))
   return incidents.flatMap((incident) => {
-    return incident.retrySpans.flatMap(({ traceId, spanId }) => {
-      const path = pathsByTrace.get(traceId)
-      if (!path || path.completeness === "notApplicable") return []
-      return [
-        {
-          traceId,
-          spanId,
-          cause: `recovered:${incident.kind}`,
-          removedNs: marginalCriticalPathNs({ path, spanId }),
-          evidence: "confirmed" as const,
-        },
-      ]
-    })
+    const path = pathsByTrace.get(incident.traceId)
+    if (!path || path.completeness === "notApplicable") return []
+    return incident.retrySpanIds.map((spanId) => ({
+      traceId: incident.traceId,
+      spanId,
+      cause: `recovered:${incident.kind}`,
+      removedNs: marginalCriticalPathNs({ path, spanId }),
+      evidence: "confirmed" as const,
+    }))
   })
 }
 
@@ -419,7 +415,9 @@ const latencyCoverageFact = ({
 export const readSessionCostEvidence = (input: SessionCostEvidenceInput): SessionCostEvidence => {
   const spendCoverage = readSessionSpendCoverage(input.generations)
   const ledger = buildSessionContentLedger({ generations: input.generations, countTokens: input.countTokens })
-  const criticalPath = buildSessionCriticalPath({ spans: input.generations })
+  const criticalPath = buildSessionCriticalPath({
+    spans: [...input.generations, ...input.toolCalls.map((call) => ({ ...call, operation: "execute_tool" }))],
+  })
 
   const repeatedCalls = readRepeatedCalls(input.toolCalls)
   const thrashing = readThrashing(input.toolCalls)

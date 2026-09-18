@@ -175,27 +175,15 @@ const toolCallReferences = (
   if (!("toolCallId" in finding) || !finding.toolCallId) {
     return { anchors: base.anchors, destinations: base.destinations }
   }
-  const responseAnchor =
-    finding.findingKind === "error"
-      ? [
-          {
-            kind: "message" as const,
-            traceId,
-            messageIndex: finding.responseMessageIndex,
-            ...(finding.responsePartIndex !== undefined ? { partIndex: finding.responsePartIndex } : {}),
-          },
-        ]
-      : []
   return {
     anchors: [
       ...base.anchors,
-      ...responseAnchor,
       {
         kind: "toolCall" as const,
         traceId,
         toolCallId: finding.toolCallId,
         ...("toolName" in finding && finding.toolName ? { toolName: finding.toolName } : {}),
-        messageIndex: finding.findingKind === "error" ? finding.responseMessageIndex : finding.messageIndex,
+        messageIndex: finding.messageIndex,
       },
     ],
     destinations: [...base.destinations, { kind: "toolCall" as const, traceId, toolCallId: finding.toolCallId }],
@@ -390,11 +378,12 @@ const readSpanFindings = (
   }
 }
 
+const toolCallIdentity = ({ traceId, toolCallId }: { readonly traceId: string; readonly toolCallId: string }): string =>
+  `${traceId}:${toolCallId}`
+
 const toolSpanReferences = (call: SessionToolCallFact) => {
   const span = { kind: "span" as const, traceId: call.traceId, spanId: call.spanId }
-  if (call.toolCallId === "") {
-    return { anchors: [span], destinations: [span] }
-  }
+  if (call.toolCallId === "") return { anchors: [span], destinations: [span] }
 
   const toolCall = {
     kind: "toolCall" as const,
@@ -404,242 +393,71 @@ const toolSpanReferences = (call: SessionToolCallFact) => {
   }
   return {
     anchors: [span, toolCall],
-    destinations: [{ kind: "toolCall" as const, traceId: call.traceId, toolCallId: call.toolCallId }],
+    destinations: [span, { kind: "toolCall" as const, traceId: call.traceId, toolCallId: call.toolCallId }],
   }
 }
 
-const toolCallIdentity = ({ traceId, toolCallId }: { readonly traceId: string; readonly toolCallId: string }): string =>
-  `${traceId}:${toolCallId}`
-
-const toolSpanIdentity = ({ traceId, spanId }: { readonly traceId: string; readonly spanId: string }): string =>
-  `${traceId}:${spanId}`
-
-const toolCallsById = (toolCalls: readonly SessionToolCallFact[]): Map<string, SessionToolCallFact[]> => {
-  const indexed = new Map<string, SessionToolCallFact[]>()
-  for (const call of toolCalls) {
-    if (call.toolCallId === "") continue
-    const matches = indexed.get(call.toolCallId) ?? []
-    matches.push(call)
-    indexed.set(call.toolCallId, matches)
-  }
-  return indexed
-}
-
-const uniqueToolCallForFinding = (
-  finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
-  indexed: ReadonlyMap<string, readonly SessionToolCallFact[]>,
-): SessionToolCallFact | undefined => {
-  const toolCallIds = new Set(
-    finding.anchors.flatMap((anchor) => (anchor.kind === "toolCall" ? [anchor.toolCallId] : [])),
-  )
-  if (toolCallIds.size !== 1) return undefined
-  const matches = indexed.get([...toolCallIds][0] ?? "") ?? []
-  return matches.length === 1 ? matches.at(0) : undefined
-}
-
-const failedToolSpanIdentities = (findings: readonly AssessmentFinding[]): Set<string> => {
-  const identities = new Set<string>()
-  for (const finding of findings) {
-    if (finding.kind !== "toolFailure") continue
-    for (const anchor of finding.anchors) {
-      if (anchor.kind === "span") identities.add(toolSpanIdentity(anchor))
-    }
-  }
-  return identities
-}
-
-const retainedToolCallPosition = (
-  finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
-  anchor: Extract<SessionEvidenceAnchor, { readonly kind: "toolCall" }>,
-  session: SessionDetail,
-): { readonly occurrence: number; readonly total: number } | undefined => {
-  if (anchor.messageIndex === undefined) return undefined
-  const responseAnchor = finding.anchors.find(
-    (candidate) => candidate.kind === "message" && candidate.messageIndex === anchor.messageIndex,
-  )
-  let targetOccurrence: number | undefined
-  let total = 0
-  const pendingCalls: number[] = []
-  const messages = sessionConversationMessages(session)
-  for (let messageIndex = 0; messageIndex < messages.length; messageIndex++) {
-    const message = messages[messageIndex]
-    if (!message) continue
-    const parts = Array.isArray(message.parts) ? message.parts : []
-    for (let partIndex = 0; partIndex < parts.length; partIndex++) {
-      const part = parts[partIndex]
-      if (typeof part !== "object" || part === null) continue
-      if (!("id" in part) || typeof part.id !== "string" || part.id.trim() !== anchor.toolCallId) continue
-      if ("type" in part && part.type === "tool_call") {
-        pendingCalls.push(total)
-        total++
-        continue
-      }
-      if (!("type" in part) || part.type !== "tool_call_response") continue
-      const callOccurrence = pendingCalls.shift()
-      const isTarget =
-        messageIndex === anchor.messageIndex &&
-        (responseAnchor?.kind !== "message" ||
-          responseAnchor.partIndex === undefined ||
-          responseAnchor.partIndex === partIndex)
-      if (isTarget) targetOccurrence = callOccurrence
-    }
-  }
-  return targetOccurrence === undefined ? undefined : { occurrence: targetOccurrence, total }
-}
-
-const alignedRetainedResponseMatch = ({
-  finding,
-  anchor,
-  session,
-  orderedMatches,
+const sameToolRetrySpanIdsThroughSuccess = ({
+  failed,
+  generations,
+  toolCalls,
 }: {
-  readonly finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>
-  readonly anchor: Extract<SessionEvidenceAnchor, { readonly kind: "toolCall" }>
-  readonly session: SessionDetail
-  readonly orderedMatches: readonly SessionToolCallFact[]
-}): SessionToolCallFact | undefined => {
-  const position = retainedToolCallPosition(finding, anchor, session)
-  if (!position || position.total > orderedMatches.length) return undefined
-  return orderedMatches[orderedMatches.length - position.total + position.occurrence]
-}
-
-const retainedConversationStartsAtSessionInput = (session: SessionDetail): boolean =>
-  session.inputMessages.length > 0 &&
-  session.inputMessages.every(
-    (message, index) => JSON.stringify(message) === JSON.stringify(session.lastInputMessages[index]),
-  )
-
-const retainedConversationCutoff = (
-  session: SessionDetail,
-  generations: readonly SessionGenerationFact[],
-): Date | undefined =>
-  generations
+  readonly failed: SessionToolCallFact
+  readonly generations: readonly SessionGenerationFact[]
+  readonly toolCalls: readonly SessionToolCallFact[]
+}): string[] => {
+  if (failed.normalizedToolName === "") return []
+  const retries = toolCalls
     .filter(
-      (generation) =>
-        isLlmCompletionOperation(generation.operation) &&
-        generation.content !== null &&
-        JSON.stringify(generation.content.outputMessages) === JSON.stringify(session.outputMessages),
+      (call) =>
+        call.traceId === failed.traceId &&
+        call.spanId !== failed.spanId &&
+        call.normalizedToolName === failed.normalizedToolName &&
+        call.startTime.getTime() >= failed.endTime.getTime(),
     )
-    .sort((left, right) => right.startTime.getTime() - left.startTime.getTime())
-    .at(0)?.startTime
+    .sort(
+      (left, right) =>
+        left.startTime.getTime() - right.startTime.getTime() ||
+        left.endTime.getTime() - right.endTime.getTime() ||
+        left.spanId.localeCompare(right.spanId),
+    )
+  const successfulIndex = retries.findIndex((call) => call.statusCode === "ok")
+  if (successfulIndex < 0) return []
+  const successful = retries[successfulIndex]
+  if (!successful) return []
 
-const uniqueAlignedToolCallForFinding = (
-  finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
-  indexed: ReadonlyMap<string, readonly SessionToolCallFact[]>,
-  session: SessionDetail,
-): SessionToolCallFact | undefined => {
-  const uniqueMatch = uniqueToolCallForFinding(finding, indexed)
-  if (!uniqueMatch) return undefined
-  const anchors = finding.anchors.filter((anchor) => anchor.kind === "toolCall")
-  const anchor = anchors.length === 1 ? anchors[0] : undefined
-  if (anchor?.kind !== "toolCall") return uniqueMatch
-  const position = retainedToolCallPosition(finding, anchor, session)
-  if (!position) return uniqueMatch
-  if (!retainedConversationStartsAtSessionInput(session)) return undefined
-  return alignedRetainedResponseMatch({ finding, anchor, session, orderedMatches: [uniqueMatch] })
-}
-
-const resolveDeterministicToolReferences = (
-  findings: readonly AssessmentFinding[],
-  toolCalls: readonly SessionToolCallFact[],
-  session: SessionDetail,
-  generations: readonly SessionGenerationFact[],
-): AssessmentFinding[] => {
-  const retainedWindowComplete = retainedConversationStartsAtSessionInput(session)
-  const retainedCutoff = retainedConversationCutoff(session, generations)
-  const eligibleToolCalls = retainedCutoff
-    ? toolCalls.filter((call) => call.endTime.getTime() <= retainedCutoff.getTime())
-    : toolCalls
-  const indexed = toolCallsById(eligibleToolCalls)
-  const findingCountByIdentity = new Map<string, number>()
-  for (const finding of findings) {
-    if (finding.kind !== "toolFailure" || uniqueAlignedToolCallForFinding(finding, indexed, session)) continue
-    const anchors = finding.anchors.filter((anchor) => anchor.kind === "toolCall")
-    const anchor = anchors.length === 1 ? anchors[0] : undefined
-    if (anchor?.kind !== "toolCall") continue
-    const identity = toolCallIdentity(anchor)
-    findingCountByIdentity.set(identity, (findingCountByIdentity.get(identity) ?? 0) + 1)
-  }
-  const matchedCountByIdentity = new Map<string, number>()
-  const matchedSpanIdentities = new Set<string>()
-  return findings.map((finding) => {
-    if (finding.kind !== "toolFailure") return finding
-    let matchingCall = uniqueAlignedToolCallForFinding(finding, indexed, session)
-    if (!matchingCall) {
-      const toolCallAnchors = finding.anchors.filter((anchor) => anchor.kind === "toolCall")
-      const anchor = toolCallAnchors.length === 1 ? toolCallAnchors[0] : undefined
-      if (anchor?.kind === "toolCall") {
-        const identity = toolCallIdentity(anchor)
-        const allOrderedMatches = (indexed.get(anchor.toolCallId) ?? []).sort(
-          (left, right) =>
-            left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
-        )
-        const responsePosition = retainedToolCallPosition(finding, anchor, session)
-        const traceMatches = allOrderedMatches.filter((call) => call.traceId === anchor.traceId)
-        const orderedMatches =
-          retainedWindowComplete && responsePosition && traceMatches.length === responsePosition.total
-            ? traceMatches
-            : allOrderedMatches
-        const matches = orderedMatches.filter((call) => !matchedSpanIdentities.has(toolSpanIdentity(call)))
-        const matchedCount = matchedCountByIdentity.get(identity) ?? 0
-        const remainingFindings = (findingCountByIdentity.get(identity) ?? 0) - matchedCount
-        const responseMatch = alignedRetainedResponseMatch({ finding, anchor, session, orderedMatches })
-        const responseMatchIsUnambiguous =
-          responseMatch !== undefined &&
-          responsePosition !== undefined &&
-          ((retainedWindowComplete && orderedMatches.length === responsePosition.total) ||
-            (!retainedWindowComplete && retainedCutoff !== undefined && orderedMatches.length > responsePosition.total))
-        matchingCall =
-          responseMatchIsUnambiguous && !matchedSpanIdentities.has(toolSpanIdentity(responseMatch))
-            ? responseMatch
-            : responseMatch !== undefined || (responsePosition && responsePosition.total > orderedMatches.length)
-              ? undefined
-              : matches.length <= remainingFindings
-                ? matches[0]
-                : (matches.find((call) => call.statusCode === "error") ?? matches[0])
-        matchedCountByIdentity.set(identity, matchedCount + 1)
-        if (matchingCall) matchedSpanIdentities.add(toolSpanIdentity(matchingCall))
-      }
-    }
-    if (!matchingCall) return finding
-    const references = toolSpanReferences(matchingCall)
-    return {
-      ...finding,
-      evidenceKey: `span:${toolSpanIdentity(matchingCall)}:tool-failure:${finding.evidenceKey}`,
-      anchors: [
-        ...references.anchors,
-        ...finding.anchors.filter((anchor) => anchor.kind !== "toolCall" && anchor.kind !== "span"),
-      ],
-      destinations: [
-        ...references.destinations,
-        ...finding.destinations.filter((destination) => destination.kind !== "toolCall" && destination.kind !== "span"),
-      ],
-    }
-  })
+  return [
+    ...generations
+      .filter(
+        (generation) =>
+          generation.traceId === failed.traceId &&
+          isLlmCompletionOperation(generation.operation) &&
+          generation.startTime.getTime() >= failed.endTime.getTime() &&
+          generation.endTime.getTime() <= successful.startTime.getTime(),
+      )
+      .map((generation) => ({ spanId: generation.spanId as string, startTime: generation.startTime })),
+    ...retries
+      .slice(0, successfulIndex + 1)
+      .map((call) => ({ spanId: call.spanId as string, startTime: call.startTime })),
+  ]
+    .sort(
+      (left, right) => left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
+    )
+    .map(({ spanId }) => spanId)
 }
 
 const toolStatusFinding = ({
   call,
   generations,
   toolCalls,
-  failedToolSpans,
-  hasCompletion,
 }: {
   readonly call: SessionToolCallFact
   readonly generations: readonly SessionGenerationFact[]
   readonly toolCalls: readonly SessionToolCallFact[]
-  readonly failedToolSpans: ReadonlySet<string>
-  readonly hasCompletion: boolean
-}): Extract<AssessmentFinding, { readonly kind: "toolFailure" }> & { readonly sameSubjectRecovered: boolean } => {
+}): Extract<AssessmentFinding, { readonly kind: "toolFailure" }> => {
   const detail = call.statusMessage.trim() || call.errorType.trim()
   const references = toolSpanReferences(call)
-  const lifecycle = toolFailureLifecycle({
-    call,
-    generations,
-    toolCalls,
-    failedToolSpans,
-    hasCompletion,
-  })
+  const recovered = sameToolRetrySpanIdsThroughSuccess({ failed: call, generations, toolCalls }).length > 0
 
   return {
     evidenceKey: `span:${call.traceId}:${call.spanId}:tool-failure:${classifyToolError(detail)}`,
@@ -655,67 +473,60 @@ const toolStatusFinding = ({
     destinations: references.destinations,
     independentHumanEvidence: false,
     kind: "toolFailure",
-    ...lifecycle,
+    recovered,
+    sameSubjectRecovered: recovered,
+    terminal: !recovered,
   }
+}
+
+const deterministicToolIdentity = (finding: AssessmentFinding): string | undefined => {
+  if (finding.kind !== "toolFailure") return undefined
+  const anchors = finding.anchors.filter((anchor) => anchor.kind === "toolCall")
+  return anchors.length === 1 && anchors[0] ? toolCallIdentity(anchors[0]) : undefined
 }
 
 const readToolStatusFindings = ({
   generations,
   toolCalls,
   deterministic,
-  hasCompletion,
 }: {
   readonly generations: readonly SessionGenerationFact[]
   readonly toolCalls: readonly SessionToolCallFact[]
   readonly deterministic: readonly AssessmentFinding[]
-  readonly hasCompletion: boolean
 }): {
   readonly deterministic: AssessmentFinding[]
   readonly findings: AssessmentFinding[]
   readonly readers: AssessmentReaderFact[]
 } => {
-  const failedToolSpans = failedToolSpanIdentities(deterministic)
-
-  const contentDetected = new Map<string, number[]>()
-  for (const [index, finding] of deterministic.entries()) {
-    if (finding.kind !== "toolFailure") continue
-    const spanIdentities = finding.anchors.flatMap((anchor) =>
-      anchor.kind === "span" ? [`span:${toolSpanIdentity(anchor)}`] : [],
-    )
-    for (const identity of new Set(spanIdentities)) {
-      contentDetected.set(identity, [...(contentDetected.get(identity) ?? []), index])
-    }
+  const errorsByIdentity = new Map<string, SessionToolCallFact[]>()
+  for (const call of toolCalls) {
+    if (call.statusCode !== "error" || call.toolCallId === "") continue
+    const identity = toolCallIdentity(call)
+    errorsByIdentity.set(identity, [...(errorsByIdentity.get(identity) ?? []), call])
   }
 
-  const reconciledDeterministic = deterministic.map((finding): AssessmentFinding => {
-    if (finding.kind !== "toolFailure") return finding
-    const call = failedToolCall(finding, toolCalls)
-    if (!call) return finding
-    return {
-      ...finding,
-      ...toolFailureLifecycle({ call, generations, toolCalls, failedToolSpans, hasCompletion }),
-    }
-  })
-  const findings = toolCalls.flatMap((call): AssessmentFinding[] => {
-    if (call.statusCode !== "error") return []
-    const spanMatch = contentDetected.get(`span:${toolSpanIdentity(call)}`)?.shift()
-    const statusFinding = toolStatusFinding({ call, generations, toolCalls, failedToolSpans, hasCompletion })
-    if (spanMatch !== undefined) {
-      const contentFinding = reconciledDeterministic[spanMatch]
-      if (contentFinding?.kind === "toolFailure") {
-        reconciledDeterministic[spanMatch] = {
-          ...contentFinding,
-          recovered: statusFinding.recovered,
-          sameSubjectRecovered: statusFinding.sameSubjectRecovered,
-          terminal: statusFinding.terminal,
-        }
-      }
+  const deduplicatedSpanIds = new Set<string>()
+  const ambiguousIdentities = new Set<string>()
+  const reconciledDeterministic = deterministic.flatMap((finding): AssessmentFinding[] => {
+    const identity = deterministicToolIdentity(finding)
+    if (!identity) return [finding]
+    const matches = errorsByIdentity.get(identity) ?? []
+    if (matches.length === 0) return [finding]
+    if (matches.length > 1) {
+      ambiguousIdentities.add(identity)
       return []
     }
-    return [statusFinding]
+    const match = matches[0]
+    if (!match) return [finding]
+    deduplicatedSpanIds.add(match.spanId)
+    return [finding]
   })
-
+  const findings = toolCalls.flatMap((call): AssessmentFinding[] => {
+    if (call.statusCode !== "error" || deduplicatedSpanIds.has(call.spanId)) return []
+    return [toolStatusFinding({ call, generations, toolCalls })]
+  })
   const statusless = toolCalls.filter((call) => call.statusCode === "unset").length
+  const ambiguous = ambiguousIdentities.size > 0
 
   return {
     deterministic: reconciledDeterministic,
@@ -729,7 +540,11 @@ const readToolStatusFindings = ({
         findingCount: findings.length,
         readableCount: toolCalls.length - statusless,
         totalCount: toolCalls.length,
-        ...(statusless > 0 ? { limitation: "missingTelemetry" as const } : {}),
+        ...(statusless > 0
+          ? { limitation: "missingTelemetry" as const }
+          : ambiguous
+            ? { limitation: "unmappedTelemetry" as const }
+            : {}),
       },
     ] satisfies AssessmentReaderFact[],
   }
@@ -772,11 +587,6 @@ const readScoreFindings = (
   scores: readonly Score[],
   signals: readonly SignalWithLifecycle[],
   screeningDecisions: NormalizedSessionAssessmentInput["screeningDecisions"],
-  evidenceAliases: readonly {
-    readonly sourceEvidenceKey: string
-    readonly targetEvidenceKey: string
-    readonly messageIndex?: number
-  }[] = [],
 ): AssessmentFinding[] => {
   const signalsById = new Map<string, SignalWithLifecycle>(signals.map((signal) => [signal.id, signal]))
   return scores.flatMap((score): AssessmentFinding[] => {
@@ -785,17 +595,7 @@ const readScoreFindings = (
     if (signal?.ignoredAt) return []
     const metadata = score.sourceType === "annotation" ? score.metadata : undefined
     const observationProbability = scoreObservationProbability(score, screeningDecisions)
-    const aliasCandidates = metadata?.flaggerFindingKey
-      ? evidenceAliases.filter(
-          (alias) =>
-            alias.sourceEvidenceKey === metadata.flaggerFindingKey &&
-            (metadata.messageIndex === undefined || alias.messageIndex === metadata.messageIndex),
-        )
-      : []
-    const evidenceKey =
-      aliasCandidates.length === 1
-        ? (aliasCandidates[0]?.targetEvidenceKey ?? `score:${score.id}`)
-        : (metadata?.flaggerFindingKey ?? `score:${score.id}`)
+    const evidenceKey = metadata?.flaggerFindingKey ?? `score:${score.id}`
     const signalIds = signal ? [signal.id] : []
     const references = scoreAnchors(score)
     const base = {
@@ -912,15 +712,6 @@ const readMomentFindings = (facts: SessionMomentFacts): AssessmentFinding[] => {
   })
 }
 
-const generationOutputHasToolCall = (generation: SessionGenerationFact): boolean =>
-  generation.content?.outputMessages.some(
-    (message) =>
-      Array.isArray(message.parts) &&
-      message.parts.some(
-        (part) => typeof part === "object" && part !== null && "type" in part && part.type === "tool_call",
-      ),
-  ) ?? false
-
 const isSuccessfulGeneration = (generation: SessionGenerationFact): boolean => {
   const endpoint = classifySpanEndpoint(generation)
   return (
@@ -930,36 +721,21 @@ const isSuccessfulGeneration = (generation: SessionGenerationFact): boolean => {
   )
 }
 
-const isSuccessfulToolRecoveryGeneration = (
-  generation: SessionGenerationFact,
-  toolCalls: readonly SessionToolCallFact[],
-): boolean => {
-  const endpoint = classifySpanEndpoint(generation)
-  if (endpoint.finishReasons.length === 0 && !hasUsableAssistantCompletion(generation.content?.outputMessages ?? [])) {
-    return false
-  }
-  const continuedIntoTool =
-    endpoint.finishReasons.some((reason) => reason.classification === "clean" && reason.kind === "toolContinuation") ||
-    toolCalls.some((call) => call.traceId === generation.traceId && call.parentSpanId === generation.spanId) ||
-    generationOutputHasToolCall(generation)
-  return !continuedIntoTool && isSuccessfulGeneration(generation)
-}
-
-const retrySpansThrough = ({
+const retrySpanIdsThrough = ({
   generations,
   traceId,
   after,
   successfulSpanId,
 }: {
   readonly generations: readonly SessionGenerationFact[]
-  readonly traceId?: string
+  readonly traceId: string
   readonly after: Date
   readonly successfulSpanId?: string
-}) => {
+}): string[] => {
   const candidates = generations
     .filter(
       (generation) =>
-        (traceId === undefined || generation.traceId === traceId) &&
+        generation.traceId === traceId &&
         isLlmCompletionOperation(generation.operation) &&
         generation.startTime.getTime() >= after.getTime(),
     )
@@ -974,138 +750,7 @@ const retrySpansThrough = ({
     : candidates.findIndex(isSuccessfulGeneration)
   return successfulIndex < 0
     ? []
-    : candidates.slice(0, successfulIndex + 1).map((generation) => ({
-        traceId: generation.traceId,
-        spanId: generation.spanId as string,
-      }))
-}
-
-const retryToolSpansThrough = ({
-  failed,
-  toolCalls,
-  failedToolSpans,
-  normalizedToolName,
-}: {
-  readonly failed: SessionToolCallFact
-  readonly toolCalls: readonly SessionToolCallFact[]
-  readonly failedToolSpans: ReadonlySet<string>
-  readonly normalizedToolName?: string
-}) => {
-  const candidates = toolCalls
-    .filter(
-      (call) =>
-        (call.traceId !== failed.traceId || call.spanId !== failed.spanId) &&
-        (normalizedToolName === undefined || call.normalizedToolName === normalizedToolName) &&
-        call.startTime.getTime() >= failed.endTime.getTime(),
-    )
-    .sort(
-      (left, right) => left.startTime.getTime() - right.startTime.getTime() || left.spanId.localeCompare(right.spanId),
-    )
-  const successfulIndex = candidates.findIndex(
-    (call) => call.statusCode === "ok" && !failedToolSpans.has(toolSpanIdentity(call)),
-  )
-  return successfulIndex < 0
-    ? []
-    : candidates.slice(0, successfulIndex + 1).map((call) => ({
-        traceId: call.traceId,
-        spanId: call.spanId as string,
-      }))
-}
-
-const retryProgressSpansThrough = ({
-  failed,
-  generations,
-  toolCalls,
-  failedToolSpans,
-}: {
-  readonly failed: SessionToolCallFact
-  readonly generations: readonly SessionGenerationFact[]
-  readonly toolCalls: readonly SessionToolCallFact[]
-  readonly failedToolSpans: ReadonlySet<string>
-}) => {
-  const candidates = [
-    ...toolCalls
-      .filter(
-        (call) =>
-          (call.traceId !== failed.traceId || call.spanId !== failed.spanId) &&
-          call.startTime.getTime() >= failed.endTime.getTime(),
-      )
-      .map((call) => ({
-        traceId: call.traceId as string,
-        spanId: call.spanId as string,
-        startTime: call.startTime,
-        endTime: call.endTime,
-        successful: call.statusCode === "ok" && !failedToolSpans.has(toolSpanIdentity(call)),
-      })),
-    ...generations
-      .filter(
-        (generation) =>
-          isLlmCompletionOperation(generation.operation) && generation.startTime.getTime() >= failed.endTime.getTime(),
-      )
-      .map((generation) => ({
-        traceId: generation.traceId as string,
-        spanId: generation.spanId as string,
-        startTime: generation.startTime,
-        endTime: generation.endTime,
-        successful: isSuccessfulToolRecoveryGeneration(generation, toolCalls),
-      })),
-  ].sort(
-    (left, right) =>
-      left.endTime.getTime() - right.endTime.getTime() ||
-      left.startTime.getTime() - right.startTime.getTime() ||
-      left.traceId.localeCompare(right.traceId) ||
-      left.spanId.localeCompare(right.spanId),
-  )
-  const successfulIndex = candidates.findIndex((candidate) => candidate.successful)
-  return successfulIndex < 0
-    ? []
-    : candidates.slice(0, successfulIndex + 1).map(({ traceId, spanId }) => ({ traceId, spanId }))
-}
-
-const laterSameToolSucceeded = ({
-  failed,
-  toolCalls,
-  failedToolSpans,
-}: {
-  readonly failed: SessionToolCallFact
-  readonly toolCalls: readonly SessionToolCallFact[]
-  readonly failedToolSpans: ReadonlySet<string>
-}): boolean =>
-  failed.normalizedToolName !== "" &&
-  retryToolSpansThrough({ failed, toolCalls, failedToolSpans, normalizedToolName: failed.normalizedToolName }).length >
-    0
-
-const successfulProgressAfter = ({
-  failed,
-  generations,
-  toolCalls,
-  failedToolSpans,
-}: {
-  readonly failed: SessionToolCallFact
-  readonly generations: readonly SessionGenerationFact[]
-  readonly toolCalls: readonly SessionToolCallFact[]
-  readonly failedToolSpans: ReadonlySet<string>
-}): boolean => retryProgressSpansThrough({ failed, generations, toolCalls, failedToolSpans }).length > 0
-
-const toolFailureLifecycle = ({
-  call,
-  generations,
-  toolCalls,
-  failedToolSpans,
-  hasCompletion,
-}: {
-  readonly call: SessionToolCallFact
-  readonly generations: readonly SessionGenerationFact[]
-  readonly toolCalls: readonly SessionToolCallFact[]
-  readonly failedToolSpans: ReadonlySet<string>
-  readonly hasCompletion: boolean
-}) => {
-  const recovered = hasCompletion && successfulProgressAfter({ failed: call, generations, toolCalls, failedToolSpans })
-  return {
-    recovered,
-    sameSubjectRecovered: laterSameToolSucceeded({ failed: call, toolCalls, failedToolSpans }),
-    terminal: !recovered,
-  }
+    : candidates.slice(0, successfulIndex + 1).map((generation) => generation.spanId as string)
 }
 
 const recoveredProviderIncident = (
@@ -1119,60 +764,70 @@ const recoveredProviderIncident = (
     (generation) => generation.traceId === anchor.traceId && generation.spanId === anchor.spanId,
   )
   if (!failed) return []
-  const retrySpans = retrySpansThrough({
+  const retrySpanIds = retrySpanIdsThrough({
     generations,
     traceId: anchor.traceId,
     after: failed.endTime,
     successfulSpanId: finding.successfulSpanId,
   })
-  return retrySpans.length === 0
+  return retrySpanIds.length === 0
     ? []
-    : [{ traceId: anchor.traceId, spanId: anchor.spanId, kind: finding.findingKind, retrySpans }]
+    : [{ traceId: anchor.traceId, spanId: anchor.spanId, kind: finding.findingKind, retrySpanIds }]
 }
 
 const failedToolCall = (
   finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
   toolCalls: readonly SessionToolCallFact[],
 ): SessionToolCallFact | undefined => {
-  const anchor = finding.anchors.find((candidate) => candidate.kind === "span")
-  if (anchor?.kind !== "span") return undefined
-  return toolCalls.find((toolCall) => toolCall.traceId === anchor.traceId && toolCall.spanId === anchor.spanId)
+  const span = finding.anchors.find((anchor) => anchor.kind === "span")
+  if (span?.kind === "span") {
+    return toolCalls.find((call) => call.traceId === span.traceId && call.spanId === span.spanId)
+  }
+  const toolCall = finding.anchors.find((anchor) => anchor.kind === "toolCall")
+  if (toolCall?.kind !== "toolCall") return undefined
+  return toolCalls.find((call) => call.traceId === toolCall.traceId && call.toolCallId === toolCall.toolCallId)
 }
 
 const recoveredToolIncident = (
   finding: Extract<AssessmentFinding, { readonly kind: "toolFailure" }>,
   generations: readonly SessionGenerationFact[],
   toolCalls: readonly SessionToolCallFact[],
-  failedToolSpans: ReadonlySet<string>,
 ): RecoveredIncident[] => {
   if (!finding.recovered || finding.terminal) return []
   const failed = failedToolCall(finding, toolCalls)
   if (!failed) return []
-  const retrySpans = retryProgressSpansThrough({ failed, generations, toolCalls, failedToolSpans })
-  return retrySpans.length === 0
+  const statusAnchored = finding.anchors.some((anchor) => anchor.kind === "span")
+  const retrySpanIds = statusAnchored
+    ? sameToolRetrySpanIdsThroughSuccess({ failed, generations, toolCalls })
+    : retrySpanIdsThrough({ generations, traceId: failed.traceId, after: failed.endTime })
+  return retrySpanIds.length === 0
     ? []
     : [
         {
           traceId: failed.traceId,
           spanId: failed.spanId,
           kind: "toolFailure",
-          retrySpans,
+          retrySpanIds,
         },
       ]
 }
 
+/**
+ * The recovered incidents Cost and Speed may charge, with the retries that got past them.
+ *
+ * Content findings end at the successful generation. Status findings end at the successful
+ * same-tool retry and may include tool spans, which carry Speed but no inherent spend.
+ */
 const recoveredIncidentsFrom = (
   findings: readonly AssessmentFinding[],
   generations: readonly SessionGenerationFact[],
   toolCalls: readonly SessionToolCallFact[],
-): RecoveredIncident[] => {
-  const failedToolSpans = failedToolSpanIdentities(findings)
-  return findings.flatMap((finding): RecoveredIncident[] => {
+): RecoveredIncident[] =>
+  findings.flatMap((finding): RecoveredIncident[] => {
     if (finding.kind === "providerError") return recoveredProviderIncident(finding, generations)
-    if (finding.kind === "toolFailure") return recoveredToolIncident(finding, generations, toolCalls, failedToolSpans)
+    if (finding.kind === "toolFailure") return recoveredToolIncident(finding, generations, toolCalls)
     return []
   })
-}
 
 const recoveredDefectsFrom = (
   findings: readonly AssessmentFinding[],
@@ -1257,29 +912,11 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
   Effect.gen(function* () {
     const hasCompletion = hasUsableAssistantCompletion(input.session.outputMessages)
     const deterministic = yield* readDeterministicFindings(input.session, input.spans)
-    const deterministicFindings = resolveDeterministicToolReferences(
-      deterministic.findings,
-      input.toolCalls,
-      input.session,
-      input.generations,
-    )
-    const deterministicEvidenceAliases = deterministic.findings.flatMap((finding, index) => {
-      const resolved = deterministicFindings[index]
-      if (!resolved || resolved.evidenceKey === finding.evidenceKey) return []
-      return [
-        {
-          sourceEvidenceKey: finding.evidenceKey,
-          targetEvidenceKey: resolved.evidenceKey,
-          ...(finding.chronology.messageIndex !== undefined ? { messageIndex: finding.chronology.messageIndex } : {}),
-        },
-      ]
-    })
-    const spanFindings = readSpanFindings(input.session, input.spans, deterministicFindings)
+    const spanFindings = readSpanFindings(input.session, input.spans, deterministic.findings)
     const toolStatusFindings = readToolStatusFindings({
       generations: input.generations,
       toolCalls: input.toolCalls,
-      deterministic: deterministicFindings,
-      hasCompletion,
+      deterministic: deterministic.findings,
     })
     const findings = [
       ...(hasCompletion
@@ -1303,7 +940,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       ...toolStatusFindings.deterministic,
       ...spanFindings.findings,
       ...toolStatusFindings.findings,
-      ...readScoreFindings(input.scores, input.signals, input.screeningDecisions, deterministicEvidenceAliases),
+      ...readScoreFindings(input.scores, input.signals, input.screeningDecisions),
       ...readMomentFindings(input.moments),
     ]
 

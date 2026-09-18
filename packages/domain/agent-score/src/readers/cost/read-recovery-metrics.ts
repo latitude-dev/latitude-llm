@@ -13,7 +13,7 @@ const RECOVERED_INCIDENT_BASE = {
 /**
  * One provider or tool incident the session went on to recover from.
  *
- * `retrySpans` are the generations that only existed to get past the incident — the retries, not
+ * `retrySpanIds` are the generations that only existed to get past the incident — the retries, not
  * the failed call. That distinction is the whole point: a failed generation that produced nothing
  * usable was still billed, but what the session *wasted* is the work it had to redo, and the
  * spans that redid it are the ones a counterfactual can remove.
@@ -22,7 +22,7 @@ export interface RecoveredIncident {
   readonly traceId: string
   readonly spanId: string
   readonly kind: string
-  readonly retrySpans: readonly { readonly traceId: string; readonly spanId: string }[]
+  readonly retrySpanIds: readonly string[]
 }
 
 export interface TerminalIncident {
@@ -79,19 +79,13 @@ export const recoverySpendClaims = ({
   readonly recovered: readonly RecoveredIncident[]
   readonly generations: readonly SessionGenerationFact[]
 }): AttributableSpendClaim[] => {
-  const billedBySpan = new Map<string, number>(
-    generations.flatMap((generation) =>
-      generation.pricingState === "providerReported" || generation.pricingState === "registryEstimated"
-        ? [[`${generation.traceId}:${generation.spanId}`, generation.costTotalMicrocents] as const]
-        : [],
-    ),
+  const billedBySpanId = new Map(
+    generations.map((generation) => [generation.spanId as string, generation.costTotalMicrocents]),
   )
   return recovered.flatMap((incident) =>
-    incident.retrySpans.flatMap(({ traceId, spanId }) => {
-      const exactMicrocents = billedBySpan.get(`${traceId}:${spanId}`)
-      return exactMicrocents === undefined
-        ? []
-        : [{ traceId, spanId, cause: `recovered:${incident.kind}`, exactMicrocents }]
+    incident.retrySpanIds.flatMap((spanId) => {
+      const exactMicrocents = billedBySpanId.get(spanId)
+      return exactMicrocents === undefined ? [] : [{ spanId, cause: `recovered:${incident.kind}`, exactMicrocents }]
     }),
   )
 }
@@ -114,10 +108,10 @@ export const recoveryAvoidableNs = ({
   let avoidableNs = 0
 
   for (const incident of recovered) {
-    for (const { traceId, spanId } of incident.retrySpans) {
-      const path = pathsByTrace.get(traceId)
-      if (!path || path.completeness === "notApplicable") continue
-      const key = `${traceId} ${spanId}`
+    const path = pathsByTrace.get(incident.traceId)
+    if (!path || path.completeness === "notApplicable") continue
+    for (const spanId of incident.retrySpanIds) {
+      const key = `${incident.traceId} ${spanId}`
       if (claimed.has(key)) continue
       claimed.add(key)
       avoidableNs += marginalCriticalPathNs({ path, spanId })

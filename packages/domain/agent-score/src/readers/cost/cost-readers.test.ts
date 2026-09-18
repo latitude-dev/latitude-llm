@@ -1,5 +1,5 @@
 import type { MemoryEvent } from "@domain/memories"
-import { SpanId, TraceId } from "@domain/shared"
+import { SpanId } from "@domain/shared"
 import { buildTraceCriticalPath, type CriticalPathSpanInput, type SessionGenerationFact } from "@domain/spans"
 import type { GenAIMessage } from "rosetta-ai"
 import { describe, expect, it } from "vitest"
@@ -246,8 +246,8 @@ describe("readRecoverableSpend", () => {
 
   it("unions claims on the same generation so two readers cannot recover it twice", () => {
     const claims: AttributableSpendClaim[] = [
-      { traceId: "trace-1", spanId: "a", cause: "retry", exactMicrocents: 400 },
-      { traceId: "trace-1", spanId: "a", cause: "repeated-call", exactMicrocents: 400 },
+      { spanId: "a", cause: "retry", exactMicrocents: 400 },
+      { spanId: "a", cause: "repeated-call", exactMicrocents: 400 },
     ]
     const reading = valid(readRecoverableSpend({ generations, coverage, claims }))
 
@@ -261,7 +261,7 @@ describe("readRecoverableSpend", () => {
       readRecoverableSpend({
         generations,
         coverage,
-        claims: [{ traceId: "trace-1", spanId: "a", cause: "retry", exactMicrocents: 9_999 }],
+        claims: [{ spanId: "a", cause: "retry", exactMicrocents: 9_999 }],
       }),
     )
 
@@ -273,7 +273,7 @@ describe("readRecoverableSpend", () => {
       readRecoverableSpend({
         generations,
         coverage,
-        claims: [{ traceId: "trace-1", spanId: "b", cause: "cache", boundedMicrocents: { lower: 100, upper: 500 } }],
+        claims: [{ spanId: "b", cause: "cache", boundedMicrocents: { lower: 100, upper: 500 } }],
       }),
     )
 
@@ -287,37 +287,14 @@ describe("readRecoverableSpend", () => {
         generations,
         coverage,
         claims: [
-          { traceId: "trace-1", spanId: "b", cause: "retry", exactMicrocents: 600 },
-          { traceId: "trace-1", spanId: "missing", cause: "retry", exactMicrocents: 100 },
+          { spanId: "b", cause: "retry", exactMicrocents: 600 },
+          { spanId: "missing", cause: "retry", exactMicrocents: 100 },
         ],
       }),
     )
 
     expect(reading.evidence).toBe("confirmed")
     expect(reading.nativeImpact).toEqual({ unit: "microcents", point: 600 })
-  })
-
-  it("keeps equal span IDs in different traces as distinct spend atoms", () => {
-    const duplicated = [
-      generation({ traceId: TraceId("trace-1"), spanId: SpanId("shared"), costTotalMicrocents: 400 }),
-      generation({ traceId: TraceId("trace-2"), spanId: SpanId("shared"), costTotalMicrocents: 600 }),
-    ]
-    const reading = valid(
-      readRecoverableSpend({
-        generations: duplicated,
-        coverage: readSessionSpendCoverage(duplicated),
-        claims: [{ traceId: "trace-2", spanId: "shared", cause: "retry", exactMicrocents: 600 }],
-      }),
-    )
-
-    expect(reading.adverseUnits).toBe(600)
-    expect(reading.observations).toEqual([
-      {
-        atomId: "generation:trace-2:shared",
-        eligibleUnits: 600,
-        adverseUnits: 600,
-      },
-    ])
   })
 
   it("is unreadable without pricing and not applicable without spend-bearing calls", () => {
@@ -674,12 +651,7 @@ describe("recovery readers", () => {
     },
   ]
   const path = buildTraceCriticalPath({ traceId: "trace-1", spans })
-  const incident = {
-    traceId: "trace-1",
-    spanId: "failed",
-    kind: "rateLimit",
-    retrySpans: [{ traceId: "trace-1", spanId: "retry" }],
-  }
+  const incident = { traceId: "trace-1", spanId: "failed", kind: "rateLimit", retrySpanIds: ["retry"] }
 
   it("is a session-grained rate over completed sessions", () => {
     expect(valid(readRecoveredIncidentRate({ completed: true, recovered: [incident] }))).toMatchObject({
@@ -706,23 +678,7 @@ describe("recovery readers", () => {
         recovered: [incident],
         generations: [generation({ spanId: SpanId("retry"), costTotalMicrocents: 375 })],
       }),
-    ).toEqual([{ traceId: "trace-1", spanId: "retry", cause: "recovered:rateLimit", exactMicrocents: 375 }])
-  })
-
-  it("excludes non-spend-bearing retry spans from spend claims", () => {
-    expect(
-      recoverySpendClaims({
-        recovered: [incident],
-        generations: [
-          generation({
-            spanId: SpanId("retry"),
-            pricingState: "notSpendBearing",
-            costTotalMicrocents: 375,
-          }),
-        ],
-      }),
-    ).toEqual([])
-    expect(recoveryAvoidableNs({ recovered: [incident], paths: [path] })).toBe(400 * 1_000_000)
+    ).toEqual([{ spanId: "retry", cause: "recovered:rateLimit", exactMicrocents: 375 }])
   })
 
   it("takes only the marginal path time the retries actually held", () => {
