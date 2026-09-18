@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## v0.3.107 - 2026-09-18
+
+### Agent Score
+
+- Agent Score trends now show markers for isolated and nonconsecutive daily snapshots, so sparse scores remain visible in the 7-day and 30-day views (ref: #4682).
+
+### Flaggers
+
+- Added an opt-in Jev session-level preclassifier for all LLM-capable flaggers. It can add classifications when a dimension meets its threshold, preserves the existing screening paths and rate limits, records metered observations in ClickHouse, and fails closed without disrupting baseline screening. The global and organization feature flags remain disabled by default. Removed the superseded classify-time Jev shadow pilot (ref: #4678, #4684).
+
+### Sessions
+
+- The filter sidebar now hides while a session drawer is open and returns with its state intact when the drawer closes, preventing the two panels from competing for horizontal space (ref: #4681).
+
 ## v0.3.106 - 2026-09-18
 
 ### Agent Score
