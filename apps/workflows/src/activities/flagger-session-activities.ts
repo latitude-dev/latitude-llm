@@ -256,7 +256,6 @@ export const screenSessionFlaggers = async (
   )
 }
 
-
 export interface ClassifySessionFlaggerActivityInput {
   readonly organizationId: string
   readonly projectId: string
