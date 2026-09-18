@@ -43,7 +43,7 @@ export const JEV_PRECLASSIFIER_THRESHOLD = 0.5
 export const JEV_PRECLASSIFIER_POLICY_VERSION = "jev-preclassifier-policy-v1"
 export const JEV_PRECLASSIFIER_STATE_BUILDER_VERSION = "jev-preclassifier-state-v1"
 export const JEV_PRECLASSIFIER_RETENTION_DAYS = 90
-export const JEV_PRECLASSIFIER_OPERATION_TIMEOUT_MS = 5_000
+export const JEV_PRECLASSIFIER_OPERATION_TIMEOUT_MS = 15_000
 export const JEV_PRECLASSIFIER_DECISIONS = ["gated-in", "below-threshold", "unknown"] as const
 
 export const JEV_SHADOW_ENABLED = false

@@ -175,7 +175,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
   const jevApiKey = createSingleSecret(
     baseName,
     "jev-api-key",
-    "Jev API key for the flagger shadow pilot — replace placeholder-change-me in Secrets Manager",
+    "Jev API key for flagger shadow / preclassifier — replace placeholder-change-me in Secrets Manager",
     process.env.LAT_JEV_API_KEY ?? "placeholder-change-me",
     environment,
     immutableSecretResourceOptions,
