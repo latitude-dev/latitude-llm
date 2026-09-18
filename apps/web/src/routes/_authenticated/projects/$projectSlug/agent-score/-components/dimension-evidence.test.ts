@@ -107,6 +107,58 @@ describe("buildDimensionEvidence", () => {
     expect(evidence.context).toEqual([expect.objectContaining({ label: "Repeated answers", value: "1 session" })])
   })
 
+  it("carries the example sessions an Outcome issue was built from", () => {
+    const withIssues = {
+      ...explanation,
+      issues: {
+        ...explanation.issues,
+        outcome: [
+          {
+            issueKey: "issue:no-output",
+            label: "sessions.no_output",
+            signalIds: [],
+            examinedSessions: 4,
+            examinedAdverseSessions: 4,
+            ranked: false,
+            exampleSessionIds: ["session-a", "session-b"],
+          },
+        ],
+      },
+    } as unknown as Explanation
+
+    const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withIssues })
+
+    // No signal to open, so the ids are the only route from the row to the sessions behind it.
+    expect(evidence.affected).toEqual([
+      expect.objectContaining({ label: "No output", exampleSessionIds: ["session-a", "session-b"] }),
+    ])
+  })
+
+  it("carries the example sessions a Reliability cause ended", () => {
+    const withheld = {
+      ...explanation,
+      publication: { status: "withheld", reason: "sessionFloor", sessionFloor: 200, dimensions: [] },
+      observedCauses: [
+        {
+          scoreDimension: "reliability",
+          causeId: "noOutput",
+          label: "noOutput",
+          measurement: "measured",
+          nativeEffect: { value: 4, unit: "sessions" },
+          observationCount: 4,
+          destination: "sessions",
+          exampleSessionIds: ["session-a"],
+        },
+      ],
+    } as unknown as Explanation
+
+    const evidence = buildDimensionEvidence({ dimension: "reliability", snapshot: null, explanation: withheld })
+
+    expect(evidence.affected).toEqual([
+      expect.objectContaining({ label: "No output", value: "4 sessions", exampleSessionIds: ["session-a"] }),
+    ])
+  })
+
   it("does not describe safety exposure as confirmed harm", () => {
     const withExposure = {
       ...explanation,

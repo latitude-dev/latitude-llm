@@ -20,9 +20,12 @@ The page is first in the Observe group, above Sessions. It is project-scoped and
 snapshots for the headline and history. Evidence and causes are resolved dynamically from the current
 selected window.
 
-The headline uses the current UTC date's snapshot. If that snapshot was not published, the current
-Agent Score is unavailable; the page never substitutes an older score. Older snapshots remain in the
-trend.
+The headline uses the latest published snapshot. The page compares that snapshot's date with the
+current UTC date. When they differ, it labels the headline "Latest available", shows the score date
+and exact computation timestamp, and says that no score was published today. The five dimension
+sections and readiness table remain today's evidence; they do not use stale score values or claim to
+explain the older headline. Older snapshots remain in the trend without synthetic points for missing
+dates.
 
 ## Level one
 
@@ -72,9 +75,11 @@ into a dollar claim.
 
 The evidence list contains only metrics with readable observations and promoted signals with an
 eligible occurrence in the selected window. Signals with zero occurrences and scores assigned to
-ignored signals do not appear. Items whose effect is not yet measurable remain visible and say so.
-A signal that informs several dimensions can appear in each applicable dimension section. This is a
-presentation choice and does not duplicate the occurrence in estimation or attribution.
+ignored signals do not appear, and neither does a metric that was read and penalized nothing: a
+healthy reading is coverage, reported as coverage, and never a cause whose effect is zero. Items
+whose effect is not yet measurable remain visible and say so. A signal that informs several
+dimensions can appear in each applicable dimension section. This is a presentation choice and does
+not duplicate the occurrence in estimation or attribution.
 
 Native inputs and causes are labelled as current evidence from the live selected window. They
 explain present behavior but do not claim to reproduce the immutable snapshot, whose stored contract
@@ -216,6 +221,12 @@ coverage context.
 A signal row links to its signal page. That page already owns examples, lifecycle, dispatch, and
 resolution. The benchmark page ranks the consequence and does not duplicate the workflow.
 
+The Sessions destination has no page keyed by a finding kind, because a terminal failure or an
+Outcome issue is not a filterable session property. Rows that lead there carry a capped sample of
+the session ids they were built from and open the Sessions list filtered to exactly those, with the
+filter panel open so the list reads as a sample of the row's reach rather than all of it. A row that
+kept no example sessions links nowhere, which stays the honest default.
+
 ## Recommendations
 
 Mechanical recommendations come from exact evidence:
@@ -260,6 +271,12 @@ dimension's coverage or confidence gate fails. It still shows:
 
 Each dimension lists the observations available so far and the exact condition blocking publication.
 No candidate or partial dimension number is shown.
+
+When a prior score is available but today has no published snapshot, the prior composite remains the
+headline as the latest available score. The adjacent readiness table is titled "Requirements for
+today's computation", gives the current UTC date, and says that the requirements do not describe the
+score beside it. If today's explanation is not available, the table preserves its unavailable or
+loading state rather than showing requirements from the older snapshot.
 
 Modeled effect and fix-gain ranking wait for enough evidence. Exact money and time observations do
 not.

@@ -152,6 +152,7 @@ const makeProjectRepository = (project: Project): (typeof ProjectRepository)["Se
   list: () => Effect.die("list not used"),
   listIncludingDeleted: () => Effect.die("listIncludingDeleted not used"),
   save: () => Effect.die("save not used"),
+  markFirstTraceAt: () => Effect.die("markFirstTraceAt not used"),
   softDelete: () => Effect.die("softDelete not used"),
   hardDelete: () => Effect.die("hardDelete not used"),
   existsByName: () => Effect.die("existsByName not used"),

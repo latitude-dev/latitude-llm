@@ -28,6 +28,11 @@ export interface DimensionEvidenceRow {
   readonly signalId?: string
   /** Product section that owns this evidence, so a row leads somewhere that can act on it. */
   readonly destination?: CauseDestination
+  /**
+   * Sessions the row can open when no section owns it, which is how a finding says which sessions
+   * it happened in. A sample the window kept, never the row's whole reach.
+   */
+  readonly exampleSessionIds?: readonly string[]
 }
 
 export interface DimensionEvidence {
@@ -38,6 +43,10 @@ export interface DimensionEvidence {
 }
 
 const clamp = (value: number): number => Math.max(0, Math.min(1, value))
+
+/** Example sessions only when there are some, so a row without them stays inert rather than linking nowhere. */
+const withExamples = (sessionIds: readonly string[] | undefined): { exampleSessionIds?: readonly string[] } =>
+  sessionIds?.length ? { exampleSessionIds: sessionIds } : {}
 
 const DIMENSION_LABELS: Readonly<Record<ScoreDimensionKey, string>> = {
   outcome: "Outcome",
@@ -173,6 +182,7 @@ const issueRows = (
       progress: clamp((estimated ?? observed) / maximum),
       tone: "negative" as const,
       ...(issue.signalIds[0] ? { signalId: issue.signalIds[0] } : {}),
+      ...withExamples(issue.exampleSessionIds),
     }
   })
 }
@@ -252,6 +262,7 @@ const addAttribution = (evidence: MutableEvidence, dimension: ScoreDimensionKey,
       tone: "negative",
       ...(row.signalId ? { signalId: row.signalId } : {}),
       ...(row.destination ? { destination: row.destination } : {}),
+      ...withExamples(row.exampleSessionIds),
     })
   }
   if (attribution && attribution.residual > 0.05) {
@@ -292,6 +303,7 @@ const addObservedCauses = (evidence: MutableEvidence, dimension: ScoreDimensionK
       ],
       ...(cause.signalId ? { signalId: cause.signalId } : {}),
       ...(cause.destination ? { destination: cause.destination } : {}),
+      ...withExamples(cause.exampleSessionIds),
     }
     if (cause.measurement === "notMeasured") evidence.context.push(row)
     else evidence.affected.push(row)

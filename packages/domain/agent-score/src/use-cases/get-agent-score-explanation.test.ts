@@ -1,15 +1,25 @@
 import { CacheError, CacheStore, OrganizationId, ProjectId } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { agentScoreExplanationCacheKey } from "../entities/agent-score-explanation.ts"
-import { getAgentScoreExplanation } from "./get-agent-score-explanation.ts"
+import {
+  agentScoreExplanationCacheKey,
+  latestAgentScoreExplanationCacheKey,
+} from "../entities/agent-score-explanation.ts"
+import {
+  cacheAgentScoreExplanation,
+  getAgentScoreExplanation,
+  getLatestAgentScoreExplanation,
+  shouldAdvanceLatestExplanation,
+} from "./get-agent-score-explanation.ts"
 
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
+const DATE = "2026-09-12"
 
 const EXPLANATION = {
   organizationId: ORGANIZATION_ID as string,
   projectId: PROJECT_ID as string,
+  date: DATE,
   scoringVersion: "agent-score@1.0.0",
   computedAt: "2026-09-12T04:00:00.000Z",
   window: { stepDays: 28, from: "2026-08-15T04:00:00.000Z", to: "2026-09-12T04:00:00.000Z" },
@@ -68,15 +78,39 @@ const withCachedValue = (value: string | null | Effect.Effect<string | null, Cac
 
 const read = (value: string | null | Effect.Effect<string | null, CacheError>) =>
   Effect.runPromise(
-    getAgentScoreExplanation({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID }).pipe(
+    getAgentScoreExplanation({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, date: DATE }).pipe(
       Effect.provide(withCachedValue(value)),
+    ),
+  )
+
+const readLatest = (value: string | null | Effect.Effect<string | null, CacheError>) =>
+  Effect.runPromise(
+    getLatestAgentScoreExplanation({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID }).pipe(
+      Effect.provide(withCachedValue(value)),
+    ),
+  )
+
+const withCachedEntries = (entries: Record<string, string>) =>
+  Layer.succeed(CacheStore, {
+    get: (key: string) => Effect.succeed(entries[key] ?? null),
+    set: () => Effect.void,
+    delete: () => Effect.void,
+  })
+
+const readLatestWithEntries = (entries: Record<string, string>) =>
+  Effect.runPromise(
+    getLatestAgentScoreExplanation({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID }).pipe(
+      Effect.provide(withCachedEntries(entries)),
     ),
   )
 
 describe("getAgentScoreExplanation", () => {
   it("reads the key under the organization prefix", () => {
-    expect(agentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID })).toBe(
-      `org:${ORGANIZATION_ID}:agent-score:explanation:${PROJECT_ID}`,
+    expect(agentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, date: DATE })).toBe(
+      `org:${ORGANIZATION_ID}:agent-score:explanation:${PROJECT_ID}:${DATE}`,
+    )
+    expect(latestAgentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID })).toBe(
+      `org:${ORGANIZATION_ID}:agent-score:latest-explanation:${PROJECT_ID}`,
     )
   })
 
@@ -87,8 +121,36 @@ describe("getAgentScoreExplanation", () => {
     expect(result.status === "ready" && result.explanation.eligibleSessionCount).toBe(5037)
   })
 
+  it("returns the latest published explanation independently from the current date", async () => {
+    const result = await readLatest(JSON.stringify(EXPLANATION))
+
+    expect(result.status).toBe("ready")
+    expect(result.status === "ready" && result.explanation.date).toBe(DATE)
+  })
+
+  it("falls back to the legacy project key when the latest key misses", async () => {
+    const result = await readLatestWithEntries({
+      [`org:${ORGANIZATION_ID}:agent-score:explanation:${PROJECT_ID}`]: JSON.stringify(EXPLANATION),
+    })
+
+    expect(result.status).toBe("ready")
+    expect(result.status === "ready" && result.explanation.date).toBe(DATE)
+  })
+
+  it("prefers the latest published key over the legacy project key", async () => {
+    const result = await readLatestWithEntries({
+      [latestAgentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID })]: JSON.stringify(
+        { ...EXPLANATION, eligibleSessionCount: 1 },
+      ),
+      [`org:${ORGANIZATION_ID}:agent-score:explanation:${PROJECT_ID}`]: JSON.stringify(EXPLANATION),
+    })
+
+    expect(result.status === "ready" && result.explanation.eligibleSessionCount).toBe(1)
+  })
+
   it("reads an entry from an incompatible shape as a miss rather than handing the page a hole", async () => {
     expect(await read("{}")).toEqual({ status: "notComputed" })
+    expect(await read(JSON.stringify({ ...EXPLANATION, date: undefined }))).toEqual({ status: "notComputed" })
     expect(await read(JSON.stringify({ ...EXPLANATION, coverage: undefined }))).toEqual({ status: "notComputed" })
   })
 
@@ -100,5 +162,123 @@ describe("getAgentScoreExplanation", () => {
     expect(await read(Effect.fail(new CacheError({ message: "cache unavailable" })))).toEqual({
       status: "notComputed",
     })
+  })
+})
+
+describe("shouldAdvanceLatestExplanation", () => {
+  it("advances when nothing is cached yet", () => {
+    expect(shouldAdvanceLatestExplanation({ existingDate: null, incomingDate: "2026-09-15" })).toBe(true)
+  })
+
+  it("advances for a newer or equal date", () => {
+    expect(shouldAdvanceLatestExplanation({ existingDate: "2026-09-15", incomingDate: "2026-09-17" })).toBe(true)
+    expect(shouldAdvanceLatestExplanation({ existingDate: "2026-09-15", incomingDate: "2026-09-15" })).toBe(true)
+  })
+
+  it("holds the pointer when an older backfill finishes late", () => {
+    expect(shouldAdvanceLatestExplanation({ existingDate: "2026-09-17", incomingDate: "2026-09-15" })).toBe(false)
+  })
+})
+
+describe("cacheAgentScoreExplanation latest pointer", () => {
+  const makeResult = (date: string) =>
+    ({
+      organizationId: ORGANIZATION_ID,
+      projectId: PROJECT_ID,
+      scoringVersion: "agent-score@1.0.0",
+      sessionFloor: 200,
+      status: "published",
+      window: {
+        stepDays: 7,
+        from: new Date("2026-09-08T00:00:00.000Z"),
+        to: new Date(`${date}T00:00:00.000Z`),
+        reason: "reachedTarget",
+        eligibleSessionCount: 1503,
+      },
+      dimensions: [{ scoreDimension: "reliability", weight: 0.2, coverage: "measured" }],
+      coverage: {
+        eligibleSessionCount: 1503,
+        readSessionCount: 1503,
+        outcome: { examinedSessionCount: 400 },
+        reliability: { readableSessionCount: 1503 },
+        safety: { examinedSessionCount: 100 },
+        cost: {
+          coverage: "measured",
+          families: [],
+          publishableSessionCount: 1503,
+          withheldSessionCount: 0,
+          publishableSessionShare: 1,
+        },
+        speed: {
+          coverage: "measured",
+          completeSessionCount: 1503,
+          incompleteSessionCount: 0,
+          completeShareOfEligible: 1,
+        },
+        readers: [],
+        artifactVersions: { cost: "cost@1", costCatalog: "catalog@1", latency: "latency@1" },
+        unmeasuredSignalEffects: 0,
+      },
+      native: {
+        cost: { familyPenalties: {} },
+        speed: { observedNs: 1, avoidableNs: 0 },
+      },
+      readiness: EXPLANATION.readiness,
+    }) as unknown as Parameters<typeof cacheAgentScoreExplanation>[0]["result"]
+
+  const withMemoryStore = (store: Map<string, string>) =>
+    Layer.succeed(CacheStore, {
+      get: (key: string) => Effect.succeed(store.get(key) ?? null),
+      set: (key: string, value: string) => Effect.sync(() => void store.set(key, value)),
+      delete: (key: string) => Effect.sync(() => void store.delete(key)),
+    })
+
+  const latestDateOf = (store: Map<string, string>): string | null => {
+    const cached = store.get(
+      latestAgentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID }),
+    )
+    if (!cached) return null
+    return (JSON.parse(cached) as { date: string }).date
+  }
+
+  it("keeps a newer latest explanation when an older backfill finishes after it", async () => {
+    const store = new Map<string, string>()
+    const layer = withMemoryStore(store)
+
+    await Effect.runPromise(
+      cacheAgentScoreExplanation({ result: makeResult("2026-09-17"), date: "2026-09-17" }).pipe(Effect.provide(layer)),
+    )
+    await Effect.runPromise(
+      cacheAgentScoreExplanation({ result: makeResult("2026-09-15"), date: "2026-09-15" }).pipe(Effect.provide(layer)),
+    )
+
+    expect(latestDateOf(store)).toBe("2026-09-17")
+    expect(
+      store.has(
+        agentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, date: "2026-09-15" }),
+      ),
+    ).toBe(true)
+  })
+
+  it("advances the pointer for a newer publication and replaces an unreadable entry", async () => {
+    const store = new Map<string, string>()
+    const layer = withMemoryStore(store)
+
+    await Effect.runPromise(
+      cacheAgentScoreExplanation({ result: makeResult("2026-09-15"), date: "2026-09-15" }).pipe(Effect.provide(layer)),
+    )
+    await Effect.runPromise(
+      cacheAgentScoreExplanation({ result: makeResult("2026-09-17"), date: "2026-09-17" }).pipe(Effect.provide(layer)),
+    )
+    expect(latestDateOf(store)).toBe("2026-09-17")
+
+    store.set(
+      latestAgentScoreExplanationCacheKey({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID }),
+      "not json",
+    )
+    await Effect.runPromise(
+      cacheAgentScoreExplanation({ result: makeResult("2026-09-18"), date: "2026-09-18" }).pipe(Effect.provide(layer)),
+    )
+    expect(latestDateOf(store)).toBe("2026-09-18")
   })
 })

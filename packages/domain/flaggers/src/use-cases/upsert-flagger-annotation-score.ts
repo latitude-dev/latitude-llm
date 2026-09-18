@@ -22,6 +22,9 @@ interface FlaggerScoreInput {
   readonly messageIndex?: number | undefined
   readonly contentHash?: string | undefined
   readonly flaggerFindingKey?: FlaggerFindingKey | undefined
+  /** Cross-session bucket a deterministic finding belongs to; drives exact issue bundling. */
+  readonly flaggerBundleKey?: string | undefined
+  readonly flaggerFindingKind?: string | undefined
   readonly flaggerPath?: FlaggerPath | undefined
   readonly scoringArtifactVersion?: ScoringArtifactVersion | undefined
   /** Session analysis generation this judgement belongs to. */
@@ -38,6 +41,8 @@ const flaggerScoreMetadata = (input: FlaggerScoreInput) => ({
   ...(input.contentHash !== undefined ? { contentHash: input.contentHash } : {}),
   ...(input.flaggerTraceId !== undefined ? { flaggerTraceId: input.flaggerTraceId } : {}),
   ...(input.flaggerFindingKey !== undefined ? { flaggerFindingKey: input.flaggerFindingKey } : {}),
+  ...(input.flaggerBundleKey !== undefined ? { flaggerBundleKey: input.flaggerBundleKey } : {}),
+  ...(input.flaggerFindingKind !== undefined ? { flaggerFindingKind: input.flaggerFindingKind } : {}),
   ...(input.flaggerPath !== undefined ? { flaggerPath: input.flaggerPath } : {}),
   ...(input.scoringArtifactVersion !== undefined ? { scoringArtifactVersion: input.scoringArtifactVersion } : {}),
   ...(input.analysisHash !== undefined ? { analysisHash: input.analysisHash } : {}),

@@ -8,21 +8,75 @@ const REFRESH_POLL_ATTEMPTS = 120
 
 const pause = (duration: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, duration))
 
+type AgentScoreSnapshotMarkerRecord = Pick<AgentScoreRecord, "date" | "score" | "createdAt">
+
+export const agentScoreSnapshotMarker = (snapshot: AgentScoreSnapshotMarkerRecord | null): string =>
+  [snapshot?.date ?? "none", snapshot?.score ?? "none", snapshot?.createdAt ?? "none"].join(":")
+
 export const agentScoreRefreshMarker = ({
   snapshot,
   explanation,
 }: {
   readonly snapshot: AgentScoreRecord | null
   readonly explanation: AgentScoreExplanationRecord["explanation"]
-}): string => `${snapshot?.date ?? "none"}:${snapshot?.score ?? "none"}:${explanation?.computedAt ?? "none"}`
+}): string => [agentScoreSnapshotMarker(snapshot), explanation?.computedAt ?? "none"].join(":")
 
-export const agentScoreExplanationForDate = ({
+export const isCurrentAgentScoreSnapshot = (snapshot: Pick<AgentScoreRecord, "date"> | null, date: string): boolean =>
+  snapshot?.date === date
+
+export const isStaleAgentScoreSnapshot = (snapshot: Pick<AgentScoreRecord, "date"> | null, date: string): boolean =>
+  snapshot !== null && snapshot.date !== date
+
+export const agentVitalityIsLoading = (snapshot: Pick<AgentScoreRecord, "date"> | null, isLoading: boolean): boolean =>
+  snapshot === null && isLoading
+
+export const agentScoreRefreshCompleted = ({
+  previousSnapshotMarker,
+  previousExplanationTime,
+  date,
+  snapshot,
+  explanation,
+}: {
+  readonly previousSnapshotMarker: string
+  readonly previousExplanationTime: string | undefined
+  readonly date: string
+  readonly snapshot: AgentScoreSnapshotMarkerRecord | null
+  readonly explanation: AgentScoreExplanationRecord["explanation"]
+}): boolean => {
+  const snapshotIsCurrent = isCurrentAgentScoreSnapshot(snapshot, date)
+  const snapshotChanged = snapshotIsCurrent && agentScoreSnapshotMarker(snapshot) !== previousSnapshotMarker
+  const explanationChanged = explanation?.computedAt !== previousExplanationTime
+  const explanationIsCurrent = explanation?.date === date
+  if (snapshotChanged) return true
+  if (!explanation || !explanationChanged || !explanationIsCurrent) return false
+  return snapshotIsCurrent || explanation.publication.status === "withheld"
+}
+
+export const agentScoreExplanationForSnapshot = ({
   explanation,
   date,
+  snapshot,
 }: {
   readonly explanation: AgentScoreExplanationRecord["explanation"]
   readonly date: string
-}): AgentScoreExplanationRecord["explanation"] => (explanation?.window.to.slice(0, 10) === date ? explanation : null)
+  readonly snapshot: Pick<AgentScoreRecord, "scoringVersion"> | null
+}): AgentScoreExplanationRecord["explanation"] => {
+  if (explanation?.date !== date) return null
+  if (snapshot && explanation.scoringVersion !== snapshot.scoringVersion) return null
+  return explanation
+}
+
+export const agentScoreSnapshotEvidenceCompleted = ({
+  needsSnapshotEvidence,
+  previousSnapshotExplanationTime,
+  snapshotExplanation,
+}: {
+  readonly needsSnapshotEvidence: boolean
+  readonly previousSnapshotExplanationTime: string | undefined
+  readonly snapshotExplanation: AgentScoreExplanationRecord["explanation"]
+}): boolean =>
+  !needsSnapshotEvidence ||
+  (snapshotExplanation !== null && snapshotExplanation.computedAt !== previousSnapshotExplanationTime)
 
 export const waitForAgentScoreRefresh = async ({
   previousMarker,

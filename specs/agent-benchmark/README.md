@@ -200,7 +200,7 @@ Read them in this order:
 | Setting | Value |
 | --- | --- |
 | Window steps | 7, 14, 21, or 28 days, choosing the shortest step that reaches the target |
-| Session target | 1,000 eligible sessions |
+| Session target | 200 eligible sessions |
 | Session floor | 200 eligible sessions |
 | Reliability reference run | 20 sessions |
 | Safety reference run | 100 sessions |

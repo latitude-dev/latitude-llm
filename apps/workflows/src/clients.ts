@@ -1,12 +1,19 @@
 import type { QueuePublisherShape } from "@domain/queue"
 import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
-import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
+import {
+  closePostgres,
+  createBoundedReadPostgresClient,
+  createPostgresClient,
+  type PostgresClient,
+} from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
+let jevShadowPostgresClientInstance: PostgresClient | undefined
+let jevShadowPostgresClientClosePromise: Promise<void> | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseClientInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
@@ -18,6 +25,33 @@ export const getPostgresClient = (): PostgresClient => {
   }
 
   return postgresClientInstance
+}
+
+export const getJevShadowPostgresClient = (): PostgresClient => {
+  if (!jevShadowPostgresClientInstance) {
+    jevShadowPostgresClientInstance = createBoundedReadPostgresClient({
+      acquisitionTimeoutMs: 200,
+      statementTimeoutMs: 150,
+      transactionTimeoutMs: 400,
+    })
+    jevShadowPostgresClientClosePromise = undefined
+  }
+
+  return jevShadowPostgresClientInstance
+}
+
+export const closeJevShadowPostgresClient = (): Promise<void> => {
+  if (jevShadowPostgresClientClosePromise) return jevShadowPostgresClientClosePromise
+  if (!jevShadowPostgresClientInstance) return Promise.resolve()
+
+  const client = jevShadowPostgresClientInstance
+  jevShadowPostgresClientClosePromise = closePostgres(client.pool).finally(() => {
+    if (jevShadowPostgresClientInstance === client) {
+      jevShadowPostgresClientInstance = undefined
+    }
+  })
+
+  return jevShadowPostgresClientClosePromise
 }
 
 /**

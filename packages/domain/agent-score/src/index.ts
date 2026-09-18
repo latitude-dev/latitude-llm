@@ -19,7 +19,11 @@ export {
   LAUNCH_LATENCY_MINIMUM_SAMPLE_COUNT,
   LAUNCH_LATENCY_REFERENCE_ARTIFACT,
 } from "./artifacts/launch-latency-reference-artifact.ts"
-export { SESSION_ASSESSMENT_CONTENT_BUDGET, SESSION_ASSESSMENT_RESOLVER_CONCURRENCY } from "./constants.ts"
+export {
+  CAUSE_EXAMPLE_SESSION_LIMIT,
+  SESSION_ASSESSMENT_CONTENT_BUDGET,
+  SESSION_ASSESSMENT_RESOLVER_CONCURRENCY,
+} from "./constants.ts"
 export type {
   AgentScoreCoverage,
   AgentScoreNativeInputs,
@@ -253,6 +257,7 @@ export {
 } from "./pagination/session-assessment-cursor.ts"
 export {
   type AgentScoreSnapshotHistoryScope,
+  type AgentScoreSnapshotLatestScope,
   AgentScoreSnapshotRepository,
   type AgentScoreSnapshotRepositoryShape,
 } from "./ports/agent-score-snapshot-repository.ts"
@@ -592,12 +597,14 @@ export {
   AGENT_SCORE_HISTORY_DEFAULT_DAYS,
   type CurrentAgentScore,
   getCurrentAgentScore,
+  getLatestAgentScore,
   listAgentScoreHistory,
 } from "./use-cases/get-agent-score.ts"
 export {
   type AgentScoreExplanationResult,
   cacheAgentScoreExplanation,
   getAgentScoreExplanation,
+  getLatestAgentScoreExplanation,
 } from "./use-cases/get-agent-score-explanation.ts"
 export {
   type GetSessionAssessmentInput,

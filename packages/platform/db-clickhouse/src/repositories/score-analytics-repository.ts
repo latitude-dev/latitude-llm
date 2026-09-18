@@ -90,7 +90,11 @@ const toAnalyticsRow = (score: Score) => {
     scoring_artifact_version: flaggerMetadata?.scoringArtifactVersion ?? null,
     flagger_finding_key: flaggerMetadata?.flaggerFindingKey ?? null,
     flagger_path: flaggerMetadata?.flaggerPath ?? null,
-    flagger_finding_kind: flaggerMetadata?.safetyFindingKind ?? null,
+    // Deterministic readers and Safety detectors both name a finding kind; they land in
+    // one column because a consumer asking "what kind of finding is this" never cares which
+    // family produced it. Only one of the two is ever set on a given row.
+    flagger_finding_kind: flaggerMetadata?.flaggerFindingKind ?? flaggerMetadata?.safetyFindingKind ?? null,
+    flagger_bundle_key: flaggerMetadata?.flaggerBundleKey ?? null,
     annotator_id: score.annotatorId ?? "",
     simulation_id: score.simulationId ?? "",
     signal_id: score.signalId ?? "",

@@ -84,7 +84,7 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
                 labelRepository.listBySessions(sessionScope),
                 screeningRepository.listLatestBySessions(input),
               ],
-              { concurrency: "unbounded" },
+              { concurrency: 2 },
             )
 
           const sessionsById = new Map(sessions.map((session) => [session.sessionId, session]))

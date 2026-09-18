@@ -2,6 +2,54 @@
 
 ## Unreleased
 
+## v0.3.105 - 2026-09-17
+
+### Agent Score
+
+- Restored the breakdown for the latest published score when the latest explanation pointer misses, by reading the dated explanation for the snapshot date. Refresh now backfills missing snapshot evidence with a forced recompute, and the page waits for both today and snapshot evidence. The latest pointer only moves forward so a late older backfill cannot replace newer evidence (ref: #4668).
+
+### Flaggers
+
+- Added the Jev shadow classification pilot for `frustration` and `refusal`. It runs beside the baseline classifier with the already loaded session context and records an advisory-only observation in ClickHouse without changing classification results, scores, or billing. It requires `LAT_JEV_FLAGGER_SHADOW_ENABLED`, `LAT_JEV_API_KEY`, and the per-organization `jevFlaggerShadow` flag (ref: #4663).
+
+## v0.3.104 - 2026-09-17
+
+### MCP Auth
+
+- Served OAuth discovery JSON at root well-known URLs instead of 307 redirect, so strict MCP clients such as Cloudflare portal complete discovery (ref: 89a9875).
+
+### Security
+
+- Required admin/owner role for POST /v1/members invite, so non-admin members cannot mint admin invitations (ref: GHSA-cc29-29hq-cgc8).
+
+### Telemetry
+
+- Stopped provider error text leak under no-content capture and fixed first_trace_at write through repository so RLS permits it (ref: #4667).
+
+### Signals
+
+- Reported recovered tool errors bundled by failure class with one live issue per bucket per project (ref: #4662).
+
+## v0.3.103 - 2026-09-16
+
+### Agent Score
+
+- Split the explanation cache into per-date entries plus a latest-published entry, so a day without a published score shows today's readiness beside the latest score breakdown instead of stale readiness or an empty breakdown. Fixed the refresh check to compare against today's explanation and added a legacy-key fallback so pre-split cached breakdowns survive the rollout (ref: #4664).
+
+## v0.3.102 - 2026-09-16
+
+### Agent Score
+
+- Batched ClickHouse generation fact and content reads and restricted content queries to selected spans, reducing memory pressure during score calculation (ref: #4635).
+- Updated the web page to show the latest published score when today's score is unavailable, with clear date labels and separate readiness evidence for today. Fixed refresh completion checks and date handling (ref: #4661).
+
+## v0.3.101 - 2026-09-15
+
+### Agent Score
+
+- Lowered the provisional window-selection target to 200 eligible sessions and the Reliability, Speed, and Safety count floors to 100 sessions, allowing more projects to publish while retaining percentage coverage guards. The UI now suppresses score deltas and cached explanations across the new scoring-version boundary (ref: #4657).
+- Polished the Agent Score page with clearer score and evidence presentation, keyboard-focusable ring details, smoother charts, and richer hover details. The seeded benchmark now uses a model with latency references so Speed can be measured (ref: #4651).
+
 ## v0.3.100 - 2026-09-13
 
 ### Agent Score

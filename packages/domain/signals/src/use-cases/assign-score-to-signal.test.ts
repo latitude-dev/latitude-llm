@@ -48,6 +48,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   filters: null,
   assigneeId: null,
   priority: null,
+  bundleKey: null,
   centroid: updateSignalCentroid({
     centroid: { ...createSignalCentroid(), clusteredAt: assignedAt },
     score: { embedding: makeEmbedding(), sourceType: "annotation", createdAt: assignedAt },

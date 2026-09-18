@@ -16,6 +16,7 @@ import {
 } from "@domain/shared"
 import type { SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
+import { bundleKeyFromScore } from "../bundle-key.ts"
 import { buildCandidatePlaceholder } from "../candidate-naming.ts"
 import { PROMOTION_MIN_SESSIONS } from "../constants.ts"
 import type { Signal, SignalSource } from "../entities/signal.ts"
@@ -131,6 +132,7 @@ const buildNewSignalFromScore = ({
     scoreEvidence: [],
     assigneeId: null,
     priority: null,
+    bundleKey: bundleKeyFromScore(score),
     centroid,
     clusteredAt: centroid.clusteredAt,
     promotedAt: null,

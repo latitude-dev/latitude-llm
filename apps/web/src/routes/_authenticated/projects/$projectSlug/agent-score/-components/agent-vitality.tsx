@@ -1,24 +1,27 @@
-import { Icon, Skeleton, Text } from "@repo/ui"
+import { Icon, Skeleton, Text, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from "@repo/ui"
 import { ChartNoAxesCombinedIcon } from "lucide-react"
 import { useState } from "react"
-import type { AgentScoreRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
-import { formatCount, SCORE_DIMENSION_ORDER, type ScoreDimensionKey } from "./agent-score-format.ts"
+import type {
+  AgentScoreExplanationRecord,
+  AgentScoreRecord,
+} from "../../../../../../domains/agent-score/agent-score.functions.ts"
+import {
+  formatCount,
+  formatDateTime,
+  formatFullDate,
+  SCORE_DIMENSION_ORDER,
+  type ScoreDimensionKey,
+} from "./agent-score-format.ts"
 import { type VitalityRingSection, VitalityScoreRing } from "./score-ring.tsx"
-
-const DIMENSION_LABELS: Readonly<Record<ScoreDimensionKey, string>> = {
-  outcome: "Outcome quality",
-  reliability: "Reliability",
-  cost: "Cost",
-  speed: "Speed",
-  safety: "Safety",
-}
+import { VitalityHoverContent } from "./vitality-hover-content.tsx"
 
 const previousScore = (
   snapshot: AgentScoreRecord | null,
   history: readonly AgentScoreRecord[] | undefined,
 ): AgentScoreRecord | null => {
   if (!snapshot || !history) return null
-  return [...history].reverse().find((entry) => entry.date < snapshot.date) ?? null
+  const previous = [...history].reverse().find((entry) => entry.date < snapshot.date)
+  return previous?.scoringVersion === snapshot.scoringVersion ? previous : null
 }
 
 function ScoreDelta({ value }: { readonly value: number | null }) {
@@ -42,18 +45,38 @@ function ScoreDelta({ value }: { readonly value: number | null }) {
 function VitalityDetails({
   snapshot,
   delta,
+  date,
 }: {
   readonly snapshot: AgentScoreRecord | null
   readonly delta: number | null
+  readonly date: string
 }) {
-  if (!snapshot) return <Text.H6 color="foregroundMuted">Score not ready</Text.H6>
+  if (!snapshot) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <Text.H6 color="foregroundMuted">Score not ready</Text.H6>
+        <Text.H7 color="foregroundMuted">No score was published today.</Text.H7>
+      </div>
+    )
+  }
+
+  const isCurrent = snapshot.date === date
+  const scoreDate = formatFullDate(snapshot.date)
 
   return (
-    <div className="flex flex-row flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
-      <Text.H6 color="foregroundMuted">Last {snapshot.windowDays} days</Text.H6>
-      <Text.H6 color="foregroundMuted">·</Text.H6>
-      <Text.H6 color="foregroundMuted">{formatCount(snapshot.eligibleSessionCount)} sessions</Text.H6>
-      <ScoreDelta value={delta} />
+    <div className="flex flex-col items-center gap-1">
+      {!isCurrent ? <Text.H6B>Latest available</Text.H6B> : null}
+      <div className="flex flex-row flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
+        <Text.H6 color="foregroundMuted">
+          {snapshot.windowDays}-day window ending {scoreDate}
+        </Text.H6>
+        <Text.H6 color="foregroundMuted">·</Text.H6>
+        <Text.H6 color="foregroundMuted">{formatCount(snapshot.eligibleSessionCount)} sessions</Text.H6>
+        <ScoreDelta value={delta} />
+      </div>
+      <Text.H7 color="foregroundMuted">Score date: {scoreDate} UTC</Text.H7>
+      <Text.H7 color="foregroundMuted">Computed: {formatDateTime(snapshot.createdAt)}</Text.H7>
+      {!isCurrent ? <Text.H7 color="foregroundMuted">No score was published today.</Text.H7> : null}
     </div>
   )
 }
@@ -80,14 +103,18 @@ function AgentVitalitySkeleton() {
 
 export function AgentVitality({
   snapshot,
+  date,
   history,
   dimensionWeights,
+  explanation,
   isLoading,
 }: {
   readonly snapshot: AgentScoreRecord | null
+  readonly date: string
   readonly history: readonly AgentScoreRecord[] | undefined
   readonly dimensionWeights: Readonly<Record<ScoreDimensionKey, number>> | undefined
   readonly isLoading: boolean
+  readonly explanation: AgentScoreExplanationRecord["explanation"]
 }) {
   const [activeSection, setActiveSection] = useState<VitalityRingSection | null>(null)
   if (isLoading) return <AgentVitalitySkeleton />
@@ -99,22 +126,42 @@ export function AgentVitality({
     weight: dimensionWeights?.[dimension] ?? 1 / SCORE_DIMENSION_ORDER.length,
     score: snapshot?.dimensions[dimension]?.score ?? null,
   }))
-  const activeDimension = activeSection && activeSection !== "vitality" ? activeSection : null
-  const activeLabel = activeDimension ? DIMENSION_LABELS[activeDimension] : "Agent vitality"
 
   return (
     <div className="flex min-h-[296px] min-w-[280px] basis-[30%] flex-col items-center justify-center gap-4 rounded-xl bg-secondary px-6 py-6">
-      <VitalityScoreRing
-        score={snapshot?.score ?? null}
-        dimensions={dimensions}
-        activeSection={activeSection}
-        onActiveSectionChange={setActiveSection}
-      />
+      <TooltipProvider>
+        <TooltipRoot
+          open={activeSection !== null}
+          onOpenChange={(open) => {
+            if (!open) setActiveSection(null)
+          }}
+        >
+          <TooltipTrigger
+            asChild
+            // The ring opens immediately; Radix's delayed open would dismiss the already-open tooltip.
+            onPointerMove={(event) => event.preventDefault()}
+          >
+            <div>
+              <VitalityScoreRing
+                score={snapshot?.score ?? null}
+                dimensions={dimensions}
+                activeSection={activeSection}
+                onActiveSectionChange={setActiveSection}
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={12} className="w-80 max-w-80 p-0">
+            {activeSection ? (
+              <VitalityHoverContent section={activeSection} snapshot={snapshot} explanation={explanation} />
+            ) : null}
+          </TooltipContent>
+        </TooltipRoot>
+      </TooltipProvider>
       <div className="flex flex-col items-center gap-1 text-center">
         <div className="flex flex-row items-center gap-1.5">
-          <Text.H5M>{activeLabel}</Text.H5M>
+          <Text.H5M>Agent vitality</Text.H5M>
         </div>
-        <VitalityDetails snapshot={snapshot} delta={delta} />
+        <VitalityDetails snapshot={snapshot} delta={delta} date={date} />
       </div>
     </div>
   )

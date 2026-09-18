@@ -415,7 +415,9 @@ const latencyCoverageFact = ({
 export const readSessionCostEvidence = (input: SessionCostEvidenceInput): SessionCostEvidence => {
   const spendCoverage = readSessionSpendCoverage(input.generations)
   const ledger = buildSessionContentLedger({ generations: input.generations, countTokens: input.countTokens })
-  const criticalPath = buildSessionCriticalPath({ spans: input.generations })
+  const criticalPath = buildSessionCriticalPath({
+    spans: [...input.generations, ...input.toolCalls.map((call) => ({ ...call, operation: "execute_tool" }))],
+  })
 
   const repeatedCalls = readRepeatedCalls(input.toolCalls)
   const thrashing = readThrashing(input.toolCalls)

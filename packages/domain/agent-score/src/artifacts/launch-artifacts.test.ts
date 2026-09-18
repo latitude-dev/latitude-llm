@@ -75,6 +75,23 @@ describe("the launch Agent Score artifact", () => {
     expect(total).toBeCloseTo(1, 12)
   })
 
+  it("uses the provisional launch window and coverage floors", () => {
+    expect(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion).toBe("agent-score-v2-provisional")
+    expect(LAUNCH_AGENT_SCORE_ARTIFACT.window).toEqual({
+      stepDays: [7, 14, 21, 28],
+      sessionTarget: 200,
+      sessionFloor: 200,
+      hysteresisMargin: 0.1,
+    })
+    expect(LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors).toEqual({
+      outcome: { examinedSessions: 100, examinedShareOfEligible: 0.05 },
+      reliability: { readableSessions: 100, readableShareOfEligible: 0.8 },
+      cost: { publishableSessionShare: 0.8 },
+      speed: { completeCriticalPathSessions: 100, completeCriticalPathShareOfEligible: 0.5 },
+      safety: { examinedSessions: 100, examinedShareOfEligible: 0.05, maxRateLimitedHintedShare: 0.1 },
+    })
+  })
+
   it("carries a floor for every dimension, so none can publish unguarded", () => {
     for (const dimension of SCORE_DIMENSIONS) {
       expect(LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors[dimension]).toBeDefined()

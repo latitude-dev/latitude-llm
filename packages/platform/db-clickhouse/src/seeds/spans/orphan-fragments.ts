@@ -82,8 +82,8 @@ const ORPHAN_FRAGMENT_SPECS: readonly OrphanFragmentSpec[] = [
     daysAgo: 6,
     frameworkServiceName: "acme-edge-worker",
     llmServiceName: "anthropic-sdk",
-    model: "claude-sonnet-4-6",
-    responseModel: "claude-sonnet-4-6-20250929",
+    model: "claude-sonnet-4-5",
+    responseModel: "claude-sonnet-4-5-20250929",
     provider: "anthropic",
     sessionId: "session-anthropic-demo",
     userPrompt: "Explain the difference between idempotency keys and request retries.",
@@ -280,7 +280,7 @@ function buildOrphanFragmentTraceSpans({ scope, spec }: BuildSpansArgs): SpanRow
   return [httpWrapper, middleware, llm]
 }
 
-function buildAllOrphanFragmentSpans(scope: SeedScope): SpanRow[] {
+export function buildAllOrphanFragmentSpans(scope: SeedScope): SpanRow[] {
   return ORPHAN_FRAGMENT_SPECS.flatMap((spec) => buildOrphanFragmentTraceSpans({ scope, spec }))
 }
 

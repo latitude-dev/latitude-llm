@@ -20,6 +20,7 @@ import type {
   FlaggerScreeningSelectionReason,
 } from "../entities/flagger-screening-decision.ts"
 import { isSafetySuiteSlug, SAFETY_SUITE_KEY, SAFETY_SUITE_SLUGS } from "../entities/safety-suite.ts"
+import { flaggerBundleKey } from "../flagger-bundle-key.ts"
 import {
   type FlaggerStrategy,
   type FlaggerSuppressor,
@@ -465,12 +466,13 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
         : (read.findings[0] ?? null)
 
       if (finding) {
-        return yield* handleMatched(
-          args,
-          finding.feedback,
-          "messageIndex" in finding ? finding.messageIndex : undefined,
-          finding.findingKey,
-        )
+        const bundleKey = flaggerBundleKey(finding)
+        return yield* handleMatched(args, finding.feedback, {
+          ...("messageIndex" in finding ? { messageIndex: finding.messageIndex } : {}),
+          findingKey: finding.findingKey,
+          findingKind: finding.findingKind,
+          ...(bundleKey !== null ? { bundleKey } : {}),
+        })
       }
 
       return yield* handleUnmatched(args, flagger, strategy)
@@ -479,15 +481,25 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
     const result = strategy.detectDeterministically?.(args.context.conversation) ?? ({ kind: "unmatched" } as const)
 
     if (result.kind === "matched") {
-      return yield* handleMatched(args, result.feedback, result.messageIndex)
+      return yield* handleMatched(args, result.feedback, {
+        ...(result.messageIndex !== undefined ? { messageIndex: result.messageIndex } : {}),
+      })
     }
 
     return yield* handleUnmatched(args, flagger, strategy)
   })
 
-const handleMatched = (args: ScreenOneStrategyInput, feedback: string, messageIndex?: number, findingKey?: string) =>
+interface MatchedFindingProvenance {
+  readonly messageIndex?: number
+  readonly findingKey?: string
+  readonly findingKind?: string
+  readonly bundleKey?: string
+}
+
+const handleMatched = (args: ScreenOneStrategyInput, feedback: string, provenance: MatchedFindingProvenance) =>
   Effect.gen(function* () {
     const session = args.context.session
+    const messageIndex = provenance.messageIndex
     const contentHash = yield* computeFlaggerAnchorContentHash(args.context.conversation, messageIndex)
 
     yield* upsertFlaggerAnnotationScore({
@@ -500,7 +512,11 @@ const handleMatched = (args: ScreenOneStrategyInput, feedback: string, messageIn
       messageIndex,
       contentHash,
       analysisHash: args.input.analysisHash,
-      ...(findingKey !== undefined ? { flaggerFindingKey: findingKey, flaggerPath: "deterministic" } : {}),
+      ...(provenance.findingKey !== undefined
+        ? { flaggerFindingKey: provenance.findingKey, flaggerPath: "deterministic" as const }
+        : {}),
+      ...(provenance.bundleKey !== undefined ? { flaggerBundleKey: provenance.bundleKey } : {}),
+      ...(provenance.findingKind !== undefined ? { flaggerFindingKind: provenance.findingKind } : {}),
     })
 
     return { slug: args.slug, action: "matched-issue" } satisfies SessionFlaggerDecision
@@ -610,8 +626,6 @@ interface BuildInitialScreeningDecisionInput {
 }
 
 const toSelection = ({
-  attempt: _attempt,
-  version: _version,
   outcome: _outcome,
   createdAt: _createdAt,
   ...selection
