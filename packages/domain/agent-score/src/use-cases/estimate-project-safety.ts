@@ -111,20 +111,14 @@ export const estimateProjectSafetyWindow = Effect.fn("agentScore.estimateProject
     { concurrency: 1 },
   )
 
+  // Only harm rows whose analysisHash matches the generation the suite examined
+  // count. Screening "matched" is not confirmed harm; a stale row left by Safety
+  // dedup after a clean re-screen must not depress the window.
   const examinedGenerationBySession = new Map<string, string>()
-  const matchedFlaggersBySession = new Map<string, Set<string>>()
   for (const [sessionId, sessionDecisions] of decisionsBySession) {
     const generation = examinedAnalysisHash(sessionDecisions, SAFETY_SUITE_SLUGS)
     if (generation === undefined) continue
     examinedGenerationBySession.set(sessionId, generation)
-    matchedFlaggersBySession.set(
-      sessionId,
-      new Set(
-        sessionDecisions
-          .filter((decision) => decision.analysisHash === generation && decision.outcome === "matched")
-          .map((decision) => decision.flaggerSlug),
-      ),
-    )
   }
 
   // Harm unions per session: several detectors on one session are one harmed
@@ -138,12 +132,7 @@ export const estimateProjectSafetyWindow = Effect.fn("agentScore.estimateProject
 
     const examinedGeneration = examinedGenerationBySession.get(score.sessionId)
     if (examinedGeneration === undefined) continue
-
-    const flaggerSlug = metadata?.flaggerSlug
-    const matchesGeneration = metadata?.analysisHash === examinedGeneration
-    const legacyMatched =
-      flaggerSlug !== undefined && (matchedFlaggersBySession.get(score.sessionId)?.has(flaggerSlug) ?? false)
-    if (!matchesGeneration && !legacyMatched) continue
+    if (metadata?.analysisHash !== examinedGeneration) continue
 
     const versions = harmVersionsBySession.get(score.sessionId) ?? []
     versions.push(metadata?.scoringArtifactVersion ?? "")
