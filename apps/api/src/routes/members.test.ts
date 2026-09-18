@@ -1,5 +1,11 @@
 import { generateId } from "@domain/shared"
-import { invitations as invitationsTable, members, users } from "@platform/db-postgres/schema/better-auth"
+import {
+  invitations as invitationsTable,
+  members,
+  oauthAccessTokens,
+  oauthApplications,
+  users,
+} from "@platform/db-postgres/schema/better-auth"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { describe, expect, it } from "vitest"
 import {
@@ -228,6 +234,53 @@ describe("Members routes — mutations require OAuth", () => {
     )
 
     expect(response.status).toBe(403)
+  })
+})
+
+describe("Members routes — invite authorization", () => {
+  setupTestApi()
+
+  it<ApiTestContext>("POST /v1/members rejects non-admin members (403 Forbidden)", async ({ app, database }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const nonAdmin = await seedExtraMember(database, tenant.organizationId, {
+      role: "member",
+      email: "non-admin@example.com",
+    })
+
+    const clientId = `lct_${generateId()}`
+    const oauthAccessToken = `loa_${crypto.randomUUID()}`
+    const oneHour = 60 * 60 * 1000
+
+    await database.db.insert(oauthApplications).values({
+      id: generateId(),
+      name: "Non-admin MCP Client",
+      clientId,
+      userId: nonAdmin.userId,
+      organizationId: tenant.organizationId,
+      disabled: false,
+    })
+
+    await database.db.insert(oauthAccessTokens).values({
+      id: generateId(),
+      accessToken: oauthAccessToken,
+      clientId,
+      userId: nonAdmin.userId,
+      accessTokenExpiresAt: new Date(Date.now() + oneHour),
+      scopes: "openid profile email",
+    })
+
+    const response = await app.fetch(
+      new Request("http://localhost/v1/members", {
+        method: "POST",
+        headers: { ...createOAuthAuthHeaders(oauthAccessToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "should-not-invite@example.com", role: "admin" }),
+      }),
+    )
+
+    expect(response.status).toBe(403)
+
+    const rows = await listMembersJson(app, createOAuthAuthHeaders(tenant.oauthAccessToken))
+    expect(rows.map((r) => r.email)).not.toContain("should-not-invite@example.com")
   })
 })
 

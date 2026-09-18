@@ -95,6 +95,32 @@ describe("signalDiscoveryWorkflow", () => {
     })
   })
 
+  it("forwards the bundle key so the bundled score takes the exact path", async () => {
+    mockActivities.embedScoreFeedback.mockImplementationOnce(async () => {
+      callOrder.push("embedScoreFeedback")
+      return {
+        scoreId: "score-1",
+        feedback: 'Tool "fetch_user" returned error: upstream 503',
+        normalizedEmbedding: [0.6, 0.8],
+        bundleKey: "tool-call-errors:error:fetch_user:http-503",
+      }
+    })
+
+    await signalDiscoveryWorkflow({ organizationId: "org-1", projectId: "proj-1", scoreId: "score-1" })
+
+    expect(mockActivities.assignOrCreateSignal).toHaveBeenCalledWith(
+      expect.objectContaining({ bundleKey: "tool-call-errors:error:fetch_user:http-503" }),
+    )
+  })
+
+  it("omits the bundle key for a model-authored score, which clusters by meaning", async () => {
+    await signalDiscoveryWorkflow({ organizationId: "org-1", projectId: "proj-1", scoreId: "score-1" })
+
+    expect(mockActivities.assignOrCreateSignal).toHaveBeenCalledWith(
+      expect.not.objectContaining({ bundleKey: expect.anything() }),
+    )
+  })
+
   it("skips embedding and assignment for known eligibility errors", async () => {
     mockActivities.checkEligibility.mockResolvedValueOnce({
       status: "skipped" as const,

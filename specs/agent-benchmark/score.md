@@ -40,15 +40,15 @@ arriving later affect future daily snapshots, not earlier ones.
 
 ### The window
 
-The score uses the shortest whole-week step that contains at least 1,000 eligible sessions:
+The score uses the shortest whole-week step that contains at least 200 eligible sessions:
 
 1. 7 days
 2. 14 days
 3. 21 days
 4. 28 days
 
-The score is withheld below 200 eligible sessions. A project that does not reach 1,000 sessions uses
-28 days once it passes the floor.
+The score is withheld below 200 eligible sessions. Because the target and floor are both 200, every
+published score uses the shortest step that passes the floor.
 
 Whole-week steps keep weekday composition stable and make snapshots easy to compare. The selected
 step is stored on every snapshot.
@@ -56,8 +56,9 @@ step is stored on every snapshot.
 #### Hysteresis
 
 The window does not shorten until the shorter step exceeds the target by 10%, and it does not
-lengthen until the current step falls 10% below the target. This prevents a project near the boundary
-from changing windows every day.
+lengthen until the current step falls 10% below the target. The publication floor still takes
+precedence, so a step below 200 sessions cannot be retained by hysteresis. This prevents a project
+near the boundary from changing windows every day.
 
 ### The session evidence table
 

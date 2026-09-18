@@ -41,6 +41,12 @@ export const FEATURE_FLAGS = {
     description:
       "Builds every project's behaviour tree with node-relative adaptive clustering instead of the static builder. Takes effect on the organization's next gardening pass, either way.",
   },
+  jevFlaggerShadow: {
+    emoji: "👤",
+    name: "Jev flagger shadow",
+    description:
+      "Runs the Jev advisory classifier beside supported flaggers without changing their classifications, reviews, or billing.",
+  },
 } as const satisfies Record<
   string,
   {

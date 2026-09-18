@@ -1421,10 +1421,12 @@ Each row is a gate the previous checklist asserted and the code does not current
   decomposition that new evidence has already invalidated. Re-running a date that has a snapshot is a
   no-op rather than an update, which is what makes the row immutable in practice and not only by
   intent.
-- **D12. The page never substitutes an older snapshot.** If today's snapshot was not published, the
-  current score is unavailable and says which floor blocked it. Older snapshots stay in the trend.
-  The public operation behaves the same way: an explicit unavailable state, not a 404 and not the
-  most recent row.
+- **D12. The page uses the latest published snapshot as its headline.** If today's snapshot was not
+  published, the headline labels that score as latest available, includes its score date and exact
+  computation timestamp, and says no score was published today. Today's readiness and evidence remain
+  separate: they do not lower or explain the stale score, and unavailable current evidence remains
+  unavailable. The trend preserves missing-day gaps. The public operation keeps its explicit
+  today-only unavailable contract; the latest-available fallback belongs to the page.
 - **D13. PR 6 ships behind a feature flag and the flag is a separate decision from the merge.** The
   two remaining gates need production traffic that does not exist yet. Holding the code back until it
   does would mean a month of drift against a moving codebase for no review benefit. The flag comes
@@ -1512,11 +1514,12 @@ Each row is a gate the previous checklist asserted and the code does not current
 ### Step 3: window selection and the eligible population
 
 - [x] **P6-16** Add `selectScoreWindow` as a pure function: the shortest of 7, 14, 21, or 28 days
-  reaching 1,000 eligible sessions, withheld below 200, and 28 days once a project passes the floor
-  without reaching the target. Return the chosen step and the reason it was chosen.
+  reaching 200 eligible sessions, withheld below 200. Return the chosen step and the reason it was
+  chosen.
 - [x] **P6-17** Implement D7's hysteresis against the previous snapshot's stored step: do not shorten
   until the shorter step exceeds the target by 10%, do not lengthen until the current step falls 10%
-  below it. With no previous snapshot or after a withheld day, choose without hysteresis.
+  below it, and never retain a step below the publication floor. With no previous snapshot or after a
+  withheld day, choose without hysteresis.
 - [x] **P6-18** Add the eligible-count-per-step read as one ClickHouse query over
   `ELIGIBLE_SESSIONS_SUBQUERY`, then the session id list for the chosen step. Do not issue four
   queries, and do not select ids for steps that were not chosen. The one query returns an age

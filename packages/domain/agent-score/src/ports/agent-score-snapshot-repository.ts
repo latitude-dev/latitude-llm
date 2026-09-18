@@ -10,6 +10,13 @@ export interface AgentScoreSnapshotHistoryScope {
   readonly to: string
 }
 
+export interface AgentScoreSnapshotLatestScope {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  /** Inclusive UTC date bound, `YYYY-MM-DD`. */
+  readonly throughDate: string
+}
+
 export interface AgentScoreSnapshotRepositoryShape {
   /**
    * Writes the day's snapshot, or does nothing if the day already has one.
@@ -25,6 +32,8 @@ export interface AgentScoreSnapshotRepositoryShape {
     readonly projectId: ProjectId
     readonly date: string
   }): Effect.Effect<AgentScoreSnapshot | null, RepositoryError, SqlClient>
+
+  findLatest(scope: AgentScoreSnapshotLatestScope): Effect.Effect<AgentScoreSnapshot | null, RepositoryError, SqlClient>
 
   /** Oldest first, so a trend chart plots without re-sorting. */
   listHistory(

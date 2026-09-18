@@ -1,6 +1,6 @@
 import { type AgentScoreSnapshot, AgentScoreSnapshotRepository, type DimensionSnapshot } from "@domain/agent-score"
 import { SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
-import { and, asc, between, eq } from "drizzle-orm"
+import { and, asc, between, desc, eq, lte } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { agentScoreSnapshots } from "../schema/agent-score-snapshots.ts"
@@ -97,6 +97,26 @@ export const AgentScoreSnapshotRepositoryLive = Layer.succeed(AgentScoreSnapshot
       )
       return row ? toDomain(row) : null
     }).pipe(Effect.mapError((error) => toRepositoryError(error, "AgentScoreSnapshotRepository.findByDate"))),
+
+  findLatest: ({ organizationId, projectId, throughDate }) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      const [row] = yield* sqlClient.query((db) =>
+        db
+          .select()
+          .from(agentScoreSnapshots)
+          .where(
+            and(
+              eq(agentScoreSnapshots.organizationId, organizationId),
+              eq(agentScoreSnapshots.projectId, projectId),
+              lte(agentScoreSnapshots.date, throughDate),
+            ),
+          )
+          .orderBy(desc(agentScoreSnapshots.date))
+          .limit(1),
+      )
+      return row ? toDomain(row) : null
+    }).pipe(Effect.mapError((error) => toRepositoryError(error, "AgentScoreSnapshotRepository.findLatest"))),
 
   listHistory: ({ organizationId, projectId, from, to }) =>
     Effect.gen(function* () {

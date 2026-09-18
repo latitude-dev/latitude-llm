@@ -336,6 +336,192 @@ describe("readSessionAssessmentSources", () => {
     ])
   })
 
+  it("reads a plain-text tool error from span status and attributes its same-tool retry", async () => {
+    const root = generation("r", 0, 30)
+    const failed = toolCall("s", "call-failed", 1, 10, {
+      parentSpanId: root.spanId,
+      statusCode: "error",
+      statusMessage: "429 rate limited by carrier feed",
+    })
+    const retry = toolCall("t", "call-retry", 11, 20, { parentSpanId: root.spanId })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-failed", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-failed", response: "429 rate limited" }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-retry", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-retry", response: "booking found" }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] },
+      ]),
+      [],
+      { generations: [root], toolCalls: [failed, retry] },
+    )
+    const failure = result.findings.find((finding) => finding.kind === "toolFailure")
+
+    expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
+    expect(failure).toMatchObject({
+      recovered: true,
+      sameSubjectRecovered: true,
+      terminal: false,
+      anchors: expect.arrayContaining([expect.objectContaining({ kind: "span", traceId, spanId: failed.spanId })]),
+    })
+    expect(result.readers.find((reader) => reader.readerId === "tools.call_status")).toMatchObject({
+      findingCount: 1,
+      readableCount: 2,
+      totalCount: 2,
+    })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "recovery.recovered_incident_rate"),
+    ).toMatchObject({ adverseUnits: 1 })
+    expect(result.costEvidence?.avoidableNsByCause["recovered:toolFailure"]).toBeGreaterThan(0)
+  })
+
+  it("attributes a paid generation before the successful same-tool retry", async () => {
+    const failed = toolCall("n", "call-failed", 0, 10, { statusCode: "error" })
+    const retryGeneration = generation("o", 11, 20, { costTotalMicrocents: 325 })
+    const retry = toolCall("p", "call-retry", 21, 30)
+    const result = await read(
+      session([{ role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] }]),
+      [],
+      { generations: [retryGeneration], toolCalls: [failed, retry] },
+    )
+
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
+    ).toMatchObject({ adverseUnits: 325 })
+  })
+
+  it("keeps a final error-status tool call terminal", async () => {
+    const failed = toolCall("u", "call-terminal", 0, 10, {
+      statusCode: "error",
+      statusMessage: "timeout",
+    })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-terminal", name: "search", arguments: {} }],
+        },
+      ]),
+      [],
+      { toolCalls: [failed] },
+    )
+
+    expect(result.findings.find((finding) => finding.kind === "toolFailure")).toMatchObject({
+      recovered: false,
+      sameSubjectRecovered: false,
+      terminal: true,
+    })
+  })
+
+  it("does not infer span-status recovery from a different tool", async () => {
+    const failed = toolCall("v", "call-failed", 0, 10, { statusCode: "error" })
+    const fallback = toolCall("w", "call-fallback", 11, 20, {
+      toolName: "fallback",
+      normalizedToolName: "fallback",
+    })
+    const result = await read(
+      session([{ role: "assistant", parts: [{ type: "text", content: "Fallback answer" }] }]),
+      [],
+      { toolCalls: [failed, fallback] },
+    )
+
+    expect(result.findings.find((finding) => finding.kind === "toolFailure")).toMatchObject({
+      recovered: false,
+      terminal: true,
+    })
+  })
+
+  it("deduplicates one exact error span without changing deterministic evidence identity", async () => {
+    const value = session([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-json", name: "search", arguments: {} }],
+      },
+      {
+        role: "tool",
+        parts: [{ type: "tool_call_response", id: "call-json", response: { error: "timeout" } }],
+      },
+    ])
+    const deterministic = await read(value)
+    const original = deterministic.findings.find((finding) => finding.kind === "toolFailure")
+    const failed = toolCall("x", "call-json", 0, 10, { statusCode: "error", statusMessage: "timeout" })
+    const result = await read(value, [], { toolCalls: [failed] })
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toMatchObject({
+      evidenceKey: original?.evidenceKey,
+    })
+    expect(failures[0]?.anchors.some((anchor) => anchor.kind === "span")).toBe(false)
+  })
+
+  it("keeps reused error spans separate instead of aligning conversation ordinals", async () => {
+    const first = toolCall("y", "call-reused", 0, 10, { statusCode: "error" })
+    const second = toolCall("z", "call-reused", 11, 20, { statusCode: "error" })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { error: "timeout" } }],
+        },
+      ]),
+      [],
+      { toolCalls: [first, second] },
+    )
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+
+    expect(failures).toHaveLength(2)
+    expect(failures.flatMap((finding) => finding.anchors)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "span", spanId: first.spanId }),
+        expect.objectContaining({ kind: "span", spanId: second.spanId }),
+      ]),
+    )
+    expect(result.readers.find((reader) => reader.readerId === "tools.call_status")).toMatchObject({
+      limitation: "unmappedTelemetry",
+    })
+  })
+
+  it("reports unset tool status as missing telemetry", async () => {
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
+      toolCalls: [toolCall("m", "call-unset", 0, 10, { statusCode: "unset" })],
+    })
+
+    expect(result.findings.some((finding) => finding.kind === "toolFailure")).toBe(false)
+    expect(result.readers.find((reader) => reader.readerId === "tools.call_status")).toMatchObject({
+      limitation: "missingTelemetry",
+      readableCount: 0,
+      totalCount: 1,
+    })
+  })
+
+  it("anchors a status failure without a call ID directly to its span", async () => {
+    const failed = toolCall("q", "", 0, 10, { statusCode: "error" })
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "No result" }] }]), [], {
+      toolCalls: [failed],
+    })
+    const failure = result.findings.find((finding) => finding.kind === "toolFailure")
+
+    expect(failure?.anchors).toEqual([{ kind: "span", traceId, spanId: failed.spanId }])
+    expect(failure?.destinations).toEqual([{ kind: "span", traceId, spanId: failed.spanId }])
+  })
+
   it("resolves several tool defects with one linked discovery score", async () => {
     const value = session([
       {

@@ -29,6 +29,7 @@
     "@domain/spans": "workspace:*",
     "@domain/taxonomy": "workspace:*",
     "@platform/ai": "workspace:*",
+    "@platform/ai-jev": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",

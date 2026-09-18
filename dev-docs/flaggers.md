@@ -149,6 +149,12 @@ classifySessionFlagger ──(matched?)──► draftSessionFlaggerAnnotation �
 - **Adversarial review**: a second classifier call approves or rejects the proposed annotation — the primary precision guard.
 - On a confirmed match the use-case computes the **`contentHash`** (below) and returns it with the session metadata the draft/save steps need.
 
+### Jev shadow pilot
+
+The optional Jev shadow runs inside the existing `classifySessionFlagger` activity after strategy, enabled-row, applicability, and session-context gates, concurrently with the baseline classifier. It only supports `frustration` and `refusal`. It receives the already loaded context and the screening selection, then records an append-only advisory observation in ClickHouse. It never changes the baseline classifier, adversarial reviewer, score writes, or billing. The shadow path has a 3s outer timeout over the 2s provider limit, so a slow provider call still leaves headroom for the audit write.
+
+Three independent gates must all be true before a provider call: `LAT_JEV_FLAGGER_SHADOW_ENABLED` (default `false`), a configured `LAT_JEV_API_KEY`, and the per-organization `jevFlaggerShadow` feature flag. The first two gates run before the feature-flag lookup, so disabled global or API-key gates do not create or call its client. The lookup uses its own size-one bounded Postgres pool: it rejects immediately under load, has a 200ms acquisition limit, a 150ms statement limit, and a 400ms transaction limit. The activity has a 1s outer lookup timeout. Any lookup failure, timeout, or capacity rejection disables the shadow path. Provider and audit-write failures are contained, so they cannot fail or retry the baseline classification activity. The observation carries the Temporal workflow id, run id, activity id, and activity attempt for audit and retry correlation.
+
 Models resolve per stage via `resolveGenerationConfig` (`LAT_AI_FLAGGER_{CLASSIFIER,EXTRACTOR,ANNOTATOR}_*` env overrides): classifier haiku t0/512, extractor + annotator minimax. The classifier's feedback is normally final; the annotator LLM only runs as a fallback for a match without feedback text.
 
 ## Scores, anchors, and dedup
@@ -165,6 +171,30 @@ The anchor dedup is a select-then-insert without a DB unique constraint: a narro
 Context compaction mirrors the moments stance: the analyzed window is the last responsive span's input (post-compaction that is the summary + subsequent turns). Pre-compaction windows that settled earlier already got their own screening pass, and the anchor dedup makes passes additive.
 
 `writeScoreUseCase` emits `ScoreCreated` → signal discovery clusters by feedback embedding (per project, not per slug — the annotator prompt is tuned to produce similar text for similar issues) → signals with `source: "flagger"` are auto-monitored → escalation → incidents. See [`./signals.md`](./signals.md).
+
+### Bundle keys: deterministic detections skip the embedding
+
+A deterministic detector names the failure class outright, so re-deriving the grouping from an embedding of the sentence it wrote is both wasteful and wrong: the sentence quotes ids, retry counts and paths that differ between two occurrences of one broken integration, and that is exactly what the embedding is sensitive to. One tool failing the same way all day would fragment into a pile of near-identical issues.
+
+So every deterministic finding carries a **bundle key** (`flaggerBundleKey`, `@domain/flaggers/flagger-bundle-key.ts`), stored on the score as `metadata.flaggerBundleKey` and claimed by the issue it creates. Discovery matches on it exactly and never runs hybrid search or rerank for such a score — see [`./signals.md`](./signals.md#deterministic-bundling). Shapes:
+
+| Finding | Key |
+| --- | --- |
+| `tool-call-errors` / `error` | `tool-call-errors:error:{toolName}:{errorClass}` |
+| `tool-call-errors` / `malformed`, `duplicate`, `undeclared` | `tool-call-errors:{kind}:{toolName}` |
+| `tool-call-errors` / `unknown-id` | `tool-call-errors:unknown-id:any-tool` |
+| `output-schema-validation` | `output-schema-validation:{kind}:{generationPosition}` |
+| `empty-response`, `trashing`, `low-cache-hit-rate` | `{slug}:{kind}` |
+
+`errorClass` comes from `classifyToolError`: a declared HTTP status (`http-503`) first, then the vendor's own `code`/`type` (`econnreset`), and only then the message with ids, hashes, urls, paths, quoted payloads and digits stripped. Recovery state is deliberately **not** in the key — whether the agent worked past a failing tool varies run to run, the broken tool does not.
+
+Model-authored judgements get no key and keep clustering by meaning, which is the only thing that groups differently-worded verdicts.
+
+### Recovered tool errors are reported, not suppressed
+
+`collectToolCallErrorFindings` marks a tool error `recovered` when the session made successful progress afterwards and still delivered a usable completion. That mark drives Reliability scoring ([`../specs/agent-benchmark/flaggers.md`](../specs/agent-benchmark/flaggers.md)) but no longer decides whether the finding reaches discovery: a retried-past integration failure is still an integration failure, and its owner is the only person who can fix it.
+
+`selectRepresentativeToolCallErrorFinding` therefore picks the first defect the run did *not* work through and falls back to the first recovered one, so the issue is anchored on the worst evidence in the session while never going silent. Volume is answered by the bundle key above and by the promotion gate, and the levers for a genuinely unwanted detector are the per-project flagger toggle, issue mute, and issue ignore — all reversible, unlike a detection that was never recorded.
 
 ## Grading a flagger's own decisions
 

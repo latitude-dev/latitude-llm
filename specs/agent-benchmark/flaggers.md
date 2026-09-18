@@ -15,7 +15,7 @@ findings and a record of which sessions each flagger could have examined.
 | return structured deterministic findings from telemetry readers | distinguish terminal failure, recovery, exposure, and harm without turning every fact into a score |
 | link a discovery score to its source finding | merge the score and signal back into one assessment item without duplicating finding data |
 | persist non-reproducible model verdicts and their provenance | preserve the exact result that was produced without rerunning a judge on page load |
-| retain recovered findings in the dynamic read model without publishing discovery events automatically | measure recovery burden and marginal retry resources without signal-volume inflation |
+| retain recovered findings in the dynamic read model, and bundle their discovery events by failure class | measure recovery burden and marginal retry resources without signal-volume inflation |
 | record tool name, input hash, output hash, and avoidability proof separately | distinguish observed repetition from confirmed waste; the current deterministic reader compares only name and argument preview |
 | replace the blanket HTTP 400 through 499 exception with a caller-declared expected-status contract | avoid treating ordinary client errors as successful tool responses |
 | guard empty grouping fields | prevent missing telemetry from manufacturing matches |
@@ -36,7 +36,7 @@ telemetry:
 | --- | --- | --- |
 | `empty-response` | one generic match | writes that match as the discovery score |
 | `output-schema-validation` | every damaged assistant output, with generation position | writes the first match as the discovery score |
-| `tool-call-errors` | `collectToolCallErrorFindings` already returns every defect | selects the first structural or unrecovered defect for discovery |
+| `tool-call-errors` | `collectToolCallErrorFindings` already returns every defect | selects the first structural or unrecovered defect for discovery, falling back to the first recovered one |
 | deterministic `trashing` | longest qualifying identical-call run | writes that loop as the discovery score |
 | `low-cache-hit-rate` | one session-wide generic match | writes that match as the discovery score |
 
@@ -141,14 +141,21 @@ session level without proving that `search_docs` recovered.
 Recovered findings remain available to Cost and Speed because the telemetry reader returns them.
 Cost records the incident in its recovery family and only adds spend, context, tool, or memory units
 that a separate reader can attribute. A tool or memory span has no inherent billable cost. They do
-not create additional scores or publish the `ScoreCreated` event used by signal discovery,
-clustering, naming, monitor evaluation, and notifications. Signal discovery continues to receive the
-one primary terminal finding, structural defect, or other finding selected by its evidence policy.
+not create additional scores of their own: signal discovery receives the one finding selected by the
+reader's evidence policy, which prefers a terminal defect and falls back to a recovered one rather
+than selecting nothing.
 
-This separation prevents a session with several tool failures from manufacturing several annotation
-scores or signal candidates. A calculated finding's stable `findingKey` includes its source identity
-and finding kind, such as a tool-call id plus `error` or a span id plus `provider-error`. Re-screening
-and daily recomputation produce the same key without a persisted observation id.
+Recovery therefore controls scoring, not visibility. A retried-past integration failure is still an
+integration failure its owner should see, and the volume it would otherwise produce is answered by
+the bundle key rather than by suppression: every occurrence of one tool failing one way lands on a
+single issue. See `dev-docs/flaggers.md` § Bundle keys.
+
+One score per session per flagger still holds, so a session with several tool failures cannot
+manufacture several annotation scores or signal candidates. A calculated finding's stable
+`findingKey` includes its source identity and finding kind, such as a tool-call id plus `error` or a
+span id plus `provider-error`. Re-screening and daily recomputation produce the same key without a
+persisted observation id. The `bundleKey` is the complementary axis: `findingKey` identifies one
+occurrence, `bundleKey` identifies the class it belongs to across sessions.
 
 ## Deterministic and sampled flaggers
 

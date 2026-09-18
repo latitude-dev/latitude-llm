@@ -147,10 +147,19 @@ def _resource_attrs(service_name: Optional[str] = None) -> List[Dict[str, Any]]:
     ]
 
 
+def _status_message(span: _Span, options: _EncodeOptions) -> Optional[str]:
+    """Gated like `error.message`: a provider error often quotes the request it rejected."""
+    if not span.error_message or not options.allow_content:
+        return None
+    message = _budget(span.error_message, options.max_content_chars)
+    return redact.redact_text(message) if options.redaction_available else message
+
+
 def _encode_span(span: _Span, options: _EncodeOptions) -> Dict[str, Any]:
     status: Dict[str, Any] = {"code": 2 if span.outcome == "error" else 1}
-    if span.error_message:
-        status["message"] = span.error_message
+    message = _status_message(span, options)
+    if message:
+        status["message"] = message
     return {
         "traceId": span.trace_id,
         "spanId": span.span_id,

@@ -799,7 +799,10 @@ describe("screenSessionFlaggersUseCase", () => {
     expect([...scores.values()]).toEqual([])
   })
 
-  it("does not publish a score for a recovered tool failure", async () => {
+  // A tool the agent retried past is still a broken integration its owner should
+  // see. Volume is answered by the bundle key below, which folds every occurrence
+  // onto one issue, not by dropping the observation.
+  it("publishes a score for a recovered tool failure, bucketed by tool and failure class", async () => {
     const failedCall = assistantToolCall("search", { q: "primary" })
     const failedCallId = (failedCall.parts[0] as { id: string }).id
     const fallbackCall = assistantToolCall("fetch", { q: "fallback" })
@@ -819,12 +822,12 @@ describe("screenSessionFlaggersUseCase", () => {
       deps: fakeDeps.deps,
     })
 
-    expect(decisionFor(result.decisions, "tool-call-errors")).toEqual({
-      slug: "tool-call-errors",
-      action: "dropped",
-      reason: "unmatched",
+    expect(decisionFor(result.decisions, "tool-call-errors")?.action).toBe("matched-issue")
+    expect([...scores.values()]).toHaveLength(1)
+    expect([...scores.values()][0]?.metadata).toMatchObject({
+      flaggerBundleKey: "tool-call-errors:error:search:timeout",
+      flaggerFindingKind: "error",
     })
-    expect([...scores.values()]).toEqual([])
   })
 
   it("publishes a score for an unrecovered terminal tool failure", async () => {

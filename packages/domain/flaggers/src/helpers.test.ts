@@ -39,9 +39,10 @@ function assistantText(content: string): TraceDetail["outputMessages"][number] {
 }
 
 describe("detectToolCallErrorsFlagger", () => {
-  // An agent that runs hundreds of tools errors constantly and works through it;
-  // the user never sees those, so they must not become signals.
-  it("ignores an error the agent worked through", () => {
+  // A broken integration the agent retried past is still broken, and its owner is
+  // the only one who can fix it. Volume is handled by bundling every occurrence
+  // onto one issue, not by never reporting it.
+  it("flags an error the agent worked through", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([
         assistantToolCall("call-1"),
@@ -51,7 +52,38 @@ describe("detectToolCallErrorsFlagger", () => {
       ]),
     )
 
-    expect(result.matched).toBe(false)
+    expect(result.matched).toBe(true)
+    if (result.matched) expect(result.feedback).toBe('Tool "get_weather" returned error: rate limited')
+  })
+
+  it("prefers the defect the run never worked through over an earlier recovered one", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-1"),
+        toolResponse("call-1", { ok: false, error: "rate limited" }),
+        assistantToolCall("call-2"),
+        toolResponse("call-2", { ok: true, temperature: 21 }),
+        assistantToolCall("call-3"),
+        toolResponse("call-3", { ok: false, error: "connection refused" }),
+      ]),
+    )
+
+    expect(result.matched).toBe(true)
+    if (result.matched) expect(result.feedback).toBe('Tool "get_weather" returned error: connection refused')
+  })
+
+  it("records recovery on the finding even when it is the one selected", () => {
+    const findings = collectToolCallErrorFindings(
+      makeTrace([
+        assistantToolCall("call-1"),
+        toolResponse("call-1", { ok: false, error: "rate limited" }),
+        assistantToolCall("call-2"),
+        toolResponse("call-2", { ok: true, temperature: 21 }),
+      ]),
+    )
+
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({ kind: "error", recovered: true, terminal: false })
   })
 
   it("flags an error the run never recovered from", () => {

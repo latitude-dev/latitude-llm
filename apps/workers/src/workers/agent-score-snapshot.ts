@@ -128,7 +128,7 @@ export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")
   yield* applyDerivedSampling({ projectId: input.projectId, result })
   // A missing cache entry costs a page one recomputation; a failed job costs a day of history. The
   // first is not worth risking the second for.
-  yield* cacheAgentScoreExplanation(result).pipe(Effect.ignore)
+  yield* cacheAgentScoreExplanation({ result, date: input.date }).pipe(Effect.ignore)
 
   if (!result.composite || !result.window) {
     return { status: "withheld", reason: withheldReason(result) } satisfies SnapshotProjectResult

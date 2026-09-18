@@ -18,6 +18,7 @@ const causeRowSchema = z.object({
   signalId: z.string().optional(),
   observationCount: z.number(),
   destination: z.enum(CAUSE_DESTINATIONS).optional(),
+  exampleSessionIds: z.array(z.string()).readonly().optional(),
 })
 
 const dimensionAttributionSchema = z.object({
@@ -39,6 +40,7 @@ const observedCauseSchema = z.object({
   observationCount: z.number(),
   signalId: z.string().optional(),
   destination: z.enum(CAUSE_DESTINATIONS).optional(),
+  exampleSessionIds: z.array(z.string()).readonly().optional(),
 })
 
 const issueRowSchema = z.object({
@@ -50,6 +52,8 @@ const issueRowSchema = z.object({
   examinedSessions: z.number(),
   examinedAdverseSessions: z.number(),
   ranked: z.boolean(),
+  /** Optional so a cached explanation written before the field existed still parses. */
+  exampleSessionIds: z.array(z.string()).readonly().optional(),
 })
 
 const windowIssuesSchema = z.object({
@@ -117,6 +121,7 @@ const speedWindowGateSchema = z.object({
 export const agentScoreExplanationSchema = z.object({
   organizationId: z.string().min(1),
   projectId: z.string().min(1),
+  date: z.string().min(1),
   scoringVersion: z.string().min(1),
   computedAt: z.string().min(1),
   window: z.object({ stepDays: z.number(), from: z.string(), to: z.string() }),
@@ -160,12 +165,19 @@ export const agentScoreExplanationSchema = z.object({
 export type AgentScoreExplanation = z.infer<typeof agentScoreExplanationSchema>
 
 /** Turns a completed window computation into the shape the page and the cache both use. */
-export const toAgentScoreExplanation = (result: AgentScoreResult): AgentScoreExplanation | null => {
+export const toAgentScoreExplanation = ({
+  result,
+  date,
+}: {
+  readonly result: AgentScoreResult
+  readonly date: string
+}): AgentScoreExplanation | null => {
   if (!result.coverage || !result.native || !result.readiness) return null
 
   return {
     organizationId: result.organizationId,
     projectId: result.projectId,
+    date,
     scoringVersion: result.scoringVersion,
     computedAt: new Date().toISOString(),
     window: {
@@ -208,18 +220,28 @@ export const toAgentScoreExplanation = (result: AgentScoreResult): AgentScoreExp
 }
 
 /**
- * Organization-prefixed, as every scoped cache key must be, and keyed by project rather than by date.
+ * Organization-prefixed, as every scoped cache key must be, and keyed by the score date.
  *
- * Not a date key on purpose: a date key is what a snapshot has, and this is a cache. It expires, it
- * is rebuilt, and nothing may read it as a record of what a past day looked like.
+ * A project may not publish a score today. Keeping each day's cached explanation separate lets the
+ * page show today's readiness beside the latest published score's breakdown.
  */
 export const agentScoreExplanationCacheKey = ({
+  organizationId,
+  projectId,
+  date,
+}: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly date: string
+}): string => `org:${organizationId}:agent-score:explanation:${projectId}:${date}`
+
+export const latestAgentScoreExplanationCacheKey = ({
   organizationId,
   projectId,
 }: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-}): string => `org:${organizationId}:agent-score:explanation:${projectId}`
+}): string => `org:${organizationId}:agent-score:latest-explanation:${projectId}`
 
 /** Longer than the daily cycle so a warm entry always exists, short enough that a stopped job shows through. */
 export const AGENT_SCORE_EXPLANATION_TTL_SECONDS = 26 * 60 * 60

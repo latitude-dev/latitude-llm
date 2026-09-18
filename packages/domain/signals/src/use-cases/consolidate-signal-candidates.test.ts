@@ -74,6 +74,7 @@ const makeCandidate = ({
     filters: null,
     assigneeId: null,
     priority: null,
+    bundleKey: null,
     centroid: updateSignalCentroid({
       centroid: { ...createSignalCentroid(), clusteredAt: bornAt },
       score: { embedding: makeEmbedding(angle), sourceType: "annotation", createdAt: bornAt },

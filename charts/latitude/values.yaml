@@ -50,6 +50,14 @@ config:
   #   value: smtp.example.com
   # - name: LAT_AI_GENERATION_PROVIDER
   #   value: openai
+  # - name: LAT_JEV_FLAGGER_SHADOW_ENABLED
+  #   value: "true"
+  # - name: LAT_JEV_BASE_URL
+  #   value: https://api.typesafe.ai
+  # - name: LAT_JEV_MODEL
+  #   value: jev-latest
+  # - name: LAT_JEV_TIMEOUT_MS
+  #   value: "2000"
 
 secrets:
   # Name of a pre-created Secret to use instead of the chart-managed one.
@@ -67,6 +75,7 @@ secrets:
   extra: {}
   # extra:
   #   LAT_VOYAGE_API_KEY: pa-...
+  #   LAT_JEV_API_KEY: "..."
   #   LAT_SMTP_PASS: "..."
 
 ingress:

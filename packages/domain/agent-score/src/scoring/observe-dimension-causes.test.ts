@@ -47,3 +47,24 @@ describe("observeDimensionCauses", () => {
     )
   })
 })
+
+describe("observeDimensionCauses evidence", () => {
+  it("carries the sessions a Reliability cause ended, so the row can show which ones", () => {
+    const causes = observeDimensionCauses({
+      fold: EMPTY_WINDOW_FOLD,
+      reliabilityEndpoints: [
+        { sessionId: "session-1", terminalFailure: true, readable: true, causes: ["noOutput"] },
+        { sessionId: "session-2", terminalFailure: true, readable: true, causes: ["noOutput", "providerError"] },
+      ],
+      signalEvidence: [],
+      signalEffects: EMPTY_WINDOW_SIGNAL_EFFECTS,
+      catalog: PROVISIONAL_COST_METRIC_CATALOG,
+    })
+
+    expect(causes.find((cause) => cause.causeId === "noOutput")).toMatchObject({
+      destination: "sessions",
+      exampleSessionIds: ["session-1", "session-2"],
+    })
+    expect(causes.find((cause) => cause.causeId === "providerError")?.exampleSessionIds).toEqual(["session-2"])
+  })
+})
