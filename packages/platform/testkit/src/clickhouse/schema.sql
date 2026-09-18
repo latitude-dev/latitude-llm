@@ -22,6 +22,7 @@ PRIMARY KEY (organization_id, dataset_id)
 ORDER BY (organization_id, dataset_id, row_id, xact_id)
 SETTINGS index_granularity = 8192;
 
+
 CREATE TABLE flagger_jev_shadow_observations
 (
     `observation_id` FixedString(64) CODEC(ZSTD(1)),

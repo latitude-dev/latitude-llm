@@ -23,7 +23,6 @@ export { FlaggerCoverageRepositoryLive } from "./repositories/flagger-coverage-r
 export { FlaggerScreeningDecisionRepositoryLive } from "./repositories/flagger-screening-decision-repository.ts"
 export { FleetLatencyReferenceRepositoryLive } from "./repositories/fleet-latency-reference-repository.ts"
 export { JevPreclassifierObservationRepositoryLive } from "./repositories/jev-preclassifier-observation-repository.ts"
-export { JevShadowObservationRepositoryLive } from "./repositories/jev-shadow-observation-repository.ts"
 export { MemoryAnalyticsRepositoryLive } from "./repositories/memory-analytics-repository.ts"
 export { MemoryRepositoryLive } from "./repositories/memory-repository.ts"
 export { MessageEmbeddingRepositoryLive } from "./repositories/message-embedding-repository.ts"

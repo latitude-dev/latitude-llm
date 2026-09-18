@@ -46,34 +46,12 @@ export const JEV_PRECLASSIFIER_RETENTION_DAYS = 90
 export const JEV_PRECLASSIFIER_OPERATION_TIMEOUT_MS = 15_000
 export const JEV_PRECLASSIFIER_DECISIONS = ["gated-in", "below-threshold", "unknown"] as const
 
-export const JEV_SHADOW_ENABLED = false
-export const JEV_SHADOW_STRATEGY_SLUGS = ["frustration", "refusal"] as const
-export const JEV_SHADOW_FRUSTRATION_THRESHOLD = 0.5
-export const JEV_SHADOW_REFUSAL_THRESHOLD = 0.5
-export const JEV_SHADOW_FRUSTRATION_QUESTION_VERSION = "jev-frustration-v1"
-export const JEV_SHADOW_REFUSAL_QUESTION_VERSION = "jev-refusal-v1"
-export const JEV_SHADOW_POLICY_VERSION = "jev-shadow-policy-v1"
-export const JEV_SHADOW_STATE_BUILDER_VERSION = "jev-shadow-state-v1"
-export const JEV_SHADOW_RETENTION_DAYS = 90
-export const JEV_SHADOW_OPERATION_TIMEOUT_MS = 3_000
 export const JEV_SHADOW_PROVIDER_FAILURE_KINDS = [
   "timeout",
   "authentication",
   "rate-limit",
   "malformed-response",
   "provider",
-] as const
-export const JEV_SHADOW_DECISIONS = ["would-run", "would-skip", "unknown"] as const
-export const JEV_SHADOW_OBSERVATION_STATUSES = [
-  "disabled",
-  "success",
-  "unsupported-slug",
-  "missing-selection",
-  "timeout",
-  "authentication",
-  "rate-limited",
-  "provider-failure",
-  "malformed-response",
 ] as const
 
 // Independent fixed windows per org+slug; sampled sessions with positive hints

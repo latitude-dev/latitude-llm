@@ -50,8 +50,6 @@ config:
   #   value: smtp.example.com
   # - name: LAT_AI_GENERATION_PROVIDER
   #   value: openai
-  # - name: LAT_JEV_FLAGGER_SHADOW_ENABLED
-  #   value: "true"
   # - name: LAT_JEV_FLAGGER_PRECLASSIFIER_ENABLED
   #   value: "false"
   # - name: LAT_JEV_BASE_URL

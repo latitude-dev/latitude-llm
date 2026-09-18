@@ -26,17 +26,6 @@ export {
   JEV_PRECLASSIFIER_STATE_BUILDER_VERSION,
   JEV_PRECLASSIFIER_STRATEGY_SLUGS,
   JEV_PRECLASSIFIER_THRESHOLD,
-  JEV_SHADOW_DECISIONS,
-  JEV_SHADOW_ENABLED,
-  JEV_SHADOW_FRUSTRATION_QUESTION_VERSION,
-  JEV_SHADOW_FRUSTRATION_THRESHOLD,
-  JEV_SHADOW_OBSERVATION_STATUSES,
-  JEV_SHADOW_POLICY_VERSION,
-  JEV_SHADOW_REFUSAL_QUESTION_VERSION,
-  JEV_SHADOW_REFUSAL_THRESHOLD,
-  JEV_SHADOW_RETENTION_DAYS,
-  JEV_SHADOW_STATE_BUILDER_VERSION,
-  JEV_SHADOW_STRATEGY_SLUGS,
 } from "./constants.ts"
 export {
   assistantTurnHasOutputContent,
@@ -94,16 +83,6 @@ export {
   jevPreclassifierDecisionSchema,
   jevPreclassifierObservationSchema,
 } from "./entities/jev-preclassifier-observation.ts"
-export {
-  type JevShadowDecision,
-  type JevShadowObservation,
-  type JevShadowObservationErrorCategory,
-  type JevShadowObservationStatus,
-  jevShadowDecisionSchema,
-  jevShadowObservationSchema,
-  jevShadowObservationStatusSchema,
-  jevShadowProviderFailureKindSchema,
-} from "./entities/jev-shadow-observation.ts"
 export { buildJudgmentVersion } from "./entities/judgment-version.ts"
 export { isSafetySuiteSlug, SAFETY_SUITE_KEY, SAFETY_SUITE_SLUGS } from "./entities/safety-suite.ts"
 export {
@@ -207,12 +186,6 @@ export {
   type JevPreclassifierStrategySlug,
 } from "./jev-preclassifier-strategies.ts"
 export {
-  getJevShadowStrategy,
-  JEV_SHADOW_STRATEGIES,
-  type JevShadowStrategy,
-  type JevShadowStrategySlug,
-} from "./jev-shadow-strategies.ts"
-export {
   FlaggerCoverageRepository,
   type FlaggerCoverageRepositoryShape,
   type GetFlaggerCoverageInput,
@@ -247,10 +220,6 @@ export {
   jevShadowProviderAuditMetadataSchema,
   jevShadowProviderResultSchema,
 } from "./ports/jev-shadow-decision-provider.ts"
-export {
-  JevShadowObservationRepository,
-  type JevShadowObservationRepositoryShape,
-} from "./ports/jev-shadow-observation-repository.ts"
 export {
   FLAGGER_NO_REFLAG_TAG,
   isFlaggerGeneratedTrace,
@@ -324,11 +293,6 @@ export {
   type RunJevPreclassifierResult,
   runJevPreclassifierUseCase,
 } from "./use-cases/run-jev-preclassifier.ts"
-export {
-  type RunJevShadowInput,
-  type RunJevShadowResult,
-  runJevShadowUseCase,
-} from "./use-cases/run-jev-shadow.ts"
 export {
   type SaveFlaggerAnnotationError,
   type SaveFlaggerAnnotationInput,
