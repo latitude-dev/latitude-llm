@@ -177,7 +177,6 @@ export const screenSessionFlaggers = async (
     effect.pipe(
       withClickHouse(
         Layer.mergeAll(
-
           ScoreAnalyticsRepositoryLive,
           FlaggerScreeningDecisionRepositoryLive,
           JevPreclassifierObservationRepositoryLive,
@@ -229,7 +228,12 @@ export const screenSessionFlaggers = async (
             label: "flagger",
           }),
           withPostgres(
-            Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, billingMeteringRepositoriesLive),
+            Layer.mergeAll(
+              FlaggerRepositoryLive,
+              OutboxEventWriterLive,
+              ScoreRepositoryLive,
+              billingMeteringRepositoriesLive,
+            ),
             getPostgresClient(),
             OrganizationId(input.organizationId),
           ),
