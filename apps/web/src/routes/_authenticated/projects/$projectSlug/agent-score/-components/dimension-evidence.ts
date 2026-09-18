@@ -44,7 +44,7 @@ export interface DimensionEvidence {
 
 const clamp = (value: number): number => Math.max(0, Math.min(1, value))
 
-const issueValue = (observed: number): string => `${formatCount(observed)} observed`
+const issueValue = (observed: number): string => `${formatCount(observed)} ${observed === 1 ? "session" : "sessions"}`
 
 /** Example sessions only when there are some, so a row without them stays inert rather than linking nowhere. */
 const withExamples = (sessionIds: readonly string[] | undefined): { exampleSessionIds?: readonly string[] } =>

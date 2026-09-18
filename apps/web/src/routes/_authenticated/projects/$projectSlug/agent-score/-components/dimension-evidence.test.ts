@@ -134,7 +134,7 @@ describe("buildDimensionEvidence", () => {
     ])
   })
 
-  it("shows only the sessions actually observed when reach is estimated", () => {
+  it("shows only the session count actually observed when reach is estimated", () => {
     const withSampledIssue = {
       ...explanation,
       issues: {
@@ -157,10 +157,10 @@ describe("buildDimensionEvidence", () => {
 
     const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withSampledIssue })
 
-    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 observed" })])
+    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 sessions" })])
   })
 
-  it("shows the observed count when estimated and observed reach agree", () => {
+  it("shows the session count when estimated and observed reach agree", () => {
     const withCensusIssue = {
       ...explanation,
       issues: {
@@ -183,10 +183,10 @@ describe("buildDimensionEvidence", () => {
 
     const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withCensusIssue })
 
-    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 observed" })])
+    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 sessions" })])
   })
 
-  it("shows the observed count when estimated reach rounds to the observed count", () => {
+  it("shows the session count when estimated reach rounds to the observed count", () => {
     const withRoundedEstimate = {
       ...explanation,
       issues: {
@@ -209,7 +209,7 @@ describe("buildDimensionEvidence", () => {
 
     const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withRoundedEstimate })
 
-    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 observed" })])
+    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 sessions" })])
   })
 
   it("carries the example sessions a Reliability cause ended", () => {
@@ -264,7 +264,7 @@ describe("buildDimensionEvidence", () => {
 
     expect(evidence.affected).toEqual([])
     expect(evidence.context).toEqual([
-      expect.objectContaining({ label: "Prompt injection exposure", value: "2 observed" }),
+      expect.objectContaining({ label: "Prompt injection exposure", value: "2 sessions" }),
     ])
   })
 
@@ -382,7 +382,7 @@ describe("buildDimensionEvidence", () => {
     expect(evidence.affected).toEqual([
       expect.objectContaining({
         label: "Personal information exposed",
-        value: "3 observed",
+        value: "3 sessions",
         description:
           "The agent exposed personal data in its output that the user did not provide or was not meant to receive.",
       }),
