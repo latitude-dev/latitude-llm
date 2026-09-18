@@ -109,10 +109,9 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
       await historyQuery.refetch()
       if (!completed) {
         toast({
-          title: "Agent Score is still being calculated",
+          title: "Agent Score has not updated yet",
           description:
-            "Scoring a large project reads every session in the window and can take several minutes. " +
-            "It keeps running in the background — reload the page later, or refresh again now.",
+            "The calculation may still be running or may have failed. Reload the page later, or refresh again now.",
         })
       }
     } catch (error) {
