@@ -15,8 +15,11 @@ import { z } from "zod"
 export const DEFAULT_JEV_BASE_URL = "https://api.typesafe.ai"
 export const DEFAULT_JEV_MODEL = "jev-latest"
 export const DEFAULT_JEV_TIMEOUT_MS = 2_000
-export const JEV_PRECLASSIFIER_TIMEOUT_MS = 5_000
-export const MAX_JEV_TIMEOUT_MS = 5_000
+// Multi-question decideMany covers all 11 LLM-capable dims in one System One call.
+// Single-question shadow keeps the 2s default; 5s proved too tight for 11 answers
+// (provider latency + parse). Budget ~1s/dim plus network/parse slack → 12s.
+export const JEV_PRECLASSIFIER_TIMEOUT_MS = 12_000
+export const MAX_JEV_TIMEOUT_MS = 12_000
 
 const provider = "typesafe-ai"
 

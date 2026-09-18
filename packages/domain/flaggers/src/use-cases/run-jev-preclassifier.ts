@@ -1,6 +1,7 @@
+import { AIMeteringScope } from "@domain/billing"
 import { OrganizationId, ProjectId, SessionId } from "@domain/shared"
 import { hash } from "@repo/utils"
-import { Effect } from "effect"
+import { Effect, Option } from "effect"
 import {
   JEV_PRECLASSIFIER_ENABLED,
   JEV_PRECLASSIFIER_POLICY_VERSION,
@@ -185,6 +186,30 @@ const evaluateStrategy = (args: {
     return { index, decision: gated.decision, classification: gated.classification, observation }
   })
 
+
+const meterJevPreclassifierCall = (results: Readonly<Record<string, JevShadowProviderResult>>) =>
+  Effect.gen(function* () {
+    const scope = yield* Effect.serviceOption(AIMeteringScope)
+    if (Option.isNone(scope)) return
+
+    // One HTTP decideMany → one llm-call. Usage is duplicated onto each question
+    // result from the same response; pick any typesafe-ai sample for metadata.
+    const sample = Object.values(results).find((result) => result.provider === "typesafe-ai")
+    if (sample === undefined) return
+
+    yield* scope.value.record({
+      action: "llm-call",
+      metadata: {
+        provider: sample.provider,
+        model: sample.resolvedModel ?? sample.requestedModel,
+        pricing: "flat-fallback",
+        source: "jev-preclassifier",
+        ...(sample.inputTokens !== null ? { tokensInput: sample.inputTokens } : {}),
+        ...(sample.outputTokens !== null ? { tokensOutput: sample.outputTokens } : {}),
+      },
+    })
+  })
+
 export const runJevPreclassifierUseCase = Effect.fn("flaggers.runJevPreclassifier")(function* (
   input: RunJevPreclassifierInput,
 ) {
@@ -203,6 +228,8 @@ export const runJevPreclassifierUseCase = Effect.fn("flaggers.runJevPreclassifie
       ? provider.decideMany({ questions: strategies.map((strategy) => strategy.question), state })
       : Effect.succeed(emptyResults)
   ).pipe(Effect.catch(() => Effect.succeed(emptyResults)))
+
+  yield* meterJevPreclassifierCall(results)
 
   const decisions = [...input.decisions]
   const classifications = [...input.classifications]

@@ -162,19 +162,38 @@ export const screenSessionFlaggers = async (
   )
   const activityIdentity = getJevActivityIdentity()
 
+  const screening = screenSessionFlaggersUseCase(
+    { ...input, attempt: currentActivityAttempt() },
+    {
+      checkRateLimit,
+      ...(jevPreclassifierEnabled ? { jevPreclassifier: { enabled: true, ...activityIdentity } } : {}),
+    },
+  )
+
+  // Jev preclassifier spends provider tokens — authorize + meter like classify.
+  // runJevPreclassifierUseCase records one llm-call per decideMany when a scope is present.
+  const screened = jevPreclassifierEnabled
+    ? screening.pipe(
+        withActivityAIMetering({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          label: "flagger",
+        }),
+      )
+    : screening
+
+  const postgresLayer = jevPreclassifierEnabled
+    ? Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, billingMeteringRepositoriesLive)
+    : Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive)
+
   return Effect.runPromise(
-    screenSessionFlaggersUseCase(
-      { ...input, attempt: currentActivityAttempt() },
-      {
-        checkRateLimit,
-        ...(jevPreclassifierEnabled ? { jevPreclassifier: { enabled: true, ...activityIdentity } } : {}),
-      },
+    (jevPreclassifierEnabled
+      ? screened.pipe(
+          withPostgres(postgresLayer, getPostgresClient(), OrganizationId(input.organizationId)),
+          Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
+        )
+      : screened.pipe(withPostgres(postgresLayer, getPostgresClient(), OrganizationId(input.organizationId)))
     ).pipe(
-      withPostgres(
-        Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
-        getPostgresClient(),
-        OrganizationId(input.organizationId),
-      ),
       withClickHouse(
         Layer.mergeAll(
           ScoreAnalyticsRepositoryLive,
