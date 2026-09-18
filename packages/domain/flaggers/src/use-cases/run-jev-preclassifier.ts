@@ -120,10 +120,7 @@ const withPropensityCorrection = (
   return { ...baseline, selection }
 }
 
-const buildJevGateIn = (args: {
-  readonly strategy: JevPreclassifierStrategy
-  readonly flagger: FlaggerCacheEntry
-}) => {
+const buildJevGateIn = (args: { readonly strategy: JevPreclassifierStrategy; readonly flagger: FlaggerCacheEntry }) => {
   const selection: FlaggerSelectionEvidence = {
     reason: "jev-preclassifier",
     inclusionProbability: 1,
@@ -235,10 +232,7 @@ const prepareStrategy = (args: {
     } satisfies StrategyEvaluation
   })
 
-const applyGate = (
-  evaluation: StrategyEvaluation,
-  input: RunJevPreclassifierInput,
-): StrategyEvaluation => {
+const applyGate = (evaluation: StrategyEvaluation, input: RunJevPreclassifierInput): StrategyEvaluation => {
   const flagger = input.flaggerBySlug.get(evaluation.strategy.slug)
   if (!flagger?.enabled) return evaluation
   const gated = buildJevGateIn({ strategy: evaluation.strategy, flagger })
@@ -297,7 +291,6 @@ const resolveGates = (args: {
       return evaluation
     })
   })
-
 
 const meterJevPreclassifierCall = (results: Readonly<Record<string, JevShadowProviderResult>>) =>
   Effect.gen(function* () {
