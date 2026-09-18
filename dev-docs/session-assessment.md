@@ -32,6 +32,10 @@ The public model is Zod-first in `src/entities/session-assessment.ts`. Internal 
 
 One source event remains one item even when it affects several dimensions. Metric evidence takes precedence when the same event is also represented by a signal, flagger score, or generic score. Merging retains every applicable score id, signal id, anchor, and destination.
 
+The internal resolved item also retains the observation probability of the reader that produced its displayed identity. Direct telemetry findings, stored conversation moments, and independent human evidence are census observations with probability one. Sampled flagger and signal judgments retain their own recorded probability; they never inherit the separate task-outcome endpoint's probability. When a sampled signal is merged onto deterministic metric evidence, the signal row keeps the signal reader's probability because that is the identity and label the issue table presents.
+
+Conversation moments remain separate chronological evidence items inside a session, but their issue identity is the sorted semantic kind set rather than the occurrence id. Outcome issue rows therefore aggregate repeated `stalling`, `escalation`, or equivalent multi-kind moments across sessions and count each session once per semantic issue.
+
 ## Coverage
 
 Coverage answers whether a reader examined the session, not whether the session was healthy. An examined reader with zero findings is different from a reader that did not run or could not read its input.
@@ -44,6 +48,8 @@ Reader states are:
 - `notApplicable`.
 
 Flagger screening decisions distinguish known sampling loss, rate limiting, execution failure, and pending work. Internal policy reasons such as disabled, suppressed, missing flagger, and missing context all surface as `skipped`. Dimension coverage is derived only from readers relevant to that dimension; there is no assessment-wide completeness flag.
+
+Outcome issue reach uses the issue reader's observation probability and the task-outcome endpoint's inclusion probability as distinct inputs. Independent draws multiply; evidence produced by the endpoint's own score shares that draw and applies it once. Direct findings contribute an issue probability of one, so only a genuinely sampled endpoint can expand their failed-reach estimate.
 
 ## Source boundaries
 

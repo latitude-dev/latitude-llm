@@ -91,7 +91,7 @@ contains only scores, intervals, version, window, and eligible-session count.
 | --- | --- |
 | Cause | metric, signal, or residual explanation |
 | Evidence | endpoint, issue context, money, time, or confirmed harm |
-| Reach | estimated affected sessions, corrected with stored inclusion probabilities when sampled |
+| Reach | estimated affected sessions, corrected with stored inclusion probabilities when sampled; used for ranking and progress, not as the compact row label |
 | Native effect | endpoint reach, Cost-family units, avoidable spend, avoidable time, or harmed sessions |
 | Attributed deficit | Shapley share of the displayed dimension deficit, when measured |
 | Fix gain | estimated score recovered if this cause alone disappeared, when measured |
@@ -175,16 +175,23 @@ expanded view.
 78   Outcome           selection-corrected success rate = 0.78
      890 examined sessions, covering 72% of eligible traffic
 
-Issue                               Estimated reach   Examined   Estimated failed reach
-Users corrected or abandoned          204 sessions        150             100 sessions
-Refund-flow loop signal                190 sessions        141              92 sessions
-No usable final output                  36 sessions         36              36 sessions
+Issue                                      Observed failed sessions
+Users corrected or abandoned                         73 sessions
+Refund-flow loop signal                              68 sessions
+No usable final output                               36 sessions
 ```
 
 The score comes from task-outcome judgments. Issue rows explain where failures concentrate without
 claiming that every affected session failed or that removing one issue guarantees a fixed point
-gain. Estimated reach and failed reach use stored inclusion probabilities. Examined is the raw count
-shown for coverage, not ranking.
+gain. The compact value is the raw number of observed failed sessions. Selection-corrected reach and
+failed reach still use stored inclusion probabilities for ranking and progress, but are not shown as
+the row's session count.
+
+Each issue uses the inclusion probability of the reader that produced that issue. Direct telemetry
+findings and stored conversation moments have probability one; they do not inherit the task-outcome
+judge's sampling rate. The issue and endpoint probabilities multiply only when they are genuinely
+independent draws. A signal discovered from the endpoint verdict shares that draw and applies it once.
+Conversation moments aggregate by their semantic kind set rather than by occurrence id.
 
 ### Safety example
 
@@ -193,18 +200,18 @@ shown for coverage, not ranking.
      interval 56 to 99
 
 Confirmed harm
-Issue                                  Estimated harmed reach   Examined
-Assistant disclosed personal data                 1 session            1
+Issue                                                    Sessions
+Assistant disclosed personal data                      1 session
 
 Exposure only
-Issue                                         Estimated reach   Examined
-Injection attempts received                     340 sessions        250
-Unsafe user content received                     82 sessions         60
+Issue                                                    Sessions
+Injection attempts received                          250 sessions
+Unsafe user content received                          60 sessions
 ```
 
 Safety always shows the wide interval created by rare events. Exposure counts remain outside the
-formula. Harm and exposure estimates use stored inclusion probabilities; the raw examined column is
-coverage context.
+formula. Harm and exposure estimates use stored inclusion probabilities for ranking and progress;
+the compact row value is the raw observed session count.
 
 ## Cause destinations
 
@@ -226,6 +233,11 @@ Outcome issue is not a filterable session property. Rows that lead there carry a
 the session ids they were built from and open the Sessions list filtered to exactly those, with the
 filter panel open so the list reads as a sample of the row's reach rather than all of it. A row that
 kept no example sessions links nowhere, which stays the honest default.
+
+The compact evidence list always renders the raw observed count as `10 sessions`. Estimated reach
+still determines ranking and relative progress, but is not printed beside the row. The link's
+accessible label names the number of example sessions it opens, which may be capped below the
+observed count.
 
 ## Recommendations
 

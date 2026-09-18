@@ -134,6 +134,84 @@ describe("buildDimensionEvidence", () => {
     ])
   })
 
+  it("shows only the session count actually observed when reach is estimated", () => {
+    const withSampledIssue = {
+      ...explanation,
+      issues: {
+        ...explanation.issues,
+        outcome: [
+          {
+            issueKey: "issue:sampled",
+            label: "Sampled issue",
+            signalIds: [],
+            estimatedReach: 100,
+            estimatedAdverseReach: 100,
+            examinedSessions: 10,
+            examinedAdverseSessions: 10,
+            ranked: true,
+            exampleSessionIds: ["session-a"],
+          },
+        ],
+      },
+    } as unknown as Explanation
+
+    const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withSampledIssue })
+
+    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 sessions" })])
+  })
+
+  it("shows the session count when estimated and observed reach agree", () => {
+    const withCensusIssue = {
+      ...explanation,
+      issues: {
+        ...explanation.issues,
+        outcome: [
+          {
+            issueKey: "issue:census",
+            label: "Census issue",
+            signalIds: [],
+            estimatedReach: 10,
+            estimatedAdverseReach: 10,
+            examinedSessions: 10,
+            examinedAdverseSessions: 10,
+            ranked: true,
+            exampleSessionIds: ["session-a"],
+          },
+        ],
+      },
+    } as unknown as Explanation
+
+    const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withCensusIssue })
+
+    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 sessions" })])
+  })
+
+  it("shows the session count when estimated reach rounds to the observed count", () => {
+    const withRoundedEstimate = {
+      ...explanation,
+      issues: {
+        ...explanation.issues,
+        outcome: [
+          {
+            issueKey: "issue:rounded-estimate",
+            label: "Rounded estimate",
+            signalIds: [],
+            estimatedReach: 10.2,
+            estimatedAdverseReach: 10.2,
+            examinedSessions: 10,
+            examinedAdverseSessions: 10,
+            ranked: true,
+            exampleSessionIds: ["session-a"],
+          },
+        ],
+      },
+    } as unknown as Explanation
+
+    const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withRoundedEstimate })
+
+    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 sessions" })])
+  })
+
   it("carries the example sessions a Reliability cause ended", () => {
     const withheld = {
       ...explanation,
@@ -186,7 +264,7 @@ describe("buildDimensionEvidence", () => {
 
     expect(evidence.affected).toEqual([])
     expect(evidence.context).toEqual([
-      expect.objectContaining({ label: "Prompt injection exposure", value: "10 sessions" }),
+      expect.objectContaining({ label: "Prompt injection exposure", value: "2 sessions" }),
     ])
   })
 
@@ -304,7 +382,7 @@ describe("buildDimensionEvidence", () => {
     expect(evidence.affected).toEqual([
       expect.objectContaining({
         label: "Personal information exposed",
-        value: "6 sessions",
+        value: "3 sessions",
         description:
           "The agent exposed personal data in its output that the user did not provide or was not meant to receive.",
       }),

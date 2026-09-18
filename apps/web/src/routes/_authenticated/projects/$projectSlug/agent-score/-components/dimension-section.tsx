@@ -82,12 +82,13 @@ function EvidenceRow({ row, projectSlug }: { readonly row: DimensionEvidenceRow;
     )
   }
   if (exampleSessionIds.length > 0) {
+    const exampleCount = exampleSessionIds.length
     return (
       <Link
         to="/projects/$projectSlug"
         params={{ projectSlug }}
         search={exampleSessionsSearch(exampleSessionIds)}
-        aria-label={`${row.label}, example sessions`}
+        aria-label={`${row.label}, ${exampleCount} example ${exampleCount === 1 ? "session" : "sessions"}`}
       >
         {content}
       </Link>

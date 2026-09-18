@@ -14,6 +14,7 @@ export interface ResolvedAssessmentItem {
   readonly item: SessionAssessmentItem
   readonly chronology: AssessmentFindingChronology
   readonly independentHumanEvidence: boolean
+  readonly observationProbability?: number
 }
 
 export interface ResolvedAssessmentItemOrder {
@@ -368,7 +369,7 @@ const findingGroupKey = (finding: AssessmentFinding): string => {
     case "standaloneScore":
       return `judgment:${finding.scoreIds[0] ?? finding.evidenceKey}`
     case "moment":
-      return finding.evidenceKey
+      return `issue:moment:${[...new Set(finding.momentKinds)].sort().join("+")}`
   }
 }
 
@@ -477,6 +478,11 @@ export const resolveAssessmentFinding = (finding: AssessmentFinding): ResolvedAs
     },
     chronology: finding.chronology,
     independentHumanEvidence: finding.independentHumanEvidence,
+    ...(finding.observationProbability !== undefined
+      ? { observationProbability: finding.observationProbability }
+      : finding.source === "metric" || finding.source === "moment" || finding.independentHumanEvidence
+        ? { observationProbability: 1 }
+        : {}),
   }
 }
 
@@ -574,6 +580,7 @@ const mergeResolvedItems = (left: ResolvedAssessmentItem, right: ResolvedAssessm
   const secondary = primary === left ? right : left
   const signalItem = [left, right].find(({ item }) => item.source === "signal")
   const chronology = compareResolvedAssessmentItems(left, right) <= 0 ? left.chronology : right.chronology
+  const observationProbability = signalItem?.observationProbability ?? primary.observationProbability
   return {
     item: {
       ...primary.item,
@@ -593,6 +600,7 @@ const mergeResolvedItems = (left: ResolvedAssessmentItem, right: ResolvedAssessm
     },
     chronology,
     independentHumanEvidence: false,
+    ...(observationProbability !== undefined ? { observationProbability } : {}),
   }
 }
 

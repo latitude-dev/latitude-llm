@@ -30,15 +30,49 @@ const verdictFinding = (scoreId: string): AssessmentFinding =>
     verdict: "failure",
   }) as AssessmentFinding
 
-const outcomeSignalFinding = (signalId: string, scoreIds: readonly string[] = []): AssessmentFinding =>
+const outcomeSignalFinding = (
+  signalId: string,
+  scoreIds: readonly string[] = [],
+  observationProbability = 0.1,
+): AssessmentFinding =>
   ({
     ...reference,
     signalIds: [signalId],
     scoreIds,
+    observationProbability,
     kind: "classifiedJudgment",
     roles: [{ scoreDimension: "outcome", role: "taskOutcome" }],
     negative: true,
     judgmentKind: "evaluation",
+  }) as AssessmentFinding
+
+const finishFailureFinding = (): AssessmentFinding =>
+  ({
+    ...reference,
+    evidenceKey: "span:generation-error",
+    label: "Generation ended with generationError",
+    source: "metric",
+    metricId: "spans.finish_failure",
+    signalIds: [],
+    scoreIds: [],
+    kind: "finishFailure",
+    findingKind: "generationError",
+    generationPosition: "final",
+    observedMicrocents: 0,
+    observedNs: 1_000,
+  }) as AssessmentFinding
+
+const momentFinding = (evidenceKey = "moment:stall-1"): AssessmentFinding =>
+  ({
+    ...reference,
+    evidenceKey,
+    label: "Assistant stalls without delivering progress",
+    source: "moment",
+    metricId: "moments.conversation",
+    signalIds: [],
+    scoreIds: [],
+    kind: "moment",
+    momentKinds: ["stalling"],
   }) as AssessmentFinding
 
 const harmFinding = (): AssessmentFinding =>
@@ -108,13 +142,25 @@ describe("readSessionIssueEvidence", () => {
     const evidence = readSessionIssueEvidence(
       session({
         sessionId: "s1",
-        findings: [outcomeSignalFinding("signal-1")],
+        findings: [outcomeSignalFinding("signal-1", [], 0.25)],
         eligibleSignalIds: ["signal-1"],
         probability: 0.25,
       }),
     )
 
     expect(evidence.outcome[0]?.observationProbability).toBe(0.25)
+  })
+
+  it("treats deterministic findings and stored conversation moments as census observations", () => {
+    const deterministic = readSessionIssueEvidence(
+      session({ sessionId: "failure", findings: [finishFailureFinding()], probability: 0.1 }),
+    )
+    const moment = readSessionIssueEvidence(
+      session({ sessionId: "stall", findings: [momentFinding()], probability: 0.1 }),
+    )
+
+    expect(deterministic.outcome[0]?.observationProbability).toBe(1)
+    expect(moment.outcome[0]?.observationProbability).toBe(1)
   })
 
   it("routes confirmed harm to the harm table and not to exposure", () => {
@@ -155,6 +201,42 @@ describe("buildWindowIssues", () => {
     expect(issues.outcome[0]?.estimatedReach).toBeCloseTo(20, 6)
     expect(issues.outcome[0]?.estimatedAdverseReach).toBeCloseTo(100, 6)
     expect(issues.outcome[0]?.examinedSessions).toBe(2)
+  })
+
+  it("corrects a conversation moment only for the sampled Outcome endpoint", () => {
+    const moment = [readSessionIssueEvidence(session({ sessionId: "failed", findings: [momentFinding()] }))]
+    const issues = buildWindowIssues({
+      evidence: moment,
+      outcome: outcomeEstimate({
+        judgedSessions: [{ sessionId: "failed", succeeded: false, inclusionProbability: 0.1, judgmentVersion: "v1" }],
+      }),
+      safety: safetyEstimate(),
+    })
+
+    expect(issues.outcome[0]).toMatchObject({
+      estimatedReach: 1,
+      estimatedAdverseReach: 10,
+      examinedSessions: 1,
+      examinedAdverseSessions: 1,
+    })
+  })
+
+  it("does not inflate a deterministic finding by the Outcome judge's sampling rate", () => {
+    const deterministic = [
+      readSessionIssueEvidence(session({ sessionId: "failed", findings: [finishFailureFinding()] })),
+    ]
+    const issues = buildWindowIssues({
+      evidence: deterministic,
+      outcome: outcomeEstimate({ deterministicFailureSessionIds: ["failed"] }),
+      safety: safetyEstimate(),
+    })
+
+    expect(issues.outcome[0]).toMatchObject({
+      estimatedReach: 1,
+      estimatedAdverseReach: 1,
+      examinedSessions: 1,
+      examinedAdverseSessions: 1,
+    })
   })
 
   it("describes only the sessions the estimator used", () => {
