@@ -1,3 +1,5 @@
+import { CAUSE_EXAMPLE_SESSION_LIMIT } from "../constants.ts"
+
 export interface IssueObservation {
   /** Identity of the issue, already collapsed: a signal and the score it was discovered from share one. */
   readonly issueKey: string
@@ -39,6 +41,15 @@ export interface IssueRow {
   readonly examinedAdverseSessions: number
   /** False when a joint probability was unknown, so the row explains without claiming a position. */
   readonly ranked: boolean
+  /**
+   * Sessions somebody can open to see the issue, capped at `CAUSE_EXAMPLE_SESSION_LIMIT`.
+   *
+   * Adverse sessions first: a row is read to find out what went wrong, and a session the issue
+   * touched without the endpoint going badly answers that less well. Never a reach estimate — these
+   * are raw examined sessions, and a row whose estimate corrects for sampling still lists only the
+   * sessions actually read.
+   */
+  readonly exampleSessionIds: readonly string[]
 }
 
 interface IssueAccumulator {
@@ -50,6 +61,8 @@ interface IssueAccumulator {
   examinedAdverseSessions: number
   reachCorrected: boolean
   adverseReachCorrected: boolean
+  adverseExamples: string[]
+  otherExamples: string[]
 }
 
 /**
@@ -68,6 +81,12 @@ const jointProbability = (observation: IssueObservation, endpointInclusionProbab
 
 const isUsable = (probability: number | undefined): probability is number =>
   probability !== undefined && Number.isFinite(probability) && probability > 0
+
+/** Keeps the two samples apart so the row can lead with the sessions that went badly. */
+const recordExample = (issue: IssueAccumulator, sessionId: string, adverse: boolean): void => {
+  const examples = adverse ? issue.adverseExamples : issue.otherExamples
+  if (examples.length < CAUSE_EXAMPLE_SESSION_LIMIT) examples.push(sessionId)
+}
 
 /**
  * The issues that explain where a dimension's adverse sessions concentrate.
@@ -104,6 +123,8 @@ export const buildIssueRows = (input: {
         examinedAdverseSessions: 0,
         reachCorrected: true,
         adverseReachCorrected: true,
+        adverseExamples: [],
+        otherExamples: [],
       }
 
       if (observation.signalId) issue.signalIds.add(observation.signalId)
@@ -124,6 +145,7 @@ export const buildIssueRows = (input: {
         if (isUsable(joint)) issue.estimatedAdverseReach += 1 / joint
         else issue.adverseReachCorrected = false
       }
+      recordExample(issue, session.sessionId, session.adverse)
 
       issues.set(observation.issueKey, issue)
     }
@@ -140,6 +162,7 @@ export const buildIssueRows = (input: {
       examinedSessions: issue.examinedSessions,
       examinedAdverseSessions: issue.examinedAdverseSessions,
       ranked,
+      exampleSessionIds: [...issue.adverseExamples, ...issue.otherExamples].slice(0, CAUSE_EXAMPLE_SESSION_LIMIT),
     }
   })
 

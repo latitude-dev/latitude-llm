@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
-import { DimensionSection, DimensionSectionSkeleton } from "./dimension-section.tsx"
+import { parseFilters } from "../../-components/trace-page-state.ts"
+import { DimensionSection, DimensionSectionSkeleton, exampleSessionsSearch } from "./dimension-section.tsx"
 
 afterEach(cleanup)
 
@@ -70,5 +71,16 @@ describe("DimensionSection", () => {
     fireEvent.click(screen.getByRole("button", { name: /Collapse Outcome quality/ }))
     expect(screen.queryByText("Terminal provider failure")).toBeNull()
     expect(screen.queryByRole("button", { name: /Healthy/ })).toBeNull()
+  })
+})
+
+describe("exampleSessionsSearch", () => {
+  it("builds a filter the sessions list accepts, so the row lands on those sessions", () => {
+    const search = exampleSessionsSearch(["session-a", "session-b"])
+
+    expect(search.tab).toBe("sessions")
+    expect(parseFilters(search.filters)).toEqual({
+      sessionId: [{ op: "in", value: ["session-a", "session-b"] }],
+    })
   })
 })

@@ -1,4 +1,5 @@
 import type { ScoreDimension } from "@domain/shared"
+import { CAUSE_EXAMPLE_SESSION_LIMIT } from "../constants.ts"
 import type { CostMetricCatalog } from "../entities/cost-metric-catalog.ts"
 import {
   type CauseDestination,
@@ -21,6 +22,8 @@ export interface ObservedDimensionCause {
   readonly observationCount: number
   readonly signalId?: string
   readonly destination?: CauseDestination
+  /** Sessions somebody can open to see the cause, capped at `CAUSE_EXAMPLE_SESSION_LIMIT`. */
+  readonly exampleSessionIds?: readonly string[]
 }
 
 const measuredCause = ({
@@ -30,6 +33,7 @@ const measuredCause = ({
   unit,
   observationCount,
   destination,
+  exampleSessionIds,
 }: {
   readonly scoreDimension: ScoreDimension
   readonly causeId: string
@@ -37,6 +41,7 @@ const measuredCause = ({
   readonly unit: string
   readonly observationCount: number
   readonly destination?: CauseDestination | undefined
+  readonly exampleSessionIds?: readonly string[] | undefined
 }): ObservedDimensionCause => ({
   scoreDimension,
   causeId,
@@ -45,6 +50,7 @@ const measuredCause = ({
   nativeEffect: { value, unit },
   observationCount,
   ...(destination ? { destination } : {}),
+  ...(exampleSessionIds?.length ? { exampleSessionIds } : {}),
 })
 
 const deterministicCauses = ({
@@ -58,9 +64,13 @@ const deterministicCauses = ({
 }): ObservedDimensionCause[] => {
   const causes: ObservedDimensionCause[] = []
   const reliabilityCounts = new Map<string, number>()
+  const reliabilityExamples = new Map<string, string[]>()
   for (const endpoint of reliabilityEndpoints) {
     for (const causeId of new Set(endpoint.causes)) {
       reliabilityCounts.set(causeId, (reliabilityCounts.get(causeId) ?? 0) + 1)
+      const examples = reliabilityExamples.get(causeId) ?? []
+      if (examples.length < CAUSE_EXAMPLE_SESSION_LIMIT) examples.push(endpoint.sessionId)
+      reliabilityExamples.set(causeId, examples)
     }
   }
   for (const [causeId, count] of reliabilityCounts) {
@@ -72,6 +82,7 @@ const deterministicCauses = ({
         unit: "sessions",
         observationCount: count,
         destination: destinationForCause(causeId),
+        exampleSessionIds: reliabilityExamples.get(causeId),
       }),
     )
   }

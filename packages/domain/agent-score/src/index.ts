@@ -19,7 +19,11 @@ export {
   LAUNCH_LATENCY_MINIMUM_SAMPLE_COUNT,
   LAUNCH_LATENCY_REFERENCE_ARTIFACT,
 } from "./artifacts/launch-latency-reference-artifact.ts"
-export { SESSION_ASSESSMENT_CONTENT_BUDGET, SESSION_ASSESSMENT_RESOLVER_CONCURRENCY } from "./constants.ts"
+export {
+  CAUSE_EXAMPLE_SESSION_LIMIT,
+  SESSION_ASSESSMENT_CONTENT_BUDGET,
+  SESSION_ASSESSMENT_RESOLVER_CONCURRENCY,
+} from "./constants.ts"
 export type {
   AgentScoreCoverage,
   AgentScoreNativeInputs,
