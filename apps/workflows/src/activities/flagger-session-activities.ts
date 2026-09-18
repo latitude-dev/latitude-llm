@@ -23,10 +23,7 @@ import {
 import type { SafetyFindingKind } from "@domain/scores"
 import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
-import {
-  JevPreclassifierDecisionProviderLive,
-  JevShadowDecisionProviderUnconfigured,
-} from "@platform/ai-jev"
+import { JevPreclassifierDecisionProviderLive, JevShadowDecisionProviderUnconfigured } from "@platform/ai-jev"
 import { checkRedisRateLimit, RedisBillingSpendReservationLive, RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   FlaggerScreeningDecisionRepositoryLive,
@@ -282,11 +279,7 @@ export const classifySessionFlagger = async (
       ),
       Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withClickHouse(
-        Layer.mergeAll(
-          SessionRepositoryLive,
-          SpanRepositoryLive,
-          FlaggerScreeningDecisionRepositoryLive,
-        ),
+        Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive, FlaggerScreeningDecisionRepositoryLive),
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
