@@ -217,6 +217,7 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
       ...(s.stack ? { stack: s.stack } : {}),
       ...(s.step ? { step: s.step } : { smooth: s.smooth ?? false }),
       showSymbol: s.showPoints ?? false,
+      ...(s.showPoints ? { showAllSymbol: true } : {}),
       lineStyle: { width: s.area ? 1 : 2, color: s.color, opacity: s.area ? 0.8 : 1 },
       itemStyle: { color: s.color },
       ...(s.area ? { areaStyle: { color: s.color, opacity: s.areaOpacity ?? 0.45 } } : {}),

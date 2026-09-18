@@ -82,7 +82,7 @@ describe("value axis", () => {
 })
 
 describe("line points", () => {
-  const showSymbolOf = (showPoints?: boolean) => {
+  const pointOptionsOf = (showPoints?: boolean) => {
     const option = buildChartOption({
       categories: ["c0"],
       series: [
@@ -95,16 +95,17 @@ describe("line points", () => {
         },
       ],
       colors,
-    }) as { series: [{ showSymbol: boolean }] }
+    }) as { series: [{ showSymbol: boolean; showAllSymbol?: boolean }] }
 
-    return option.series[0].showSymbol
+    return option.series[0]
   }
 
   it("hides points by default", () => {
-    expect(showSymbolOf()).toBe(false)
+    expect(pointOptionsOf()).toMatchObject({ showSymbol: false })
+    expect(pointOptionsOf().showAllSymbol).toBeUndefined()
   })
 
-  it("shows points when the series opts in", () => {
-    expect(showSymbolOf(true)).toBe(true)
+  it("shows every point when the series opts in", () => {
+    expect(pointOptionsOf(true)).toMatchObject({ showSymbol: true, showAllSymbol: true })
   })
 })
