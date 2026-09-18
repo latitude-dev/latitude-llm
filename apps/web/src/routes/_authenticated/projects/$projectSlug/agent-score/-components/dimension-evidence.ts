@@ -44,6 +44,14 @@ export interface DimensionEvidence {
 
 const clamp = (value: number): number => Math.max(0, Math.min(1, value))
 
+const sessionCount = (value: number): string => `${formatCount(value)} ${value === 1 ? "session" : "sessions"}`
+
+const issueValue = (estimated: number | undefined, observed: number): string => {
+  if (estimated === undefined) return `${formatCount(observed)} observed`
+  if (Math.abs(estimated - observed) < 0.001) return sessionCount(observed)
+  return `~${sessionCount(Math.round(estimated))} · ${formatCount(observed)} observed`
+}
+
 /** Example sessions only when there are some, so a row without them stays inert rather than linking nowhere. */
 const withExamples = (sessionIds: readonly string[] | undefined): { exampleSessionIds?: readonly string[] } =>
   sessionIds?.length ? { exampleSessionIds: sessionIds } : {}
@@ -175,10 +183,7 @@ const issueRows = (
       id: `${prefix}:${issue.issueKey}`,
       label: findingLabel(issue.label),
       ...(description ? { description } : {}),
-      value:
-        estimated === undefined
-          ? `${formatCount(observed)} observed`
-          : `${formatCount(Math.round(estimated))} sessions`,
+      value: issueValue(estimated, observed),
       progress: clamp((estimated ?? observed) / maximum),
       tone: "negative" as const,
       ...(issue.signalIds[0] ? { signalId: issue.signalIds[0] } : {}),

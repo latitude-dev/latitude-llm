@@ -1,7 +1,11 @@
 import type { SafetyFindingKind } from "@domain/scores"
 import { describe, expect, it } from "vitest"
 import type { AssessmentFinding } from "../entities/session-assessment-input.ts"
-import { resolveAssessmentFinding, resolveSessionAssessmentItems } from "./resolve-assessment-findings.ts"
+import {
+  resolveAssessmentFinding,
+  resolveSessionAssessmentItems,
+  resolveSessionAssessmentItemsWithChronology,
+} from "./resolve-assessment-findings.ts"
 
 const base = {
   evidenceKey: "finding-1",
@@ -152,9 +156,11 @@ describe("assessment finding resolver", () => {
       negative: true,
       judgmentKind: "annotation",
       signalOrigin: "system",
+      observationProbability: 0.1,
     }
 
     const items = resolveSessionAssessmentItems([metric, signal])
+    const resolved = resolveSessionAssessmentItemsWithChronology([metric, signal])
 
     expect(items).toHaveLength(1)
     expect(items[0]).toMatchObject({
@@ -169,6 +175,7 @@ describe("assessment finding resolver", () => {
       occurrenceCount: 3,
     })
     expect(items[0]?.effects).toHaveLength(2)
+    expect(resolved[0]?.observationProbability).toBe(0.1)
   })
 
   it("keeps independent human evidence separate from an automatic observation", () => {
@@ -214,6 +221,30 @@ describe("assessment finding resolver", () => {
       "issue:tool-failure:search-failed",
     ])
     expect(items.map((resolved) => resolved.occurrenceCount)).toEqual([2, 4])
+  })
+
+  it("groups conversation moments by semantic kind rather than occurrence id", () => {
+    const moment = (evidenceKey: string, momentKinds: readonly string[]): AssessmentFinding => ({
+      ...base,
+      evidenceKey,
+      source: "moment",
+      signalIds: [],
+      scoreIds: [],
+      kind: "moment",
+      momentKinds,
+    })
+
+    const items = resolveSessionAssessmentItems([
+      moment("moment:first", ["stalling"]),
+      moment("moment:second", ["stalling"]),
+      moment("moment:third", ["escalation", "stalling"]),
+    ])
+
+    expect(items.map((resolved) => resolved.groupKey)).toEqual([
+      "issue:moment:stalling",
+      "issue:moment:stalling",
+      "issue:moment:escalation+stalling",
+    ])
   })
 })
 

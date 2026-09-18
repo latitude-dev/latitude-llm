@@ -1,5 +1,5 @@
 import type { NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
-import { resolveSessionAssessmentItems } from "../resolver/resolve-assessment-findings.ts"
+import { resolveSessionAssessmentItemsWithChronology } from "../resolver/resolve-assessment-findings.ts"
 import type { IssueObservation } from "./build-issue-rows.ts"
 import { buildIssueRows, type IssueRow, type IssueSession } from "./build-issue-rows.ts"
 import { buildSafetyIssues, type SafetyIssues } from "./build-safety-issues.ts"
@@ -8,7 +8,6 @@ import type { ProjectSafetyEstimate } from "./estimate-safety.ts"
 import { readOutcomeIssueObservations } from "./read-outcome-issue-observations.ts"
 import { readSafetyIssueObservations, type SafetyIssueObservations } from "./read-safety-issue-observations.ts"
 
-const TASK_OUTCOME_SLUG = "task-failure"
 const SAFETY_SUITE_SLUGS: readonly string[] = ["jailbreaking", "pii-leakage"]
 
 /** One session's issue observations, kept rather than its whole assessment. */
@@ -37,14 +36,13 @@ const decisionProbability = (
  * Only the observations survive the batch; the items they came from do not.
  */
 export const readSessionIssueEvidence = (session: NormalizedSessionAssessmentInput): SessionIssueEvidence => {
-  const items = resolveSessionAssessmentItems(session.findings)
+  const items = resolveSessionAssessmentItemsWithChronology(session.findings)
   const eligibleSignalIds = new Set(session.scoringEligibleSignalIds)
   // A signal discovered from the verdict score rode the verdict's own draw. Without this the two
   // probabilities multiply and the issue's reach comes out an order of magnitude too large.
   const verdictScoreIds = session.findings.flatMap((finding) =>
     finding.kind === "taskOutcome" ? [...finding.scoreIds] : [],
   )
-  const outcomeProbability = decisionProbability(session, [TASK_OUTCOME_SLUG])
   const safetyProbability = decisionProbability(session, SAFETY_SUITE_SLUGS)
 
   return {
@@ -53,10 +51,9 @@ export const readSessionIssueEvidence = (session: NormalizedSessionAssessmentInp
       items,
       eligibleSignalIds,
       verdictScoreIds,
-      ...(outcomeProbability !== undefined ? { observationProbability: outcomeProbability } : {}),
     }),
     safety: readSafetyIssueObservations({
-      items,
+      items: items.map(({ item }) => item),
       eligibleSignalIds,
       ...(safetyProbability !== undefined ? { observationProbability: safetyProbability } : {}),
     }),

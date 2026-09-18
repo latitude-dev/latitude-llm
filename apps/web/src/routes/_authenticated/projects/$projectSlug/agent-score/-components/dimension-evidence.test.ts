@@ -134,6 +134,58 @@ describe("buildDimensionEvidence", () => {
     ])
   })
 
+  it("distinguishes estimated reach from the sessions actually observed", () => {
+    const withSampledIssue = {
+      ...explanation,
+      issues: {
+        ...explanation.issues,
+        outcome: [
+          {
+            issueKey: "issue:sampled",
+            label: "Sampled issue",
+            signalIds: [],
+            estimatedReach: 100,
+            estimatedAdverseReach: 100,
+            examinedSessions: 10,
+            examinedAdverseSessions: 10,
+            ranked: true,
+            exampleSessionIds: ["session-a"],
+          },
+        ],
+      },
+    } as unknown as Explanation
+
+    const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withSampledIssue })
+
+    expect(evidence.affected).toEqual([expect.objectContaining({ value: "~100 sessions · 10 observed" })])
+  })
+
+  it("uses a plain session count when estimated and observed reach agree", () => {
+    const withCensusIssue = {
+      ...explanation,
+      issues: {
+        ...explanation.issues,
+        outcome: [
+          {
+            issueKey: "issue:census",
+            label: "Census issue",
+            signalIds: [],
+            estimatedReach: 10,
+            estimatedAdverseReach: 10,
+            examinedSessions: 10,
+            examinedAdverseSessions: 10,
+            ranked: true,
+            exampleSessionIds: ["session-a"],
+          },
+        ],
+      },
+    } as unknown as Explanation
+
+    const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withCensusIssue })
+
+    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 sessions" })])
+  })
+
   it("carries the example sessions a Reliability cause ended", () => {
     const withheld = {
       ...explanation,
@@ -186,7 +238,7 @@ describe("buildDimensionEvidence", () => {
 
     expect(evidence.affected).toEqual([])
     expect(evidence.context).toEqual([
-      expect.objectContaining({ label: "Prompt injection exposure", value: "10 sessions" }),
+      expect.objectContaining({ label: "Prompt injection exposure", value: "~10 sessions · 2 observed" }),
     ])
   })
 
@@ -304,7 +356,7 @@ describe("buildDimensionEvidence", () => {
     expect(evidence.affected).toEqual([
       expect.objectContaining({
         label: "Personal information exposed",
-        value: "6 sessions",
+        value: "~6 sessions · 3 observed",
         description:
           "The agent exposed personal data in its output that the user did not provide or was not meant to receive.",
       }),

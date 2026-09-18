@@ -3,6 +3,7 @@ import type { Score } from "@domain/scores"
 import { OrganizationId, ProjectId, ScoreId, SessionId, TraceId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import type { AssessmentFinding, NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
+import { resolveSessionAssessmentItemsWithChronology } from "../resolver/resolve-assessment-findings.ts"
 import { resolveSessionAssessment } from "../resolver/resolve-session-assessment.ts"
 import { buildIssueRows, type IssueSession } from "./build-issue-rows.ts"
 import { estimateProjectOutcome, type OutcomeSessionVerdict } from "./estimate-outcome.ts"
@@ -172,9 +173,8 @@ describe("one judged session across every Outcome layer", () => {
 
   it("explains the failure through the moment, not through the verdict itself", () => {
     const observations = readOutcomeIssueObservations({
-      items: assessment.items,
+      items: resolveSessionAssessmentItemsWithChronology(assessmentInput.findings),
       eligibleSignalIds: new Set(),
-      observationProbability: 1,
     })
 
     const issueSession: IssueSession = {

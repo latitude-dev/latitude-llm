@@ -186,6 +186,12 @@ claiming that every affected session failed or that removing one issue guarantee
 gain. Estimated reach and failed reach use stored inclusion probabilities. Examined is the raw count
 shown for coverage, not ranking.
 
+Each issue uses the inclusion probability of the reader that produced that issue. Direct telemetry
+findings and stored conversation moments have probability one; they do not inherit the task-outcome
+judge's sampling rate. The issue and endpoint probabilities multiply only when they are genuinely
+independent draws. A signal discovered from the endpoint verdict shares that draw and applies it once.
+Conversation moments aggregate by their semantic kind set rather than by occurrence id.
+
 ### Safety example
 
 ```text
@@ -226,6 +232,11 @@ Outcome issue is not a filterable session property. Rows that lead there carry a
 the session ids they were built from and open the Sessions list filtered to exactly those, with the
 filter panel open so the list reads as a sample of the row's reach rather than all of it. A row that
 kept no example sessions links nowhere, which stays the honest default.
+
+In the compact evidence list, an estimate that differs from the observed count renders as
+`~100 sessions · 10 observed`; a census row whose estimate and observation count agree renders as
+`10 sessions`. The link's accessible label names the number of example sessions it opens. The UI
+never presents estimated reach and a capped example list as though they were the same count.
 
 ## Recommendations
 
