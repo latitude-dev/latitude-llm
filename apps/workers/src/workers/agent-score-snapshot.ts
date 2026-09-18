@@ -59,6 +59,14 @@ const startOfUtcDay = (date: string): number => new Date(`${date}T00:00:00.000Z`
 export const resolveScoringCutoff = (date: string, now: Date): Date =>
   new Date(Math.min(startOfUtcDay(date) + DAY_MS, now.getTime()))
 
+/** When a snapshot already exists, a forced refresh must score the same window it published. */
+export const resolveSnapshotScoringCutoff = (
+  date: string,
+  now: Date,
+  existing: { readonly createdAt: Date } | null,
+  force?: boolean,
+): Date => resolveScoringCutoff(date, existing && force ? existing.createdAt : now)
+
 const previousUtcDate = (date: string): string => new Date(startOfUtcDay(date) - DAY_MS).toISOString().slice(0, 10)
 
 const withheldReason = (result: AgentScoreResult): string => {
@@ -84,7 +92,6 @@ const withheldReason = (result: AgentScoreResult): string => {
 export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")(function* (
   input: SnapshotProjectInput,
 ) {
-  const to = input.to ?? resolveScoringCutoff(input.date, new Date())
   const snapshots = yield* AgentScoreSnapshotRepository
   const existing = yield* snapshots.findByDate({
     organizationId: input.organizationId,
@@ -95,6 +102,8 @@ export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")
   // that day. A forced run recomputes anyway, for the cached explanation, and the conditional insert
   // below is what keeps the score itself untouched.
   if (existing && !input.force) return { status: "already-published" } satisfies SnapshotProjectResult
+
+  const to = input.to ?? resolveSnapshotScoringCutoff(input.date, new Date(), existing, input.force)
 
   // Yesterday's stored step is what makes today's window choice sticky, and the snapshot is the only
   // durable record of it.
