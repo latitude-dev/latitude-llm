@@ -187,7 +187,16 @@ export function ScoreTrend({
   const versions = new Set(selectedHistory.map((entry) => entry.scoringVersion))
   const windows = new Set(selectedHistory.map((entry) => entry.windowDays))
   const series: readonly ChartSeries[] = [
-    { kind: "line", name: "Agent vitality", values, color: primary, area: true, areaOpacity: 0.12, smooth: true },
+    {
+      kind: "line",
+      name: "Agent vitality",
+      values,
+      color: primary,
+      area: true,
+      areaOpacity: 0.12,
+      showPoints: true,
+      smooth: true,
+    },
   ]
 
   return (
