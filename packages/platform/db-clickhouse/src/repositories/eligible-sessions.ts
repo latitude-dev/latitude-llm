@@ -1,3 +1,7 @@
+import { FLAGGER_NO_REFLAG_TAG } from "@domain/flaggers"
+import type { OrganizationId, ProjectId } from "@domain/shared"
+import { formatCHDate } from "@repo/utils"
+
 /**
  * The score's base population: production sessions whose last activity has
  * settled and which screening could actually have examined.
@@ -10,8 +14,8 @@
 export const SESSION_END_DEBOUNCE_SECONDS = 5 * 60
 
 /**
- * Callers must bind `organizationId`, `projectId`, `from`, `to`,
- * `debounceSeconds`, and `noReflagTag`.
+ * Callers must bind `organizationId`, `projectId`, `from`, `to`, `partitionFrom`,
+ * `debounceSeconds`, and `noReflagTag` — build them with `eligibleSessionScopeParams`.
  */
 // `screenSessionFlaggersUseCase` exits on no-reflag sessions before writing any decision.
 const ELIGIBLE_SESSION_AGGREGATES = `
@@ -35,12 +39,21 @@ const ELIGIBLE_SESSION_HAVING = `
     AND simulation_id = ''
     AND NOT has(tags, {noReflagTag:String})`
 
+/**
+ * `partitionFrom` is what bounds the read in time. The window itself is applied in `HAVING`, on an
+ * aggregate (`last_activity_time`), which cannot prune anything: without this clause a project's
+ * every month is read and grouped to answer a question about its last few days. `sessions` is
+ * partitioned by month on `min_start_time`, so a bound on that column is the one that prunes, and
+ * it reaches far enough back (`ELIGIBLE_SESSION_PARTITION_LOOKBACK_DAYS`) that a session which began
+ * before the window and was still active inside it is still counted.
+ */
 export const ELIGIBLE_SESSIONS_SUBQUERY = `
   SELECT
     session_id,${ELIGIBLE_SESSION_AGGREGATES}
   FROM sessions
   WHERE organization_id = {organizationId:String}
     AND project_id = {projectId:String}
+    AND min_start_time >= {partitionFrom:DateTime64(9, 'UTC')}
   GROUP BY session_id
   ${ELIGIBLE_SESSION_HAVING}
 `
@@ -70,15 +83,47 @@ export const ELIGIBLE_SESSION_AGE_HISTOGRAM_QUERY = `
 `
 
 /**
- * How far before the window the sweep's partition filter reaches back.
+ * How far before the cutoff every partition filter reaches back.
  *
  * `sessions` is partitioned by month on `min_start_time`, so a bound on that column is what prunes
- * partitions. A session that started before the bound and was still active inside the window would
- * be missed, and the sweep must not miss a project that deserves a snapshot, so the bound sits a
- * month earlier than the window itself. A session still running two months after it began does not
- * occur in practice; one that has been idle that long is not eligible anyway.
+ * partitions, and a session that started before the bound is invisible however recently it was
+ * active. Measured from the cutoff rather than from each reader's own window start, because those
+ * windows differ — the sweep looks over the longest step, the score over the selected one — and a
+ * floor that moved with them would let the sweep count a long-running session the score then drops.
+ * Three months is far past any session that is still one session; one idle that long is not
+ * eligible anyway.
  */
-export const SWEEP_PARTITION_GRACE_DAYS = 31
+const ELIGIBLE_SESSION_PARTITION_LOOKBACK_DAYS = 90
+
+export const eligibleSessionPartitionFrom = (to: Date): Date =>
+  new Date(to.getTime() - ELIGIBLE_SESSION_PARTITION_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
+
+/**
+ * The bindings every eligible-session query needs, derived from one window.
+ *
+ * A single place to derive them because the partition floor is what a reader could most easily get
+ * wrong: one that bound a later floor than another would silently measure a different population,
+ * which is the one thing this subquery exists to prevent.
+ */
+export const eligibleSessionScopeParams = ({
+  organizationId,
+  projectId,
+  from,
+  to,
+}: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly from: Date
+  readonly to: Date
+}) => ({
+  organizationId: organizationId as string,
+  projectId: projectId as string,
+  from: formatCHDate(from),
+  partitionFrom: formatCHDate(eligibleSessionPartitionFrom(to)),
+  to: formatCHDate(to),
+  debounceSeconds: SESSION_END_DEBOUNCE_SECONDS,
+  noReflagTag: FLAGGER_NO_REFLAG_TAG,
+})
 
 /**
  * Projects with enough eligible traffic for the daily sweep to fan out to.
@@ -92,8 +137,9 @@ export const SWEEP_PARTITION_GRACE_DAYS = 31
  * every tenant: the sort key starts at `organization_id`, which a cross-organisation query cannot
  * use, so partition pruning is all that is left. It is deliberately applied before aggregation even
  * though that can drop an older part of a session whose parts straddle a month boundary. The result
- * is a candidate list, not a verdict: the per-project pass recomputes eligibility exactly, so a
- * dropped part can only make this over-include, and an over-included project simply withholds.
+ * is a candidate list, not a verdict: the per-project pass recomputes eligibility over the same
+ * partition floor, so a dropped part can only make this over-include, and an over-included project
+ * simply withholds.
  */
 export const ELIGIBLE_PROJECTS_QUERY = `
   SELECT organization_id, project_id, count() AS eligible_sessions

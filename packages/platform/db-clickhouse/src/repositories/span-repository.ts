@@ -578,7 +578,7 @@ const addGenerationContentByKey = (
   }
 }
 
-const GENERATION_FACT_TRACE_BATCH_SIZE = 8
+const TRACE_READ_BATCH_SIZE = 8
 const GENERATION_CONTENT_SPAN_BATCH_SIZE = 128
 const GENERATION_CONTENT_TARGET_BYTES = 1024 * 1024
 
@@ -590,7 +590,14 @@ const batchValues = <T>(values: readonly T[], size: number): T[][] => {
   return batches
 }
 
-const compareGenerationFactRows = (left: GenerationFactRow, right: GenerationFactRow): number => {
+type SpanOrderingRow = {
+  readonly start_time: string
+  readonly trace_id: string
+  readonly span_id: string
+}
+
+/** Restores the single-query order across batched reads; ClickHouse renders `start_time` sortably. */
+const compareSpanRowsByStartTime = (left: SpanOrderingRow, right: SpanOrderingRow): number => {
   if (left.start_time !== right.start_time) return left.start_time < right.start_time ? -1 : 1
   if (left.trace_id !== right.trace_id) return left.trace_id < right.trace_id ? -1 : 1
   if (left.span_id !== right.span_id) return left.span_id < right.span_id ? -1 : 1
@@ -710,7 +717,15 @@ const BOUNDED_READ_SETTINGS = {
   max_execution_time: 5,
 } as const
 
-const GENERATION_READ_SETTINGS = {
+/**
+ * Settings for the trace-scoped reads a scoring window makes.
+ *
+ * `BOUNDED_READ_SETTINGS` caps one query at ~954 MiB, and a read whose trace list grows with the
+ * session batch hits that cap instead of running slower: the reader pool allocates per thread and
+ * per block, so one thread and small blocks is what keeps a batch's working set flat. Paired with
+ * `TRACE_READ_BATCH_SIZE`, which caps how much a single query is asked for in the first place.
+ */
+const TRACE_SCOPED_READ_SETTINGS = {
   ...BOUNDED_READ_SETTINGS,
   max_threads: 1,
   max_block_size: "256",
@@ -841,47 +856,53 @@ export const SpanRepositoryLive = Layer.effect(
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         if (traceIds.length === 0) return []
+        const uniqueTraceIds = [...new Set(traceIds.map((traceId) => traceId as string))]
         const startFromClause = startTimeFrom
           ? "AND start_time >= parseDateTime64BestEffort({startTimeFrom:String}, 9, 'UTC')"
           : ""
         const startToClause = startTimeTo
           ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
           : ""
-        return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              // Dedupe by trace + span because span ids are trace-scoped, and drop
-              // the attr maps (same OOM hazard as listBySessionId — the span detail
-              // view reads attributes via findBySpanId).
-              query: `SELECT ${LIST_COLUMNS_LEAN}, ${EMPTY_ATTR_MAP_COLUMNS}
-                    FROM (
-                      SELECT ${LIST_COLUMNS_LEAN}
-                      FROM spans
-                      WHERE organization_id = {organizationId:String}
-                        AND project_id = {projectId:String}
-                        AND trace_id IN ({traceIds:Array(String)})
-                        ${startFromClause}
-                        ${startToClause}
-                      ORDER BY trace_id, span_id, ingested_at DESC
-                      LIMIT 1 BY trace_id, span_id
-                    )
-                    ORDER BY start_time ASC`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                traceIds: Array.from(traceIds) as string[],
-                ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
-                ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
-              },
-              format: "JSONEachRow",
-              clickhouse_settings: BOUNDED_READ_SETTINGS,
-            })
-            return result.json<SpanListRow>()
-          })
-          .pipe(
-            Effect.map((rows) => rows.map(toDomainSpan)),
-            Effect.mapError((error) => toRepositoryError(error, "listByTraceIds")),
-          )
+        const scope = {
+          organizationId: organizationId as string,
+          projectId: projectId as string,
+          ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
+          ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
+        }
+
+        const rowsByBatch = yield* Effect.forEach(
+          batchValues(uniqueTraceIds, TRACE_READ_BATCH_SIZE),
+          (traceIdBatch) =>
+            chSqlClient
+              .query(async (client) => {
+                const result = await client.query({
+                  // Dedupe by trace + span because span ids are trace-scoped, and drop
+                  // the attr maps (same OOM hazard as listBySessionId — the span detail
+                  // view reads attributes via findBySpanId).
+                  query: `SELECT ${LIST_COLUMNS_LEAN}, ${EMPTY_ATTR_MAP_COLUMNS}
+                        FROM (
+                          SELECT ${LIST_COLUMNS_LEAN}
+                          FROM spans
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            AND trace_id IN ({traceIds:Array(String)})
+                            ${startFromClause}
+                            ${startToClause}
+                          ORDER BY trace_id, span_id, ingested_at DESC
+                          LIMIT 1 BY trace_id, span_id
+                        )
+                        ORDER BY start_time ASC`,
+                  query_params: { ...scope, traceIds: traceIdBatch },
+                  format: "JSONEachRow",
+                  clickhouse_settings: TRACE_SCOPED_READ_SETTINGS,
+                })
+                return result.json<SpanListRow>()
+              })
+              .pipe(Effect.mapError((error) => toRepositoryError(error, "listByTraceIds"))),
+          { concurrency: 1 },
+        )
+
+        return rowsByBatch.flat().sort(compareSpanRowsByStartTime).map(toDomainSpan)
       })
 
     const listByProjectId: SpanRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
@@ -1233,7 +1254,7 @@ export const SpanRepositoryLive = Layer.effect(
         }
 
         const factRowsByBatch = yield* Effect.forEach(
-          batchValues(uniqueTraceIds, GENERATION_FACT_TRACE_BATCH_SIZE),
+          batchValues(uniqueTraceIds, TRACE_READ_BATCH_SIZE),
           (traceIdBatch) =>
             chSqlClient
               .query(async (client) => {
@@ -1252,14 +1273,14 @@ export const SpanRepositoryLive = Layer.effect(
                         ORDER BY start_time ASC, trace_id ASC, span_id ASC`,
                   query_params: { ...scope, traceIds: traceIdBatch },
                   format: "JSONEachRow",
-                  clickhouse_settings: GENERATION_READ_SETTINGS,
+                  clickhouse_settings: TRACE_SCOPED_READ_SETTINGS,
                 })
                 return result.json<GenerationFactRow>()
               })
               .pipe(Effect.mapError((error) => toRepositoryError(error, "listGenerationFactsByTraceIds"))),
           { concurrency: 1 },
         )
-        const rows = factRowsByBatch.flat().sort(compareGenerationFactRows)
+        const rows = factRowsByBatch.flat().sort(compareSpanRowsByStartTime)
 
         const selected = selectGenerationContentWithinBudget({
           candidates: generationContentCandidates(rows, sessionKeyByTraceId),
@@ -1296,7 +1317,7 @@ export const SpanRepositoryLive = Layer.effect(
                         spanIds: batch.map((candidate) => candidate.spanId as string),
                       },
                       format: "JSONEachRow",
-                      clickhouse_settings: GENERATION_READ_SETTINGS,
+                      clickhouse_settings: TRACE_SCOPED_READ_SETTINGS,
                     })
                     return result.json<GenerationContentRow>()
                   })
@@ -1325,51 +1346,57 @@ export const SpanRepositoryLive = Layer.effect(
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         if (traceIds.length === 0) return []
+        const uniqueTraceIds = [...new Set(traceIds.map((traceId) => traceId as string))]
         const startToClause = startTimeTo
           ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
           : ""
-        return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              // Payload hashes are computed server-side: tool I/O can hold whole files, so a
-              // scoring window must never transfer it. Whitespace-normalized rather than
-              // JSON-canonical, which can under-detect repetition but never invent it.
-              query: `SELECT trace_id, span_id, parent_span_id, tool_call_id, tool_name,
-                             normalized_tool_name, input_hash, output_hash, input_bytes, output_bytes,
-                             start_time, end_time, duration_ns, status_code, status_message, error_type
-                    FROM (
-                      SELECT trace_id, span_id, parent_span_id, tool_call_id, tool_name, ingested_at,
-                             lower(trimBoth(tool_name)) AS normalized_tool_name,
-                             if(empty(tool_input), '', hex(cityHash64(replaceRegexpAll(tool_input, '\\\\s+', ' ')))) AS input_hash,
-                             if(empty(tool_output), '', hex(cityHash64(replaceRegexpAll(tool_output, '\\\\s+', ' ')))) AS output_hash,
-                             length(tool_input) AS input_bytes,
-                             length(tool_output) AS output_bytes,
-                             start_time, end_time, duration_ns, status_code, status_message, error_type
-                      FROM spans
-                      WHERE organization_id = {organizationId:String}
-                        AND project_id = {projectId:String}
-                        AND trace_id IN ({traceIds:Array(String)})
-                        AND operation = 'execute_tool'
-                        ${startToClause}
-                      ORDER BY trace_id, span_id, ingested_at DESC
-                      LIMIT 1 BY trace_id, span_id
-                    )
-                    ORDER BY start_time ASC, trace_id ASC, span_id ASC`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                traceIds: Array.from(traceIds) as string[],
-                ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
-              },
-              format: "JSONEachRow",
-              clickhouse_settings: BOUNDED_READ_SETTINGS,
-            })
-            return result.json<ToolCallFactRow>()
-          })
-          .pipe(
-            Effect.map((rows) => rows.map(toToolCallFact)),
-            Effect.mapError((error) => toRepositoryError(error, "listToolCallFactsByTraceIds")),
-          )
+        const scope = {
+          organizationId: organizationId as string,
+          projectId: projectId as string,
+          ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
+        }
+
+        const rowsByBatch = yield* Effect.forEach(
+          batchValues(uniqueTraceIds, TRACE_READ_BATCH_SIZE),
+          (traceIdBatch) =>
+            chSqlClient
+              .query(async (client) => {
+                const result = await client.query({
+                  // Payload hashes are computed server-side: tool I/O can hold whole files, so a
+                  // scoring window must never transfer it. Whitespace-normalized rather than
+                  // JSON-canonical, which can under-detect repetition but never invent it.
+                  query: `SELECT trace_id, span_id, parent_span_id, tool_call_id, tool_name,
+                                 normalized_tool_name, input_hash, output_hash, input_bytes, output_bytes,
+                                 start_time, end_time, duration_ns, status_code, status_message, error_type
+                        FROM (
+                          SELECT trace_id, span_id, parent_span_id, tool_call_id, tool_name, ingested_at,
+                                 lower(trimBoth(tool_name)) AS normalized_tool_name,
+                                 if(empty(tool_input), '', hex(cityHash64(replaceRegexpAll(tool_input, '\\\\s+', ' ')))) AS input_hash,
+                                 if(empty(tool_output), '', hex(cityHash64(replaceRegexpAll(tool_output, '\\\\s+', ' ')))) AS output_hash,
+                                 length(tool_input) AS input_bytes,
+                                 length(tool_output) AS output_bytes,
+                                 start_time, end_time, duration_ns, status_code, status_message, error_type
+                          FROM spans
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            AND trace_id IN ({traceIds:Array(String)})
+                            AND operation = 'execute_tool'
+                            ${startToClause}
+                          ORDER BY trace_id, span_id, ingested_at DESC
+                          LIMIT 1 BY trace_id, span_id
+                        )
+                        ORDER BY start_time ASC, trace_id ASC, span_id ASC`,
+                  query_params: { ...scope, traceIds: traceIdBatch },
+                  format: "JSONEachRow",
+                  clickhouse_settings: TRACE_SCOPED_READ_SETTINGS,
+                })
+                return result.json<ToolCallFactRow>()
+              })
+              .pipe(Effect.mapError((error) => toRepositoryError(error, "listToolCallFactsByTraceIds"))),
+          { concurrency: 1 },
+        )
+
+        return rowsByBatch.flat().sort(compareSpanRowsByStartTime).map(toToolCallFact)
       })
 
     return {

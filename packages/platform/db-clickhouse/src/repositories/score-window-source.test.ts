@@ -154,6 +154,24 @@ describe("ScoreWindowSourceLive", () => {
     expect([...(await sessionIds(28))].sort()).toEqual(["in-window", "outside-window"])
   })
 
+  it("still counts a long session that started before the window but stayed active inside it", async () => {
+    // The window is applied to `last_activity_time`, an aggregate, so the partition bound the reader
+    // adds for pruning must reach further back than the window or a session like this disappears.
+    await ch.client.insert({
+      table: "sessions",
+      values: [sessionRow("long-running", 2, { min_start_time: `${chDate(40)}000000` }), sessionRow("ordinary", 2)],
+      format: "JSONEachRow",
+    })
+
+    expect([...(await sessionIds(7))].sort()).toEqual(["long-running", "ordinary"])
+    expect(await counts()).toEqual([
+      { stepDays: 7, eligibleSessions: 2 },
+      { stepDays: 14, eligibleSessions: 2 },
+      { stepDays: 21, eligibleSessions: 2 },
+      { stepDays: 28, eligibleSessions: 2 },
+    ])
+  })
+
   it("asks for nothing when no step was requested", async () => {
     const result = await run(
       Effect.gen(function* () {

@@ -1,14 +1,9 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import {
-  FLAGGER_NO_REFLAG_TAG,
-  FlaggerCoverageRepository,
-  type FlaggerCoverageRow,
-  flaggerCoverageRowSchema,
-} from "@domain/flaggers"
+import { FlaggerCoverageRepository, type FlaggerCoverageRow, flaggerCoverageRowSchema } from "@domain/flaggers"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { formatCHDate, normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
-import { ELIGIBLE_SESSIONS_SUBQUERY, SESSION_END_DEBOUNCE_SECONDS } from "./eligible-sessions.ts"
+import { ELIGIBLE_SESSIONS_SUBQUERY, eligibleSessionScopeParams } from "./eligible-sessions.ts"
 
 // Not `min(created_at)`: decisions are written after a session settles, past the sessions they cover.
 const recordingSinceQuery = `
@@ -172,14 +167,7 @@ export const FlaggerCoverageRepositoryLive = Layer.effect(
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
             .query(async (client) => {
-              const scopeParams = {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                from: formatCHDate(from),
-                to: formatCHDate(to),
-                debounceSeconds: SESSION_END_DEBOUNCE_SECONDS,
-                noReflagTag: FLAGGER_NO_REFLAG_TAG,
-              }
+              const scopeParams = eligibleSessionScopeParams({ organizationId, projectId, from, to })
 
               const recordingResult = await client.query({
                 query: recordingSinceQuery,

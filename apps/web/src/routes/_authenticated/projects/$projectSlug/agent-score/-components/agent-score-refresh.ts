@@ -1,10 +1,25 @@
+import {
+  AGENT_SCORE_REFRESH_POLL_BACKOFF_MS,
+  AGENT_SCORE_REFRESH_POLL_INTERVAL_MS,
+  AGENT_SCORE_REFRESH_POLL_SETTLE_MS,
+  AGENT_SCORE_REFRESH_POLL_WINDOW_MS,
+} from "../../../../../../domains/agent-score/agent-score.constants.ts"
 import type {
   AgentScoreExplanationRecord,
   AgentScoreRecord,
 } from "../../../../../../domains/agent-score/agent-score.functions.ts"
 
-const REFRESH_POLL_INTERVAL_MS = 2_000
-const REFRESH_POLL_ATTEMPTS = 120
+const SETTLE_ATTEMPTS = Math.ceil(AGENT_SCORE_REFRESH_POLL_SETTLE_MS / AGENT_SCORE_REFRESH_POLL_INTERVAL_MS)
+
+/** Fast while a short run can still land, then slow enough that covering the whole window is cheap. */
+export const agentScoreRefreshPollDelayMs = (attempt: number): number =>
+  attempt < SETTLE_ATTEMPTS ? AGENT_SCORE_REFRESH_POLL_INTERVAL_MS : AGENT_SCORE_REFRESH_POLL_BACKOFF_MS
+
+const REFRESH_POLL_ATTEMPTS =
+  SETTLE_ATTEMPTS +
+  Math.ceil(
+    (AGENT_SCORE_REFRESH_POLL_WINDOW_MS - AGENT_SCORE_REFRESH_POLL_SETTLE_MS) / AGENT_SCORE_REFRESH_POLL_BACKOFF_MS,
+  )
 
 const pause = (duration: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, duration))
 
@@ -82,18 +97,18 @@ export const waitForAgentScoreRefresh = async ({
   previousMarker,
   refetch,
   attempts = REFRESH_POLL_ATTEMPTS,
-  intervalMs = REFRESH_POLL_INTERVAL_MS,
+  delayMs = agentScoreRefreshPollDelayMs,
   wait = pause,
 }: {
   readonly previousMarker: string
   readonly refetch: () => Promise<string>
   readonly attempts?: number
-  readonly intervalMs?: number
+  readonly delayMs?: (attempt: number) => number
   readonly wait?: (duration: number) => Promise<void>
 }): Promise<boolean> => {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     if ((await refetch()) !== previousMarker) return true
-    if (attempt + 1 < attempts) await wait(intervalMs)
+    if (attempt + 1 < attempts) await wait(delayMs(attempt))
   }
   return false
 }

@@ -109,8 +109,10 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
       await historyQuery.refetch()
       if (!completed) {
         toast({
-          title: "Agent Score is still refreshing",
-          description: "The calculation is taking longer than expected. Try refreshing again in a few minutes.",
+          title: "Agent Score is still being calculated",
+          description:
+            "Scoring a large project reads every session in the window and can take several minutes. " +
+            "It keeps running in the background — reload the page later, or refresh again now.",
         })
       }
     } catch (error) {

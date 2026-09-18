@@ -36,6 +36,15 @@ type RecordedQuery = {
 const generationFactQueries = (queries: readonly RecordedQuery[]) =>
   queries.filter((query) => query.query.includes("length(input_messages) AS input_message_bytes"))
 
+const spanListQueries = (queries: readonly RecordedQuery[]) =>
+  queries.filter(
+    (query) =>
+      query.query.includes("ORDER BY trace_id, span_id, ingested_at DESC") && query.query.includes("attr_string"),
+  )
+
+const toolCallQueries = (queries: readonly RecordedQuery[]) =>
+  queries.filter((query) => query.query.includes("AS normalized_tool_name"))
+
 const generationContentQueries = (queries: readonly RecordedQuery[]) =>
   queries.filter((query) =>
     query.query.includes("SELECT trace_id, span_id, input_messages, output_messages, tool_definitions"),
@@ -614,6 +623,98 @@ describe("SpanRepository Cost and Speed source facts", () => {
 
       expect(await readToolCalls([TRACE_A])).toEqual([])
       expect(await readToolCalls([])).toEqual([])
+    })
+
+    it("splits a long trace list into bounded queries and restores one global order", async () => {
+      const traces = Array.from({ length: 9 }, (_, index) => TraceId((index + 80).toString(16).padStart(32, "0")))
+      await runCh(
+        insertJsonEachRow(
+          ch.client,
+          "spans",
+          traces.map((traceId, index) =>
+            toolRow({
+              trace_id: traceId,
+              span_id: (index + 80).toString(16).padStart(16, "0"),
+              tool_call_id: `call-${index}`,
+              tool_name: "search",
+              tool_input: "{}",
+              start_time: `2026-01-01 00:00:0${9 - index}.000000000`,
+            }),
+          ),
+        ),
+      )
+      const queries: RecordedQuery[] = []
+      const facts = await Effect.runPromise(
+        repo
+          .listToolCallFactsByTraceIds({ organizationId: ORG_ID, projectId: PROJECT_ID, traceIds: traces })
+          .pipe(Effect.provide(ChSqlClientLive(recordingClient(queries), ORG_ID))),
+      )
+
+      expect(facts.map((fact) => fact.traceId)).toEqual([...traces].reverse())
+      const reads = toolCallQueries(queries)
+      expect(reads).toHaveLength(2)
+      expect(reads.map((query) => query.queryParams?.traceIds)).toEqual([traces.slice(0, 8), [traces[8]]])
+      expect(reads.every((query) => query.settings?.max_threads === 1)).toBe(true)
+    })
+  })
+
+  describe("listByTraceIds", () => {
+    /**
+     * The read that failed in production: one `trace_id IN (...)` over a whole session batch could
+     * exceed ClickHouse's per-query memory cap and fail the day's score outright.
+     */
+    it("splits a long trace list into bounded queries, dedupes it, and restores one global order", async () => {
+      const traces = Array.from({ length: 9 }, (_, index) => TraceId((index + 60).toString(16).padStart(32, "0")))
+      await runCh(
+        insertJsonEachRow(
+          ch.client,
+          "spans",
+          traces.map((traceId, index) =>
+            spanRow({
+              trace_id: traceId,
+              span_id: (index + 60).toString(16).padStart(16, "0"),
+              start_time: `2026-01-01 00:00:0${9 - index}.000000000`,
+            }),
+          ),
+        ),
+      )
+      const queries: RecordedQuery[] = []
+      const spans = await Effect.runPromise(
+        repo
+          .listByTraceIds({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceIds: traces.concat(traces[0] as TraceId),
+          })
+          .pipe(Effect.provide(ChSqlClientLive(recordingClient(queries), ORG_ID))),
+      )
+
+      expect(spans.map((span) => span.traceId)).toEqual([...traces].reverse())
+      const reads = spanListQueries(queries)
+      expect(reads).toHaveLength(2)
+      expect(reads.map((query) => query.queryParams?.traceIds)).toEqual([traces.slice(0, 8), [traces[8]]])
+      expect(reads.every((query) => new Set(query.queryParams?.traceIds as string[]).size <= 8)).toBe(true)
+      expect(reads.every((query) => query.settings?.max_threads === 1)).toBe(true)
+      expect(reads.every((query) => query.settings?.max_block_size === "256")).toBe(true)
+    })
+
+    it("fails the complete read when a later batch fails and does not start later batches", async () => {
+      const traces = Array.from({ length: 17 }, (_, index) => TraceId((index + 100).toString(16).padStart(32, "0")))
+      const queries: RecordedQuery[] = []
+      const client = recordingClient(queries, (query) =>
+        (query.queryParams?.traceIds as string[] | undefined)?.includes(traces[8] as string)
+          ? new Error("later batch failed")
+          : null,
+      )
+
+      await expect(
+        Effect.runPromise(
+          repo
+            .listByTraceIds({ organizationId: ORG_ID, projectId: PROJECT_ID, traceIds: traces })
+            .pipe(Effect.provide(ChSqlClientLive(client, ORG_ID))),
+        ),
+      ).rejects.toMatchObject({ _tag: "RepositoryError", operation: "listByTraceIds" })
+      expect(spanListQueries(queries)).toHaveLength(2)
     })
   })
 })

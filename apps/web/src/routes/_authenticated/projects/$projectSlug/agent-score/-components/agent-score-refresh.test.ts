@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
+import { AGENT_SCORE_REFRESH_THROTTLE_MS } from "../../../../../../domains/agent-score/agent-score.constants.ts"
 import type { AgentScoreExplanationRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
 import {
   agentScoreExplanationForSnapshot,
   agentScoreRefreshCompleted,
+  agentScoreRefreshPollDelayMs,
   agentScoreSnapshotEvidenceCompleted,
   agentScoreSnapshotMarker,
   agentVitalityIsLoading,
@@ -106,13 +108,33 @@ describe("agentScoreSnapshotEvidenceCompleted", () => {
   })
 })
 
+describe("agentScoreRefreshPollDelayMs", () => {
+  it("outlasts the publish throttle so the retry it suggests is one the queue accepts", async () => {
+    let waited = 0
+    const refetch = vi.fn().mockResolvedValue("before")
+    const wait = vi.fn().mockImplementation(async (duration: number) => {
+      waited += duration
+    })
+
+    await expect(waitForAgentScoreRefresh({ previousMarker: "before", refetch, wait })).resolves.toBe(false)
+
+    expect(waited).toBeGreaterThan(AGENT_SCORE_REFRESH_THROTTLE_MS)
+  })
+
+  it("watches closely while a short run can still land, then backs off", () => {
+    expect(agentScoreRefreshPollDelayMs(0)).toBe(2_000)
+    expect(agentScoreRefreshPollDelayMs(14)).toBe(2_000)
+    expect(agentScoreRefreshPollDelayMs(15)).toBe(10_000)
+  })
+})
+
 describe("waitForAgentScoreRefresh", () => {
   it("keeps polling until the refreshed result arrives", async () => {
     const refetch = vi.fn().mockResolvedValueOnce("before").mockResolvedValueOnce("after")
     const wait = vi.fn().mockResolvedValue(undefined)
 
     await expect(
-      waitForAgentScoreRefresh({ previousMarker: "before", refetch, attempts: 3, intervalMs: 1, wait }),
+      waitForAgentScoreRefresh({ previousMarker: "before", refetch, attempts: 3, delayMs: () => 1, wait }),
     ).resolves.toBe(true)
     expect(refetch).toHaveBeenCalledTimes(2)
     expect(wait).toHaveBeenCalledTimes(1)
@@ -123,7 +145,7 @@ describe("waitForAgentScoreRefresh", () => {
     const wait = vi.fn().mockResolvedValue(undefined)
 
     await expect(
-      waitForAgentScoreRefresh({ previousMarker: "before", refetch, attempts: 2, intervalMs: 1, wait }),
+      waitForAgentScoreRefresh({ previousMarker: "before", refetch, attempts: 2, delayMs: () => 1, wait }),
     ).resolves.toBe(false)
     expect(refetch).toHaveBeenCalledTimes(2)
   })
