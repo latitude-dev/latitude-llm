@@ -67,9 +67,33 @@ export {
   toolDefinitionSchema,
   USAGE_OPERATIONS,
 } from "./entities/span.ts"
+export type {
+  FinishReasonClassification,
+  GenerationPosition,
+  ProviderErrorClassification,
+  ProviderErrorFinding,
+  RecognizedProviderErrorClassification,
+  SessionGenerationEndpoint,
+  SessionSpanEndpointResolution,
+  SpanEndpointClassification,
+} from "./entities/span-endpoint.ts"
+export {
+  finishReasonClassificationSchema,
+  generationPositionSchema,
+  providerErrorClassificationSchema,
+  providerErrorFindingSchema,
+  recognizedProviderErrorClassificationSchema,
+  sessionGenerationEndpointSchema,
+  sessionSpanEndpointResolutionSchema,
+  spanEndpointClassificationSchema,
+} from "./entities/span-endpoint.ts"
 export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { RedactionError, SpanDecodingError } from "./errors.ts"
+export {
+  assistantMessageHasOutputContent,
+  hasUsableAssistantCompletion,
+} from "./helpers/assistant-output-content.ts"
 export type {
   CacheCadence,
   CacheCadenceHistogram,
@@ -105,6 +129,23 @@ export {
   cacheBreakEvenRate,
   classifyCacheState,
 } from "./helpers/cache-economics.ts"
+export { classifyFinishReason, normalizeFinishReason } from "./helpers/classify-finish-reason.ts"
+export type {
+  GenerationContentState,
+  GenerationModelContext,
+  GenerationModelContextState,
+  GenerationPricingState,
+} from "./helpers/classify-generation-coverage.ts"
+export {
+  classifyGenerationContent,
+  classifyGenerationModelContext,
+  classifyGenerationPricing,
+  GENERATION_CONTENT_STATES,
+  GENERATION_MODEL_CONTEXT_STATES,
+  GENERATION_PRICING_STATES,
+} from "./helpers/classify-generation-coverage.ts"
+export { classifyProviderError, normalizeProviderErrorType } from "./helpers/classify-provider-error.ts"
+export { classifySpanEndpoint } from "./helpers/classify-span-endpoint.ts"
 export type { ClassifiedUnpricedPair, UnpricedCause, UnpricedUsageSummary } from "./helpers/classify-unpriced-cost.ts"
 export {
   classifyUnpricedPair,
@@ -134,6 +175,25 @@ export {
 export { resolveSpanCost, usdToMicrocents } from "./helpers/estimate-span-cost.ts"
 export type { CacheModelJudgment, JudgedCacheModel } from "./helpers/judge-cache-economics.ts"
 export { judgeCacheEconomics, promptCacheTtlSeconds } from "./helpers/judge-cache-economics.ts"
+export type {
+  LatencyCohortKey,
+  LatencyInputBucket,
+  LatencyOutputBucket,
+  ThroughputCohortKey,
+} from "./helpers/latency-cohort.ts"
+export {
+  LATENCY_INPUT_BUCKET_BOUNDS,
+  LATENCY_INPUT_BUCKETS,
+  LATENCY_OUTPUT_BUCKET_BOUNDS,
+  LATENCY_OUTPUT_BUCKETS,
+  latencyCohortId,
+  latencyInputBucket,
+  latencyInputTokens,
+  latencyOutputBucket,
+  latencyOutputTokens,
+  providerModelCohortId,
+  throughputCohortId,
+} from "./helpers/latency-cohort.ts"
 export {
   canonicalizeMessageForEmbedding,
   hashMessageContent,
@@ -149,7 +209,16 @@ export {
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
+export {
+  type ResolveSessionSpanEndpointsInput,
+  resolveSessionSpanEndpoints,
+} from "./helpers/resolve-session-span-endpoints.ts"
 export { toolDefinitionsFrom } from "./helpers/resolve-tool-definitions.ts"
+export type {
+  GenerationContentBudget,
+  GenerationContentCandidate,
+} from "./helpers/select-generation-content.ts"
+export { selectGenerationContentWithinBudget } from "./helpers/select-generation-content.ts"
 export {
   shouldReportUnpricedSpan,
   UNPRICEABLE_PAIR_REASONS,
@@ -243,6 +312,10 @@ export type {
 export { emptySessionMetrics, SessionRepository } from "./ports/session-repository.ts"
 export type {
   MemoryOperationSpan,
+  SessionGenerationCapturedBytes,
+  SessionGenerationContent,
+  SessionGenerationFact,
+  SessionToolCallFact,
   SessionToolSpan,
   SpanIdentity,
   SpanIngestedAtWindow,
@@ -342,6 +415,31 @@ export type {
   AgentTrigger,
 } from "./use-cases/build-agent-graph.ts"
 export { agentGraphSpanKey, agentGraphToolCallKey, buildAgentGraph } from "./use-cases/build-agent-graph.ts"
+export type {
+  CriticalPathIncompleteReason,
+  CriticalPathSegment,
+  CriticalPathSegmentKind,
+  CriticalPathSpanInput,
+  ForegroundEnvelope,
+  ForegroundProvenance,
+  ForegroundRole,
+  SessionCriticalPath,
+  SessionCriticalPathCompleteness,
+  TraceCriticalPath,
+  TraceCriticalPathCompleteness,
+} from "./use-cases/build-critical-path.ts"
+export {
+  buildSessionCriticalPath,
+  buildTraceCriticalPath,
+  CRITICAL_PATH_INCOMPLETE_REASONS,
+  CRITICAL_PATH_SEGMENT_KINDS,
+  FOREGROUND_PROVENANCES,
+  FOREGROUND_ROLES,
+  marginalCriticalPathNs,
+  resolveMarginalAvoidableNs,
+  SESSION_CRITICAL_PATH_COMPLETENESS,
+  TRACE_CRITICAL_PATH_COMPLETENESS,
+} from "./use-cases/build-critical-path.ts"
 export type {
   TraceSearchDocument,
   TraceSearchDocumentInput,

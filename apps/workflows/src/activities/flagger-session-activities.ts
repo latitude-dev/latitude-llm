@@ -1,4 +1,5 @@
 import { NoCreditsRemainingError } from "@domain/billing"
+import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import {
   type CheckFlaggerLlmRateLimit,
   type ClassifySessionFlaggerResult,
@@ -10,15 +11,23 @@ import {
   FLAGGER_SAMPLED_RATE_LIMIT,
   type FlaggerAnnotateOutput,
   type FlaggerClassificationReason,
+  type FlaggerScreeningSelection,
+  recordFlaggerScreeningOutcomeUseCase,
   type ScreenSessionFlaggersResult,
   type SessionHint,
   saveFlaggerAnnotationUseCase,
   screenSessionFlaggersUseCase,
+  upsertFlaggerVerdictScore,
+  upsertSafetyFindingScore,
 } from "@domain/flaggers"
-import { OrganizationId } from "@domain/shared"
+import type { SafetyFindingKind } from "@domain/scores"
+import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
+import { JevShadowDecisionProviderLive, JevShadowDecisionProviderUnconfigured } from "@platform/ai-jev"
 import { checkRedisRateLimit, RedisBillingSpendReservationLive, RedisCacheStoreLive } from "@platform/cache-redis"
 import {
+  FlaggerScreeningDecisionRepositoryLive,
+  JevShadowObservationRepositoryLive,
   ScoreAnalyticsRepositoryLive,
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
@@ -26,13 +35,70 @@ import {
   SpanRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
-import { FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  FeatureFlagRepositoryLive,
+  FlaggerRepositoryLive,
+  OutboxEventWriterLive,
+  ScoreRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
+import { parseEnvOptional } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
-import { Effect, Layer } from "effect"
-import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { Context as ActivityContext } from "@temporalio/activity"
+import { Cause, Effect, Layer } from "effect"
+import { getClickhouseClient, getJevShadowPostgresClient, getPostgresClient, getRedisClient } from "../clients.ts"
 import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 const logger = createLogger("workflows-flagger-session")
+const JEV_SHADOW_FEATURE_FLAG_TIMEOUT_MS = 1_000
+
+const currentActivityAttempt = () => {
+  try {
+    return ActivityContext.current().info.attempt
+  } catch {
+    return 1
+  }
+}
+
+const getJevShadowActivityIdentity = () => {
+  try {
+    const info = ActivityContext.current().info
+    return {
+      workflowId: info.workflowExecution?.workflowId ?? "unknown-workflow",
+      workflowRunId: info.workflowExecution?.runId ?? "unknown-run",
+      activityId: info.activityId,
+      activityAttempt: info.attempt,
+    }
+  } catch {
+    return {
+      workflowId: "unknown-workflow",
+      workflowRunId: "unknown-run",
+      activityId: "unknown-activity",
+      activityAttempt: 1,
+    }
+  }
+}
+
+type HasJevShadowFeatureFlag = (organizationId: string) => Effect.Effect<boolean, unknown>
+
+const hasJevShadowFeatureFlag: HasJevShadowFeatureFlag = (organizationId) =>
+  hasFeatureFlagUseCase({ identifier: "jevFlaggerShadow" }).pipe(
+    withPostgres(FeatureFlagRepositoryLive, getJevShadowPostgresClient(), OrganizationId(organizationId)),
+  )
+
+export const isJevShadowEnabledForOrganization = (
+  organizationId: string,
+  hasFeatureFlag: HasJevShadowFeatureFlag = hasJevShadowFeatureFlag,
+) =>
+  Effect.gen(function* () {
+    const globalEnabled = yield* parseEnvOptional("LAT_JEV_FLAGGER_SHADOW_ENABLED", "boolean")
+    const apiKey = yield* parseEnvOptional("LAT_JEV_API_KEY", "string")
+    if (globalEnabled !== true || apiKey === undefined) return false
+
+    return yield* hasFeatureFlag(organizationId).pipe(Effect.timeout(JEV_SHADOW_FEATURE_FLAG_TIMEOUT_MS))
+  }).pipe(
+    Effect.catchCause((cause) => (Cause.hasInterruptsOnly(cause) ? Effect.failCause(cause) : Effect.succeed(false))),
+  )
 
 const rateLimitBucket = (reason: FlaggerClassificationReason, hasPositiveHints: boolean) => {
   if (reason === "hinted") return { bucket: "hinted", limit: FLAGGER_HINTED_RATE_LIMIT }
@@ -69,7 +135,7 @@ export const screenSessionFlaggers = async (
   input: ScreenSessionFlaggersActivityInput,
 ): Promise<ScreenSessionFlaggersResult> =>
   Effect.runPromise(
-    screenSessionFlaggersUseCase(input, { checkRateLimit }).pipe(
+    screenSessionFlaggersUseCase({ ...input, attempt: currentActivityAttempt() }, { checkRateLimit }).pipe(
       withPostgres(
         Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
         getPostgresClient(),
@@ -78,6 +144,7 @@ export const screenSessionFlaggers = async (
       withClickHouse(
         Layer.mergeAll(
           ScoreAnalyticsRepositoryLive,
+          FlaggerScreeningDecisionRepositoryLive,
           SessionRepositoryLive,
           SpanRepositoryLive,
           SessionAnalysisRepositoryLive,
@@ -120,18 +187,46 @@ export interface ClassifySessionFlaggerActivityInput {
   readonly sessionId: string
   readonly flaggerSlug: string
   readonly hints: readonly SessionHint[]
+  readonly analysisHash?: string | undefined
+  readonly screeningSelection?: FlaggerScreeningSelection | undefined
 }
 
 export const classifySessionFlagger = async (
   input: ClassifySessionFlaggerActivityInput,
-): Promise<ClassifySessionFlaggerResult> =>
-  Effect.runPromise(
-    classifySessionFlaggerUseCase(input).pipe(
+): Promise<ClassifySessionFlaggerResult> => {
+  const jevShadowEnabled = await Effect.runPromise(isJevShadowEnabledForOrganization(input.organizationId))
+  const activityIdentity = getJevShadowActivityIdentity()
+
+  return Effect.runPromise(
+    classifySessionFlaggerUseCase({
+      ...input,
+      ...(jevShadowEnabled
+        ? { jevShadow: { enabled: true, ...activityIdentity, screeningSelection: input.screeningSelection } }
+        : {}),
+    }).pipe(
       withActivityAIMetering({
         organizationId: input.organizationId,
         projectId: input.projectId,
         label: "flagger-classify",
       }),
+      Effect.tap((result) =>
+        input.screeningSelection
+          ? recordFlaggerScreeningOutcomeUseCase({
+              selection: input.screeningSelection,
+              attempt: currentActivityAttempt(),
+              outcome: result.outcome,
+            })
+          : Effect.void,
+      ),
+      Effect.tapError(() =>
+        input.screeningSelection
+          ? recordFlaggerScreeningOutcomeUseCase({
+              selection: input.screeningSelection,
+              attempt: currentActivityAttempt(),
+              outcome: "error",
+            })
+          : Effect.void,
+      ),
       withPostgres(
         Layer.mergeAll(FlaggerRepositoryLive, billingMeteringRepositoriesLive),
         getPostgresClient(),
@@ -139,11 +234,17 @@ export const classifySessionFlagger = async (
       ),
       Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withClickHouse(
-        Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive),
+        Layer.mergeAll(
+          SessionRepositoryLive,
+          SpanRepositoryLive,
+          FlaggerScreeningDecisionRepositoryLive,
+          JevShadowObservationRepositoryLive,
+        ),
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
       withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
+      Effect.provide(jevShadowEnabled ? JevShadowDecisionProviderLive : JevShadowDecisionProviderUnconfigured),
       Effect.provide(RedisCacheStoreLive(getRedisClient())),
       withTracing,
       Effect.tap((result) =>
@@ -157,6 +258,159 @@ export const classifySessionFlagger = async (
           }),
         ),
       ),
+    ),
+  )
+}
+
+export interface SaveSessionFlaggerVerdictActivityInput {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly sessionId: string
+  readonly flaggerSlug: string
+  readonly verdict: "success" | "failure"
+  readonly feedback: string
+  readonly latestTraceId: string
+  readonly simulationId: string | null
+  readonly contentHash: string
+  readonly analysisHash: string
+  readonly scoringArtifactVersion: string
+  readonly messageIndex?: number | undefined
+  readonly flaggerTraceId?: string | undefined
+}
+
+/**
+ * Persists a verdict flagger's judgement in one step.
+ *
+ * Unlike the negative-annotation path there is nothing to draft: a verdict
+ * always arrives with its own feedback, so the annotator fallback would only
+ * spend credits, and the anchor dedup that path performs is the wrong rule for
+ * a whole-session verdict that is re-judged each generation.
+ */
+export const saveSessionFlaggerVerdict = async (input: SaveSessionFlaggerVerdictActivityInput): Promise<void> =>
+  Effect.runPromise(
+    upsertFlaggerVerdictScore({
+      projectId: ProjectId(input.projectId),
+      traceId: TraceId(input.latestTraceId),
+      sessionId: input.sessionId,
+      simulationId: input.simulationId,
+      flaggerSlug: input.flaggerSlug,
+      verdict: input.verdict,
+      feedback: input.feedback,
+      contentHash: input.contentHash,
+      analysisHash: input.analysisHash,
+      scoringArtifactVersion: input.scoringArtifactVersion,
+      flaggerPath: "sampled",
+      ...(input.messageIndex !== undefined ? { messageIndex: input.messageIndex } : {}),
+      ...(input.flaggerTraceId !== undefined ? { flaggerTraceId: input.flaggerTraceId } : {}),
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+      withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      withTracing,
+      Effect.tap((result) =>
+        Effect.sync(() =>
+          logger.info("Session flagger verdict saved", {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            sessionId: input.sessionId,
+            flaggerSlug: input.flaggerSlug,
+            verdict: input.verdict,
+            status: result.status,
+            scoreId: result.scoreId,
+          }),
+        ),
+      ),
+      Effect.tapError((error) =>
+        Effect.sync(() =>
+          logger.error("Session flagger verdict save failed", {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            sessionId: input.sessionId,
+            flaggerSlug: input.flaggerSlug,
+            error,
+          }),
+        ),
+      ),
+      Effect.asVoid,
+    ),
+  )
+
+export interface SaveSessionFlaggerSafetyFindingActivityInput {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly sessionId: string
+  readonly flaggerSlug: string
+  readonly safetyFindingKind: SafetyFindingKind
+  readonly feedback: string
+  readonly latestTraceId: string
+  readonly simulationId: string | null
+  readonly contentHash: string
+  readonly scoringArtifactVersion: string
+  readonly analysisHash?: string | undefined
+  readonly messageIndex?: number | undefined
+  readonly flaggerTraceId?: string | undefined
+}
+
+/**
+ * Persists a Safety detector's structured finding in one step.
+ *
+ * The finding kind decides the polarity, so exposure and confirmed harm take
+ * the same path as a defense; only the written score differs.
+ */
+export const saveSessionFlaggerSafetyFinding = async (
+  input: SaveSessionFlaggerSafetyFindingActivityInput,
+): Promise<void> =>
+  Effect.runPromise(
+    upsertSafetyFindingScore({
+      projectId: ProjectId(input.projectId),
+      traceId: TraceId(input.latestTraceId),
+      sessionId: input.sessionId,
+      simulationId: input.simulationId,
+      flaggerSlug: input.flaggerSlug,
+      safetyFindingKind: input.safetyFindingKind,
+      feedback: input.feedback,
+      contentHash: input.contentHash,
+      scoringArtifactVersion: input.scoringArtifactVersion,
+      flaggerPath: "sampled",
+      ...(input.analysisHash !== undefined ? { analysisHash: input.analysisHash } : {}),
+      ...(input.messageIndex !== undefined ? { messageIndex: input.messageIndex } : {}),
+      ...(input.flaggerTraceId !== undefined ? { flaggerTraceId: input.flaggerTraceId } : {}),
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+      withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      withTracing,
+      Effect.tap((result) =>
+        Effect.sync(() =>
+          logger.info("Session flagger safety finding saved", {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            sessionId: input.sessionId,
+            flaggerSlug: input.flaggerSlug,
+            safetyFindingKind: input.safetyFindingKind,
+            status: result.status,
+            scoreId: result.scoreId,
+          }),
+        ),
+      ),
+      Effect.tapError((error) =>
+        Effect.sync(() =>
+          logger.error("Session flagger safety finding save failed", {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            sessionId: input.sessionId,
+            flaggerSlug: input.flaggerSlug,
+            error,
+          }),
+        ),
+      ),
+      Effect.asVoid,
     ),
   )
 
@@ -225,6 +479,7 @@ export interface SaveSessionFlaggerAnnotationActivityInput {
   readonly contentHash: string
   readonly messageIndex?: number | undefined
   readonly flaggerTraceId?: string | undefined
+  readonly scoringArtifactVersion: string
 }
 
 export const saveSessionFlaggerAnnotation = async (
@@ -245,6 +500,7 @@ export const saveSessionFlaggerAnnotation = async (
       messageIndex: input.messageIndex,
       contentHash: input.contentHash,
       flaggerTraceId: input.flaggerTraceId,
+      scoringArtifactVersion: input.scoringArtifactVersion,
     }).pipe(
       withPostgres(
         Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),

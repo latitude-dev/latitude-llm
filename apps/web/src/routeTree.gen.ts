@@ -72,6 +72,7 @@ import { Route as AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport } fro
 import { Route as AuthenticatedProjectsProjectSlugCustomBehavioursIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/custom-behaviours/index'
 import { Route as AuthenticatedProjectsProjectSlugCostIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/cost/index'
 import { Route as AuthenticatedProjectsProjectSlugBehavioursIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/index'
+import { Route as AuthenticatedProjectsProjectSlugAgentScoreIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/agent-score/index'
 import { Route as AuthenticatedProjectsProjectSlugSettingsSsoRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/sso'
 import { Route as AuthenticatedProjectsProjectSlugSettingsSignalsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/signals'
 import { Route as AuthenticatedProjectsProjectSlugSettingsPrivacyRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/privacy'
@@ -458,6 +459,12 @@ const AuthenticatedProjectsProjectSlugBehavioursIndexRoute =
     path: '/behaviours/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugAgentScoreIndexRoute =
+  AuthenticatedProjectsProjectSlugAgentScoreIndexRouteImport.update({
+    id: '/agent-score/',
+    path: '/agent-score/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugSettingsSsoRoute =
   AuthenticatedProjectsProjectSlugSettingsSsoRouteImport.update({
     id: '/sso',
@@ -743,6 +750,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/settings/privacy': typeof AuthenticatedProjectsProjectSlugSettingsPrivacyRoute
   '/projects/$projectSlug/settings/signals': typeof AuthenticatedProjectsProjectSlugSettingsSignalsRoute
   '/projects/$projectSlug/settings/sso': typeof AuthenticatedProjectsProjectSlugSettingsSsoRoute
+  '/projects/$projectSlug/agent-score/': typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRoute
   '/projects/$projectSlug/behaviours/': typeof AuthenticatedProjectsProjectSlugBehavioursIndexRoute
   '/projects/$projectSlug/cost/': typeof AuthenticatedProjectsProjectSlugCostIndexRoute
   '/projects/$projectSlug/custom-behaviours/': typeof AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute
@@ -836,6 +844,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/settings/privacy': typeof AuthenticatedProjectsProjectSlugSettingsPrivacyRoute
   '/projects/$projectSlug/settings/signals': typeof AuthenticatedProjectsProjectSlugSettingsSignalsRoute
   '/projects/$projectSlug/settings/sso': typeof AuthenticatedProjectsProjectSlugSettingsSsoRoute
+  '/projects/$projectSlug/agent-score': typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRoute
   '/projects/$projectSlug/behaviours': typeof AuthenticatedProjectsProjectSlugBehavioursIndexRoute
   '/projects/$projectSlug/cost': typeof AuthenticatedProjectsProjectSlugCostIndexRoute
   '/projects/$projectSlug/custom-behaviours': typeof AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute
@@ -935,6 +944,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/settings/privacy': typeof AuthenticatedProjectsProjectSlugSettingsPrivacyRoute
   '/_authenticated/projects/$projectSlug/settings/signals': typeof AuthenticatedProjectsProjectSlugSettingsSignalsRoute
   '/_authenticated/projects/$projectSlug/settings/sso': typeof AuthenticatedProjectsProjectSlugSettingsSsoRoute
+  '/_authenticated/projects/$projectSlug/agent-score/': typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRoute
   '/_authenticated/projects/$projectSlug/behaviours/': typeof AuthenticatedProjectsProjectSlugBehavioursIndexRoute
   '/_authenticated/projects/$projectSlug/cost/': typeof AuthenticatedProjectsProjectSlugCostIndexRoute
   '/_authenticated/projects/$projectSlug/custom-behaviours/': typeof AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute
@@ -1034,6 +1044,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings/privacy'
     | '/projects/$projectSlug/settings/signals'
     | '/projects/$projectSlug/settings/sso'
+    | '/projects/$projectSlug/agent-score/'
     | '/projects/$projectSlug/behaviours/'
     | '/projects/$projectSlug/cost/'
     | '/projects/$projectSlug/custom-behaviours/'
@@ -1127,6 +1138,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings/privacy'
     | '/projects/$projectSlug/settings/signals'
     | '/projects/$projectSlug/settings/sso'
+    | '/projects/$projectSlug/agent-score'
     | '/projects/$projectSlug/behaviours'
     | '/projects/$projectSlug/cost'
     | '/projects/$projectSlug/custom-behaviours'
@@ -1225,6 +1237,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/settings/privacy'
     | '/_authenticated/projects/$projectSlug/settings/signals'
     | '/_authenticated/projects/$projectSlug/settings/sso'
+    | '/_authenticated/projects/$projectSlug/agent-score/'
     | '/_authenticated/projects/$projectSlug/behaviours/'
     | '/_authenticated/projects/$projectSlug/cost/'
     | '/_authenticated/projects/$projectSlug/custom-behaviours/'
@@ -1731,6 +1744,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/agent-score/': {
+      id: '/_authenticated/projects/$projectSlug/agent-score/'
+      path: '/agent-score'
+      fullPath: '/projects/$projectSlug/agent-score/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
     '/_authenticated/projects/$projectSlug/settings/sso': {
       id: '/_authenticated/projects/$projectSlug/settings/sso'
       path: '/sso'
@@ -2076,6 +2096,7 @@ interface AuthenticatedProjectsProjectSlugRouteChildren {
   AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   AuthenticatedProjectsProjectSlugMonitorsSearchRoute: typeof AuthenticatedProjectsProjectSlugMonitorsSearchRoute
   AuthenticatedProjectsProjectSlugMonitorsSignalsRoute: typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
+  AuthenticatedProjectsProjectSlugAgentScoreIndexRoute: typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRoute
   AuthenticatedProjectsProjectSlugBehavioursIndexRoute: typeof AuthenticatedProjectsProjectSlugBehavioursIndexRoute
   AuthenticatedProjectsProjectSlugCostIndexRoute: typeof AuthenticatedProjectsProjectSlugCostIndexRoute
   AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute: typeof AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute
@@ -2118,6 +2139,8 @@ const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjec
       AuthenticatedProjectsProjectSlugMonitorsSearchRoute,
     AuthenticatedProjectsProjectSlugMonitorsSignalsRoute:
       AuthenticatedProjectsProjectSlugMonitorsSignalsRoute,
+    AuthenticatedProjectsProjectSlugAgentScoreIndexRoute:
+      AuthenticatedProjectsProjectSlugAgentScoreIndexRoute,
     AuthenticatedProjectsProjectSlugBehavioursIndexRoute:
       AuthenticatedProjectsProjectSlugBehavioursIndexRoute,
     AuthenticatedProjectsProjectSlugCostIndexRoute:

@@ -1,8 +1,8 @@
 {
   "id": "@latitude-data/openclaw-telemetry",
   "name": "Latitude Telemetry",
-  "description": "Streams every OpenClaw agent run to Latitude as OTLP traces — full prompt, message history, assistant output, tool I/O, token usage, and agent name.",
-  "version": "0.0.9",
+  "description": "Streams every OpenClaw agent run to Latitude as OTLP traces: prompts, model calls with per-call usage and cost, tool calls and definitions, memory reads and writes, subagents, cron runs, and the sending user.",
+  "version": "0.1.0",
   "configSchema": {
     "type": "object",
     "additionalProperties": true,
@@ -27,12 +27,67 @@
       "debug": {
         "type": "boolean",
         "default": false,
-        "description": "Log diagnostic lines to stderr."
+        "description": "Log diagnostic lines to the gateway log."
       },
       "enabled": {
         "type": "boolean",
         "default": true,
         "description": "Set to false to pause emission without uninstalling."
+      },
+      "serviceName": {
+        "type": "string",
+        "default": "openclaw",
+        "description": "OTLP service.name; the Service axis in Latitude. Set one per agent deployment to tell them apart."
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Extra Latitude tags appended to the derived ones (openclaw, channel, agent id, cron:<job>, subagent:<agent>)."
+      },
+      "metadata": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "Extra Latitude metadata key/values. Keys starting with openclaw. are reserved and ignored."
+      },
+      "memory": {
+        "type": "boolean",
+        "default": true,
+        "description": "Emit memory spans for MEMORY.md, USER.md and memory/ reads and writes."
+      },
+      "memoryContent": {
+        "type": "boolean",
+        "default": true,
+        "description": "Include memory record bodies and search queries on memory spans."
+      },
+      "toolDefinitions": {
+        "type": "boolean",
+        "default": true,
+        "description": "Attach the tool definitions offered to the model on each model call span."
+      },
+      "maxContentChars": {
+        "type": "integer",
+        "minimum": 1024,
+        "default": 262144,
+        "description": "Per-attribute content budget; larger values are truncated from the middle."
+      },
+      "redact": {
+        "type": "object",
+        "description": "Local attribute redaction before export: { attributes: [exact key or /regex/flags], mask }.",
+        "properties": {
+          "attributes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mask": {
+            "type": "string"
+          }
+        }
       }
     }
   }

@@ -1,16 +1,21 @@
+import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
+
 # Prime Intellect (Verifiers) telemetry
 
-Stream [Prime Intellect Verifiers](https://github.com/PrimeIntellect-ai/verifiers) eval rollouts into Latitude as traces. After setup, each rollout appears in your project's **Traces** view with prompts, model calls, tool calls, token usage, timing, and rewards — optionally as Latitude custom scores.
+Stream [Prime Intellect Verifiers](https://github.com/PrimeIntellect-ai/verifiers) eval rollouts into Latitude as traces. After setup, each rollout appears in your project's **Traces** view with prompts, model calls, tool calls, token usage, timing, and rewards — optionally as Latitude custom scores. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
+
+<SkillsCallout />
 
 ## Prerequisites
 
-- A [Latitude account](https://console.latitude.so/login) with a project
+- A [Latitude account](https://console.latitude.so/login) with a project, or none yet: your agent can create a temporary one with the [`latitude-setup` skill](/getting-started/skills), no signup, and fill in the values below
 - A Verifiers v1 eval setup (`verifiers.v1`, `uv run eval`, or `prime eval`)
 - `pip` / `uv` in the same environment that runs your eval
 
 ## Install
 
-1. In Latitude, copy your project slug from the project sidebar.
+1. In Latitude, copy your project slug from the project sidebar (or let the `latitude-setup` skill create a temporary account and project for you).
 2. Create or copy an API key from **Settings → API Keys**.
 3. Install the package into the env that runs Verifiers:
 
@@ -65,6 +70,10 @@ The CLI looks for `traces.jsonl`, `episodes.jsonl`, or `results.jsonl`.
 Open your Latitude project → **Traces**. New rollouts should appear within a few seconds after export. If you left score export enabled (default), rewards show up as custom scores on those traces.
 
 If nothing arrives, set `LATITUDE_DEBUG=true` and re-run the export.
+
+## See what was captured
+
+<FirstArtifact />
 
 ## Structural-only telemetry
 

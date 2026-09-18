@@ -1,14 +1,16 @@
 import {
-  BillingUsagePeriodRepository,
-  calculatePlanSpendMills,
+  type BillingOverview,
+  type BillingUsageBreakdownRow,
+  getBillingOverviewUseCase,
+  getBillingUsageBreakdownUseCase,
   PLAN_SLUGS,
-  type PlanSlug,
   updateSpendingLimitUseCase,
 } from "@domain/billing"
 import { BadRequestError, OrganizationId, type UserId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
   invalidateEffectivePlanCache,
   MembershipRepositoryLive,
@@ -26,67 +28,19 @@ import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getBetterAuth, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 
-interface BillingOverviewDto {
-  planSlug: PlanSlug
-  planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
+type BillingOverviewDto = Omit<BillingOverview, "periodStart" | "periodEnd"> & {
   periodStart: string
   periodEnd: string
-  /** `null` when the plan entitlement is intentionally unbounded over JSON (Enterprise). */
-  includedCredits: number | null
-  /** Authoritative period total from `billing_usage_periods.consumed_credits` (includes overage). */
-  consumedCredits: number
-  overageCredits: number
-  /** Portion of `consumedCredits` that counts against the included allowance. */
-  includedUsedCredits: number
-  /** Credits left in the included allowance; `null` when the entitlement is unbounded. */
-  remainingCredits: number | null
-  /** 0–1 fill for the usage ring; `1` when unbounded or at/over the included allowance. */
-  usageProgress: number
-  isAtIncludedLimit: boolean
-  overageAmountMills: number
-  overageAllowed: boolean
-  hardCapped: boolean
-  retentionDays: number
-  currentSpendMills: number | null
-  spendingLimitCents: number | null
 }
 
 const loadBillingOverview = Effect.fn("web.billing.getOverview")(function* (organizationId: string) {
   const orgPlan = yield* resolveEffectivePlanCached(OrganizationId(organizationId))
-  const periodRepo = yield* BillingUsagePeriodRepository
-  const period = yield* periodRepo.findOptionalByPeriod({
-    organizationId: OrganizationId(organizationId),
-    periodStart: orgPlan.periodStart,
-    periodEnd: orgPlan.periodEnd,
-  })
-
-  const includedCredits = Number.isFinite(orgPlan.plan.includedCredits) ? orgPlan.plan.includedCredits : null
-  const consumedCredits = period?.consumedCredits ?? 0
-  const overageCredits = period?.overageCredits ?? 0
-  const includedUsedCredits = includedCredits === null ? consumedCredits : Math.min(consumedCredits, includedCredits)
-  const remainingCredits = includedCredits === null ? null : Math.max(includedCredits - consumedCredits, 0)
-  const isAtIncludedLimit = includedCredits !== null && includedCredits > 0 && consumedCredits >= includedCredits
-  const usageProgress =
-    includedCredits === null || includedCredits <= 0 ? 1 : Math.min(consumedCredits / includedCredits, 1)
+  const overview = yield* getBillingOverviewUseCase(orgPlan)
 
   return {
-    planSlug: orgPlan.plan.slug,
-    planSource: orgPlan.source as BillingOverviewDto["planSource"],
-    periodStart: orgPlan.periodStart.toISOString(),
-    periodEnd: orgPlan.periodEnd.toISOString(),
-    includedCredits,
-    consumedCredits,
-    overageCredits,
-    includedUsedCredits,
-    remainingCredits,
-    usageProgress,
-    isAtIncludedLimit,
-    overageAmountMills: period?.overageAmountMills ?? 0,
-    overageAllowed: orgPlan.plan.overageAllowed,
-    hardCapped: orgPlan.plan.hardCapped,
-    retentionDays: orgPlan.plan.retentionDays,
-    currentSpendMills: calculatePlanSpendMills(orgPlan.plan.slug, period?.overageAmountMills ?? 0),
-    spendingLimitCents: orgPlan.plan.spendingLimitCents,
+    ...overview,
+    periodStart: overview.periodStart.toISOString(),
+    periodEnd: overview.periodEnd.toISOString(),
   } satisfies BillingOverviewDto
 })
 
@@ -110,6 +64,50 @@ export const getBillingOverview = createServerFn({ method: "GET" }).handler(asyn
     ),
   )
 })
+
+interface BillingUsageBreakdownDto {
+  periodStart: string
+  periodEnd: string
+  /** One entry per project and category with credits in the current period, largest first. */
+  rows: readonly BillingUsageBreakdownRow[]
+}
+
+export const getBillingUsageBreakdown = createServerFn({ method: "GET" }).handler(
+  async (): Promise<BillingUsageBreakdownDto> => {
+    const { organizationId: orgId } = await requireSession()
+    const client = getPostgresClient()
+    const organizationId = OrganizationId(orgId)
+
+    const billingLayers = Layer.mergeAll(
+      BillingOverrideRepositoryLive,
+      BillingUsageEventRepositoryLive,
+      SettingsReaderLive,
+      StripeSubscriptionLookupLive,
+      OrganizationRepositoryLive,
+    )
+
+    return await Effect.runPromise(
+      Effect.gen(function* () {
+        const orgPlan = yield* resolveEffectivePlanCached(organizationId)
+        const rows = yield* getBillingUsageBreakdownUseCase({
+          organizationId,
+          periodStart: orgPlan.periodStart,
+          periodEnd: orgPlan.periodEnd,
+        })
+
+        return {
+          periodStart: orgPlan.periodStart.toISOString(),
+          periodEnd: orgPlan.periodEnd.toISOString(),
+          rows,
+        } satisfies BillingUsageBreakdownDto
+      }).pipe(
+        withPostgres(billingLayers, client, organizationId),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
+    )
+  },
+)
 
 export const getFreshBillingOverview = createServerFn({ method: "GET" }).handler(
   async (): Promise<BillingOverviewDto> => {

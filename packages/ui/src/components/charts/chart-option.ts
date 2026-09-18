@@ -47,6 +47,7 @@ export interface ChartLineSeries {
   readonly axis?: "left" | "right"
   readonly stack?: string
   readonly area?: boolean
+  readonly areaOpacity?: number
   readonly smooth?: boolean
   readonly step?: "start" | "middle" | "end"
 }
@@ -56,6 +57,12 @@ export type ChartSeries = ChartBarSeries | ChartLineSeries
 export interface ChartAxisDescriptor {
   /** Axis label shown adjacent to the values. */
   readonly name?: string
+  /** Hides the axis and its grid lines while retaining its scale. */
+  readonly show?: boolean
+  /** Fixed lower bound for comparable charts. */
+  readonly min?: number
+  /** Fixed upper bound for comparable charts. */
+  readonly max?: number
   /** Smallest split interval. Defaults to 1, which flattens sub-unit ranges (e.g. dollars). */
   readonly minInterval?: number
   /** Formats this axis' tick labels and the tooltip values of its series. */
@@ -80,6 +87,15 @@ interface ChartOptionInput {
   /** Suppress the built-in legend when the caller renders its own (echarts' only toggles visibility). */
   readonly hideLegend?: boolean
 }
+
+const axisScaleOptions = (descriptor: ChartAxisDescriptor | undefined) => ({
+  ...(descriptor?.show === undefined ? {} : { show: descriptor.show }),
+  ...(descriptor?.min === undefined ? {} : { min: descriptor.min }),
+  ...(descriptor?.max === undefined ? {} : { max: descriptor.max }),
+  ...(descriptor?.show === false ? { splitLine: { show: false } } : {}),
+})
+
+const chartGridLeft = (descriptor: ChartAxisDescriptor | undefined): number => (descriptor?.show === false ? 16 : 48)
 
 export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
   const {
@@ -120,6 +136,7 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
 
   const withAxisOptions = (descriptor: ChartAxisDescriptor | undefined) => ({
     ...yAxisBase,
+    ...axisScaleOptions(descriptor),
     ...(descriptor?.minInterval === undefined ? {} : { minInterval: descriptor.minInterval }),
     ...(descriptor?.formatValue ? { axisLabel: { ...yAxisBase.axisLabel, formatter: descriptor.formatValue } } : {}),
   })
@@ -201,15 +218,17 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
       showSymbol: false,
       lineStyle: { width: s.area ? 1 : 2, color: s.color, opacity: s.area ? 0.8 : 1 },
       itemStyle: { color: s.color },
-      ...(s.area ? { areaStyle: { color: s.color, opacity: 0.45 } } : {}),
+      ...(s.area ? { areaStyle: { color: s.color, opacity: s.areaOpacity ?? 0.45 } } : {}),
       emphasis: { disabled: true },
     }
   })
 
   const option: EChartsCoreOption = {
     backgroundColor: "transparent",
+    animationDuration: 500,
+    animationDurationUpdate: 300,
     grid: {
-      left: 48,
+      left: chartGridLeft(primaryAxis),
       right: gridRight,
       top: gridTop,
       bottom: gridVerticalInsetPx,

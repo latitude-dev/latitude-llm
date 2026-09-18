@@ -145,6 +145,76 @@ describe("annotationScoreSchema", () => {
     expect(result.success).toBe(true)
   })
 
+  it("accepts legacy flagger metadata without structured provenance", () => {
+    const result = annotationScoreSchema.safeParse({
+      ...buildBaseScoreInput(),
+      sourceType: "annotation",
+      sourceId: "SYSTEM",
+      metadata: {
+        rawFeedback: "Legacy automatic annotation.",
+        flaggerSlug: "empty-response",
+      },
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("accepts bounded deterministic finding linkage", () => {
+    const result = annotationScoreSchema.safeParse({
+      ...buildBaseScoreInput(),
+      sourceType: "annotation",
+      sourceId: "SYSTEM",
+      metadata: {
+        rawFeedback: "The final response was blank.",
+        flaggerSlug: "empty-response",
+        flaggerPath: "deterministic",
+        flaggerFindingKey: "f".repeat(64),
+      },
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("accepts bounded sampled scoring provenance", () => {
+    const result = annotationScoreSchema.safeParse({
+      ...buildBaseScoreInput(),
+      sourceType: "annotation",
+      sourceId: "SYSTEM",
+      metadata: {
+        rawFeedback: "The assistant refused the task.",
+        flaggerSlug: "refusal",
+        flaggerPath: "sampled",
+        scoringArtifactVersion: "refusal@1",
+      },
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("rejects malformed finding keys and empty artifact versions", () => {
+    const deterministic = annotationScoreSchema.safeParse({
+      ...buildBaseScoreInput(),
+      sourceType: "annotation",
+      sourceId: "SYSTEM",
+      metadata: {
+        rawFeedback: "Invalid deterministic provenance.",
+        flaggerFindingKey: "not-a-finding-key",
+      },
+    })
+    const sampled = annotationScoreSchema.safeParse({
+      ...buildBaseScoreInput(),
+      sourceType: "annotation",
+      sourceId: "SYSTEM",
+      metadata: {
+        rawFeedback: "Invalid sampled provenance.",
+        scoringArtifactVersion: "",
+      },
+    })
+
+    expect(deterministic.success).toBe(false)
+    expect(sampled.success).toBe(false)
+  })
+
   it("rejects incomplete text offsets", () => {
     const result = annotationScoreSchema.safeParse({
       ...buildBaseScoreInput(),

@@ -9,9 +9,10 @@ A project benchmark explains the agent across many sessions. A session assessmen
 happened in one session.
 
 One session does not have a dimension score. Reliability and Safety describe risk across repeated
-traffic. Outcome can require calibrated evidence from comparable sessions. Cost and Speed compare
-observed resources with a counterfactual. Compressing those different claims into five session
-numbers would imply precision the evidence does not have.
+traffic. Outcome uses project-level examined task-outcome judgments. Cost combines family
+rates across a selected population, and Speed compares observed critical-path time with a
+counterfactual. Compressing those different claims into five session numbers would imply precision
+the evidence does not have.
 
 The assessment tells the session's story instead. It gathers the available evidence, keeps its
 position in the conversation or trace, identifies which dimensions it informs, and states whether
@@ -24,7 +25,9 @@ For one session, a user can answer:
 - Did the agent produce a usable completion?
 - What evidence suggests the task succeeded or failed?
 - Which operational problems ended the session, and which ones it recovered from?
-- How much spend and critical-path time was avoidable?
+- Which Cost metrics produced adverse or efficient raw readings, and what native resource effect was
+  observed or estimated?
+- How much spend and critical-path time was avoidable where that quantity can be estimated?
 - Did the agent cause safety harm, encounter hostile input, or defend against it?
 - Which recurring signals appeared?
 - Which parts of the session were not examined or could not be measured?
@@ -49,12 +52,29 @@ The assessment is the shared read model used by:
 
 - the session Scores panel;
 - public session-assessment operations;
-- session filters and exports;
 - the benchmark's window-level estimators;
 - cause attribution on the Agent Score page.
 
 It is resolved from current source records when requested. Latitude does not persist a session
 assessment or freeze a session-level score.
+
+## Persistence boundary
+
+An assessment observation is a normalized fact, not necessarily a database row. Deterministic
+observations are calculated from retained session telemetry whenever the single-session or bulk
+resolver runs. Empty output, malformed output, tool failures, recovery, finish reasons, provider
+errors, repetition, and other telemetry-derived facts do not become additional score rows.
+
+Scores remain the persisted records for human annotations, evaluations, and flagger or judge results
+that cannot be reproduced exactly. A flagger-authored score may carry a stable `findingKey` that
+links it to the deterministic source fact which caused signal discovery, but it does not duplicate
+the complete finding. Model-produced structured verdicts and their scoring-artifact provenance are
+persisted because rerunning a model later is not guaranteed to return the same result.
+
+Screening decisions are persisted separately. Scores alone cannot distinguish a classifier that ran
+and found nothing from one that was skipped, sampled out, rate-limited, or failed. Together, retained
+telemetry, persisted scores, signals, moments, and screening decisions are sufficient to resolve the
+assessment. No separate persisted observation entity is introduced.
 
 ## Shared vocabulary
 
@@ -79,10 +99,12 @@ type ScoreEvidenceContract =
     }
 ```
 
-The role identifies the estimator channel. The occurrence says whether the effect is positive,
-negative, or context and carries the structured result. For example, `operationalIncident` can be a
-recovered provider error. Its Reliability effect is context, while the same event has negative Cost
-and Speed effects.
+The role identifies the estimator channel. `spendEfficiency` remains the persisted compatibility
+name for the general Cost channel introduced in PR 1; PR 3 resolves its Cost family from the linked
+metric or residual signal policy instead of migrating existing signal JSON. The occurrence says
+whether the effect is positive, negative, or context and carries the structured result. For example,
+`operationalIncident` can be a recovered provider error. Its Reliability effect is context, while
+the same recovered event can have negative Cost and Speed effects.
 
 ## Assessment model
 
@@ -107,7 +129,7 @@ type SessionAssessmentItem = {
   occurrenceCount: number
   effects: SessionDimensionEffect[]
   anchors: SessionEvidenceAnchor[]
-  destination: SessionEvidenceDestination
+  destinations: SessionEvidenceDestination[]
 }
 
 type SessionDimensionEffect = ScoreEvidenceContract & {
@@ -115,9 +137,80 @@ type SessionDimensionEffect = ScoreEvidenceContract & {
   measurement: "observed" | "estimated" | "notMeasured"
   benchmarkUse: "direct" | "modeled" | "attributionOnly" | "contextOnly"
   impact?: SessionEvidenceImpact
-  confidence?: SessionEvidenceConfidence
+  costEvaluation?: SessionCostMetricEvaluation
+}
+
+type SessionCostMetricEvaluation = {
+  family: "spend" | "context" | "tools" | "memory" | "recovery"
+  rawValue?: number
+  rawUnit?: string
+  measurementState: "measured" | "unmeasured" | "notApplicable"
+  nativeImpact?: EstimateRange
+}
+
+type SessionCostMetricEvidence = {
+  metricId: string
+  family: "spend" | "context" | "tools" | "memory" | "recovery"
+  aggregation: "resourceRatio" | "eventRate" | "sessionMean"
+  measurementState: "measured" | "unmeasured" | "notApplicable"
+  rawUnit: string
+  rawValue?: number
+  eligibleUnits?: number
+  adverseUnits?: number
+  evidence?: "confirmed" | "modeled"
+  nativeImpact?: EstimateRange
+  limitations: string[]
+}
+
+type EstimateRange = {
+  unit: string
+  point: number
+  lower?: number
+  upper?: number
+  interpretation?: "identificationBound" | "confidenceInterval"
 }
 ```
+
+Anchors identify where the fact occurred. Destinations identify the authorized product records a
+user can open. They are separate because one deduplicated item can point to both the underlying tool
+call and a signal created from its discovery score.
+
+```ts
+type SessionEvidenceAnchor =
+  | {
+      kind: "message"
+      traceId: string
+      messageIndex: number
+      partIndex?: number
+      contentHash?: string
+    }
+  | { kind: "span"; traceId: string; spanId: string }
+  | {
+      kind: "toolCall"
+      traceId: string
+      toolCallId: string
+      toolName?: string
+      messageIndex?: number
+    }
+  | { kind: "memoryEvent"; memoryEventId: string }
+  | { kind: "score"; scoreId: string }
+  | { kind: "signal"; signalId: string }
+
+type SessionEvidenceDestination =
+  | { kind: "sessionMessage"; traceId: string; messageIndex: number; partIndex?: number }
+  | { kind: "span"; traceId: string; spanId: string }
+  | { kind: "toolCall"; traceId: string; toolCallId: string }
+  | { kind: "memoryEvent"; memoryEventId: string }
+  | { kind: "score"; scoreId: string }
+  | { kind: "signal"; signalId: string }
+```
+
+Both lists are deduplicated. An item may have no destination when its source has no existing product
+detail surface; the API returns an empty list rather than a placeholder route. Destinations contain
+identifiers, not web URLs, so web, SDK, CLI, and in-process consumers can resolve them appropriately.
+The current memory ledger has no standalone event id. `memoryEventId` is therefore an opaque stable
+key derived from organization, project, trace, span, store, record, change kind, and timestamp. It is
+not a new persisted identifier and does not require a migration.
 
 `SessionEvidenceImpact` is this discriminated union:
 
@@ -148,31 +241,109 @@ consequence cannot yet be quantified. A newly promoted Cost signal is one exampl
 modeled facts enter a calibrated or counterfactual estimator, attribution-only facts explain an
 already established deficit, and context-only facts never change the score.
 
+Cost and Speed attach uncertainty to the concrete native estimate, not to whether the source fact
+occurred. Session-level estimates generally use same-unit identification bounds. Project-level
+dimension and composite intervals remain owned by the score contract and use confidence intervals.
+Lower and upper session scenarios rerun deduplication and aggregation; item ranges are never added
+naively.
+
 ## Dimension summaries
 
-The assessment does not reduce a dimension to a single state. Each summary contains the evidence a
-user can read without opening every row:
+The assessment does not reduce a dimension to a score. It returns all five summaries, including
+dimensions with no readable evidence. Direction counts and measurement counts are orthogonal: one
+recovered tool incident can be observed Reliability context and simultaneously unmeasured negative
+Cost evidence. Counts are over deduplicated effects in that dimension, not raw source rows or items.
 
-| Dimension | Session summary |
-| --- | --- |
-| Outcome | explicit positive and negative evidence, plus calibrated probability when available |
-| Reliability | usable completion, terminal failure, and recovered incidents |
-| Cost | observed spend, measured avoidable spend, and unmeasured Cost evidence |
-| Speed | observed critical-path time, measured avoidable time, and unmeasured Speed evidence |
-| Safety | confirmed harm, exposure, successful defense, and examination coverage |
+```ts
+type SessionDimensionSummaryBase = {
+  scoreDimension: ScoreDimension
+  evidenceCounts: {
+    positive: number
+    negative: number
+    context: number
+  }
+  measurementCounts: {
+    observed: number
+    estimated: number
+    notMeasured: number
+  }
+  coverage: "complete" | "partial" | "notExamined"
+}
+
+type SessionDimensionSummary =
+  | SessionDimensionSummaryBase & {
+      scoreDimension: "outcome"
+      taskOutcome?: {
+        verdict?: "success" | "failure"
+        probability?: number
+      }
+    }
+  | SessionDimensionSummaryBase & {
+      scoreDimension: "reliability"
+      completion: "usable" | "terminalFailure" | "undetermined"
+      recoveredIncidentCount: number
+      unrecoveredIncidentCount: number
+    }
+  | SessionDimensionSummaryBase & {
+      scoreDimension: "cost"
+      observedMicrocents?: number
+      measuredAvoidableMicrocents?: number
+      estimatedAvoidableMicrocents?: number
+      families: Array<{
+        family: "spend" | "context" | "tools" | "memory" | "recovery"
+        measurementState: "measured" | "partial" | "unmeasured" | "notApplicable"
+        observedItemCount: number
+        metrics: SessionCostMetricEvidence[]
+        nativeImpact?: EstimateRange
+      }>
+    }
+  | SessionDimensionSummaryBase & {
+      scoreDimension: "speed"
+      observedCriticalPathNs?: number
+      measuredAvoidableNs?: number
+      estimatedAvoidableNs?: number
+    }
+  | SessionDimensionSummaryBase & {
+      scoreDimension: "safety"
+      exposureCount: number
+      successfulDefenseCount: number
+      confirmedHarmCount: number
+    }
+```
+
+Optional native values distinguish zero from unknown. A present zero is a measured zero; an omitted
+value is unavailable. PR 2 can leave future Cost, Speed, Outcome, and Safety fields absent or zero as
+appropriate until their owning PR supplies the reader. It does not invent placeholder estimates.
 
 Examples:
 
 ```text
 Outcome       1 positive observation · 2 negative observations
 Reliability   Completed · 1 recovered provider incident
-Cost          $0.04 of $0.31 measured as avoidable
+Cost          Repeated tool calls: 2 of 7 · Recoverable spend: $0.04 of $0.31
 Speed         3.2s of 18.4s measured as avoidable
 Safety        1 injection attempt refused · no confirmed harm observed
 ```
 
 "No confirmed harm observed" is shown with examination coverage. It never means the session was
 safe when no relevant detector ran.
+
+## Usable completion
+
+The operational content test is deliberately narrow:
+
+```text
+hasOutputContent = nonWhitespaceResponseText OR atLeastOneToolCall
+```
+
+Reasoning without response text or a tool call is not a delivered result. A captured assistant turn
+with neither response text nor a tool call is terminal no-output evidence. No captured assistant turn
+is unreadable and produces `completion: "undetermined"`, not a failure.
+
+A tool call prevents a no-output finding even if it is malformed. Its malformed structure can still
+produce a separate terminal operational finding. Likewise, non-empty repeated-character text counts
+as content and becomes terminal only when schema, requested-output, or semantic usability evidence
+confirms that it could not satisfy the task.
 
 ## Evidence sources
 
@@ -183,19 +354,20 @@ while others provide spend or time. Value evidence can also be positive:
 
 - a usable final output is positive Reliability evidence;
 - TTFT or throughput at or better than the frozen expectation is positive Speed evidence;
-- achieved cache use at the session's measurable ceiling is positive Cost evidence;
+- cache use at the session's measurable ceiling can be positive Cost evidence when the reader is
+  applicable, readable, and has complete visibility;
 - a provider or tool retry that completed is positive recovery evidence and negative resource
   evidence.
 
 Readers do not generate a positive item merely because no defect was found.
 
-### Task Success
+### Task failure
 
-The `task-success` flagger judges the complete session and produces `success`, `failure`,
+The `task-failure` flagger judges the complete session and produces `success`, `failure`,
 `indeterminate`, or `notApplicable`. Success and failure become passed and failed system scores.
 Indeterminate and not-applicable decisions remain coverage facts and do not become scores.
 
-A failed Task Success score can enter normal signal discovery. A passed score never creates a
+A failed task-outcome score can enter normal signal discovery. A passed score never creates a
 signal. The assessment shows the verdict and its anchors when the flagger examined the session.
 
 ### Signals
@@ -221,9 +393,10 @@ the raw score feed unless their public contract gains benchmark semantics.
 
 ### Moments
 
-Conversation moments provide positive or negative Outcome evidence. Corrections, abandonment, and
-frustration are negative. Explicit resolution or satisfaction can be positive once the Outcome model
-has calibrated that evidence. A handoff is context unless earlier evidence shows failed self-service.
+Conversation moments provide Outcome context. Corrections, abandonment, and frustration can appear
+under needs attention. Explicit resolution or satisfaction remains contextual until a later scoring
+version defines how it enters the project estimator. A handoff is context unless earlier evidence
+shows failed self-service.
 
 ### Safety
 
@@ -271,25 +444,82 @@ Every item can include one or more anchors:
 - score id.
 
 Items without a temporal position sort after the timeline under "Session-wide evidence." Dimension,
-direction, source, and measured state are filters. Filtering does not duplicate multi-dimension
-items.
+direction, source, and measured state remain properties of each item and effect; PR 2 does not add
+assessment filters.
 
-The operation returns complete dimension summaries and cursor-paginates evidence items in this
-order. Cursors use the stable chronology key and evidence key. The default page size is 100. The web
-panel virtualizes additional pages rather than truncating large sessions.
+The operation returns complete dimension summaries and cursor-paginates all evidence items in
+chronological order. Cursors use the stable chronology key and evidence key. The default page size is
+100. The web panel virtualizes additional pages rather than truncating large sessions.
 
 ## Coverage
 
-Coverage is part of the session story. It reports:
+Coverage is reported per reader because one session can have complete Reliability evidence and no
+Safety examination. There is no single assessment-wide complete flag.
 
-- which deterministic readers had their required telemetry;
-- which sampled flaggers were examined and why;
-- known inclusion probabilities;
-- missing pricing;
-- whether the critical path could be reconstructed;
-- conversation-analysis status;
-- unmapped finish reasons or provider errors;
-- signal effects that lack enough comparison traffic.
+```ts
+type SessionAssessmentCoverage = {
+  readers: SessionReaderCoverage[]
+}
+
+type SessionReaderCoverageBase = {
+  readerId: string
+  label: string
+  scoreDimensions: ScoreDimension[]
+}
+
+type SessionReaderSelection = {
+  method: "deterministic" | "hinted" | "uniform-sample" | "ordinary-sample"
+  inclusionProbability: number
+}
+
+type SessionCoverageLimitation =
+  | "skipped"
+  | "notSelected"
+  | "rateLimited"
+  | "executionFailed"
+  | "pending"
+  | "missingTelemetry"
+  | "missingContent"
+  | "truncatedContent"
+  | "unmappedTelemetry"
+  | "missingPricing"
+  | "unknownModelContext"
+  | "criticalPathUnavailable"
+
+type SessionReaderCoverage =
+  | SessionReaderCoverageBase & {
+      status: "examined"
+      findingCount: number
+      selection?: SessionReaderSelection
+    }
+  | SessionReaderCoverageBase & {
+      status: "partiallyExamined"
+      findingCount: number
+      readableCount: number
+      totalCount: number
+      limitation: SessionCoverageLimitation
+      selection?: SessionReaderSelection
+    }
+  | SessionReaderCoverageBase & {
+      status: "notExamined"
+      limitation: SessionCoverageLimitation
+      selection?: SessionReaderSelection
+    }
+  | SessionReaderCoverageBase & {
+      status: "notApplicable"
+    }
+```
+
+`examined` with `findingCount: 0` means the reader ran and found nothing. `notExamined` means no such
+claim is possible. Disabled, suppressed, unavailable-flagger, and missing-flagger-context policy
+paths all expose the single public limitation `skipped`; PR 2 does not expose skip subreasons.
+Statistically distinct states such as a known sampling loss, rate limiting, execution failure, or
+missing telemetry remain separate because later estimators handle them differently.
+
+Coverage includes deterministic telemetry readability, sampled examination and inclusion
+probability, pricing availability, critical-path reconstruction, conversation-analysis status,
+unmapped span values, captured content, truncated content, known model context limits, and signal
+effects without adequate comparison traffic.
 
 The UI distinguishes "examined with no finding" from "not examined." The assessment never fills
 missing evidence with a positive item.
@@ -316,9 +546,10 @@ workflow.
 same domain read model used by the web panel. Its schema includes descriptions suitable for HTTP,
 OpenAPI, MCP, SDKs, CLI, and in-process agent tools.
 
-The input identifies a project and session. The use-case resolves the session's trace ids so callers
-do not need to understand orphan score rows. Organization access is enforced at the boundary, and
-every repository read remains organization and project scoped.
+The input identifies a project and session and optionally carries the pagination cursor. It has no
+assessment-filter parameters. The use-case resolves the session's trace ids so callers do not need
+to understand orphan score rows. Organization access is enforced at the boundary, and every
+repository read remains organization and project scoped.
 
 The operation returns labels, structured effects, and anchors. It does not copy message, tool, or
 span contents into the assessment payload. Callers follow the existing authorized destinations to
@@ -348,11 +579,20 @@ progress. That addition requires a new Outcome contract and scoring-version boun
 - A session has no 0 through 100 dimension score.
 - One underlying event is one item, even when it informs several dimensions.
 - Positive evidence is observed or calibrated; absence of negative evidence is not positive.
-- Exact money and time are never replaced by a generic point value.
+- Session evidence preserves native money, token, operation, incident, and time values; it never
+  replaces them with a session-level generic point value.
 - A recovered incident is not a terminal failure.
 - Exposure is not confirmed harm.
 - Missing examination is not a clean result.
 - Scores assigned to ignored signals are excluded; other signal lifecycle state does not change the
   assessment.
+- Deterministic observations are recalculated from retained telemetry rather than persisted as score
+  rows or assessment rows.
+- Scores persist authored or non-reproducible judgments; screening decisions persist whether sampled
+  examination occurred.
+- Response text or a tool call is required for a usable delivered result; reasoning alone is not a
+  completion.
+- The assessment has no assessment filters. Estimate ranges describe native quantities, not generic
+  evidence confidence.
 - The assessment is resolved dynamically and is never persisted as a session score.
 - The web, public operation, and benchmark use the same evidence semantics.

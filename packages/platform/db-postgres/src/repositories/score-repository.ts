@@ -12,7 +12,7 @@ import {
   type TraceId,
 } from "@domain/shared"
 import { createLogger } from "@repo/observability"
-import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, type SQL, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { scores } from "../schema/scores.ts"
@@ -105,6 +105,17 @@ const applyDraftMode = (options: ScoreListOptions | undefined) => {
   return isNull(scores.draftedAt)
 }
 
+/**
+ * Excludes a flagger's positive reference verdict.
+ *
+ * Applied in SQL rather than over the returned page so a hidden verdict cannot
+ * consume the page budget and displace a real annotation.
+ */
+const applyFlaggerReferenceVerdictFilter = (options: ScoreListOptions | undefined) => {
+  if (!options?.omitFlaggerReferenceVerdicts) return undefined
+  return or(eq(scores.passed, false), ne(scores.sourceId, "SYSTEM"), sql`${scores.metadata}->>'flaggerSlug' is null`)
+}
+
 const applyAbsentEvaluationFilter = (options: ScoreListOptions | undefined) => {
   if (!options?.omitAbsentEvaluations) return undefined
   return or(
@@ -147,11 +158,13 @@ export const ScoreRepositoryLive = Layer.effect(
             const offset = input.options?.offset ?? 0
             const draftClause = applyDraftMode(input.options)
             const absentEvaluationClause = applyAbsentEvaluationFilter(input.options)
+            const referenceVerdictClause = applyFlaggerReferenceVerdictFilter(input.options)
             const whereClause = and(
               eq(scores.organizationId, organizationId),
               input.baseWhere,
               draftClause,
               absentEvaluationClause,
+              referenceVerdictClause,
             )
 
             return db
@@ -482,7 +495,9 @@ export const ScoreRepositoryLive = Layer.effect(
               db
                 .select({
                   traceId: scores.traceId,
-                  positiveCount: sql<number>`count(*) filter (where ${scores.passed} = true and ${scores.errored} = false)::int`,
+                  // A flagger's positive reference verdict is a measurement, not a
+                  // reviewer's annotation, so it must not inflate this badge.
+                  positiveCount: sql<number>`count(*) filter (where ${scores.passed} = true and ${scores.errored} = false and not (${scores.sourceId} = 'SYSTEM' and ${scores.metadata}->>'flaggerSlug' is not null))::int`,
                   negativeCount: sql<number>`count(*) filter (where ${scores.passed} = false and ${scores.errored} = false and not (${scores.sourceType} = 'evaluation' and ${scores.signalId} is null))::int`,
                 })
                 .from(scores)
@@ -580,6 +595,32 @@ export const ScoreRepositoryLive = Layer.effect(
         })
       },
 
+      listBySessionsAndTraces: ({ organizationId, projectId, sessionIds, traceIds, createdAtTo }) =>
+        Effect.gen(function* () {
+          if (sessionIds.length === 0 && traceIds.length === 0) return []
+          const sqlClient = yield* resolveSqlClient()
+          const membership = or(
+            ...(sessionIds.length > 0 ? [inArray(scores.sessionId, sessionIds.map(String))] : []),
+            ...(traceIds.length > 0 ? [inArray(scores.traceId, traceIds.map(String))] : []),
+          )
+          return yield* sqlClient
+            .query((db) =>
+              db
+                .select()
+                .from(scores)
+                .where(
+                  and(
+                    eq(scores.organizationId, organizationId),
+                    eq(scores.projectId, projectId),
+                    lte(scores.createdAt, createdAtTo),
+                    membership,
+                  ),
+                )
+                .orderBy(scores.createdAt, scores.id),
+            )
+            .pipe(Effect.map((rows) => rows.map(toDomainScore)))
+        }),
+
       listBySessionId: ({
         projectId,
         sessionId,
@@ -668,10 +709,12 @@ export const ScoreRepositoryLive = Layer.effect(
       listPublishedSystemAnnotationsBySession: ({
         projectId,
         sessionId,
+        flaggerSlug,
         limit = 200,
       }: {
         readonly projectId: ProjectId
         readonly sessionId: SessionId
+        readonly flaggerSlug?: string
         readonly limit?: number
       }) =>
         Effect.gen(function* () {
@@ -689,6 +732,7 @@ export const ScoreRepositoryLive = Layer.effect(
                     eq(scores.sourceId, "SYSTEM"),
                     eq(scores.sessionId, sessionId as string),
                     isNull(scores.draftedAt),
+                    ...(flaggerSlug === undefined ? [] : [sql`${scores.metadata}->>'flaggerSlug' = ${flaggerSlug}`]),
                   ),
                 )
                 .orderBy(desc(scores.createdAt))

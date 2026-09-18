@@ -40,6 +40,7 @@ const makeCandidate = (id: SignalId): Signal => ({
   filters: null,
   assigneeId: null,
   priority: null,
+  bundleKey: null,
   centroid: null,
   clusteredAt: createdAt,
   promotedAt: null,

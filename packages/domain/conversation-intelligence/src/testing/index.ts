@@ -18,6 +18,13 @@ export const createFakeSessionAnalysisRepository = (
   const repository: SessionAnalysisRepositoryShape = {
     findLatest: ({ organizationId, projectId, sessionId }) =>
       Effect.sync(() => rows.get(analysisKey(organizationId, projectId, sessionId)) ?? null),
+    listLatestBySessions: ({ organizationId, projectId, sessionIds, indexedAtTo }) =>
+      Effect.sync(() =>
+        sessionIds.flatMap((sessionId) => {
+          const analysis = rows.get(analysisKey(organizationId, projectId, sessionId))
+          return analysis && analysis.indexedAt <= indexedAtTo ? [analysis] : []
+        }),
+      ),
     upsert: (analysis) =>
       Effect.sync(() => {
         rows.set(analysisKey(analysis.organizationId, analysis.projectId, analysis.sessionId), analysis)
@@ -43,6 +50,16 @@ export const createFakeSessionSemanticMomentRepository = (seed: readonly Session
             moment.sessionId === sessionId,
         ),
       ),
+    listBySessions: ({ organizationId, projectId, sessionIds, indexedAtTo }) =>
+      Effect.sync(() =>
+        rows.filter(
+          (moment) =>
+            moment.organizationId === organizationId &&
+            moment.projectId === projectId &&
+            sessionIds.includes(moment.sessionId) &&
+            moment.indexedAt <= indexedAtTo,
+        ),
+      ),
     listByTrace: ({ organizationId, projectId, traceId }) =>
       Effect.sync(() =>
         rows.filter(
@@ -66,6 +83,16 @@ export const createFakeSessionMomentLabelRepository = (seed: readonly SessionMom
         rows.filter(
           (label) =>
             label.organizationId === organizationId && label.projectId === projectId && label.sessionId === sessionId,
+        ),
+      ),
+    listBySessions: ({ organizationId, projectId, sessionIds, indexedAtTo }) =>
+      Effect.sync(() =>
+        rows.filter(
+          (label) =>
+            label.organizationId === organizationId &&
+            label.projectId === projectId &&
+            sessionIds.includes(label.sessionId) &&
+            label.indexedAt <= indexedAtTo,
         ),
       ),
     listByMoment: ({ organizationId, projectId, sessionId, momentId }) =>

@@ -32,6 +32,7 @@ export function useSessionPanelParamReset() {
   const [, setSessionTab] = useParamState("sessionTab", "")
   const [, setTraceTab] = useParamState("traceTab", "")
   const [, setFocusScoreId] = useParamState("scoreId", "")
+  const [, setFocusMessageIndex] = useParamState("messageIndex", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
 
@@ -41,6 +42,7 @@ export function useSessionPanelParamReset() {
     setSessionTab("")
     setTraceTab("")
     setFocusScoreId("")
+    setFocusMessageIndex("")
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
   }
@@ -49,6 +51,8 @@ export function useSessionPanelParamReset() {
 export type OpenTraceOptions = {
   /** Focuses a score's anchor after the trace slot mounts. Implies `conversation` as the default tab. */
   readonly focusScoreId?: string
+  /** Focuses a conversation message after the trace slot mounts. */
+  readonly focusMessageIndex?: number
   /** Overrides which tab the trace slot lands on. Defaults: `conversation` with focus, otherwise `trace`. */
   readonly targetTab?: TraceDetailTabId
 }
@@ -86,6 +90,7 @@ export function SessionDetailDrawer({
   const [traceId, setTraceId] = useParamState("traceId", "")
   const [signalId, setSignalId] = useParamState("signalId", "")
   const [focusScoreId, setFocusScoreId] = useParamState("scoreId", "")
+  const [, setFocusMessageIndex] = useParamState("messageIndex", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
   const [q] = useParamState("q", "")
@@ -166,11 +171,12 @@ export function SessionDetailDrawer({
   const showDetail = detailKind !== null && !isSessionMissing
 
   const openTrace = (nextTraceId: string, options: OpenTraceOptions = {}) => {
-    const { focusScoreId: nextFocusScoreId, targetTab } = options
+    const { focusScoreId: nextFocusScoreId, focusMessageIndex: nextFocusMessageIndex, targetTab } = options
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
     setFocusScoreId(nextFocusScoreId ?? "")
-    setTraceTab(targetTab ?? (nextFocusScoreId ? "conversation" : "trace"))
+    setFocusMessageIndex(nextFocusMessageIndex === undefined ? "" : String(nextFocusMessageIndex))
+    setTraceTab(targetTab ?? (nextFocusScoreId || nextFocusMessageIndex !== undefined ? "conversation" : "trace"))
     setTraceId(nextTraceId)
   }
 
@@ -178,18 +184,23 @@ export function SessionDetailDrawer({
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
     setFocusScoreId("")
+    setFocusMessageIndex("")
     setTraceId("")
     setSignalId(nextSignalId)
   }
 
   const focusScoreInConversation = (scoreId: string) => {
+    setFocusMessageIndex("")
     setFocusScoreId(scoreId)
     setActiveTab("conversation")
   }
 
   // A focused score only means anything on the Conversation tab, so any other tab drops the param.
   const selectTab = (tab: SessionTabId) => {
-    if (tab !== "conversation") setFocusScoreId("")
+    if (tab !== "conversation") {
+      setFocusScoreId("")
+      setFocusMessageIndex("")
+    }
     setActiveTab(tab)
   }
 
@@ -197,6 +208,7 @@ export function SessionDetailDrawer({
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
     setFocusScoreId("")
+    setFocusMessageIndex("")
     setTraceId("")
     setSignalId("")
   }
@@ -205,6 +217,7 @@ export function SessionDetailDrawer({
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
     setFocusScoreId("")
+    setFocusMessageIndex("")
     setTraceId("")
     setSignalId("")
     onClose()

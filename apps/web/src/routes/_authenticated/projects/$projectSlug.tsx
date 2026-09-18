@@ -177,7 +177,11 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
               />
               {!collapsed && (
                 <div className="mt-2 border-t border-border pt-3">
-                  <BillingCreditCounter organizationId={organizationId} initialOverview={organizationBilling} />
+                  <BillingCreditCounter
+                    organizationId={organizationId}
+                    projectId={project.id}
+                    initialOverview={organizationBilling}
+                  />
                 </div>
               )}
             </>

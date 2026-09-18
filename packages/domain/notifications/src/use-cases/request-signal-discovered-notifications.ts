@@ -9,7 +9,7 @@ import {
   type SqlClient,
   UserId,
 } from "@domain/shared"
-import { SignalRepository } from "@domain/signals"
+import { type Signal, SignalRepository } from "@domain/signals"
 import { Effect } from "effect"
 import type { SignalDiscoveredPayload } from "../entities/notification.ts"
 import { buildIdempotencyKey } from "../helpers/idempotency-key.ts"
@@ -48,6 +48,35 @@ export type RequestSignalDiscoveredNotificationsResult =
 
 export type RequestSignalDiscoveredNotificationsError = RepositoryError
 
+type DiscoveredSignalSkipReason =
+  | "signal-not-found"
+  | "user-origin-signal"
+  | "signal-muted"
+  | "signal-ignored"
+  | "signal-resolved"
+
+const skipReasonForDiscoveredSignal = (signal: Signal, projectId: ProjectId): DiscoveredSignalSkipReason | null => {
+  if (signal.projectId !== projectId) return "signal-not-found"
+  if (signal.origin === "user") return "user-origin-signal"
+  if (signal.mutedAt !== null) return "signal-muted"
+  if (signal.ignoredAt !== null) return "signal-ignored"
+  if (signal.resolvedAt !== null) return "signal-resolved"
+  return null
+}
+
+const resolveDiscoveredRecipients = (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly assigneeId: string | null
+}) =>
+  input.assigneeId
+    ? Effect.succeed([UserId(input.assigneeId)] as const)
+    : resolveRecipients({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        kind: "signal.discovered",
+      })
+
 export const requestSignalDiscoveredNotificationsUseCase = (input: RequestSignalDiscoveredNotificationsInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("signalId", input.signalId)
@@ -56,38 +85,22 @@ export const requestSignalDiscoveredNotificationsUseCase = (input: RequestSignal
     const signal = yield* signals
       .findById(input.signalId)
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-    if (signal === null || signal.projectId !== input.projectId) {
+    if (signal === null) {
       yield* Effect.annotateCurrentSpan("skipped", "signal-not-found")
       return { status: "skipped", reason: "signal-not-found" } as const
     }
-    if (signal.origin === "user") {
-      yield* Effect.annotateCurrentSpan("skipped", "user-origin-signal")
-      return { status: "skipped", reason: "user-origin-signal" } as const
-    }
-    if (signal.mutedAt !== null) {
-      yield* Effect.annotateCurrentSpan("skipped", "signal-muted")
-      return { status: "skipped", reason: "signal-muted" } as const
-    }
-    if (signal.ignoredAt !== null) {
-      yield* Effect.annotateCurrentSpan("skipped", "signal-ignored")
-      return { status: "skipped", reason: "signal-ignored" } as const
-    }
-    if (signal.resolvedAt !== null) {
-      yield* Effect.annotateCurrentSpan("skipped", "signal-resolved")
-      return { status: "skipped", reason: "signal-resolved" } as const
+    const skipReason = skipReasonForDiscoveredSignal(signal, input.projectId)
+    if (skipReason !== null) {
+      yield* Effect.annotateCurrentSpan("skipped", skipReason)
+      return { status: "skipped", reason: skipReason } as const
     }
 
     const hasSignalAssignee = Boolean(signal.assigneeId)
-    let recipients: readonly UserId[]
-    if (signal.assigneeId) {
-      recipients = [UserId(signal.assigneeId)]
-    } else {
-      recipients = yield* resolveRecipients({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        kind: "signal.discovered",
-      })
-    }
+    const recipients = yield* resolveDiscoveredRecipients({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      assigneeId: signal.assigneeId,
+    })
     if (recipients.length === 0) {
       return { status: "skipped", reason: "no-recipients" } as const
     }

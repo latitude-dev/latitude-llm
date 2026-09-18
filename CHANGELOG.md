@@ -2,6 +2,165 @@
 
 ## Unreleased
 
+## v0.3.105 - 2026-09-17
+
+### Agent Score
+
+- Restored the breakdown for the latest published score when the latest explanation pointer misses, by reading the dated explanation for the snapshot date. Refresh now backfills missing snapshot evidence with a forced recompute, and the page waits for both today and snapshot evidence. The latest pointer only moves forward so a late older backfill cannot replace newer evidence (ref: #4668).
+
+### Flaggers
+
+- Added the Jev shadow classification pilot for `frustration` and `refusal`. It runs beside the baseline classifier with the already loaded session context and records an advisory-only observation in ClickHouse without changing classification results, scores, or billing. It requires `LAT_JEV_FLAGGER_SHADOW_ENABLED`, `LAT_JEV_API_KEY`, and the per-organization `jevFlaggerShadow` flag (ref: #4663).
+
+## v0.3.104 - 2026-09-17
+
+### MCP Auth
+
+- Served OAuth discovery JSON at root well-known URLs instead of 307 redirect, so strict MCP clients such as Cloudflare portal complete discovery (ref: 89a9875).
+
+### Security
+
+- Required admin/owner role for POST /v1/members invite, so non-admin members cannot mint admin invitations (ref: GHSA-cc29-29hq-cgc8).
+
+### Telemetry
+
+- Stopped provider error text leak under no-content capture and fixed first_trace_at write through repository so RLS permits it (ref: #4667).
+
+### Signals
+
+- Reported recovered tool errors bundled by failure class with one live issue per bucket per project (ref: #4662).
+
+## v0.3.103 - 2026-09-16
+
+### Agent Score
+
+- Split the explanation cache into per-date entries plus a latest-published entry, so a day without a published score shows today's readiness beside the latest score breakdown instead of stale readiness or an empty breakdown. Fixed the refresh check to compare against today's explanation and added a legacy-key fallback so pre-split cached breakdowns survive the rollout (ref: #4664).
+
+## v0.3.102 - 2026-09-16
+
+### Agent Score
+
+- Batched ClickHouse generation fact and content reads and restricted content queries to selected spans, reducing memory pressure during score calculation (ref: #4635).
+- Updated the web page to show the latest published score when today's score is unavailable, with clear date labels and separate readiness evidence for today. Fixed refresh completion checks and date handling (ref: #4661).
+
+## v0.3.101 - 2026-09-15
+
+### Agent Score
+
+- Lowered the provisional window-selection target to 200 eligible sessions and the Reliability, Speed, and Safety count floors to 100 sessions, allowing more projects to publish while retaining percentage coverage guards. The UI now suppresses score deltas and cached explanations across the new scoring-version boundary (ref: #4657).
+- Polished the Agent Score page with clearer score and evidence presentation, keyboard-focusable ring details, smoother charts, and richer hover details. The seeded benchmark now uses a model with latency references so Speed can be measured (ref: #4651).
+
+## v0.3.100 - 2026-09-13
+
+### Agent Score
+
+- Outcome and Safety intervals now pool sessions by selection stratum before drawing a replicate, so the confidence interval reflects how the sample was taken instead of treating every judged session as equally likely to have been picked. The policy cap is applied to each replicate as well, so the interval cannot span a score the cap would have refused (ref: #4628).
+- A session whose required Cost families could not be read is excluded from Cost but kept for Speed: one dimension's missing evidence no longer erases another's readable evidence. Cost denominators and cause counts now come from the sessions actually folded in rather than from every session read (ref: #4628).
+- Latency comparison is scoped to completions that sit on a complete critical path, and the workload stratum distinguishes output-token bucket and toolset, with unreadable tool content as its own key, so unlike sessions are not compared against each other. Speed is withheld when a latency reader could not read every applicable unit (ref: #4628).
+- Unlinked signal residuals scale by the selection-corrected exposed weight, so a signal's avoidable time describes the window rather than the sampled subset of it (ref: #4628).
+- A project below the session floor now gets a readiness breakdown instead of a bare "no score": the trend card shows progress towards the session floor, and each dimension reports the requirement it is short of and by how much (ref: #4629).
+- The page renders placeholders while the score loads, and the refresh action enqueues the scoring worker to warm the explanation cache, throttled to one run per project every five minutes. An explanation computed for a different window than the visible snapshot is ignored rather than shown as current (ref: #4629).
+- `pnpm seed` and `pnpm db:reset` publish an Agent Score, so a freshly seeded environment opens on a real score (ref: #4629).
+
+## v0.3.99 - 2026-09-13
+
+### Agent Score
+
+- Shipped the Agent Score: one 0-100 number per project composed from five dimensions — Reliability, Outcome, Safety, Cost and Speed — each with its own estimator, confidence interval and coverage floors. A daily sweep selects the shortest whole-week window that reaches the session target, runs the five estimators over one read of that window, and publishes an immutable snapshot in `agent_score_snapshots`. The composite is withheld entirely when any dimension is unmeasured, rather than presenting four scores beside a gap, and a day with no score is left out of the trend instead of zero-filled (ref: #4626, #4621, #4625, #4614).
+- Deficits are attributed after the fact and can never move the score: Cost, Speed and Reliability get Shapley shares in their own units plus a separate fix-gain column that must not be summed, while Outcome and Safety get issue rows carrying reach and no points. Unlinked signals can add a capped residual, with near-duplicate clusters grouped by exposure overlap so splitting one cluster cannot double its contribution (ref: #4626).
+- Added the project Agent Score page behind the `agentScore` feature flag: a vitality card with the score ring, weighted dimensions and trend, then one evidence section per dimension. Reliability always shows its one-session rate beside the twenty-session number, and coverage is presented as denominators and exclusions rather than as a score. Cause rows and coverage come from an explanation cache the daily job warms, so a miss reports "not ready" rather than empty tables (ref: #4626).
+- Public read surface: `GET /v1/projects/{projectSlug}/agent-score`, `/history` and `/causes`, reaching the MCP server (`getAgentScore`, `listAgentScoreHistory`, `getAgentScoreCauses`), the TypeScript and Python SDKs 9.13.0 and the CLI 7.13.0 (`latitude agent-score get|history|causes`). Today's score or nothing — a stale score presented as current is the one error a reader cannot detect (ref: #4626).
+- Staff can recalculate a project's score from the backoffice. A forced run refreshes the explanation cache but can never rewrite a published score (ref: #4626).
+- Added `agent-score:seed` (45 days of a billing copilot that degraded and recovered) and `agent-score:shadow`, which reports what Cost and Speed would say over a window without writing anything (ref: #4626).
+
+### Flaggers
+
+- Added the `task-failure` LLM judge, a sampled four-verdict holistic reference that can also come back positive, feeding the Outcome dimension. Verdicts persist as scores naming the judge and the session generation they judged; a successful verdict is evidence in session assessment but no longer renders as a green annotation card or inflates the positive count. A Drizzle migration provisions the flagger row on existing projects, so the dimension is not permanently unmeasured where the slug postdates the project (ref: #4621).
+- The `jailbreaking` and `pii-leakage` classifiers now answer with a structured verdict that judges the attack and the agent's response separately, resolved onto a bounded finding kind persisted in a new ClickHouse column (`00058`). A refused attack stays an annotation but no longer enters the harm numerator, and a successful defense is recorded as positive evidence. The Safety suite is selected once per session on a shared draw so its members examine the same population, and is enabled in every onboarding preset (ref: #4625).
+- Fixed the settings coverage panel, which divided a screening-decision numerator by a live 28-day session denominator and so counted every session predating the project's first decision as missing. The window now clamps to the oldest eligible session a decision exists for, reports earlier sessions separately, and drops no-reflag telemetry from the denominator (ref: #4622).
+- A sampling rate somebody edited is no longer overwritten by the score sweep: a new `sampling_source` column backs existing non-default rates up to `user` in the same migration that adds it (ref: #4626).
+- Scoped the flagger dedup lookup to its own flagger in SQL. A session accumulating more than 200 published system annotations from other detectors pushed the target row out of the page and produced duplicates (ref: #4625).
+
+### API
+
+- Fixed `apps/api/mcp.json`, which was generated in output mode and so described the parsed result rather than the request: 17 of 130 tools listed a defaulted field as required and 360 object schemas carried `additionalProperties: false`. The `/v1/mcp` transport was already correct, so only the checked-in manifest disagreed with the server (ref: #4615).
+
+### Docs
+
+- Product catch-up: added the Cost dashboard and Notifications pages and an end-to-end "Migrate to Latitude" guide, and refreshed signals (promotion gate, candidate consolidation and expiry, flagger feedback, priority scale), monitor severity, Memory analytics and grouped filters (ref: #4490).
+
+## v0.3.98 - 2026-09-09
+
+### Sessions
+
+- Session outlier badges and analytical flagger hints now calculate duration, time-to-first-token, token and cost percentiles from LLM-active sessions only. Synthetic HTTP sessions no longer distort project cohort thresholds, and existing cached baselines are bypassed (ref: #4611).
+
+## v0.3.97 - 2026-09-09
+
+### Sessions
+
+- Added an on-demand session assessment: the session drawer and the public API now combine normalized telemetry, flagger findings, stored scores, signals and intelligence into paginated evidence with reliability, safety, outcome, cost and speed summaries. Exposed as `GET /v1/sessions/{sessionId}/assessment`, the `getSessionAssessment` MCP tool, `getAssessment` in the SDKs and `latitude sessions get-assessment` in the CLI. Reads are side-effect free; confidence, assessment filters and historical backfill are deferred (ref: #4604).
+
+### Flaggers
+
+- Deterministic flaggers keep structured finding provenance while still writing one canonical discovery score, and append-only screening decisions let the assessment tell examined, partially examined, skipped and not-applicable coverage apart. Two ClickHouse migrations (`00056`, `00057`) add the provenance and screening tables (ref: #4604).
+
+### Telemetry
+
+- Rewrote the OpenClaw plugin and its installer, published as `@latitude-data/openclaw-telemetry` and `@latitude-data/openclaw-telemetry-cli` 0.1.0. The 0.0.9 plugin emitted nothing on OpenClaw 2026.8.1 or newer after upstream removed its run-start hook. The rewrite exports one trace per run with per-call tokens, OpenClaw's own cost, time to first token, the system prompt, tool definitions, tool calls, memory reads and writes, subagents nested under the spawning tool call, cron and compaction runs, and the sending user, all grouped into one Latitude session per OpenClaw session. It supports both OpenClaw runtimes, including the Codex app-server harness that withholds history (rebuilt from OpenClaw's transcript store), and the installer passes the capability consent OpenClaw now requires. The public docs page recommends the plugin over OpenClaw's bundled exporter, the in-app onboarding snippet points at the installer, and a new ingest contract test pins the plugin's payload shape (ref: #4608).
+
+## v0.3.96 - 2026-09-08
+
+### Billing
+
+- The sidebar usage counter opens a popover showing where the period's credits went: a split by product area (Traces, Signals, Behaviors, Flaggers, Annotations, Other) and by project, with the current project highlighted. The breakdown is derived from the usage-event ledger with no migration; AI charges are classified by the metering label in their idempotency key, which is now a typed set so a new charge point cannot compile without a category. Period dates render in UTC on the popover and the billing settings page (ref: #4603).
+- Public usage API: `GET /v1/usage` returns the organization's plan, period bounds, credit position and the same category and project splits; `GET /v1/projects/{projectSlug}/usage` returns one project's slice. Both reach the MCP server (`getUsage`, `getProjectUsage`), the TypeScript and Python SDKs 9.12.0 (`client.usage.get`, `client.projects.usage`) and the CLI 7.12.0 (`latitude usage get`, `latitude projects usage`) (ref: #4603).
+
+### Behaviors
+
+- Raised the topic assignment fit floor from 0.65 to 0.75 and applied it to full-window reassignment, which previously attached every observation to its nearest leaf regardless of distance; observations below the floor are written as noise instead of forced into a cluster. A new per-run assignment-coverage span, retention filter, span metrics and a coverage group on the taxonomy quality dashboard make the resulting coverage cost visible in Datadog, with a ClickHouse baseline of the pre-change admissions committed for comparison (ref: #4467).
+
+### Docs
+
+- Every telemetry page now states in its first paragraph that an agent can create a temporary account and complete setup through the `latitude-setup` skill, so the route survives tools that strip callouts; the skill docs say it builds the first Artifact from its own template and hands back the claim link (ref: #4595, #4596, #4598, #4599).
+
+## v0.3.95 - 2026-09-07
+
+### Docs
+
+- Every telemetry getting-started page (providers, frameworks, agent harnesses, imports, SDKs, OTel exporter) opens with a callout pointing agents and users at the `latitude-setup` skill, which bootstraps an account when there is none, instruments the app or harness, verifies traces and offers a first Artifact. The agent-only line is hidden in the rendered page and kept in the markdown export. The TypeScript integrations table no longer shows the object-map syntax removed in telemetry v4 (ref: #4590).
+
+## v0.3.94 - 2026-09-07
+
+### Models
+
+- Refreshed the bundled models.dev catalog and unblocked its daily refresh. Four gateway assertions and a cost-archetype seed named individual models.dev listings by hand, so the suite broke whenever the catalog retired one and the automated update stalled; both now pick their fixtures out of the bundled catalog. The refresh adds OpenAI's GPT-6 Astra pricing and retires `vercel / xai/grok-4.5` (ref: #4589).
+
+## v0.3.93 - 2026-09-07
+
+### Signals
+
+- A signal can be created from a saved search, from the save-search modal or from the saved-search row action. The search's filters become the signal's scope and its query becomes the conditions: free text is a semantic check at search's own relevance floor, quoted phrases a case-sensitive text match, backtick phrases a case-insensitive one. A query-less search compiles to an `always` condition. The scope step now uses the shared filter builder, so an imported scope is fully visible and editable (ref: #4554).
+- A saved-search query that mixes free text with quoted phrases keeps its free-text clause instead of dropping it when turned into a signal (ref: #4556).
+- Removed the completed one-off score evidence backfill job, script and repository methods (ref: #4555).
+
+### Artifacts
+
+- The "build a dashboard" guide became the Artifacts page under More, covering one-off reports over the MCP, refreshable dashboards driven by an API script, the full read-tool catalog and copyable prompts. The MCP server instructions now point agents at the Artifacts and Skills docs, and the `queryAnalytics` description lists all six streams (SDKs, CLI and manifests regenerated). A companion `latitude-artifacts` skill ships in the skills repo (ref: #4586).
+
+### Destinations
+
+- PostHog cross-links open the trace drawer: the span URL now includes `tab=traces`, and the worker and the "What gets sent" preview share one URL builder, with the preview resolving the project slug the same way the worker does (ref: #4586).
+
+### Docs
+
+- Added the Migrate from Latitude V1 guide, mapping every V1 concept to its V2 equivalent, with a runnable LinguaAI before/after example and the `latitude-migrate` skill (ref: #4547).
+
+### Maintenance
+
+- Enabled Biome's cognitive complexity rule (max 15) and refactored the handlers it flagged across the API, ingest, operations, notification producers, Temporal client helpers and conversation intelligence (ref: #4577, #4579, #4580, #4581, #4582, #4583, #4585).
+- Bumped `hono` to 4.13.5 in the workspace catalog, the Python telemetry instrumentations to 0.62.3 and `pydantic` to 2.13.5, plus routine example-app and GitHub Actions bumps (ref: #4560 to #4576).
+
 ## v0.3.92 - 2026-09-04
 
 ### Signals

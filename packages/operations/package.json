@@ -20,7 +20,9 @@
   "dependencies": {
     "@clickhouse/client": "catalog:",
     "@domain/annotations": "workspace:*",
+    "@domain/agent-score": "workspace:*",
     "@domain/api-keys": "workspace:*",
+    "@domain/billing": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/experiments": "workspace:*",

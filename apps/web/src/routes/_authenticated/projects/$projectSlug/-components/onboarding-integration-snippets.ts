@@ -1876,7 +1876,7 @@ export function getCodingMachineTelemetryInstallCommand(agent: CodingMachineAgen
     case "claude-code":
       return "npx -y @latitude-data/claude-code-telemetry install"
     case "openclaw":
-      return ["npx -y @latitude-data/openclaw-telemetry install", "openclaw gateway restart"].join("\n")
+      return "npx -y @latitude-data/openclaw-telemetry-cli install"
     case "hermes":
       return "pip install latitude-telemetry-hermes"
     case "pi":
@@ -1910,7 +1910,7 @@ export function getCodingMachineInstallDescription(agent: CodingMachineAgentId):
     case "claude-code":
       return "Run the command in your terminal and follow the instructions. Telemetry will be set up for Claude Code in the CLI, IDE, and Desktop app."
     case "openclaw":
-      return "Run the install command in your terminal and follow the prompts, then run the gateway restart command so the plugin loads."
+      return "Run the command in your terminal and follow the prompts. The installer writes your credentials into ~/.openclaw/openclaw.json and offers to restart the gateway; accept so the plugin loads. Needs OpenClaw 2026.8.1 or newer."
     case "hermes":
       return "Install into the Python that runs Hermes (use `~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python latitude-telemetry-hermes` if Hermes uses its own venv), enable the plugin in `~/.hermes/config.yaml`, and set credentials in `~/.hermes/.env`."
     case "pi":

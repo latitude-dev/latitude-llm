@@ -1,5 +1,7 @@
 export * from "./account/client/requests/index.js";
 export * as account from "./account/index.js";
+export * from "./agentScore/client/requests/index.js";
+export * as agentScore from "./agentScore/index.js";
 export * from "./analytics/client/requests/index.js";
 export * as analytics from "./analytics/index.js";
 export * from "./annotations/client/requests/index.js";
@@ -46,6 +48,7 @@ export * as tools from "./tools/index.js";
 export * from "./tools/types/index.js";
 export * from "./traces/client/requests/index.js";
 export * as traces from "./traces/index.js";
+export * as usage from "./usage/index.js";
 export * from "./users/client/requests/index.js";
 export * as users from "./users/index.js";
 export * from "./users/types/index.js";

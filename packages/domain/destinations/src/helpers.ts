@@ -1,3 +1,5 @@
+import type { SpanDetail } from "@domain/spans"
+
 const uuidToBytes = (uuid: string): Uint8Array => {
   const hex = uuid.replaceAll("-", "")
   // Fail fast: a malformed namespace would otherwise parse to NaN→0 bytes and
@@ -34,3 +36,9 @@ export const uuidV5 = async (input: { readonly namespace: string; readonly name:
   bytes[8] = (bytes[8] & 0x3f) | 0x80
   return bytesToUuid(bytes)
 }
+
+// `tab=traces` is required: without it the explorer stays on the sessions tab and never opens the trace drawer.
+export const spanUrlBuilder =
+  (webUrl: string, projectKey: string) =>
+  (span: SpanDetail): string =>
+    `${webUrl}/projects/${projectKey}?tab=traces&traceId=${encodeURIComponent(span.traceId)}&spanId=${encodeURIComponent(span.spanId)}`

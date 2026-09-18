@@ -269,6 +269,13 @@ def test_build_otlp_respects_content_gating():
     assert attrs["latitude.captured.content"] is False
 
 
+def test_the_status_message_is_withheld_when_capture_is_disabled():
+    encoded = _build_otlp(_spans(), allow_content=False)["resourceSpans"][0]["scopeSpans"][0]["spans"]
+    tool = next(s for s in encoded if s["name"] == "tool_call:terminal")
+    assert "message" not in tool["status"], "provider and tool error text can quote the request it rejected"
+    assert tool["status"]["code"] == 2, "the failure itself still shows"
+
+
 def test_service_name_override_reaches_the_resource(monkeypatch):
     monkeypatch.setenv("LATITUDE_HERMES_SERVICE_NAME", "alescript")
     reset_config()

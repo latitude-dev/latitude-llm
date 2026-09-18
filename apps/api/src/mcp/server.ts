@@ -139,24 +139,26 @@ interface InternalRoute {
  * prepends `/${API_VERSION}`, and resolves against the outer MCP request's
  * origin so Hono's path matcher sees a fully-qualified URL.
  */
-const buildInternalRequestUrl = (
-  c: Context,
-  route: InternalRoute,
-  params: Record<string, unknown>,
-  query: Record<string, unknown>,
-): string => {
-  const path = route.pathTemplate
-  const prefix = route.routerPrefix.replace(/\/$/, "")
+const joinRoutePath = (routerPrefix: string, pathTemplate: string): string => {
+  const prefix = routerPrefix.replace(/\/$/, "")
   // `pathTemplate === "/"` collapses to the bare prefix — Hono treats
   // `/api-keys` and `/api-keys/` as distinct routes; ours mount un-trailing.
-  let joined = path === "/" ? prefix : `${prefix}${path.startsWith("/") ? path : `/${path}`}`
+  if (pathTemplate === "/") return prefix
+  return `${prefix}${pathTemplate.startsWith("/") ? pathTemplate : `/${pathTemplate}`}`
+}
+
+const substitutePathParams = (path: string, params: Record<string, unknown>): string => {
+  let joined = path
   // Substitute `{name}` placeholders across the full joined string — params
   // can appear either in the route's own path (e.g. `/api-keys/{id}`) or in
   // the mount prefix (e.g. `/projects/{projectSlug}/annotations`).
   for (const [name, value] of Object.entries(params)) {
     joined = joined.replaceAll(`{${name}}`, encodeURIComponent(String(value)))
   }
-  const subAppPath = joined === "" ? "/" : joined
+  return joined === "" ? "/" : joined
+}
+
+const appendQueryParams = (query: Record<string, unknown>): string => {
   const search = new URLSearchParams()
   for (const [key, value] of Object.entries(query)) {
     if (value === undefined || value === null) continue
@@ -166,14 +168,26 @@ const buildInternalRequestUrl = (
       search.append(key, String(value))
     }
   }
-  const qs = search.toString()
-  const internalPath = `/${API_VERSION}${subAppPath}${qs ? `?${qs}` : ""}`
+  return search.toString()
+}
+
+const resolveInternalUrl = (requestUrl: string, internalPath: string): string => {
   try {
-    const outerUrl = new URL(c.req.url)
-    return new URL(internalPath, outerUrl.origin).toString()
+    return new URL(internalPath, new URL(requestUrl).origin).toString()
   } catch {
     // Fallback for runtimes where `c.req.url` is relative — shouldn't happen
     // with TanStack Start / Hono node-server, but defensible.
     return `http://localhost${internalPath}`
   }
+}
+
+const buildInternalRequestUrl = (
+  c: Context,
+  route: InternalRoute,
+  params: Record<string, unknown>,
+  query: Record<string, unknown>,
+): string => {
+  const subAppPath = substitutePathParams(joinRoutePath(route.routerPrefix, route.pathTemplate), params)
+  const qs = appendQueryParams(query)
+  return resolveInternalUrl(c.req.url, `/${API_VERSION}${subAppPath}${qs ? `?${qs}` : ""}`)
 }

@@ -11,14 +11,103 @@ export {
   FLAGGER_PROMPT_MAX_HINTS,
   FLAGGER_SAMPLED_POSITIVE_RATE_LIMIT,
   FLAGGER_SAMPLED_RATE_LIMIT,
+  FLAGGER_SAMPLING_SOURCES,
+  FLAGGER_SCORING_ARTIFACT_VERSION,
+  FLAGGER_SCREENING_ARTIFACT_VERSION,
+  FLAGGER_SCREENING_OUTCOMES,
+  FLAGGER_SCREENING_RETENTION_DAYS,
+  FLAGGER_SCREENING_SELECTION_REASONS,
+  type FlaggerSamplingSource,
+  JEV_SHADOW_DECISIONS,
+  JEV_SHADOW_ENABLED,
+  JEV_SHADOW_FRUSTRATION_QUESTION_VERSION,
+  JEV_SHADOW_FRUSTRATION_THRESHOLD,
+  JEV_SHADOW_OBSERVATION_STATUSES,
+  JEV_SHADOW_POLICY_VERSION,
+  JEV_SHADOW_REFUSAL_QUESTION_VERSION,
+  JEV_SHADOW_REFUSAL_THRESHOLD,
+  JEV_SHADOW_RETENTION_DAYS,
+  JEV_SHADOW_STATE_BUILDER_VERSION,
+  JEV_SHADOW_STRATEGY_SLUGS,
 } from "./constants.ts"
 export {
+  assistantTurnHasOutputContent,
   buildFlaggerSessionContext,
+  type CapturedAssistantTurn,
   computeFlaggerAnchorContentHash,
   type FlaggerConversation,
   type FlaggerSessionContext,
+  findFinalCapturedAssistantTurn,
 } from "./conversation.ts"
-export { FLAGGER_DEFAULT_ENABLED, type Flagger, flaggerSchema } from "./entities/flagger.ts"
+export { FLAGGER_DEFAULT_ENABLED, type Flagger, flaggerSchema, flaggerSlugSchema } from "./entities/flagger.ts"
+export {
+  emptyFlaggerCoverageRow,
+  type FlaggerCoverageReport,
+  type FlaggerCoverageRow,
+  type FlaggerSelectionPathCounts,
+  flaggerCoverageReportSchema,
+  flaggerCoverageRowSchema,
+  flaggerSelectionPathCountsSchema,
+} from "./entities/flagger-coverage.ts"
+export {
+  type DeterministicFlaggerFindingRead,
+  deterministicFlaggerFindingReadSchema,
+  type FlaggerFinding,
+  type FlaggerFindingDraft,
+  type FlaggerFindingKind,
+  type FlaggerFindingScope,
+  flaggerFindingSchema,
+  flaggerFindingScopeSchema,
+  unreadableDeterministicFlaggerFindingRead,
+} from "./entities/flagger-finding.ts"
+export {
+  FLAGGER_SCREENING_COVERAGE_LIMITATIONS,
+  type FlaggerScreeningCoverage,
+  type FlaggerScreeningCoverageLimitation,
+  type FlaggerScreeningSelectionEvidence,
+  flaggerScreeningCoverageLimitationSchema,
+  flaggerScreeningCoverageSchema,
+  flaggerScreeningSelectionEvidenceSchema,
+  resolveFlaggerScreeningCoverage,
+} from "./entities/flagger-screening-coverage.ts"
+export {
+  type FlaggerScreeningDecision,
+  type FlaggerScreeningOutcome,
+  type FlaggerScreeningSelection,
+  type FlaggerScreeningSelectionReason,
+  flaggerScreeningDecisionSchema,
+  flaggerScreeningOutcomeSchema,
+  flaggerScreeningSelectionReasonSchema,
+  flaggerScreeningSelectionSchema,
+} from "./entities/flagger-screening-decision.ts"
+export {
+  type JevShadowDecision,
+  type JevShadowObservation,
+  type JevShadowObservationErrorCategory,
+  type JevShadowObservationStatus,
+  jevShadowDecisionSchema,
+  jevShadowObservationSchema,
+  jevShadowObservationStatusSchema,
+  jevShadowProviderFailureKindSchema,
+} from "./entities/jev-shadow-observation.ts"
+export { buildJudgmentVersion } from "./entities/judgment-version.ts"
+export { isSafetySuiteSlug, SAFETY_SUITE_KEY, SAFETY_SUITE_SLUGS } from "./entities/safety-suite.ts"
+export {
+  SAFETY_JUDGMENT_VERSION_PREFIX,
+  safetyJudgmentVersion,
+  writesSafetyAnnotation,
+} from "./entities/safety-verdict.ts"
+export {
+  isScoringTaskOutcomeVerdict,
+  TASK_OUTCOME_JUDGMENT_VERSION_PREFIX,
+  TASK_OUTCOME_VERDICTS,
+  type TaskOutcomeVerdict,
+  type TaskOutcomeVerdictKind,
+  taskOutcomeJudgmentVersion,
+  taskOutcomeVerdictKindSchema,
+  taskOutcomeVerdictSchema,
+} from "./entities/task-outcome-verdict.ts"
+export { FLAGGER_BUNDLE_KEY_MAX_LENGTH, flaggerBundleKey } from "./flagger-bundle-key.ts"
 export {
   DETERMINISTIC_FLAGGER_INSTRUCTIONS,
   FLAGGER_DISPLAY,
@@ -52,25 +141,36 @@ export {
   outputSchemaValidationStrategy,
   piiLeakageStrategy,
   rankStagesByRefusalLikelihood,
+  readDeterministicFlaggerFindings,
   refusalStrategy,
   type SuspiciousSnippet,
   scoreRefusalLikelihood,
   suppressorSlug,
+  taskFailureStrategy,
   toolCallErrorsStrategy,
   trashingStrategy,
   truncateExcerpt,
   type WorkSignals,
 } from "./flagger-strategies/index.ts"
 export { FLAGGER_STRATEGY_SLUGS } from "./flagger-strategies/types.ts"
+export type { ToolExpectedStatusContract } from "./helpers.ts"
 export {
+  buildFlaggerFinding,
+  classifyToolError,
+  collectOutputSchemaDamageFindings,
   collectToolCallErrorFindings,
   type DeterministicFlaggerMatch,
   detectEmptyResponseFlagger,
   detectLowCacheHitRateFlagger,
   detectOutputSchemaValidationFlagger,
   detectToolCallErrorsFlagger,
+  EMPTY_TOOL_EXPECTED_STATUS_CONTRACT,
+  type OutputSchemaDamageFinding,
+  type OutputSchemaDamageKind,
+  selectRepresentativeToolCallErrorFinding,
   type ToolCallErrorFinding,
   type ToolCallErrorFindingKind,
+  UNSPECIFIED_TOOL_ERROR_CLASS,
 } from "./helpers.ts"
 export {
   gatherSessionHintsUseCase,
@@ -88,6 +188,17 @@ export {
   type SessionHintKind,
 } from "./hints/types.ts"
 export {
+  getJevShadowStrategy,
+  JEV_SHADOW_STRATEGIES,
+  type JevShadowStrategy,
+  type JevShadowStrategySlug,
+} from "./jev-shadow-strategies.ts"
+export {
+  FlaggerCoverageRepository,
+  type FlaggerCoverageRepositoryShape,
+  type GetFlaggerCoverageInput,
+} from "./ports/flagger-coverage-repository.ts"
+export {
   type FindFlaggerByProjectAndSlugInput,
   FlaggerRepository,
   type FlaggerRepositoryShape,
@@ -97,6 +208,27 @@ export {
   type UpdateFlaggerInput as RepositoryUpdateFlaggerInput,
 } from "./ports/flagger-repository.ts"
 export {
+  FlaggerScreeningDecisionRepository,
+  type FlaggerScreeningDecisionRepositoryShape,
+} from "./ports/flagger-screening-decision-repository.ts"
+export {
+  JEV_SHADOW_PROVIDER_FAILURE_KINDS,
+  JevShadowDecisionProvider,
+  type JevShadowDecisionProviderRequest,
+  type JevShadowDecisionProviderShape,
+  type JevShadowProviderAuditMetadata,
+  type JevShadowProviderFailureKind,
+  type JevShadowProviderResult,
+  type JevShadowQuestion,
+  jevShadowProviderAuditMetadataSchema,
+  jevShadowProviderResultSchema,
+} from "./ports/jev-shadow-decision-provider.ts"
+export {
+  JevShadowObservationRepository,
+  type JevShadowObservationRepositoryShape,
+} from "./ports/jev-shadow-observation-repository.ts"
+export {
+  FLAGGER_NO_REFLAG_TAG,
   isFlaggerGeneratedTrace,
   isReflagSuppressed,
   isUserCentricReflagInapplicable,
@@ -106,6 +238,7 @@ export {
   type ClassifySessionFlaggerInput,
   type ClassifySessionFlaggerResult,
   classifySessionFlaggerUseCase,
+  type JudgedSessionAnchors,
   loadFlaggerSessionContextUseCase,
 } from "./use-cases/classify-session-flagger.ts"
 export {
@@ -145,6 +278,11 @@ export {
   provisionFlaggersUseCase,
 } from "./use-cases/provision-flaggers.ts"
 export {
+  type RecordFlaggerScreeningOutcomeError,
+  type RecordFlaggerScreeningOutcomeInput,
+  recordFlaggerScreeningOutcomeUseCase,
+} from "./use-cases/record-flagger-screening-outcome.ts"
+export {
   type ClassifyConversationForFlaggerInput,
   type ClassifyTraceForFlaggerInput,
   classifyConversationForFlaggerUseCase,
@@ -157,6 +295,11 @@ export {
   annotateConversationForFlaggerUseCase,
   annotateTraceForFlaggerUseCase,
 } from "./use-cases/run-flagger-annotator.ts"
+export {
+  type RunJevShadowInput,
+  type RunJevShadowResult,
+  runJevShadowUseCase,
+} from "./use-cases/run-jev-shadow.ts"
 export {
   type SaveFlaggerAnnotationError,
   type SaveFlaggerAnnotationInput,
@@ -179,3 +322,9 @@ export {
   type UpdateFlaggerInput,
   updateFlaggerUseCase,
 } from "./use-cases/update-flagger.ts"
+export {
+  type UpsertFlaggerVerdictScoreInput,
+  type UpsertSafetyFindingScoreInput,
+  upsertFlaggerVerdictScore,
+  upsertSafetyFindingScore,
+} from "./use-cases/upsert-flagger-annotation-score.ts"

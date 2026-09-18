@@ -1,5 +1,6 @@
 import type {
   NotFoundError,
+  OrganizationId,
   ProjectId,
   RepositoryError,
   ScoreId,
@@ -22,6 +23,8 @@ export interface ScoreListOptions {
   readonly draftMode?: ScoreDraftMode
   /** Drop failed, non-errored evaluation runs that have no stamped signal (`signalId` is null). */
   readonly omitAbsentEvaluations?: boolean
+  /** Drop a flagger's positive reference verdict, which is a measurement rather than a reviewer's annotation. */
+  readonly omitFlaggerReferenceVerdicts?: boolean
 }
 
 export interface ScoreListPage {
@@ -123,6 +126,13 @@ export interface ScoreRepositoryShape {
     readonly signalId?: SignalId
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
+  listBySessionsAndTraces(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionIds: readonly SessionId[]
+    readonly traceIds: readonly TraceId[]
+    readonly createdAtTo: Date
+  }): Effect.Effect<readonly Score[], RepositoryError, SqlClient>
   /** Per-trace +/- score counts. Omit `source` for all sources; pass `"annotation"` for the public API fields. Signal-less absent evaluation runs are excluded from the negative count. */
   countAnnotationsByTraceIds(input: {
     readonly projectId: ProjectId
@@ -175,11 +185,14 @@ export interface ScoreRepositoryShape {
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
   /**
    * Published flagger-authored annotations for one session, newest first,
-   * bounded by `limit`. Backs the flagger anchor dedup.
+   * bounded by `limit`. Backs the flagger dedup lookups, which pass
+   * `flaggerSlug` so a busy session's other detectors cannot push the row they
+   * are looking for past the limit.
    */
   listPublishedSystemAnnotationsBySession(input: {
     readonly projectId: ProjectId
     readonly sessionId: SessionId
+    readonly flaggerSlug?: string
     readonly limit?: number
   }): Effect.Effect<readonly Score[], RepositoryError, SqlClient>
   /**

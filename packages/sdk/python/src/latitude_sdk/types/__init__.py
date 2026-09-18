@@ -15,6 +15,26 @@ if typing.TYPE_CHECKING:
     from .active_member import ActiveMember
     from .active_member_role import ActiveMemberRole
     from .active_member_status import ActiveMemberStatus
+    from .agent_score_cause_row import AgentScoreCauseRow
+    from .agent_score_cause_row_destination import AgentScoreCauseRowDestination
+    from .agent_score_cause_row_evidence import AgentScoreCauseRowEvidence
+    from .agent_score_cause_row_native_effect import AgentScoreCauseRowNativeEffect
+    from .agent_score_causes import AgentScoreCauses
+    from .agent_score_causes_status import AgentScoreCausesStatus
+    from .agent_score_dimension import AgentScoreDimension
+    from .agent_score_dimension_attribution import AgentScoreDimensionAttribution
+    from .agent_score_dimension_attribution_method import AgentScoreDimensionAttributionMethod
+    from .agent_score_dimension_attribution_score_dimension import AgentScoreDimensionAttributionScoreDimension
+    from .agent_score_dimensions import AgentScoreDimensions
+    from .agent_score_dimensions_cost import AgentScoreDimensionsCost
+    from .agent_score_dimensions_reliability import AgentScoreDimensionsReliability
+    from .agent_score_dimensions_safety import AgentScoreDimensionsSafety
+    from .agent_score_dimensions_speed import AgentScoreDimensionsSpeed
+    from .agent_score_explanation import AgentScoreExplanation
+    from .agent_score_history import AgentScoreHistory
+    from .agent_score_interval import AgentScoreInterval
+    from .agent_score_issue_row import AgentScoreIssueRow
+    from .agent_score_snapshot import AgentScoreSnapshot
     from .alert_baseline import AlertBaseline
     from .alert_baseline_kind import AlertBaselineKind
     from .alert_condition import AlertCondition, AlertCondition_Escalating, AlertCondition_Threshold
@@ -460,6 +480,8 @@ if typing.TYPE_CHECKING:
     from .create_monitor_body_threshold_target_type import CreateMonitorBodyThresholdTargetType
     from .create_score_body import CreateScoreBody
     from .create_signal_response import CreateSignalResponse
+    from .current_agent_score import CurrentAgentScore
+    from .current_agent_score_snapshot import CurrentAgentScoreSnapshot
     from .custom_score_response import CustomScoreResponse
     from .dataset import Dataset
     from .dataset_column import DatasetColumn
@@ -715,6 +737,8 @@ if typing.TYPE_CHECKING:
     from .project import Project
     from .project_settings import ProjectSettings
     from .project_settings_patch import ProjectSettingsPatch
+    from .project_usage_response import ProjectUsageResponse
+    from .project_usage_response_period import ProjectUsageResponsePeriod
     from .project_user import ProjectUser
     from .query_spans import QuerySpans
     from .recent_tool_call import RecentToolCall
@@ -739,6 +763,254 @@ if typing.TYPE_CHECKING:
     from .session_analytics_time_to_first_token import SessionAnalyticsTimeToFirstToken
     from .session_analytics_tokens import SessionAnalyticsTokens
     from .session_analytics_traces import SessionAnalyticsTraces
+    from .session_assessment import SessionAssessment
+    from .session_assessment_cost_evaluation import SessionAssessmentCostEvaluation
+    from .session_assessment_cost_evaluation_family import SessionAssessmentCostEvaluationFamily
+    from .session_assessment_cost_evaluation_measurement_state import SessionAssessmentCostEvaluationMeasurementState
+    from .session_assessment_cost_evaluation_raw_unit import SessionAssessmentCostEvaluationRawUnit
+    from .session_assessment_cost_family_summary import SessionAssessmentCostFamilySummary
+    from .session_assessment_cost_family_summary_family import SessionAssessmentCostFamilySummaryFamily
+    from .session_assessment_cost_family_summary_measurement_state import (
+        SessionAssessmentCostFamilySummaryMeasurementState,
+    )
+    from .session_assessment_cost_family_summary_native_impact import SessionAssessmentCostFamilySummaryNativeImpact
+    from .session_assessment_cost_family_summary_native_impact_interpretation import (
+        SessionAssessmentCostFamilySummaryNativeImpactInterpretation,
+    )
+    from .session_assessment_cost_metric_evidence import SessionAssessmentCostMetricEvidence
+    from .session_assessment_cost_metric_evidence_aggregation import SessionAssessmentCostMetricEvidenceAggregation
+    from .session_assessment_cost_metric_evidence_evidence import SessionAssessmentCostMetricEvidenceEvidence
+    from .session_assessment_cost_metric_evidence_family import SessionAssessmentCostMetricEvidenceFamily
+    from .session_assessment_cost_metric_evidence_limitations_item import (
+        SessionAssessmentCostMetricEvidenceLimitationsItem,
+    )
+    from .session_assessment_cost_metric_evidence_measurement_state import (
+        SessionAssessmentCostMetricEvidenceMeasurementState,
+    )
+    from .session_assessment_cost_metric_evidence_native_impact import SessionAssessmentCostMetricEvidenceNativeImpact
+    from .session_assessment_cost_metric_evidence_native_impact_interpretation import (
+        SessionAssessmentCostMetricEvidenceNativeImpactInterpretation,
+    )
+    from .session_assessment_cost_metric_evidence_raw_unit import SessionAssessmentCostMetricEvidenceRawUnit
+    from .session_assessment_coverage import SessionAssessmentCoverage
+    from .session_assessment_dimension_effect import (
+        SessionAssessmentDimensionEffect,
+        SessionAssessmentDimensionEffect_Cost,
+        SessionAssessmentDimensionEffect_Outcome,
+        SessionAssessmentDimensionEffect_Reliability,
+        SessionAssessmentDimensionEffect_Safety,
+        SessionAssessmentDimensionEffect_Speed,
+    )
+    from .session_assessment_dimension_effect_cost import SessionAssessmentDimensionEffectCost
+    from .session_assessment_dimension_effect_cost_benchmark_use import SessionAssessmentDimensionEffectCostBenchmarkUse
+    from .session_assessment_dimension_effect_cost_direction import SessionAssessmentDimensionEffectCostDirection
+    from .session_assessment_dimension_effect_cost_measurement import SessionAssessmentDimensionEffectCostMeasurement
+    from .session_assessment_dimension_effect_cost_role import SessionAssessmentDimensionEffectCostRole
+    from .session_assessment_dimension_effect_outcome import SessionAssessmentDimensionEffectOutcome
+    from .session_assessment_dimension_effect_outcome_benchmark_use import (
+        SessionAssessmentDimensionEffectOutcomeBenchmarkUse,
+    )
+    from .session_assessment_dimension_effect_outcome_direction import SessionAssessmentDimensionEffectOutcomeDirection
+    from .session_assessment_dimension_effect_outcome_measurement import (
+        SessionAssessmentDimensionEffectOutcomeMeasurement,
+    )
+    from .session_assessment_dimension_effect_outcome_role import SessionAssessmentDimensionEffectOutcomeRole
+    from .session_assessment_dimension_effect_reliability import SessionAssessmentDimensionEffectReliability
+    from .session_assessment_dimension_effect_reliability_benchmark_use import (
+        SessionAssessmentDimensionEffectReliabilityBenchmarkUse,
+    )
+    from .session_assessment_dimension_effect_reliability_direction import (
+        SessionAssessmentDimensionEffectReliabilityDirection,
+    )
+    from .session_assessment_dimension_effect_reliability_measurement import (
+        SessionAssessmentDimensionEffectReliabilityMeasurement,
+    )
+    from .session_assessment_dimension_effect_reliability_role import SessionAssessmentDimensionEffectReliabilityRole
+    from .session_assessment_dimension_effect_safety import SessionAssessmentDimensionEffectSafety
+    from .session_assessment_dimension_effect_safety_benchmark_use import (
+        SessionAssessmentDimensionEffectSafetyBenchmarkUse,
+    )
+    from .session_assessment_dimension_effect_safety_direction import SessionAssessmentDimensionEffectSafetyDirection
+    from .session_assessment_dimension_effect_safety_measurement import (
+        SessionAssessmentDimensionEffectSafetyMeasurement,
+    )
+    from .session_assessment_dimension_effect_safety_role import SessionAssessmentDimensionEffectSafetyRole
+    from .session_assessment_dimension_effect_speed import SessionAssessmentDimensionEffectSpeed
+    from .session_assessment_dimension_effect_speed_benchmark_use import (
+        SessionAssessmentDimensionEffectSpeedBenchmarkUse,
+    )
+    from .session_assessment_dimension_effect_speed_direction import SessionAssessmentDimensionEffectSpeedDirection
+    from .session_assessment_dimension_effect_speed_measurement import SessionAssessmentDimensionEffectSpeedMeasurement
+    from .session_assessment_dimension_effect_speed_role import SessionAssessmentDimensionEffectSpeedRole
+    from .session_assessment_dimension_summary import (
+        SessionAssessmentDimensionSummary,
+        SessionAssessmentDimensionSummary_Cost,
+        SessionAssessmentDimensionSummary_Outcome,
+        SessionAssessmentDimensionSummary_Reliability,
+        SessionAssessmentDimensionSummary_Safety,
+        SessionAssessmentDimensionSummary_Speed,
+    )
+    from .session_assessment_dimension_summary_cost import SessionAssessmentDimensionSummaryCost
+    from .session_assessment_dimension_summary_cost_coverage import SessionAssessmentDimensionSummaryCostCoverage
+    from .session_assessment_dimension_summary_cost_evidence_counts import (
+        SessionAssessmentDimensionSummaryCostEvidenceCounts,
+    )
+    from .session_assessment_dimension_summary_cost_measurement_counts import (
+        SessionAssessmentDimensionSummaryCostMeasurementCounts,
+    )
+    from .session_assessment_dimension_summary_outcome import SessionAssessmentDimensionSummaryOutcome
+    from .session_assessment_dimension_summary_outcome_coverage import SessionAssessmentDimensionSummaryOutcomeCoverage
+    from .session_assessment_dimension_summary_outcome_evidence_counts import (
+        SessionAssessmentDimensionSummaryOutcomeEvidenceCounts,
+    )
+    from .session_assessment_dimension_summary_outcome_measurement_counts import (
+        SessionAssessmentDimensionSummaryOutcomeMeasurementCounts,
+    )
+    from .session_assessment_dimension_summary_outcome_task_outcome import (
+        SessionAssessmentDimensionSummaryOutcomeTaskOutcome,
+    )
+    from .session_assessment_dimension_summary_outcome_task_outcome_verdict import (
+        SessionAssessmentDimensionSummaryOutcomeTaskOutcomeVerdict,
+    )
+    from .session_assessment_dimension_summary_reliability import SessionAssessmentDimensionSummaryReliability
+    from .session_assessment_dimension_summary_reliability_completion import (
+        SessionAssessmentDimensionSummaryReliabilityCompletion,
+    )
+    from .session_assessment_dimension_summary_reliability_coverage import (
+        SessionAssessmentDimensionSummaryReliabilityCoverage,
+    )
+    from .session_assessment_dimension_summary_reliability_evidence_counts import (
+        SessionAssessmentDimensionSummaryReliabilityEvidenceCounts,
+    )
+    from .session_assessment_dimension_summary_reliability_measurement_counts import (
+        SessionAssessmentDimensionSummaryReliabilityMeasurementCounts,
+    )
+    from .session_assessment_dimension_summary_safety import SessionAssessmentDimensionSummarySafety
+    from .session_assessment_dimension_summary_safety_coverage import SessionAssessmentDimensionSummarySafetyCoverage
+    from .session_assessment_dimension_summary_safety_evidence_counts import (
+        SessionAssessmentDimensionSummarySafetyEvidenceCounts,
+    )
+    from .session_assessment_dimension_summary_safety_measurement_counts import (
+        SessionAssessmentDimensionSummarySafetyMeasurementCounts,
+    )
+    from .session_assessment_dimension_summary_speed import SessionAssessmentDimensionSummarySpeed
+    from .session_assessment_dimension_summary_speed_coverage import SessionAssessmentDimensionSummarySpeedCoverage
+    from .session_assessment_dimension_summary_speed_evidence_counts import (
+        SessionAssessmentDimensionSummarySpeedEvidenceCounts,
+    )
+    from .session_assessment_dimension_summary_speed_measurement_counts import (
+        SessionAssessmentDimensionSummarySpeedMeasurementCounts,
+    )
+    from .session_assessment_estimate_range import SessionAssessmentEstimateRange
+    from .session_assessment_estimate_range_interpretation import SessionAssessmentEstimateRangeInterpretation
+    from .session_assessment_evidence_anchor import (
+        SessionAssessmentEvidenceAnchor,
+        SessionAssessmentEvidenceAnchor_MemoryEvent,
+        SessionAssessmentEvidenceAnchor_Message,
+        SessionAssessmentEvidenceAnchor_Score,
+        SessionAssessmentEvidenceAnchor_Signal,
+        SessionAssessmentEvidenceAnchor_Span,
+        SessionAssessmentEvidenceAnchor_ToolCall,
+    )
+    from .session_assessment_evidence_anchor_memory_event import SessionAssessmentEvidenceAnchorMemoryEvent
+    from .session_assessment_evidence_anchor_message import SessionAssessmentEvidenceAnchorMessage
+    from .session_assessment_evidence_anchor_score import SessionAssessmentEvidenceAnchorScore
+    from .session_assessment_evidence_anchor_signal import SessionAssessmentEvidenceAnchorSignal
+    from .session_assessment_evidence_anchor_span import SessionAssessmentEvidenceAnchorSpan
+    from .session_assessment_evidence_anchor_tool_call import SessionAssessmentEvidenceAnchorToolCall
+    from .session_assessment_evidence_destination import (
+        SessionAssessmentEvidenceDestination,
+        SessionAssessmentEvidenceDestination_MemoryEvent,
+        SessionAssessmentEvidenceDestination_Score,
+        SessionAssessmentEvidenceDestination_SessionMessage,
+        SessionAssessmentEvidenceDestination_Signal,
+        SessionAssessmentEvidenceDestination_Span,
+        SessionAssessmentEvidenceDestination_ToolCall,
+    )
+    from .session_assessment_evidence_destination_memory_event import SessionAssessmentEvidenceDestinationMemoryEvent
+    from .session_assessment_evidence_destination_score import SessionAssessmentEvidenceDestinationScore
+    from .session_assessment_evidence_destination_session_message import (
+        SessionAssessmentEvidenceDestinationSessionMessage,
+    )
+    from .session_assessment_evidence_destination_signal import SessionAssessmentEvidenceDestinationSignal
+    from .session_assessment_evidence_destination_span import SessionAssessmentEvidenceDestinationSpan
+    from .session_assessment_evidence_destination_tool_call import SessionAssessmentEvidenceDestinationToolCall
+    from .session_assessment_evidence_impact import (
+        SessionAssessmentEvidenceImpact,
+        SessionAssessmentEvidenceImpact_Completion,
+        SessionAssessmentEvidenceImpact_Duration,
+        SessionAssessmentEvidenceImpact_Incident,
+        SessionAssessmentEvidenceImpact_Observation,
+        SessionAssessmentEvidenceImpact_OutcomeAssociation,
+        SessionAssessmentEvidenceImpact_Safety,
+        SessionAssessmentEvidenceImpact_Spend,
+        SessionAssessmentEvidenceImpact_TaskOutcome,
+    )
+    from .session_assessment_evidence_impact_completion import SessionAssessmentEvidenceImpactCompletion
+    from .session_assessment_evidence_impact_completion_status import SessionAssessmentEvidenceImpactCompletionStatus
+    from .session_assessment_evidence_impact_duration import SessionAssessmentEvidenceImpactDuration
+    from .session_assessment_evidence_impact_incident import SessionAssessmentEvidenceImpactIncident
+    from .session_assessment_evidence_impact_incident_status import SessionAssessmentEvidenceImpactIncidentStatus
+    from .session_assessment_evidence_impact_observation import SessionAssessmentEvidenceImpactObservation
+    from .session_assessment_evidence_impact_outcome_association import (
+        SessionAssessmentEvidenceImpactOutcomeAssociation,
+    )
+    from .session_assessment_evidence_impact_safety import SessionAssessmentEvidenceImpactSafety
+    from .session_assessment_evidence_impact_safety_status import SessionAssessmentEvidenceImpactSafetyStatus
+    from .session_assessment_evidence_impact_spend import SessionAssessmentEvidenceImpactSpend
+    from .session_assessment_evidence_impact_task_outcome import SessionAssessmentEvidenceImpactTaskOutcome
+    from .session_assessment_evidence_impact_task_outcome_verdict import (
+        SessionAssessmentEvidenceImpactTaskOutcomeVerdict,
+    )
+    from .session_assessment_item import SessionAssessmentItem
+    from .session_assessment_item_impact_level import SessionAssessmentItemImpactLevel
+    from .session_assessment_item_polarity import SessionAssessmentItemPolarity
+    from .session_assessment_item_source import SessionAssessmentItemSource
+    from .session_assessment_reader_coverage import (
+        SessionAssessmentReaderCoverage,
+        SessionAssessmentReaderCoverage_Examined,
+        SessionAssessmentReaderCoverage_NotApplicable,
+        SessionAssessmentReaderCoverage_NotExamined,
+        SessionAssessmentReaderCoverage_PartiallyExamined,
+    )
+    from .session_assessment_reader_coverage_examined import SessionAssessmentReaderCoverageExamined
+    from .session_assessment_reader_coverage_examined_score_dimensions_item import (
+        SessionAssessmentReaderCoverageExaminedScoreDimensionsItem,
+    )
+    from .session_assessment_reader_coverage_examined_selection import SessionAssessmentReaderCoverageExaminedSelection
+    from .session_assessment_reader_coverage_examined_selection_method import (
+        SessionAssessmentReaderCoverageExaminedSelectionMethod,
+    )
+    from .session_assessment_reader_coverage_not_applicable import SessionAssessmentReaderCoverageNotApplicable
+    from .session_assessment_reader_coverage_not_applicable_score_dimensions_item import (
+        SessionAssessmentReaderCoverageNotApplicableScoreDimensionsItem,
+    )
+    from .session_assessment_reader_coverage_not_examined import SessionAssessmentReaderCoverageNotExamined
+    from .session_assessment_reader_coverage_not_examined_limitation import (
+        SessionAssessmentReaderCoverageNotExaminedLimitation,
+    )
+    from .session_assessment_reader_coverage_not_examined_score_dimensions_item import (
+        SessionAssessmentReaderCoverageNotExaminedScoreDimensionsItem,
+    )
+    from .session_assessment_reader_coverage_not_examined_selection import (
+        SessionAssessmentReaderCoverageNotExaminedSelection,
+    )
+    from .session_assessment_reader_coverage_not_examined_selection_method import (
+        SessionAssessmentReaderCoverageNotExaminedSelectionMethod,
+    )
+    from .session_assessment_reader_coverage_partially_examined import SessionAssessmentReaderCoveragePartiallyExamined
+    from .session_assessment_reader_coverage_partially_examined_limitation import (
+        SessionAssessmentReaderCoveragePartiallyExaminedLimitation,
+    )
+    from .session_assessment_reader_coverage_partially_examined_score_dimensions_item import (
+        SessionAssessmentReaderCoveragePartiallyExaminedScoreDimensionsItem,
+    )
+    from .session_assessment_reader_coverage_partially_examined_selection import (
+        SessionAssessmentReaderCoveragePartiallyExaminedSelection,
+    )
+    from .session_assessment_reader_coverage_partially_examined_selection_method import (
+        SessionAssessmentReaderCoveragePartiallyExaminedSelectionMethod,
+    )
     from .session_detail import SessionDetail
     from .session_filter_set import SessionFilterSet
     from .session_memory_change import SessionMemoryChange
@@ -852,6 +1124,13 @@ if typing.TYPE_CHECKING:
     from .traces_ref_ids import TracesRefIds
     from .update_dataset_row_response import UpdateDatasetRowResponse
     from .update_signal_response import UpdateSignalResponse
+    from .usage_category import UsageCategory
+    from .usage_category_category import UsageCategoryCategory
+    from .usage_project import UsageProject
+    from .usage_response import UsageResponse
+    from .usage_response_credits import UsageResponseCredits
+    from .usage_response_period import UsageResponsePeriod
+    from .usage_response_plan import UsageResponsePlan
     from .user_activity_bucket import UserActivityBucket
     from .user_activity_response import UserActivityResponse
     from .user_behaviour import UserBehaviour
@@ -879,6 +1158,26 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ActiveMember": ".active_member",
     "ActiveMemberRole": ".active_member_role",
     "ActiveMemberStatus": ".active_member_status",
+    "AgentScoreCauseRow": ".agent_score_cause_row",
+    "AgentScoreCauseRowDestination": ".agent_score_cause_row_destination",
+    "AgentScoreCauseRowEvidence": ".agent_score_cause_row_evidence",
+    "AgentScoreCauseRowNativeEffect": ".agent_score_cause_row_native_effect",
+    "AgentScoreCauses": ".agent_score_causes",
+    "AgentScoreCausesStatus": ".agent_score_causes_status",
+    "AgentScoreDimension": ".agent_score_dimension",
+    "AgentScoreDimensionAttribution": ".agent_score_dimension_attribution",
+    "AgentScoreDimensionAttributionMethod": ".agent_score_dimension_attribution_method",
+    "AgentScoreDimensionAttributionScoreDimension": ".agent_score_dimension_attribution_score_dimension",
+    "AgentScoreDimensions": ".agent_score_dimensions",
+    "AgentScoreDimensionsCost": ".agent_score_dimensions_cost",
+    "AgentScoreDimensionsReliability": ".agent_score_dimensions_reliability",
+    "AgentScoreDimensionsSafety": ".agent_score_dimensions_safety",
+    "AgentScoreDimensionsSpeed": ".agent_score_dimensions_speed",
+    "AgentScoreExplanation": ".agent_score_explanation",
+    "AgentScoreHistory": ".agent_score_history",
+    "AgentScoreInterval": ".agent_score_interval",
+    "AgentScoreIssueRow": ".agent_score_issue_row",
+    "AgentScoreSnapshot": ".agent_score_snapshot",
     "AlertBaseline": ".alert_baseline",
     "AlertBaselineKind": ".alert_baseline_kind",
     "AlertCondition": ".alert_condition",
@@ -1279,6 +1578,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateMonitorBody_Threshold": ".create_monitor_body",
     "CreateScoreBody": ".create_score_body",
     "CreateSignalResponse": ".create_signal_response",
+    "CurrentAgentScore": ".current_agent_score",
+    "CurrentAgentScoreSnapshot": ".current_agent_score_snapshot",
     "CustomScoreResponse": ".custom_score_response",
     "Dataset": ".dataset",
     "DatasetColumn": ".dataset_column",
@@ -1530,6 +1831,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "Project": ".project",
     "ProjectSettings": ".project_settings",
     "ProjectSettingsPatch": ".project_settings_patch",
+    "ProjectUsageResponse": ".project_usage_response",
+    "ProjectUsageResponsePeriod": ".project_usage_response_period",
     "ProjectUser": ".project_user",
     "QuerySpans": ".query_spans",
     "RecentToolCall": ".recent_tool_call",
@@ -1556,6 +1859,160 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SessionAnalyticsTimeToFirstToken": ".session_analytics_time_to_first_token",
     "SessionAnalyticsTokens": ".session_analytics_tokens",
     "SessionAnalyticsTraces": ".session_analytics_traces",
+    "SessionAssessment": ".session_assessment",
+    "SessionAssessmentCostEvaluation": ".session_assessment_cost_evaluation",
+    "SessionAssessmentCostEvaluationFamily": ".session_assessment_cost_evaluation_family",
+    "SessionAssessmentCostEvaluationMeasurementState": ".session_assessment_cost_evaluation_measurement_state",
+    "SessionAssessmentCostEvaluationRawUnit": ".session_assessment_cost_evaluation_raw_unit",
+    "SessionAssessmentCostFamilySummary": ".session_assessment_cost_family_summary",
+    "SessionAssessmentCostFamilySummaryFamily": ".session_assessment_cost_family_summary_family",
+    "SessionAssessmentCostFamilySummaryMeasurementState": ".session_assessment_cost_family_summary_measurement_state",
+    "SessionAssessmentCostFamilySummaryNativeImpact": ".session_assessment_cost_family_summary_native_impact",
+    "SessionAssessmentCostFamilySummaryNativeImpactInterpretation": ".session_assessment_cost_family_summary_native_impact_interpretation",
+    "SessionAssessmentCostMetricEvidence": ".session_assessment_cost_metric_evidence",
+    "SessionAssessmentCostMetricEvidenceAggregation": ".session_assessment_cost_metric_evidence_aggregation",
+    "SessionAssessmentCostMetricEvidenceEvidence": ".session_assessment_cost_metric_evidence_evidence",
+    "SessionAssessmentCostMetricEvidenceFamily": ".session_assessment_cost_metric_evidence_family",
+    "SessionAssessmentCostMetricEvidenceLimitationsItem": ".session_assessment_cost_metric_evidence_limitations_item",
+    "SessionAssessmentCostMetricEvidenceMeasurementState": ".session_assessment_cost_metric_evidence_measurement_state",
+    "SessionAssessmentCostMetricEvidenceNativeImpact": ".session_assessment_cost_metric_evidence_native_impact",
+    "SessionAssessmentCostMetricEvidenceNativeImpactInterpretation": ".session_assessment_cost_metric_evidence_native_impact_interpretation",
+    "SessionAssessmentCostMetricEvidenceRawUnit": ".session_assessment_cost_metric_evidence_raw_unit",
+    "SessionAssessmentCoverage": ".session_assessment_coverage",
+    "SessionAssessmentDimensionEffect": ".session_assessment_dimension_effect",
+    "SessionAssessmentDimensionEffectCost": ".session_assessment_dimension_effect_cost",
+    "SessionAssessmentDimensionEffectCostBenchmarkUse": ".session_assessment_dimension_effect_cost_benchmark_use",
+    "SessionAssessmentDimensionEffectCostDirection": ".session_assessment_dimension_effect_cost_direction",
+    "SessionAssessmentDimensionEffectCostMeasurement": ".session_assessment_dimension_effect_cost_measurement",
+    "SessionAssessmentDimensionEffectCostRole": ".session_assessment_dimension_effect_cost_role",
+    "SessionAssessmentDimensionEffectOutcome": ".session_assessment_dimension_effect_outcome",
+    "SessionAssessmentDimensionEffectOutcomeBenchmarkUse": ".session_assessment_dimension_effect_outcome_benchmark_use",
+    "SessionAssessmentDimensionEffectOutcomeDirection": ".session_assessment_dimension_effect_outcome_direction",
+    "SessionAssessmentDimensionEffectOutcomeMeasurement": ".session_assessment_dimension_effect_outcome_measurement",
+    "SessionAssessmentDimensionEffectOutcomeRole": ".session_assessment_dimension_effect_outcome_role",
+    "SessionAssessmentDimensionEffectReliability": ".session_assessment_dimension_effect_reliability",
+    "SessionAssessmentDimensionEffectReliabilityBenchmarkUse": ".session_assessment_dimension_effect_reliability_benchmark_use",
+    "SessionAssessmentDimensionEffectReliabilityDirection": ".session_assessment_dimension_effect_reliability_direction",
+    "SessionAssessmentDimensionEffectReliabilityMeasurement": ".session_assessment_dimension_effect_reliability_measurement",
+    "SessionAssessmentDimensionEffectReliabilityRole": ".session_assessment_dimension_effect_reliability_role",
+    "SessionAssessmentDimensionEffectSafety": ".session_assessment_dimension_effect_safety",
+    "SessionAssessmentDimensionEffectSafetyBenchmarkUse": ".session_assessment_dimension_effect_safety_benchmark_use",
+    "SessionAssessmentDimensionEffectSafetyDirection": ".session_assessment_dimension_effect_safety_direction",
+    "SessionAssessmentDimensionEffectSafetyMeasurement": ".session_assessment_dimension_effect_safety_measurement",
+    "SessionAssessmentDimensionEffectSafetyRole": ".session_assessment_dimension_effect_safety_role",
+    "SessionAssessmentDimensionEffectSpeed": ".session_assessment_dimension_effect_speed",
+    "SessionAssessmentDimensionEffectSpeedBenchmarkUse": ".session_assessment_dimension_effect_speed_benchmark_use",
+    "SessionAssessmentDimensionEffectSpeedDirection": ".session_assessment_dimension_effect_speed_direction",
+    "SessionAssessmentDimensionEffectSpeedMeasurement": ".session_assessment_dimension_effect_speed_measurement",
+    "SessionAssessmentDimensionEffectSpeedRole": ".session_assessment_dimension_effect_speed_role",
+    "SessionAssessmentDimensionEffect_Cost": ".session_assessment_dimension_effect",
+    "SessionAssessmentDimensionEffect_Outcome": ".session_assessment_dimension_effect",
+    "SessionAssessmentDimensionEffect_Reliability": ".session_assessment_dimension_effect",
+    "SessionAssessmentDimensionEffect_Safety": ".session_assessment_dimension_effect",
+    "SessionAssessmentDimensionEffect_Speed": ".session_assessment_dimension_effect",
+    "SessionAssessmentDimensionSummary": ".session_assessment_dimension_summary",
+    "SessionAssessmentDimensionSummaryCost": ".session_assessment_dimension_summary_cost",
+    "SessionAssessmentDimensionSummaryCostCoverage": ".session_assessment_dimension_summary_cost_coverage",
+    "SessionAssessmentDimensionSummaryCostEvidenceCounts": ".session_assessment_dimension_summary_cost_evidence_counts",
+    "SessionAssessmentDimensionSummaryCostMeasurementCounts": ".session_assessment_dimension_summary_cost_measurement_counts",
+    "SessionAssessmentDimensionSummaryOutcome": ".session_assessment_dimension_summary_outcome",
+    "SessionAssessmentDimensionSummaryOutcomeCoverage": ".session_assessment_dimension_summary_outcome_coverage",
+    "SessionAssessmentDimensionSummaryOutcomeEvidenceCounts": ".session_assessment_dimension_summary_outcome_evidence_counts",
+    "SessionAssessmentDimensionSummaryOutcomeMeasurementCounts": ".session_assessment_dimension_summary_outcome_measurement_counts",
+    "SessionAssessmentDimensionSummaryOutcomeTaskOutcome": ".session_assessment_dimension_summary_outcome_task_outcome",
+    "SessionAssessmentDimensionSummaryOutcomeTaskOutcomeVerdict": ".session_assessment_dimension_summary_outcome_task_outcome_verdict",
+    "SessionAssessmentDimensionSummaryReliability": ".session_assessment_dimension_summary_reliability",
+    "SessionAssessmentDimensionSummaryReliabilityCompletion": ".session_assessment_dimension_summary_reliability_completion",
+    "SessionAssessmentDimensionSummaryReliabilityCoverage": ".session_assessment_dimension_summary_reliability_coverage",
+    "SessionAssessmentDimensionSummaryReliabilityEvidenceCounts": ".session_assessment_dimension_summary_reliability_evidence_counts",
+    "SessionAssessmentDimensionSummaryReliabilityMeasurementCounts": ".session_assessment_dimension_summary_reliability_measurement_counts",
+    "SessionAssessmentDimensionSummarySafety": ".session_assessment_dimension_summary_safety",
+    "SessionAssessmentDimensionSummarySafetyCoverage": ".session_assessment_dimension_summary_safety_coverage",
+    "SessionAssessmentDimensionSummarySafetyEvidenceCounts": ".session_assessment_dimension_summary_safety_evidence_counts",
+    "SessionAssessmentDimensionSummarySafetyMeasurementCounts": ".session_assessment_dimension_summary_safety_measurement_counts",
+    "SessionAssessmentDimensionSummarySpeed": ".session_assessment_dimension_summary_speed",
+    "SessionAssessmentDimensionSummarySpeedCoverage": ".session_assessment_dimension_summary_speed_coverage",
+    "SessionAssessmentDimensionSummarySpeedEvidenceCounts": ".session_assessment_dimension_summary_speed_evidence_counts",
+    "SessionAssessmentDimensionSummarySpeedMeasurementCounts": ".session_assessment_dimension_summary_speed_measurement_counts",
+    "SessionAssessmentDimensionSummary_Cost": ".session_assessment_dimension_summary",
+    "SessionAssessmentDimensionSummary_Outcome": ".session_assessment_dimension_summary",
+    "SessionAssessmentDimensionSummary_Reliability": ".session_assessment_dimension_summary",
+    "SessionAssessmentDimensionSummary_Safety": ".session_assessment_dimension_summary",
+    "SessionAssessmentDimensionSummary_Speed": ".session_assessment_dimension_summary",
+    "SessionAssessmentEstimateRange": ".session_assessment_estimate_range",
+    "SessionAssessmentEstimateRangeInterpretation": ".session_assessment_estimate_range_interpretation",
+    "SessionAssessmentEvidenceAnchor": ".session_assessment_evidence_anchor",
+    "SessionAssessmentEvidenceAnchorMemoryEvent": ".session_assessment_evidence_anchor_memory_event",
+    "SessionAssessmentEvidenceAnchorMessage": ".session_assessment_evidence_anchor_message",
+    "SessionAssessmentEvidenceAnchorScore": ".session_assessment_evidence_anchor_score",
+    "SessionAssessmentEvidenceAnchorSignal": ".session_assessment_evidence_anchor_signal",
+    "SessionAssessmentEvidenceAnchorSpan": ".session_assessment_evidence_anchor_span",
+    "SessionAssessmentEvidenceAnchorToolCall": ".session_assessment_evidence_anchor_tool_call",
+    "SessionAssessmentEvidenceAnchor_MemoryEvent": ".session_assessment_evidence_anchor",
+    "SessionAssessmentEvidenceAnchor_Message": ".session_assessment_evidence_anchor",
+    "SessionAssessmentEvidenceAnchor_Score": ".session_assessment_evidence_anchor",
+    "SessionAssessmentEvidenceAnchor_Signal": ".session_assessment_evidence_anchor",
+    "SessionAssessmentEvidenceAnchor_Span": ".session_assessment_evidence_anchor",
+    "SessionAssessmentEvidenceAnchor_ToolCall": ".session_assessment_evidence_anchor",
+    "SessionAssessmentEvidenceDestination": ".session_assessment_evidence_destination",
+    "SessionAssessmentEvidenceDestinationMemoryEvent": ".session_assessment_evidence_destination_memory_event",
+    "SessionAssessmentEvidenceDestinationScore": ".session_assessment_evidence_destination_score",
+    "SessionAssessmentEvidenceDestinationSessionMessage": ".session_assessment_evidence_destination_session_message",
+    "SessionAssessmentEvidenceDestinationSignal": ".session_assessment_evidence_destination_signal",
+    "SessionAssessmentEvidenceDestinationSpan": ".session_assessment_evidence_destination_span",
+    "SessionAssessmentEvidenceDestinationToolCall": ".session_assessment_evidence_destination_tool_call",
+    "SessionAssessmentEvidenceDestination_MemoryEvent": ".session_assessment_evidence_destination",
+    "SessionAssessmentEvidenceDestination_Score": ".session_assessment_evidence_destination",
+    "SessionAssessmentEvidenceDestination_SessionMessage": ".session_assessment_evidence_destination",
+    "SessionAssessmentEvidenceDestination_Signal": ".session_assessment_evidence_destination",
+    "SessionAssessmentEvidenceDestination_Span": ".session_assessment_evidence_destination",
+    "SessionAssessmentEvidenceDestination_ToolCall": ".session_assessment_evidence_destination",
+    "SessionAssessmentEvidenceImpact": ".session_assessment_evidence_impact",
+    "SessionAssessmentEvidenceImpactCompletion": ".session_assessment_evidence_impact_completion",
+    "SessionAssessmentEvidenceImpactCompletionStatus": ".session_assessment_evidence_impact_completion_status",
+    "SessionAssessmentEvidenceImpactDuration": ".session_assessment_evidence_impact_duration",
+    "SessionAssessmentEvidenceImpactIncident": ".session_assessment_evidence_impact_incident",
+    "SessionAssessmentEvidenceImpactIncidentStatus": ".session_assessment_evidence_impact_incident_status",
+    "SessionAssessmentEvidenceImpactObservation": ".session_assessment_evidence_impact_observation",
+    "SessionAssessmentEvidenceImpactOutcomeAssociation": ".session_assessment_evidence_impact_outcome_association",
+    "SessionAssessmentEvidenceImpactSafety": ".session_assessment_evidence_impact_safety",
+    "SessionAssessmentEvidenceImpactSafetyStatus": ".session_assessment_evidence_impact_safety_status",
+    "SessionAssessmentEvidenceImpactSpend": ".session_assessment_evidence_impact_spend",
+    "SessionAssessmentEvidenceImpactTaskOutcome": ".session_assessment_evidence_impact_task_outcome",
+    "SessionAssessmentEvidenceImpactTaskOutcomeVerdict": ".session_assessment_evidence_impact_task_outcome_verdict",
+    "SessionAssessmentEvidenceImpact_Completion": ".session_assessment_evidence_impact",
+    "SessionAssessmentEvidenceImpact_Duration": ".session_assessment_evidence_impact",
+    "SessionAssessmentEvidenceImpact_Incident": ".session_assessment_evidence_impact",
+    "SessionAssessmentEvidenceImpact_Observation": ".session_assessment_evidence_impact",
+    "SessionAssessmentEvidenceImpact_OutcomeAssociation": ".session_assessment_evidence_impact",
+    "SessionAssessmentEvidenceImpact_Safety": ".session_assessment_evidence_impact",
+    "SessionAssessmentEvidenceImpact_Spend": ".session_assessment_evidence_impact",
+    "SessionAssessmentEvidenceImpact_TaskOutcome": ".session_assessment_evidence_impact",
+    "SessionAssessmentItem": ".session_assessment_item",
+    "SessionAssessmentItemImpactLevel": ".session_assessment_item_impact_level",
+    "SessionAssessmentItemPolarity": ".session_assessment_item_polarity",
+    "SessionAssessmentItemSource": ".session_assessment_item_source",
+    "SessionAssessmentReaderCoverage": ".session_assessment_reader_coverage",
+    "SessionAssessmentReaderCoverageExamined": ".session_assessment_reader_coverage_examined",
+    "SessionAssessmentReaderCoverageExaminedScoreDimensionsItem": ".session_assessment_reader_coverage_examined_score_dimensions_item",
+    "SessionAssessmentReaderCoverageExaminedSelection": ".session_assessment_reader_coverage_examined_selection",
+    "SessionAssessmentReaderCoverageExaminedSelectionMethod": ".session_assessment_reader_coverage_examined_selection_method",
+    "SessionAssessmentReaderCoverageNotApplicable": ".session_assessment_reader_coverage_not_applicable",
+    "SessionAssessmentReaderCoverageNotApplicableScoreDimensionsItem": ".session_assessment_reader_coverage_not_applicable_score_dimensions_item",
+    "SessionAssessmentReaderCoverageNotExamined": ".session_assessment_reader_coverage_not_examined",
+    "SessionAssessmentReaderCoverageNotExaminedLimitation": ".session_assessment_reader_coverage_not_examined_limitation",
+    "SessionAssessmentReaderCoverageNotExaminedScoreDimensionsItem": ".session_assessment_reader_coverage_not_examined_score_dimensions_item",
+    "SessionAssessmentReaderCoverageNotExaminedSelection": ".session_assessment_reader_coverage_not_examined_selection",
+    "SessionAssessmentReaderCoverageNotExaminedSelectionMethod": ".session_assessment_reader_coverage_not_examined_selection_method",
+    "SessionAssessmentReaderCoveragePartiallyExamined": ".session_assessment_reader_coverage_partially_examined",
+    "SessionAssessmentReaderCoveragePartiallyExaminedLimitation": ".session_assessment_reader_coverage_partially_examined_limitation",
+    "SessionAssessmentReaderCoveragePartiallyExaminedScoreDimensionsItem": ".session_assessment_reader_coverage_partially_examined_score_dimensions_item",
+    "SessionAssessmentReaderCoveragePartiallyExaminedSelection": ".session_assessment_reader_coverage_partially_examined_selection",
+    "SessionAssessmentReaderCoveragePartiallyExaminedSelectionMethod": ".session_assessment_reader_coverage_partially_examined_selection_method",
+    "SessionAssessmentReaderCoverage_Examined": ".session_assessment_reader_coverage",
+    "SessionAssessmentReaderCoverage_NotApplicable": ".session_assessment_reader_coverage",
+    "SessionAssessmentReaderCoverage_NotExamined": ".session_assessment_reader_coverage",
+    "SessionAssessmentReaderCoverage_PartiallyExamined": ".session_assessment_reader_coverage",
     "SessionDetail": ".session_detail",
     "SessionFilterSet": ".session_filter_set",
     "SessionMemoryChange": ".session_memory_change",
@@ -1669,6 +2126,13 @@ _dynamic_imports: typing.Dict[str, str] = {
     "TracesRef_Ids": ".traces_ref",
     "UpdateDatasetRowResponse": ".update_dataset_row_response",
     "UpdateSignalResponse": ".update_signal_response",
+    "UsageCategory": ".usage_category",
+    "UsageCategoryCategory": ".usage_category_category",
+    "UsageProject": ".usage_project",
+    "UsageResponse": ".usage_response",
+    "UsageResponseCredits": ".usage_response_credits",
+    "UsageResponsePeriod": ".usage_response_period",
+    "UsageResponsePlan": ".usage_response_plan",
     "UserActivityBucket": ".user_activity_bucket",
     "UserActivityResponse": ".user_activity_response",
     "UserBehaviour": ".user_behaviour",
@@ -1720,6 +2184,26 @@ __all__ = [
     "ActiveMember",
     "ActiveMemberRole",
     "ActiveMemberStatus",
+    "AgentScoreCauseRow",
+    "AgentScoreCauseRowDestination",
+    "AgentScoreCauseRowEvidence",
+    "AgentScoreCauseRowNativeEffect",
+    "AgentScoreCauses",
+    "AgentScoreCausesStatus",
+    "AgentScoreDimension",
+    "AgentScoreDimensionAttribution",
+    "AgentScoreDimensionAttributionMethod",
+    "AgentScoreDimensionAttributionScoreDimension",
+    "AgentScoreDimensions",
+    "AgentScoreDimensionsCost",
+    "AgentScoreDimensionsReliability",
+    "AgentScoreDimensionsSafety",
+    "AgentScoreDimensionsSpeed",
+    "AgentScoreExplanation",
+    "AgentScoreHistory",
+    "AgentScoreInterval",
+    "AgentScoreIssueRow",
+    "AgentScoreSnapshot",
     "AlertBaseline",
     "AlertBaselineKind",
     "AlertCondition",
@@ -2120,6 +2604,8 @@ __all__ = [
     "CreateMonitorBody_Threshold",
     "CreateScoreBody",
     "CreateSignalResponse",
+    "CurrentAgentScore",
+    "CurrentAgentScoreSnapshot",
     "CustomScoreResponse",
     "Dataset",
     "DatasetColumn",
@@ -2371,6 +2857,8 @@ __all__ = [
     "Project",
     "ProjectSettings",
     "ProjectSettingsPatch",
+    "ProjectUsageResponse",
+    "ProjectUsageResponsePeriod",
     "ProjectUser",
     "QuerySpans",
     "RecentToolCall",
@@ -2397,6 +2885,160 @@ __all__ = [
     "SessionAnalyticsTimeToFirstToken",
     "SessionAnalyticsTokens",
     "SessionAnalyticsTraces",
+    "SessionAssessment",
+    "SessionAssessmentCostEvaluation",
+    "SessionAssessmentCostEvaluationFamily",
+    "SessionAssessmentCostEvaluationMeasurementState",
+    "SessionAssessmentCostEvaluationRawUnit",
+    "SessionAssessmentCostFamilySummary",
+    "SessionAssessmentCostFamilySummaryFamily",
+    "SessionAssessmentCostFamilySummaryMeasurementState",
+    "SessionAssessmentCostFamilySummaryNativeImpact",
+    "SessionAssessmentCostFamilySummaryNativeImpactInterpretation",
+    "SessionAssessmentCostMetricEvidence",
+    "SessionAssessmentCostMetricEvidenceAggregation",
+    "SessionAssessmentCostMetricEvidenceEvidence",
+    "SessionAssessmentCostMetricEvidenceFamily",
+    "SessionAssessmentCostMetricEvidenceLimitationsItem",
+    "SessionAssessmentCostMetricEvidenceMeasurementState",
+    "SessionAssessmentCostMetricEvidenceNativeImpact",
+    "SessionAssessmentCostMetricEvidenceNativeImpactInterpretation",
+    "SessionAssessmentCostMetricEvidenceRawUnit",
+    "SessionAssessmentCoverage",
+    "SessionAssessmentDimensionEffect",
+    "SessionAssessmentDimensionEffectCost",
+    "SessionAssessmentDimensionEffectCostBenchmarkUse",
+    "SessionAssessmentDimensionEffectCostDirection",
+    "SessionAssessmentDimensionEffectCostMeasurement",
+    "SessionAssessmentDimensionEffectCostRole",
+    "SessionAssessmentDimensionEffectOutcome",
+    "SessionAssessmentDimensionEffectOutcomeBenchmarkUse",
+    "SessionAssessmentDimensionEffectOutcomeDirection",
+    "SessionAssessmentDimensionEffectOutcomeMeasurement",
+    "SessionAssessmentDimensionEffectOutcomeRole",
+    "SessionAssessmentDimensionEffectReliability",
+    "SessionAssessmentDimensionEffectReliabilityBenchmarkUse",
+    "SessionAssessmentDimensionEffectReliabilityDirection",
+    "SessionAssessmentDimensionEffectReliabilityMeasurement",
+    "SessionAssessmentDimensionEffectReliabilityRole",
+    "SessionAssessmentDimensionEffectSafety",
+    "SessionAssessmentDimensionEffectSafetyBenchmarkUse",
+    "SessionAssessmentDimensionEffectSafetyDirection",
+    "SessionAssessmentDimensionEffectSafetyMeasurement",
+    "SessionAssessmentDimensionEffectSafetyRole",
+    "SessionAssessmentDimensionEffectSpeed",
+    "SessionAssessmentDimensionEffectSpeedBenchmarkUse",
+    "SessionAssessmentDimensionEffectSpeedDirection",
+    "SessionAssessmentDimensionEffectSpeedMeasurement",
+    "SessionAssessmentDimensionEffectSpeedRole",
+    "SessionAssessmentDimensionEffect_Cost",
+    "SessionAssessmentDimensionEffect_Outcome",
+    "SessionAssessmentDimensionEffect_Reliability",
+    "SessionAssessmentDimensionEffect_Safety",
+    "SessionAssessmentDimensionEffect_Speed",
+    "SessionAssessmentDimensionSummary",
+    "SessionAssessmentDimensionSummaryCost",
+    "SessionAssessmentDimensionSummaryCostCoverage",
+    "SessionAssessmentDimensionSummaryCostEvidenceCounts",
+    "SessionAssessmentDimensionSummaryCostMeasurementCounts",
+    "SessionAssessmentDimensionSummaryOutcome",
+    "SessionAssessmentDimensionSummaryOutcomeCoverage",
+    "SessionAssessmentDimensionSummaryOutcomeEvidenceCounts",
+    "SessionAssessmentDimensionSummaryOutcomeMeasurementCounts",
+    "SessionAssessmentDimensionSummaryOutcomeTaskOutcome",
+    "SessionAssessmentDimensionSummaryOutcomeTaskOutcomeVerdict",
+    "SessionAssessmentDimensionSummaryReliability",
+    "SessionAssessmentDimensionSummaryReliabilityCompletion",
+    "SessionAssessmentDimensionSummaryReliabilityCoverage",
+    "SessionAssessmentDimensionSummaryReliabilityEvidenceCounts",
+    "SessionAssessmentDimensionSummaryReliabilityMeasurementCounts",
+    "SessionAssessmentDimensionSummarySafety",
+    "SessionAssessmentDimensionSummarySafetyCoverage",
+    "SessionAssessmentDimensionSummarySafetyEvidenceCounts",
+    "SessionAssessmentDimensionSummarySafetyMeasurementCounts",
+    "SessionAssessmentDimensionSummarySpeed",
+    "SessionAssessmentDimensionSummarySpeedCoverage",
+    "SessionAssessmentDimensionSummarySpeedEvidenceCounts",
+    "SessionAssessmentDimensionSummarySpeedMeasurementCounts",
+    "SessionAssessmentDimensionSummary_Cost",
+    "SessionAssessmentDimensionSummary_Outcome",
+    "SessionAssessmentDimensionSummary_Reliability",
+    "SessionAssessmentDimensionSummary_Safety",
+    "SessionAssessmentDimensionSummary_Speed",
+    "SessionAssessmentEstimateRange",
+    "SessionAssessmentEstimateRangeInterpretation",
+    "SessionAssessmentEvidenceAnchor",
+    "SessionAssessmentEvidenceAnchorMemoryEvent",
+    "SessionAssessmentEvidenceAnchorMessage",
+    "SessionAssessmentEvidenceAnchorScore",
+    "SessionAssessmentEvidenceAnchorSignal",
+    "SessionAssessmentEvidenceAnchorSpan",
+    "SessionAssessmentEvidenceAnchorToolCall",
+    "SessionAssessmentEvidenceAnchor_MemoryEvent",
+    "SessionAssessmentEvidenceAnchor_Message",
+    "SessionAssessmentEvidenceAnchor_Score",
+    "SessionAssessmentEvidenceAnchor_Signal",
+    "SessionAssessmentEvidenceAnchor_Span",
+    "SessionAssessmentEvidenceAnchor_ToolCall",
+    "SessionAssessmentEvidenceDestination",
+    "SessionAssessmentEvidenceDestinationMemoryEvent",
+    "SessionAssessmentEvidenceDestinationScore",
+    "SessionAssessmentEvidenceDestinationSessionMessage",
+    "SessionAssessmentEvidenceDestinationSignal",
+    "SessionAssessmentEvidenceDestinationSpan",
+    "SessionAssessmentEvidenceDestinationToolCall",
+    "SessionAssessmentEvidenceDestination_MemoryEvent",
+    "SessionAssessmentEvidenceDestination_Score",
+    "SessionAssessmentEvidenceDestination_SessionMessage",
+    "SessionAssessmentEvidenceDestination_Signal",
+    "SessionAssessmentEvidenceDestination_Span",
+    "SessionAssessmentEvidenceDestination_ToolCall",
+    "SessionAssessmentEvidenceImpact",
+    "SessionAssessmentEvidenceImpactCompletion",
+    "SessionAssessmentEvidenceImpactCompletionStatus",
+    "SessionAssessmentEvidenceImpactDuration",
+    "SessionAssessmentEvidenceImpactIncident",
+    "SessionAssessmentEvidenceImpactIncidentStatus",
+    "SessionAssessmentEvidenceImpactObservation",
+    "SessionAssessmentEvidenceImpactOutcomeAssociation",
+    "SessionAssessmentEvidenceImpactSafety",
+    "SessionAssessmentEvidenceImpactSafetyStatus",
+    "SessionAssessmentEvidenceImpactSpend",
+    "SessionAssessmentEvidenceImpactTaskOutcome",
+    "SessionAssessmentEvidenceImpactTaskOutcomeVerdict",
+    "SessionAssessmentEvidenceImpact_Completion",
+    "SessionAssessmentEvidenceImpact_Duration",
+    "SessionAssessmentEvidenceImpact_Incident",
+    "SessionAssessmentEvidenceImpact_Observation",
+    "SessionAssessmentEvidenceImpact_OutcomeAssociation",
+    "SessionAssessmentEvidenceImpact_Safety",
+    "SessionAssessmentEvidenceImpact_Spend",
+    "SessionAssessmentEvidenceImpact_TaskOutcome",
+    "SessionAssessmentItem",
+    "SessionAssessmentItemImpactLevel",
+    "SessionAssessmentItemPolarity",
+    "SessionAssessmentItemSource",
+    "SessionAssessmentReaderCoverage",
+    "SessionAssessmentReaderCoverageExamined",
+    "SessionAssessmentReaderCoverageExaminedScoreDimensionsItem",
+    "SessionAssessmentReaderCoverageExaminedSelection",
+    "SessionAssessmentReaderCoverageExaminedSelectionMethod",
+    "SessionAssessmentReaderCoverageNotApplicable",
+    "SessionAssessmentReaderCoverageNotApplicableScoreDimensionsItem",
+    "SessionAssessmentReaderCoverageNotExamined",
+    "SessionAssessmentReaderCoverageNotExaminedLimitation",
+    "SessionAssessmentReaderCoverageNotExaminedScoreDimensionsItem",
+    "SessionAssessmentReaderCoverageNotExaminedSelection",
+    "SessionAssessmentReaderCoverageNotExaminedSelectionMethod",
+    "SessionAssessmentReaderCoveragePartiallyExamined",
+    "SessionAssessmentReaderCoveragePartiallyExaminedLimitation",
+    "SessionAssessmentReaderCoveragePartiallyExaminedScoreDimensionsItem",
+    "SessionAssessmentReaderCoveragePartiallyExaminedSelection",
+    "SessionAssessmentReaderCoveragePartiallyExaminedSelectionMethod",
+    "SessionAssessmentReaderCoverage_Examined",
+    "SessionAssessmentReaderCoverage_NotApplicable",
+    "SessionAssessmentReaderCoverage_NotExamined",
+    "SessionAssessmentReaderCoverage_PartiallyExamined",
     "SessionDetail",
     "SessionFilterSet",
     "SessionMemoryChange",
@@ -2510,6 +3152,13 @@ __all__ = [
     "TracesRef_Ids",
     "UpdateDatasetRowResponse",
     "UpdateSignalResponse",
+    "UsageCategory",
+    "UsageCategoryCategory",
+    "UsageProject",
+    "UsageResponse",
+    "UsageResponseCredits",
+    "UsageResponsePeriod",
+    "UsageResponsePlan",
     "UserActivityBucket",
     "UserActivityResponse",
     "UserBehaviour",

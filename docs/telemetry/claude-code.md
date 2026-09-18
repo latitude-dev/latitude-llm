@@ -1,10 +1,15 @@
+import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
+
 # Claude Code telemetry
 
-Stream Claude Code conversations into Latitude as traces. After setup, Claude Code turns appear in your project's **Traces** view with prompts, responses, tool calls, and tool results.
+Stream Claude Code conversations into Latitude as traces. After setup, Claude Code turns appear in your project's **Traces** view with prompts, responses, tool calls, and tool results. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
+
+<SkillsCallout />
 
 ## Prerequisites
 
-- A [Latitude account](https://console.latitude.so/login) with a project
+- A [Latitude account](https://console.latitude.so/login) with a project, or none yet: your agent can create a temporary one with the [`latitude-setup` skill](/getting-started/skills), no signup, and fill in the values below
 - Claude Code installed locally
 - Node.js available on your `PATH`
 
@@ -14,7 +19,7 @@ Stream Claude Code conversations into Latitude as traces. After setup, Claude Co
 
 ## Install
 
-1. In Latitude, copy your project slug from the project sidebar.
+1. In Latitude, copy your project slug from the project sidebar (or let the `latitude-setup` skill create a temporary account and project for you).
 2. Create or copy an API key from **Settings → API Keys**.
 3. Run the installer:
 
@@ -36,6 +41,10 @@ npx -y @latitude-data/claude-code-telemetry@latest install \
 ## Restart and verify
 
 Fully quit and relaunch Claude Code, then run any prompt. Open your Latitude project and go to **Traces**. The new trace should appear within a few seconds.
+
+## See what was captured
+
+<FirstArtifact />
 
 ## Disable or uninstall
 
@@ -97,6 +106,8 @@ Restart Claude Code after saving.
 ## Captured data and privacy
 
 Treat this as full-fidelity telemetry. Latitude receives the content needed to reconstruct Claude Code turns, including prompts, responses, tool input/output, and system context when available.
+
+The integration also emits memory operation spans when Claude Code reads or writes its auto memory, so those changes show up in [Memory](../observability/memory) with per-record history and diffs.
 
 - Telemetry runs for each turn until disabled or uninstalled.
 - Disable telemetry before working with sensitive material you do not want sent to Latitude.

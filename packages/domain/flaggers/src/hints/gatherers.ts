@@ -110,7 +110,7 @@ export const momentLabelsGatherer: SessionHintGatherer<MomentLabelsEnv> = {
 const COHORT_BASELINE_CACHE_TTL_SECONDS = 15 * 60
 
 const cohortBaselineCacheKey = (organizationId: string, projectId: string): string =>
-  `org:${organizationId}:flaggers:cohort-baseline:${projectId}`
+  `org:${organizationId}:flaggers:cohort-baseline:${projectId}:v2`
 
 const parseCachedBaseline = (value: string): CohortBaselineData | null => {
   try {

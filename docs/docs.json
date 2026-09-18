@@ -1,8 +1,18 @@
 {
   "$schema": "https://mintlify.com/schema.json",
   "redirects": [
-    { "source": "/issues/:slug*", "destination": "/signals/:slug*" },
-    { "source": "/search/behaviours", "destination": "/behaviours/overview" },
+    {
+      "source": "/issues/:slug*",
+      "destination": "/signals/:slug*"
+    },
+    {
+      "source": "/search/behaviours",
+      "destination": "/behaviours/overview"
+    },
+    {
+      "source": "/observability/guides/build-a-dashboard",
+      "destination": "/more/artifacts"
+    },
     {
       "source": "/more/data-destinations",
       "destination": "/more/data-destinations/overview"
@@ -97,7 +107,8 @@
         "pages": [
           "getting-started/introduction",
           "getting-started/how-to-use-latitude",
-          "getting-started/self-healing-agents"
+          "getting-started/self-healing-agents",
+          "getting-started/concepts"
         ]
       },
       {
@@ -106,6 +117,16 @@
           "telemetry/start-tracing",
           "getting-started/migrate-from-v1",
           "telemetry/memory",
+          {
+            "group": "Migrate from another platform",
+            "pages": [
+              "telemetry/imports/migrate",
+              "telemetry/imports/overview",
+              "telemetry/imports/langfuse",
+              "telemetry/imports/langsmith",
+              "telemetry/imports/braintrust"
+            ]
+          },
           {
             "group": "SDKs",
             "pages": [
@@ -169,15 +190,6 @@
               "telemetry/pi-coding-agent",
               "telemetry/prime-intellect"
             ]
-          },
-          {
-            "group": "Platforms",
-            "pages": [
-              "telemetry/imports/overview",
-              "telemetry/imports/langfuse",
-              "telemetry/imports/langsmith",
-              "telemetry/imports/braintrust"
-            ]
           }
         ]
       },
@@ -189,6 +201,7 @@
           "observability/users",
           "observability/tools",
           "observability/memory",
+          "observability/cost",
           "observability/traces",
           "observability/spans",
           "observability/tool-calls",
@@ -222,8 +235,7 @@
           {
             "group": "Guides",
             "pages": [
-              "observability/guides/group-traces-by-project",
-              "observability/guides/build-a-dashboard"
+              "observability/guides/group-traces-by-project"
             ]
           }
         ]
@@ -331,10 +343,12 @@
       {
         "group": "More",
         "pages": [
-          "getting-started/concepts",
           "getting-started/mcp",
           "getting-started/cli",
           "getting-started/skills",
+          "more/api-reference",
+          "more/artifacts",
+          "more/notifications",
           "more/slack",
           "more/github",
           {
@@ -344,7 +358,6 @@
               "more/data-destinations/posthog"
             ]
           },
-          "more/api-reference",
           "more/partners"
         ]
       }

@@ -1,38 +1,46 @@
-import { postTraces } from "./client.ts"
 import { type Config, loadConfig } from "./config.ts"
-import { createLogger, type Logger } from "./logger.ts"
-import { buildOtlpRequest } from "./otlp.ts"
+import { createLogger, type HostLogger, type Logger } from "./logger.ts"
+import { buildOtlpRequest, SCOPE_VERSION } from "./otlp.ts"
 import { type BuildResult, SpanBuilder } from "./span-builder.ts"
+import { Transport } from "./transport.ts"
 import type {
   OpenClawAfterCompactionEvent,
   OpenClawAfterToolCallEvent,
   OpenClawAgentContext,
   OpenClawAgentEndEvent,
-  OpenClawBeforeAgentStartEvent,
   OpenClawBeforeCompactionEvent,
   OpenClawBeforeToolCallEvent,
+  OpenClawCronChangedEvent,
   OpenClawLlmInputEvent,
   OpenClawLlmOutputEvent,
+  OpenClawMessageContext,
+  OpenClawMessageReceivedEvent,
   OpenClawModelCallEndedEvent,
   OpenClawModelCallStartedEvent,
+  OpenClawSessionEndEvent,
+  OpenClawSessionScopedContext,
+  OpenClawSessionStartEvent,
+  OpenClawSubagentContext,
   OpenClawSubagentEndedEvent,
   OpenClawSubagentSpawnedEvent,
+  OpenClawToolContext,
 } from "./types.ts"
 
 /**
- * Minimal structural type for OpenClaw's plugin API — only the fields we
- * touch. We avoid importing from `openclaw/plugin-sdk` so the package stays
- * usable when OpenClaw isn't installed (the CLI and tests don't need it),
- * and so we're robust to small signature changes across OpenClaw versions.
- *
- * `pluginConfig` is the user's `plugins.entries[id].config` block — that's
- * the canonical place to read credentials and feature flags. The OpenClaw
- * plugin SDK also exposes the same value as `api.pluginConfig` on the
- * builder API; keep both names in sync if the upstream contract evolves.
+ * Structural type for the slice of OpenClaw's plugin API this plugin touches.
+ * Kept local so the package works without OpenClaw installed (tests, CLI) and
+ * tolerates small upstream signature changes.
  */
 export interface OpenClawPluginApiLike {
-  logger?: Logger
+  logger?: HostLogger
   pluginConfig?: Record<string, unknown>
+  /** The whole OpenClaw config; only the plugin's own `hooks` block is read. */
+  config?: { plugins?: { entries?: Record<string, { hooks?: { allowConversationAccess?: boolean } }> } }
+  /** Host runtime helpers; the state dir and the agent event stream are used when present. */
+  runtime?: {
+    state?: { resolveStateDir?: () => string }
+    events?: { onAgentEvent?: (listener: (evt: AgentEventLike) => void) => unknown }
+  }
   on: <K extends string>(
     hookName: K,
     handler: (event: unknown, ctx: unknown) => unknown,
@@ -40,203 +48,199 @@ export interface OpenClawPluginApiLike {
   ) => void
 }
 
+export interface AgentEventLike {
+  runId?: string
+  stream?: string
+  ts?: number
+  data?: Record<string, unknown>
+  sessionKey?: string
+  sessionId?: string
+  agentId?: string
+}
+
 export interface RegisterOptions {
   /** Override the config, mostly for tests. */
   config?: Config
-  /** Override the logger. */
   logger?: Logger
-  /**
-   * Hook to observe the emitted run right before it's posted. Used by tests;
-   * not a stable public API.
-   */
+  /** Observe each finished batch right before export. Tests only. */
   onEmit?: (result: BuildResult) => void
+  /** Replace the network transport. Tests only. */
+  transport?: Pick<Transport, "enqueue" | "flush">
+  now?: () => number
+  schedule?: (fn: () => void, ms: number) => () => void
 }
 
-/**
- * Register the Latitude plugin against an OpenClaw plugin API. OpenClaw calls
- * this once at plugin activation; we wire up the granular paired hooks
- * (model_call_started/_ended, before_/after_tool_call, before_/after_compaction,
- * subagent_spawned/_ended, before_agent_start/agent_end) plus the
- * data-only feeds (llm_input/llm_output) that enrich the agent span.
- *
- * Every typed hook on OpenClaw's side fires fire-and-forget for non-modifying
- * hooks; before_tool_call is a `runModifyingHook` where returning anything
- * other than undefined blocks the tool call. Our handler returns nothing —
- * keep it that way.
- */
+const STOP_FLUSH_BUDGET_MS = 4_000
+const PLUGIN_ID = "@latitude-data/openclaw-telemetry"
+
 export default function registerLatitudePlugin(api: OpenClawPluginApiLike, opts: RegisterOptions = {}): void {
-  // Source of truth: OpenClaw passes the user's `plugins.entries[id].config`
-  // as `api.pluginConfig`. Env vars are a fallback so existing deploys with
-  // LATITUDE_* exported in the gateway environment keep working.
   const config = opts.config ?? loadConfig(api.pluginConfig)
-  const logger = opts.logger ?? createLogger(config.debug)
+  const logger = opts.logger ?? createLogger(config.debug, api.logger)
 
   if (!config.enabled) {
-    if (config.apiKey === "") logger.debug("disabled: apiKey is empty (set plugins.entries[id].config.apiKey)")
-    if (config.project === "") logger.debug("disabled: project is empty (set plugins.entries[id].config.project)")
+    if (config.apiKey === "") logger.warn("disabled: apiKey is empty (set plugins.entries[id].config.apiKey)")
+    if (config.project === "") logger.warn("disabled: project is empty (set plugins.entries[id].config.project)")
     return
   }
   logger.debug(
-    `enabled: project=${config.project} base=${config.baseUrl} allowConversationAccess=${config.allowConversationAccess}`,
+    `enabled v${SCOPE_VERSION}: project=${config.project} base=${config.baseUrl} content=${config.allowConversationAccess}`,
   )
+  if (api.config?.plugins?.entries && api.config.plugins.entries[PLUGIN_ID]?.hooks?.allowConversationAccess !== true) {
+    logger.warn(
+      `plugins.entries["${PLUGIN_ID}"].hooks.allowConversationAccess is not true; OpenClaw will not deliver the conversation hooks and no traces will be exported. ` +
+        `Run: openclaw config set 'plugins.entries["${PLUGIN_ID}"].hooks.allowConversationAccess' true && openclaw gateway restart`,
+    )
+  }
 
-  const builder = new SpanBuilder()
+  const transport =
+    opts.transport ?? new Transport({ baseUrl: config.baseUrl, apiKey: config.apiKey, project: config.project, logger })
 
-  // Helper: wrap a void-returning hook handler with try/catch + cast.
-  const wrap = <E>(
-    name: string,
-    fn: (evt: E, ctx: OpenClawAgentContext) => void,
-  ): ((evt: unknown, ctx: unknown) => void) => {
+  let stateDir: string | undefined
+  try {
+    stateDir = api.runtime?.state?.resolveStateDir?.()
+  } catch {
+    stateDir = undefined
+  }
+
+  const builder = new SpanBuilder({
+    pluginVersion: SCOPE_VERSION,
+    stateDir,
+    tags: config.tags,
+    metadata: config.metadata,
+    memory: config.memory,
+    memoryContent: config.memoryContent,
+    toolDefinitions: config.toolDefinitions,
+    now: opts.now,
+    schedule: opts.schedule,
+    log: (msg) => logger.debug(msg),
+    emit: (result) => {
+      try {
+        opts.onEmit?.(result)
+        logger.debug(`run ${result.runId}: ${result.spans.length} spans ready`)
+        transport.enqueue(
+          buildOtlpRequest([result], {
+            allowConversationAccess: config.allowConversationAccess,
+            redact: config.redact,
+            serviceName: config.serviceName,
+            maxContentChars: config.maxContentChars,
+          }),
+        )
+      } catch (err) {
+        logger.warn(`export of run ${result.runId} failed: ${String(err)}`)
+      }
+    },
+  })
+
+  const wrap = <E, C>(name: string, fn: (evt: E, ctx: C) => void): ((evt: unknown, ctx: unknown) => undefined) => {
     return (evt, ctx) => {
       try {
-        fn(evt as E, ctx as OpenClawAgentContext)
+        fn(evt as E, ctx as C)
       } catch (err) {
         logger.warn(`${name} handler failed: ${String(err)}`)
       }
+      // Several of these are modifying hooks; anything but undefined would alter the run.
+      return undefined
     }
   }
 
-  // ─── Span boundaries ────────────────────────────────────────────────────
-
   api.on(
-    "before_agent_start",
-    wrap<OpenClawBeforeAgentStartEvent>("before_agent_start", (evt, ctx) => {
-      builder.onBeforeAgentStart(evt, ctx)
-    }),
+    "llm_input",
+    wrap<OpenClawLlmInputEvent, OpenClawAgentContext>("llm_input", (e, c) => builder.onLlmInput(e, c)),
+  )
+  api.on(
+    "llm_output",
+    wrap<OpenClawLlmOutputEvent, OpenClawAgentContext>("llm_output", (e, c) => builder.onLlmOutput(e, c)),
+  )
+  api.on(
+    "agent_end",
+    wrap<OpenClawAgentEndEvent, OpenClawAgentContext>("agent_end", (e, c) => builder.onAgentEnd(e, c)),
   )
 
   api.on(
     "model_call_started",
-    wrap<OpenClawModelCallStartedEvent>("model_call_started", (evt, ctx) => {
-      builder.onModelCallStarted(evt, ctx)
-    }),
+    wrap<OpenClawModelCallStartedEvent, OpenClawAgentContext>("model_call_started", (e, c) =>
+      builder.onModelCallStarted(e, c),
+    ),
   )
   api.on(
     "model_call_ended",
-    wrap<OpenClawModelCallEndedEvent>("model_call_ended", (evt, ctx) => {
-      builder.onModelCallEnded(evt, ctx)
-    }),
+    wrap<OpenClawModelCallEndedEvent, OpenClawAgentContext>("model_call_ended", (e, c) =>
+      builder.onModelCallEnded(e, c),
+    ),
   )
 
-  // before_tool_call is a `runModifyingHook` — returning {block: true} from
-  // any plugin handler blocks the tool. We return nothing (void) so OpenClaw
-  // dispatches normally. The `wrap` helper preserves that void return.
   api.on(
     "before_tool_call",
-    wrap<OpenClawBeforeToolCallEvent>("before_tool_call", (evt, ctx) => {
-      builder.onBeforeToolCall(evt, ctx)
-    }),
+    wrap<OpenClawBeforeToolCallEvent, OpenClawToolContext>("before_tool_call", (e, c) =>
+      builder.onBeforeToolCall(e, c),
+    ),
   )
   api.on(
     "after_tool_call",
-    wrap<OpenClawAfterToolCallEvent>("after_tool_call", (evt, ctx) => {
-      builder.onAfterToolCall(evt, ctx)
-    }),
+    wrap<OpenClawAfterToolCallEvent, OpenClawToolContext>("after_tool_call", (e, c) => builder.onAfterToolCall(e, c)),
   )
 
   api.on(
     "before_compaction",
-    wrap<OpenClawBeforeCompactionEvent>("before_compaction", (evt, ctx) => {
-      builder.onBeforeCompaction(evt, ctx)
-    }),
+    wrap<OpenClawBeforeCompactionEvent, OpenClawSessionScopedContext>("before_compaction", (e, c) =>
+      builder.onBeforeCompaction(e, c),
+    ),
   )
   api.on(
     "after_compaction",
-    wrap<OpenClawAfterCompactionEvent>("after_compaction", (evt, ctx) => {
-      builder.onAfterCompaction(evt, ctx)
-    }),
+    wrap<OpenClawAfterCompactionEvent, OpenClawSessionScopedContext>("after_compaction", (e, c) =>
+      builder.onAfterCompaction(e, c),
+    ),
   )
 
   api.on(
     "subagent_spawned",
-    wrap<OpenClawSubagentSpawnedEvent>("subagent_spawned", (evt, ctx) => {
-      builder.onSubagentSpawned(evt, ctx)
-    }),
+    wrap<OpenClawSubagentSpawnedEvent, OpenClawSubagentContext>("subagent_spawned", (e, c) =>
+      builder.onSubagentSpawned(e, c),
+    ),
   )
   api.on(
     "subagent_ended",
-    wrap<OpenClawSubagentEndedEvent>("subagent_ended", (evt, ctx) => {
-      builder.onSubagentEnded(evt, ctx)
-    }),
+    wrap<OpenClawSubagentEndedEvent, OpenClawSubagentContext>("subagent_ended", (e, c) =>
+      builder.onSubagentEnded(e, c),
+    ),
   )
 
-  // ─── Data-only feeds ────────────────────────────────────────────────────
-  // These DON'T open or close spans. They enrich the open `agent` span with
-  // attempt-aggregate content + token usage, and seed the rolling history
-  // snapshot used by per-call `model_call.input.messages`.
+  api.on(
+    "session_start",
+    wrap<OpenClawSessionStartEvent, OpenClawSessionScopedContext>("session_start", (e, c) =>
+      builder.onSessionStart(e, c),
+    ),
+  )
+  api.on(
+    "session_end",
+    wrap<OpenClawSessionEndEvent, OpenClawSessionScopedContext>("session_end", (e, c) =>
+      builder.onSessionEnd(e.sessionKey ?? c.sessionKey, e.sessionId ?? c.sessionId),
+    ),
+  )
+  api.on(
+    "message_received",
+    wrap<OpenClawMessageReceivedEvent, OpenClawMessageContext>("message_received", (e, c) =>
+      builder.onMessageReceived(e, c),
+    ),
+  )
+  api.on(
+    "cron_changed",
+    wrap<OpenClawCronChangedEvent, unknown>("cron_changed", (e) => builder.onCronChanged(e)),
+  )
 
-  api.on(
-    "llm_input",
-    wrap<OpenClawLlmInputEvent>("llm_input", (evt, ctx) => {
-      builder.onLlmInput(evt, ctx)
-    }),
-  )
-  api.on(
-    "llm_output",
-    wrap<OpenClawLlmOutputEvent>("llm_output", (evt, ctx) => {
-      builder.onLlmOutput(evt, ctx)
-    }),
-  )
+  api.on("gateway_stop", (_evt, _ctx) => transport.flush(STOP_FLUSH_BUDGET_MS))
 
-  // ─── Trace flush ────────────────────────────────────────────────────────
-  //
-  // Why we defer the finalize by one microtask tick instead of finalizing
-  // synchronously inside the agent_end handler: OpenClaw 2026.4.26+ has TWO
-  // hook fire-orders depending on which runtime the agent uses, and the
-  // selection.runtime path (used by the codex / embedded ACPX agents) fires
-  // events in this order:
-  //
-  //     llm_input → ...model_calls / tool_calls... → agent_end → llm_output
-  //
-  // The cli-runner.runtime path (used by the claude-code agent) fires the
-  // reverse — `llm_output` BEFORE `agent_end` — and only when the assistant
-  // emitted a non-empty text part.
-  //
-  // If we finalize on agent_end synchronously, the run is deleted and the OTLP
-  // batch is shipped before `llm_output` (under selection.runtime) gets a
-  // chance to enrich the agent span with `gen_ai.output.messages`,
-  // `gen_ai.response.model`, `openclaw.resolved.ref`, `openclaw.harness.id`,
-  // and the entire `gen_ai.usage.*` block. The `onLlmOutput` handler then
-  // bails on `if (!run) return` cleanly (no error, no warning), and every
-  // attribute that lives on the `llm_output` event is silently dropped.
-  //
-  // Deferring with `queueMicrotask` is order-agnostic: in either path, both
-  // hook handlers run synchronously in the current microtask round and write
-  // to the still-alive run; the queued finalize fires after both have
-  // completed and serializes a fully-enriched batch. Subagents go through
-  // exactly the same `onAgentEnd` path so they benefit automatically.
-  //
-  // We don't use `setTimeout(0)` because the +1 macrotask of latency isn't
-  // meaningful here, and `queueMicrotask` is more reliable on process exit
-  // (microtasks drain before exit; macrotasks may not). If a future OpenClaw
-  // ever introduces an `await` between `agent_end` dispatch and `llm_output`
-  // dispatch, we'll need to switch to `setTimeout(0)`.
-  api.on(
-    "agent_end",
-    wrap<OpenClawAgentEndEvent>("agent_end", (evt, ctx) => {
-      queueMicrotask(() => {
-        try {
-          const result = builder.onAgentEnd(evt, ctx)
-          if (!result) {
-            logger.debug("agent_end fired without a matching run in flight")
-            return
-          }
-          opts.onEmit?.(result)
-          const payload = buildOtlpRequest(result, {
-            allowConversationAccess: config.allowConversationAccess,
-            redact: config.redact,
-          })
-          void postTraces({
-            baseUrl: config.baseUrl,
-            apiKey: config.apiKey,
-            project: config.project,
-            payload,
-            logger,
-          })
-        } catch (err) {
-          logger.warn(`agent_end finalize failed: ${String(err)}`)
-        }
-      })
-    }),
-  )
+  // Streamed deltas are the only time-to-first-token source on the Codex harness.
+  try {
+    api.runtime?.events?.onAgentEvent?.((evt) => {
+      try {
+        builder.onAgentEvent(evt)
+      } catch (err) {
+        logger.warn(`agent event handler failed: ${String(err)}`)
+      }
+    })
+  } catch (err) {
+    logger.debug(`agent event stream unavailable: ${String(err)}`)
+  }
 }

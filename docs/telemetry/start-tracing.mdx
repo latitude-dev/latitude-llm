@@ -3,14 +3,20 @@ title: Start tracing
 description: Connect your agent to Latitude and send your first traces.
 ---
 
-Use your coding agent to add Latitude tracing to your app. The Latitude skill inspects your codebase, detects your LLM providers and existing OpenTelemetry setup, installs the right SDK, and verifies that traces arrive in your project.
+<Note>
+  Coming from Langfuse, LangSmith, or Braintrust? Follow [Migrate to Latitude](./imports/migrate)
+  instead: it covers this setup plus porting your context, backfilling your existing traces
+  with a one-time [import](./imports/overview), and cutting over.
+</Note>
+
+Use your agent to add Latitude tracing to your app or agent harness. The `latitude-setup` skill inspects your codebase, detects your LLM providers and existing OpenTelemetry setup, installs the right SDK or harness plugin, verifies that traces arrive in your project, and builds your first [Artifact](/more/artifacts) from them. If you don't have a Latitude account yet, it bootstraps a temporary one from the terminal, no signup, and gives you a link to claim it.
 
 <Steps>
   <Step title="Ask your agent to install tracing">
-    Paste this prompt into Claude Code, Cursor, Windsurf, Codex, OpenCode, or another coding agent:
+    Paste this prompt into Claude Code, Cursor, Codex, OpenCode, Hermes, or any other agent:
 
     ```text
-    Install the `latitude-setup` skill from `github.com/latitude-dev/skills`, and use it to add Latitude tracing to this app following best practices.
+    Install the `latitude-setup` skill from `github.com/latitude-dev/skills` and use it to set up Latitude tracing here, following best practices.
     ```
 
   </Step>
@@ -20,14 +26,14 @@ Use your coding agent to add Latitude tracing to your app. The Latitude skill in
   <Step title="Check Latitude">
     Open your Latitude project and go to **Traces**. The new trace should appear within a few seconds.
   </Step>
-  <Step title="Connect Latitude to your coding agent (optional)">
+  <Step title="Connect Latitude to your agent (optional)">
     Install the [Latitude MCP server](../getting-started/mcp) so your agent can access your Latitude workspace, find the right project, and verify the setup.
   </Step>
 </Steps>
 
 ## Manual setup
 
-If you are not using a coding agent, start with the SDK for your runtime:
+If you are not using an agent, start with the SDK for your runtime:
 
 <CardGroup cols={2}>
   <Card title="TypeScript SDK" icon="code" href="../telemetry/typescript">
@@ -46,4 +52,5 @@ For other languages, use the [OpenTelemetry exporter](../telemetry/otel-exporter
 - Explore traces in [Observability](../observability/overview)
 - Add provider-specific instrumentation from the Observability sidebar
 - Trace your agent's long-term memory with [Memory tracing](./memory)
+- Already have traces elsewhere? [Import them as a one-time backfill](./imports/overview) so you do not start from an empty project
 - Learn how traces become [scores](../scores/overview), [signals](../signals/overview), and [evaluations](../evaluations/overview)

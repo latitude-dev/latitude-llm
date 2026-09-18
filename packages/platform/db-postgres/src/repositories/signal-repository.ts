@@ -110,6 +110,7 @@ const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
     filters: row.filters,
     assigneeId: row.assigneeId,
     priority: row.priority,
+    bundleKey: row.bundleKey,
     centroid: row.centroid,
     clusteredAt: row.clusteredAt,
     promotedAt: row.promotedAt,
@@ -218,6 +219,7 @@ const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null)
   filters: issue.filters,
   assigneeId: issue.assigneeId,
   priority: issue.priority,
+  bundleKey: issue.bundleKey,
   centroid: issue.centroid,
   centroidEmbedding: centroidEmbedding === null ? null : [...centroidEmbedding],
   clusteredAt: issue.clusteredAt,
@@ -497,6 +499,27 @@ const signalRepositoryCoreLive = Layer.effect(
                 return Effect.succeed(toSignalWithLifecycle(row))
               }),
             )
+        }),
+
+      findByBundleKey: ({ projectId, bundleKey }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(signals)
+                .where(
+                  and(
+                    eq(signals.organizationId, organizationId),
+                    eq(signals.projectId, projectId),
+                    eq(signals.bundleKey, bundleKey),
+                    isNull(signals.deletedAt),
+                  ),
+                )
+                .limit(1),
+            )
+            .pipe(Effect.map((rows) => (rows[0] ? toDomainSignal(rows[0]) : null)))
         }),
 
       findByIdForUpdate: (id: SignalId) =>
@@ -782,6 +805,27 @@ const signalRepositoryCoreLive = Layer.effect(
                 },
               }),
           )
+        }),
+
+      adoptBundleKey: ({ signalId, bundleKey }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db
+              .update(signals)
+              .set({ bundleKey })
+              .where(
+                and(
+                  eq(signals.organizationId, organizationId),
+                  eq(signals.id, signalId),
+                  isNull(signals.deletedAt),
+                  isNull(signals.bundleKey),
+                  eq(signals.source, "flagger"),
+                ),
+              )
+              .returning({ id: signals.id }),
+          )
+          return rows.length > 0
         }),
 
       claimReopenOnOccurrence: ({ signalId, occurredAt, now }) =>

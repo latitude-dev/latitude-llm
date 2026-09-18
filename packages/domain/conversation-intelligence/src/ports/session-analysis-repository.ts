@@ -8,6 +8,12 @@ export interface SessionAnalysisRepositoryShape {
     readonly projectId: ProjectId
     readonly sessionId: SessionId
   }): Effect.Effect<SessionAnalysis | null, RepositoryError, ChSqlClient>
+  listLatestBySessions(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionIds: readonly SessionId[]
+    readonly indexedAtTo: Date
+  }): Effect.Effect<readonly SessionAnalysis[], RepositoryError, ChSqlClient>
   upsert(analysis: SessionAnalysis): Effect.Effect<void, RepositoryError, ChSqlClient>
 }
 

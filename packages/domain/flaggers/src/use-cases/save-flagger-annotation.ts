@@ -1,4 +1,9 @@
-import type { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "@domain/scores"
+import {
+  type ScoreDraftClosedError,
+  type ScoreDraftUpdateConflictError,
+  type ScoringArtifactVersion,
+  scoringArtifactVersionSchema,
+} from "@domain/scores"
 import { BadRequestError, ProjectId, type RepositoryError, ScoreId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -26,6 +31,8 @@ export interface SaveFlaggerAnnotationInput extends FlaggerAnnotateInput {
   readonly traceCreatedAt: string
   readonly messageIndex?: number | undefined
   readonly flaggerTraceId?: string | undefined
+  readonly scoringArtifactVersion: ScoringArtifactVersion
+  readonly analysisHash?: string | undefined
 }
 
 export type SaveFlaggerAnnotationError =
@@ -41,6 +48,11 @@ export const saveFlaggerAnnotationUseCase = Effect.fn("flaggers.saveFlaggerAnnot
   yield* Effect.annotateCurrentSpan("flagger.traceId", input.traceId)
 
   const parsedInput = yield* parseOrBadRequest(flaggerAnnotateInputSchema, input, "Invalid flagger annotate input")
+  const scoringArtifactVersion = yield* parseOrBadRequest(
+    scoringArtifactVersionSchema,
+    input.scoringArtifactVersion,
+    "Invalid scoring artifact version",
+  )
 
   const projectId = ProjectId(parsedInput.projectId)
   const traceId = TraceId(parsedInput.traceId)
@@ -57,6 +69,9 @@ export const saveFlaggerAnnotationUseCase = Effect.fn("flaggers.saveFlaggerAnnot
     messageIndex: input.messageIndex,
     contentHash: parsedInput.contentHash,
     flaggerTraceId: input.flaggerTraceId,
+    flaggerPath: "sampled",
+    scoringArtifactVersion,
+    analysisHash: input.analysisHash,
   })
 
   return flaggerAnnotateOutputSchema.parse({

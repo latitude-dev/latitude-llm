@@ -70,6 +70,18 @@ export interface MemoryRepositoryShape {
     readonly traceId?: TraceId
   }): Effect.Effect<readonly MemoryEvent[], RepositoryError, ChSqlClient>
 
+  /**
+   * Ledger events for many sessions in one read, deduped, ordered by `endTime`, `startTime`, ingest
+   * order. The batched twin of `readSessionMemoryEvents`, for scoring windows that must not issue a
+   * query per session; `endTimeTo` pins the read to a window cutoff.
+   */
+  readMemoryEventsBySessionIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionIds: readonly SessionId[]
+    readonly endTimeTo?: Date
+  }): Effect.Effect<readonly MemoryEvent[], RepositoryError, ChSqlClient>
+
   /** Mutating version chains for a set of records, deduped, per record ordered by `endTime`. */
   readRecordVersions(input: {
     readonly organizationId: OrganizationId

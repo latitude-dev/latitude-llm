@@ -3,6 +3,15 @@ import { ALERT_SEVERITIES, DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared
 
 export const SIGNAL_NAME_MAX_LENGTH = 128
 
+/**
+ * Bound on the exact bundle key a deterministic detector claims. Mirrors
+ * `FLAGGER_BUNDLE_KEY_MAX_LENGTH` in `@domain/flaggers`, which is where keys are
+ * built and truncated; repeated rather than imported because signals do not
+ * depend on flaggers, and `assign-or-create-signal-from-score.test.ts` pins the
+ * two together.
+ */
+export const SIGNAL_BUNDLE_KEY_MAX_LENGTH = 200
+
 /** Boundary guard on the reason accompanying a signal feedback verdict, so a pasted transcript cannot land in the row. */
 export const SIGNAL_FEEDBACK_MAX_LENGTH = 1024
 
@@ -506,6 +515,14 @@ export const SIGNAL_DISCOVERY_PROJECT_LOCK_TTL_SECONDS = 300
 
 /** Inner project-scoped serialization lock key. */
 export const SIGNAL_DISCOVERY_PROJECT_LOCK_KEY = "project"
+
+/**
+ * Outer lock key for a score that carries an exact bundle key, replacing the
+ * feedback hash. A deterministic detector's herd shares the bucket, not the
+ * sentence, so hashing the feedback would let two occurrences of one failure
+ * race each other into two issues.
+ */
+export const SIGNAL_DISCOVERY_BUNDLE_LOCK_KEY = (bundleKey: string) => `bundle:${bundleKey}`
 
 /**
  * Outer feedback-scoped serialization lock key. Takes the SHA-256 hex digest

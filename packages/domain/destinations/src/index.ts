@@ -103,7 +103,7 @@ export type {
   DestinationHealthBadge,
 } from "./health.ts"
 export { deriveDestinationHealth } from "./health.ts"
-export { uuidV5 } from "./helpers.ts"
+export { spanUrlBuilder, uuidV5 } from "./helpers.ts"
 
 // Mappers
 export type {

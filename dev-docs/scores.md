@@ -132,7 +132,20 @@ Source-specific metadata stays intentionally lightweight:
 
 - evaluation scores store `evaluationHash`
 - annotation scores store raw or drafted feedback plus the minimal GenAI anchor fields needed to reopen either the whole-conversation annotation or the exact selected message/text range
-- flagger-authored annotation rows (`sourceId: "SYSTEM"`) add `flaggerSlug`, the content anchor `contentHash`, and `flaggerTraceId` — the Latitude trace of the generation that made the call, so a detection can be traced back to the decision behind it and graded (see [`./flaggers.md`](./flaggers.md#grading-a-flaggers-own-decisions)). `flaggerTraceId` is absent on deterministic detections, cached generations, and rows predating it.
+- flagger-authored annotation rows (`sourceId: "SYSTEM"`) add `flaggerSlug`, the content anchor
+  `contentHash`, and `flaggerTraceId` — the Latitude trace of the generation that made the call, so a
+  detection can be traced back to the decision behind it and graded (see
+  [`./flaggers.md`](./flaggers.md#grading-a-flaggers-own-decisions)). New rows also identify the
+  `flaggerPath` as `deterministic` or `sampled`: deterministic discovery rows link to the calculated
+  source fact with `flaggerFindingKey`, while sampled model results identify their compatible prompt,
+  judge configuration, and result schema with `scoringArtifactVersion`. All four fields are optional
+  so rows predating structured provenance remain readable. `flaggerTraceId` is absent on deterministic
+  detections, cached generations, and rows predating it. A deterministic score stores only the key of
+  the primary finding selected by the strategy; the full finding set is recalculated from session
+  telemetry when the assessment report is resolved. A sampled binary flagger verdict uses the score's
+  existing `passed`, `value`, and `feedback` fields and records `flagger-classification-v1` as its
+  current scoring artifact version. Change that version whenever the classifier prompt contract,
+  supported judge configuration, or result schema changes.
 - custom scores store arbitrary user-defined metadata
 
 ### Shareable conversation anchors
@@ -142,6 +155,14 @@ Anchored annotation scores (message-level or part-level) can deep-link into the 
 Opening a session from a signal occurrence uses the same mechanism: the session route carries `scoreId` for the score that recorded the occurrence there, so the first view lands on the evidence message rather than the session header. See [`./annotations.md`](./annotations.md) and [`./conversation-timeline.md`](./conversation-timeline.md).
 
 The metadata field is not intended for heavy analytical querying.
+
+ClickHouse dual-writes only `flagger_slug`, `scoring_artifact_version`, `flagger_finding_key`, and
+`flagger_path` from new SYSTEM annotation scores. Those columns are nullable so rows written before
+the provenance contract remain explicitly unknown. Detailed deterministic finding fields stay in
+their source telemetry and are recalculated by the assessment reader. `readFlaggerScoreProvenance`
+returns `compatible` only for a complete deterministic `(path, finding key)` tuple or sampled `(path,
+artifact version)` tuple. Historical and partial tuples remain `legacy` raw evidence; no Postgres or
+ClickHouse backfill is performed.
 
 ## Postgres Indexing
 

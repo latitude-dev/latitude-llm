@@ -118,6 +118,67 @@ describe("checkEligibilityUseCase", () => {
     })
   })
 
+  // Outcome's reference judge persists a passed score for every session it
+  // finds successful. Those must never open a signal, or a healthy project
+  // would accumulate one "the task succeeded" signal per judged session.
+  it("rejects a passed task-outcome verdict and accepts a failed one", async () => {
+    const verdict = (passed: boolean) =>
+      makeScore({
+        passed,
+        value: passed ? 1 : 0,
+        sourceId: "SYSTEM",
+        feedback: "The cancellation never happened.",
+        metadata: {
+          rawFeedback: "The cancellation never happened.",
+          flaggerSlug: "task-failure",
+          flaggerPath: "sampled",
+          scoringArtifactVersion: "task-failure-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          analysisHash: "a".repeat(64),
+        },
+      })
+
+    await expect(runEligibility(verdict(true))).rejects.toMatchObject({
+      _tag: "PassedScoreNotEligibleForDiscoveryError",
+    })
+    await expect(runEligibility(verdict(false))).resolves.toMatchObject({ passed: false })
+  })
+
+  // A successful defense and user-authored personal data are measurements the
+  // score needs, not defects: a project whose users type their own email must
+  // not accumulate one signal per session for it.
+  it.each([
+    { safetyFindingKind: "injectionDefense", passed: true },
+    { safetyFindingKind: "piiExposure", passed: true },
+    { safetyFindingKind: "injectionCompliance", passed: false },
+    { safetyFindingKind: "injectionAttempt", passed: false },
+    { safetyFindingKind: "piiDisclosure", passed: false },
+  ])("gives $safetyFindingKind the discovery eligibility its polarity implies", async ({
+    safetyFindingKind,
+    passed,
+  }) => {
+    const finding = makeScore({
+      passed,
+      value: passed ? 1 : 0,
+      sourceId: "SYSTEM",
+      feedback: "An instruction-override attempt arrived in the first user turn.",
+      metadata: {
+        rawFeedback: "An instruction-override attempt arrived in the first user turn.",
+        flaggerSlug: "jailbreaking",
+        flaggerPath: "sampled",
+        scoringArtifactVersion: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+        safetyFindingKind,
+      },
+    })
+
+    if (passed) {
+      await expect(runEligibility(finding)).rejects.toMatchObject({
+        _tag: "PassedScoreNotEligibleForDiscoveryError",
+      })
+      return
+    }
+    await expect(runEligibility(finding)).resolves.toMatchObject({ passed: false })
+  })
+
   it("rejects organization mismatches", async () => {
     await expect(runEligibility(makeScore(), { organizationId: "xxxxxxxxxxxxxxxxxxxxxxxx" })).rejects.toMatchObject({
       _tag: "ScoreDiscoveryOrganizationMismatchError",

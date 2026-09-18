@@ -34,7 +34,7 @@ import {
   ProjectParamsSchema,
   typedResponses,
 } from "../openapi/schemas.ts"
-import type { OrganizationScopedEnv } from "../types.ts"
+import type { AuthContext, OrganizationScopedEnv } from "../types.ts"
 
 // Project-settings shape, expressed at the API layer so each field carries a
 // description (the domain `projectSettingsSchema` is description-free by
@@ -216,6 +216,54 @@ const UpdateRequestSchema = z
   })
   .openapi("UpdateProjectBody")
 
+const oauthActorUserId = (auth: AuthContext): string | undefined =>
+  auth.method === "oauth" ? (auth.userId as string) : undefined
+
+const applyProjectNameAndSettings = (input: {
+  readonly projectId: Project["id"]
+  readonly body: z.infer<typeof UpdateRequestSchema>
+  readonly actorUserId: string | undefined
+}) =>
+  Effect.gen(function* () {
+    let updated = yield* updateProjectUseCase({
+      id: input.projectId,
+      ...(input.body.name !== undefined ? { name: input.body.name } : {}),
+      // Patch, not replace: this schema exposes a subset of the stored settings,
+      // so a replace would let one field's update silently clear the others.
+      ...(input.body.settings !== undefined ? { settingsPatch: input.body.settings } : {}),
+    })
+
+    // `updateProjectUseCase` refuses to write `redaction`, so the policy goes through its
+    // own use case to pick up the audit event that an irreversible change needs.
+    if (input.body.settings?.redaction !== undefined) {
+      updated = yield* updateProjectRedactionUseCase({
+        projectId: input.projectId,
+        actorUserId: input.actorUserId ?? "",
+        redaction: input.body.settings.redaction,
+      })
+    }
+
+    return updated
+  })
+
+const applyProjectFlaggers = (input: {
+  readonly flaggers: NonNullable<z.infer<typeof UpdateRequestSchema>["flaggers"]>
+  readonly organizationId: string
+  readonly projectId: Project["id"]
+  readonly actorUserId: string | undefined
+}) =>
+  Effect.gen(function* () {
+    for (const [slug, enabled] of Object.entries(input.flaggers)) {
+      yield* updateFlaggerUseCase({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        slug: slug as FlaggerSlug,
+        enabled,
+        ...(input.actorUserId !== undefined ? { actorUserId: input.actorUserId } : {}),
+      })
+    }
+  })
+
 const toResponse = (project: Project) => ({
   id: project.id as string,
   organizationId: project.organizationId as string,
@@ -337,39 +385,19 @@ const updateProject = projectEndpoint({
   execute: (input, ctx) =>
     Effect.gen(function* () {
       const body = input.body
-      const actorUserId = ctx.auth.method === "oauth" ? (ctx.auth.userId as string) : undefined
+      const actorUserId = oauthActorUserId(ctx.auth)
 
       const repo = yield* ProjectRepository
       const project = yield* repo.findBySlug(input.params.projectSlug)
-
-      let updated = yield* updateProjectUseCase({
-        id: project.id,
-        ...(body.name !== undefined ? { name: body.name } : {}),
-        // Patch, not replace: this schema exposes a subset of the stored settings,
-        // so a replace would let one field's update silently clear the others.
-        ...(body.settings !== undefined ? { settingsPatch: body.settings } : {}),
-      })
-
-      // `updateProjectUseCase` refuses to write `redaction`, so the policy goes through its
-      // own use case to pick up the audit event that an irreversible change needs.
-      if (body.settings?.redaction !== undefined) {
-        updated = yield* updateProjectRedactionUseCase({
-          projectId: project.id,
-          actorUserId: actorUserId ?? "",
-          redaction: body.settings.redaction,
-        })
-      }
+      const updated = yield* applyProjectNameAndSettings({ projectId: project.id, body, actorUserId })
 
       if (body.flaggers) {
-        for (const [slug, enabled] of Object.entries(body.flaggers)) {
-          yield* updateFlaggerUseCase({
-            organizationId: ctx.organization.id,
-            projectId: updated.id,
-            slug: slug as FlaggerSlug,
-            enabled,
-            ...(actorUserId !== undefined ? { actorUserId } : {}),
-          })
-        }
+        yield* applyProjectFlaggers({
+          flaggers: body.flaggers,
+          organizationId: ctx.organization.id,
+          projectId: updated.id,
+          actorUserId,
+        })
       }
 
       return { status: 200, body: toResponse(updated) } as const

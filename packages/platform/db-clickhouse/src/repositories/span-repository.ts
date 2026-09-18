@@ -14,8 +14,12 @@ import {
   TraceId as toTraceId,
 } from "@domain/shared"
 import type {
+  GenerationContentCandidate,
   MemoryOperationSpan,
   Operation,
+  SessionGenerationContent,
+  SessionGenerationFact,
+  SessionToolCallFact,
   SessionToolSpan,
   Span,
   SpanDetail,
@@ -24,10 +28,20 @@ import type {
   SpanListOrderField,
   SpanMessagesData,
   SpanStatusCode,
+  SpanTokenCounts,
   ToolDefinition,
   TraceConversationChunk,
 } from "@domain/spans"
-import { MEMORY_OPERATIONS, parseCostSource, SpanRepository, type SpanRepositoryShape } from "@domain/spans"
+import {
+  classifyGenerationContent,
+  classifyGenerationModelContext,
+  classifyGenerationPricing,
+  MEMORY_OPERATIONS,
+  parseCostSource,
+  SpanRepository,
+  type SpanRepositoryShape,
+  selectGenerationContentWithinBudget,
+} from "@domain/spans"
 import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -437,10 +451,269 @@ const sessionMembership = (sessionId: string): { clause: string; params: Record<
 // under the client's 30s `request_timeout` so ClickHouse cancels the query
 // server-side (freeing the shared socket) instead of the client abandoning a
 // query that keeps burning a thread.
+// Exactly the columns the Agent Score Cost and Speed readers use, plus the stored payload sizes
+// so absent content stays distinguishable from a budget-skipped read. `attr_string` is absent by
+// design (see SessionGenerationFact).
+const GENERATION_FACT_BASE_COLUMNS = `
+  trace_id, span_id, parent_span_id, operation, provider, model, response_model,
+  start_time, end_time, duration_ns, name, tool_name, agent_name,
+  tokens_input, tokens_output, tokens_cache_read, tokens_cache_create, tokens_reasoning,
+  cost_input_microcents, cost_output_microcents, cost_total_microcents,
+  cost_is_estimated, cost_source, cost_priced_provider, cost_priced_model,
+  time_to_first_token_ns, is_streaming, finish_reasons,
+  status_code, status_message, error_type
+`
+
+// Payload sizes are measured in the dedup subquery so the outer select never touches the payload
+// columns themselves.
+const GENERATION_FACT_COLUMNS = `${GENERATION_FACT_BASE_COLUMNS},
+  length(input_messages) AS input_message_bytes,
+  length(output_messages) AS output_message_bytes,
+  length(tool_definitions) AS tool_definition_bytes
+`
+
+const GENERATION_FACT_PROJECTED_COLUMNS = `${GENERATION_FACT_BASE_COLUMNS},
+  input_message_bytes, output_message_bytes, tool_definition_bytes
+`
+
+type GenerationFactRow = {
+  trace_id: string
+  span_id: string
+  parent_span_id: string
+  operation: string
+  provider: string
+  model: string
+  response_model: string
+  start_time: string
+  end_time: string
+  duration_ns: string | number
+  name: string
+  tool_name: string
+  agent_name: string
+  tokens_input: string | number
+  tokens_output: string | number
+  tokens_cache_read: string | number
+  tokens_cache_create: string | number
+  tokens_reasoning: string | number
+  cost_input_microcents: string | number
+  cost_output_microcents: string | number
+  cost_total_microcents: string | number
+  cost_is_estimated: number
+  cost_source: string
+  cost_priced_provider: string
+  cost_priced_model: string
+  time_to_first_token_ns: string | number
+  is_streaming: number
+  finish_reasons: readonly string[]
+  status_code: number
+  status_message: string
+  error_type: string
+  input_message_bytes: string | number
+  output_message_bytes: string | number
+  tool_definition_bytes: string | number
+}
+
+type GenerationContentRow = {
+  trace_id: string
+  span_id: string
+  input_messages: string
+  output_messages: string
+  tool_definitions: string
+}
+
+type ToolCallFactRow = {
+  trace_id: string
+  span_id: string
+  parent_span_id: string
+  tool_call_id: string
+  tool_name: string
+  normalized_tool_name: string
+  input_hash: string
+  output_hash: string
+  input_bytes: string | number
+  output_bytes: string | number
+  start_time: string
+  end_time: string
+  duration_ns: string | number
+  status_code: number
+  status_message: string
+  error_type: string
+}
+
+const spanKey = (traceId: string, spanId: string) => `${traceId}:${spanId}`
+
+const generationContentBytes = (row: GenerationFactRow): number =>
+  parseClickHouseNumber(row.input_message_bytes) +
+  parseClickHouseNumber(row.output_message_bytes) +
+  parseClickHouseNumber(row.tool_definition_bytes)
+
+const generationContentCandidates = (
+  rows: readonly GenerationFactRow[],
+  sessionKeyByTraceId: ReadonlyMap<string, string>,
+): GenerationContentCandidate[] =>
+  rows.map((row) => {
+    const traceId = normalizeCHString(row.trace_id)
+    return {
+      sessionKey: sessionKeyByTraceId.get(traceId) ?? traceId,
+      traceId: toTraceId(traceId),
+      spanId: SpanId(normalizeCHString(row.span_id)),
+      startTime: parseCHDate(row.start_time),
+      bytes: generationContentBytes(row),
+    }
+  })
+
+const addGenerationContentByKey = (
+  rows: readonly GenerationContentRow[],
+  wanted: ReadonlySet<string>,
+  contentByKey: Map<string, SessionGenerationContent>,
+): void => {
+  for (const row of rows) {
+    const key = spanKey(normalizeCHString(row.trace_id), normalizeCHString(row.span_id))
+    if (!wanted.has(key)) continue
+    contentByKey.set(key, {
+      inputMessages: parseMessages(row.input_messages),
+      outputMessages: parseMessages(row.output_messages),
+      toolDefinitions: parseToolDefinitions(row.tool_definitions),
+    })
+  }
+}
+
+const GENERATION_FACT_TRACE_BATCH_SIZE = 8
+const GENERATION_CONTENT_SPAN_BATCH_SIZE = 128
+const GENERATION_CONTENT_TARGET_BYTES = 1024 * 1024
+
+const batchValues = <T>(values: readonly T[], size: number): T[][] => {
+  const batches: T[][] = []
+  for (let index = 0; index < values.length; index += size) {
+    batches.push(values.slice(index, index + size))
+  }
+  return batches
+}
+
+const compareGenerationFactRows = (left: GenerationFactRow, right: GenerationFactRow): number => {
+  if (left.start_time !== right.start_time) return left.start_time < right.start_time ? -1 : 1
+  if (left.trace_id !== right.trace_id) return left.trace_id < right.trace_id ? -1 : 1
+  if (left.span_id !== right.span_id) return left.span_id < right.span_id ? -1 : 1
+  return 0
+}
+
+const selectedContentBatchesByTraceId = (
+  selected: readonly GenerationContentCandidate[],
+): Map<string, readonly (readonly GenerationContentCandidate[])[]> => {
+  const batchesByTraceId = new Map<string, GenerationContentCandidate[][]>()
+  const bytesByTraceId = new Map<string, number>()
+  for (const candidate of selected) {
+    const traceId = candidate.traceId as string
+    const batches = batchesByTraceId.get(traceId) ?? []
+    const batch = batches.at(-1)
+    const batchBytes = bytesByTraceId.get(traceId) ?? 0
+    if (
+      !batch ||
+      batch.length === GENERATION_CONTENT_SPAN_BATCH_SIZE ||
+      batchBytes + candidate.bytes > GENERATION_CONTENT_TARGET_BYTES
+    ) {
+      batches.push([candidate])
+      batchesByTraceId.set(traceId, batches)
+      bytesByTraceId.set(traceId, candidate.bytes)
+      continue
+    }
+    batch.push(candidate)
+    bytesByTraceId.set(traceId, batchBytes + candidate.bytes)
+  }
+  return batchesByTraceId
+}
+
+const toGenerationFact = (row: GenerationFactRow, content: SessionGenerationContent | null): SessionGenerationFact => {
+  const tokens: SpanTokenCounts = {
+    tokensInput: parseClickHouseNumber(row.tokens_input),
+    tokensOutput: parseClickHouseNumber(row.tokens_output),
+    tokensCacheRead: parseClickHouseNumber(row.tokens_cache_read),
+    tokensCacheCreate: parseClickHouseNumber(row.tokens_cache_create),
+    tokensReasoning: parseClickHouseNumber(row.tokens_reasoning),
+  }
+  const costTotalMicrocents = parseClickHouseNumber(row.cost_total_microcents)
+  const capturedBytes = {
+    inputMessages: parseClickHouseNumber(row.input_message_bytes),
+    outputMessages: parseClickHouseNumber(row.output_message_bytes),
+    toolDefinitions: parseClickHouseNumber(row.tool_definition_bytes),
+  }
+  const provider = normalizeCHString(row.provider)
+  const model = normalizeCHString(row.model)
+  const operation = normalizeCHString(row.operation)
+  const loaded = content !== null
+  const modelContext = classifyGenerationModelContext({ provider, model })
+  const costSource = parseCostSource(normalizeCHString(row.cost_source), {
+    costTotalMicrocents,
+    costIsEstimated: row.cost_is_estimated === 1,
+    hasTokens: Object.values(tokens).some((value) => value > 0),
+  })
+  return {
+    traceId: toTraceId(normalizeCHString(row.trace_id)),
+    spanId: SpanId(normalizeCHString(row.span_id)),
+    parentSpanId: normalizeCHString(row.parent_span_id),
+    operation: operation as Operation,
+    provider,
+    model,
+    responseModel: normalizeCHString(row.response_model),
+    startTime: parseCHDate(row.start_time),
+    endTime: parseCHDate(row.end_time),
+    durationNs: parseClickHouseNumber(row.duration_ns),
+    name: normalizeCHString(row.name),
+    toolName: normalizeCHString(row.tool_name),
+    agentName: normalizeCHString(row.agent_name),
+    tokens,
+    costInputMicrocents: parseClickHouseNumber(row.cost_input_microcents),
+    costOutputMicrocents: parseClickHouseNumber(row.cost_output_microcents),
+    costTotalMicrocents,
+    costSource,
+    costPricedProvider: normalizeCHString(row.cost_priced_provider),
+    costPricedModel: normalizeCHString(row.cost_priced_model),
+    isStreaming: row.is_streaming === 1,
+    timeToFirstTokenNs: parseClickHouseNumber(row.time_to_first_token_ns),
+    finishReasons: row.finish_reasons.map(normalizeCHString),
+    statusCode: INT_TO_STATUS_CODE[row.status_code] ?? "unset",
+    statusMessage: row.status_message,
+    errorType: normalizeCHString(row.error_type),
+    capturedBytes,
+    content,
+    inputContentState: classifyGenerationContent({ storedBytes: capturedBytes.inputMessages, loaded }),
+    outputContentState: classifyGenerationContent({ storedBytes: capturedBytes.outputMessages, loaded }),
+    toolDefinitionContentState: classifyGenerationContent({ storedBytes: capturedBytes.toolDefinitions, loaded }),
+    pricingState: classifyGenerationPricing({ operation, provider, model, costSource }),
+    modelContextState: modelContext.state,
+    modelContextLimitTokens: modelContext.contextLimitTokens,
+  }
+}
+
+const toToolCallFact = (row: ToolCallFactRow): SessionToolCallFact => ({
+  traceId: toTraceId(normalizeCHString(row.trace_id)),
+  spanId: SpanId(normalizeCHString(row.span_id)),
+  parentSpanId: normalizeCHString(row.parent_span_id),
+  toolCallId: normalizeCHString(row.tool_call_id),
+  toolName: normalizeCHString(row.tool_name),
+  normalizedToolName: normalizeCHString(row.normalized_tool_name),
+  inputHash: normalizeCHString(row.input_hash),
+  outputHash: normalizeCHString(row.output_hash),
+  inputBytes: parseClickHouseNumber(row.input_bytes),
+  outputBytes: parseClickHouseNumber(row.output_bytes),
+  startTime: parseCHDate(row.start_time),
+  endTime: parseCHDate(row.end_time),
+  durationNs: parseClickHouseNumber(row.duration_ns),
+  statusCode: INT_TO_STATUS_CODE[row.status_code] ?? "unset",
+  statusMessage: row.status_message,
+  errorType: normalizeCHString(row.error_type),
+})
+
 const BOUNDED_READ_SETTINGS = {
   output_format_parallel_formatting: 0,
   max_memory_usage: "1000000000",
   max_execution_time: 5,
+} as const
+
+const GENERATION_READ_SETTINGS = {
+  ...BOUNDED_READ_SETTINGS,
+  max_threads: 1,
+  max_block_size: "256",
 } as const
 
 const PAGINATED_READ_SETTINGS = {
@@ -938,6 +1211,167 @@ export const SpanRepositoryLive = Layer.effect(
           )
       })
 
+    const listGenerationFactsByTraceIds: SpanRepositoryShape["listGenerationFactsByTraceIds"] = ({
+      organizationId,
+      projectId,
+      traceIds,
+      startTimeTo,
+      contentBudget,
+      sessionKeyByTraceId,
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        if (traceIds.length === 0) return []
+        const uniqueTraceIds = [...new Set(traceIds.map((traceId) => traceId as string))]
+        const startToClause = startTimeTo
+          ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
+          : ""
+        const scope = {
+          organizationId: organizationId as string,
+          projectId: projectId as string,
+          ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
+        }
+
+        const factRowsByBatch = yield* Effect.forEach(
+          batchValues(uniqueTraceIds, GENERATION_FACT_TRACE_BATCH_SIZE),
+          (traceIdBatch) =>
+            chSqlClient
+              .query(async (client) => {
+                const result = await client.query({
+                  query: `SELECT ${GENERATION_FACT_PROJECTED_COLUMNS}
+                        FROM (
+                          SELECT ${GENERATION_FACT_COLUMNS}, ingested_at
+                          FROM spans
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            AND trace_id IN ({traceIds:Array(String)})
+                            ${startToClause}
+                          ORDER BY trace_id, span_id, ingested_at DESC
+                          LIMIT 1 BY trace_id, span_id
+                        )
+                        ORDER BY start_time ASC, trace_id ASC, span_id ASC`,
+                  query_params: { ...scope, traceIds: traceIdBatch },
+                  format: "JSONEachRow",
+                  clickhouse_settings: GENERATION_READ_SETTINGS,
+                })
+                return result.json<GenerationFactRow>()
+              })
+              .pipe(Effect.mapError((error) => toRepositoryError(error, "listGenerationFactsByTraceIds"))),
+          { concurrency: 1 },
+        )
+        const rows = factRowsByBatch.flat().sort(compareGenerationFactRows)
+
+        const selected = selectGenerationContentWithinBudget({
+          candidates: generationContentCandidates(rows, sessionKeyByTraceId),
+          budget: contentBudget,
+        })
+        const wanted = new Set(selected.map((candidate) => spanKey(candidate.traceId, candidate.spanId)))
+        if (wanted.size === 0) return rows.map((row) => toGenerationFact(row, null))
+
+        const contentByKey = new Map<string, SessionGenerationContent>()
+        yield* Effect.forEach(
+          selectedContentBatchesByTraceId(selected),
+          ([traceId, batches]) =>
+            Effect.forEach(
+              batches,
+              (batch) =>
+                chSqlClient
+                  .query(async (client) => {
+                    const result = await client.query({
+                      query: `SELECT trace_id, span_id, input_messages, output_messages, tool_definitions
+                            FROM (
+                              SELECT trace_id, span_id, input_messages, output_messages, tool_definitions, ingested_at
+                              FROM spans
+                              WHERE organization_id = {organizationId:String}
+                                AND project_id = {projectId:String}
+                                AND trace_id = {traceId:FixedString(32)}
+                                AND span_id IN ({spanIds:Array(String)})
+                                ${startToClause}
+                              ORDER BY trace_id, span_id, ingested_at DESC
+                              LIMIT 1 BY trace_id, span_id
+                            )`,
+                      query_params: {
+                        ...scope,
+                        traceId,
+                        spanIds: batch.map((candidate) => candidate.spanId as string),
+                      },
+                      format: "JSONEachRow",
+                      clickhouse_settings: GENERATION_READ_SETTINGS,
+                    })
+                    return result.json<GenerationContentRow>()
+                  })
+                  .pipe(
+                    Effect.map((contentRows) => addGenerationContentByKey(contentRows, wanted, contentByKey)),
+                    Effect.mapError((error) => toRepositoryError(error, "listGenerationFactsByTraceIds.content")),
+                  ),
+              { concurrency: 1, discard: true },
+            ),
+          { concurrency: 1, discard: true },
+        )
+        return rows.map((row) =>
+          toGenerationFact(
+            row,
+            contentByKey.get(spanKey(normalizeCHString(row.trace_id), normalizeCHString(row.span_id))) ?? null,
+          ),
+        )
+      })
+
+    const listToolCallFactsByTraceIds: SpanRepositoryShape["listToolCallFactsByTraceIds"] = ({
+      organizationId,
+      projectId,
+      traceIds,
+      startTimeTo,
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        if (traceIds.length === 0) return []
+        const startToClause = startTimeTo
+          ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
+          : ""
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              // Payload hashes are computed server-side: tool I/O can hold whole files, so a
+              // scoring window must never transfer it. Whitespace-normalized rather than
+              // JSON-canonical, which can under-detect repetition but never invent it.
+              query: `SELECT trace_id, span_id, parent_span_id, tool_call_id, tool_name,
+                             normalized_tool_name, input_hash, output_hash, input_bytes, output_bytes,
+                             start_time, end_time, duration_ns, status_code, status_message, error_type
+                    FROM (
+                      SELECT trace_id, span_id, parent_span_id, tool_call_id, tool_name, ingested_at,
+                             lower(trimBoth(tool_name)) AS normalized_tool_name,
+                             if(empty(tool_input), '', hex(cityHash64(replaceRegexpAll(tool_input, '\\\\s+', ' ')))) AS input_hash,
+                             if(empty(tool_output), '', hex(cityHash64(replaceRegexpAll(tool_output, '\\\\s+', ' ')))) AS output_hash,
+                             length(tool_input) AS input_bytes,
+                             length(tool_output) AS output_bytes,
+                             start_time, end_time, duration_ns, status_code, status_message, error_type
+                      FROM spans
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND trace_id IN ({traceIds:Array(String)})
+                        AND operation = 'execute_tool'
+                        ${startToClause}
+                      ORDER BY trace_id, span_id, ingested_at DESC
+                      LIMIT 1 BY trace_id, span_id
+                    )
+                    ORDER BY start_time ASC, trace_id ASC, span_id ASC`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                traceIds: Array.from(traceIds) as string[],
+                ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
+              },
+              format: "JSONEachRow",
+              clickhouse_settings: BOUNDED_READ_SETTINGS,
+            })
+            return result.json<ToolCallFactRow>()
+          })
+          .pipe(
+            Effect.map((rows) => rows.map(toToolCallFact)),
+            Effect.mapError((error) => toRepositoryError(error, "listToolCallFactsByTraceIds")),
+          )
+      })
+
     return {
       // TODO(repositories): rename insert -> save to keep repository write
       // verbs consistent across append-only and upsert-backed stores.
@@ -1012,6 +1446,10 @@ export const SpanRepositoryLive = Layer.effect(
       listByTraceId,
 
       listByTraceIds,
+
+      listGenerationFactsByTraceIds,
+
+      listToolCallFactsByTraceIds,
 
       listBySessionId,
 

@@ -1,7 +1,7 @@
 import { ClaudeCodeIcon, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
-import { ArrowRightIcon, BrainCircuitIcon, CheckIcon, MinusIcon } from "lucide-react"
+import { ArrowRightIcon, BrainCircuitIcon, CheckIcon, GaugeIcon, MinusIcon } from "lucide-react"
 import { adminGetProject } from "../../../domains/admin/projects.functions.ts"
 import { adminGetProjectTaxonomy } from "../../../domains/admin/taxonomy.functions.ts"
 import { ActionRow, ActionsSection } from "../-components/actions-section/section.tsx"
@@ -13,6 +13,7 @@ import {
   PropertiesStrip,
 } from "../-components/dashboard/index.ts"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
+import { AgentScoreRecalculateButton } from "./-components/agent-score-recalculate-button.tsx"
 import { MetricsSection } from "./-components/metrics-section.tsx"
 import { SessionIntelligenceBackfillButton } from "./-components/session-intelligence-backfill-button.tsx"
 import { TaxonomySection } from "./-components/taxonomy-section.tsx"
@@ -138,6 +139,12 @@ function BackofficeProjectDetailPage() {
           title="Generate Claude Code Wrapped"
           description="Enqueue the weekly summary email now. The worker will generate it when the project has Claude Code activity in the last 7 days."
           action={<WrappedTriggerButton projectId={project.id} projectName={project.name} />}
+        />
+        <ActionRow
+          icon={GaugeIcon}
+          title="Recalculate Agent Score"
+          description="Recompute today's score and refresh the cause rows and coverage the Agent Score page shows. A score already published for today is not changed."
+          action={<AgentScoreRecalculateButton projectId={project.id} projectName={project.name} />}
         />
         <ActionRow
           icon={BrainCircuitIcon}

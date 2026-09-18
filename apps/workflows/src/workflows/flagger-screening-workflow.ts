@@ -43,6 +43,7 @@ export const flaggerScreeningWorkflow = async (input: FlaggerScreeningWorkflowIn
             flaggerSlug: classification.flaggerSlug,
             reason: classification.reason,
             hints: screening.hints,
+            screeningSelection: classification.screeningSelection,
           },
         ],
       })

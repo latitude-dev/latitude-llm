@@ -1,7 +1,7 @@
 {
   "name": "@latitude-data/openclaw-telemetry",
-  "version": "0.0.9",
-  "description": "OpenClaw plugin that streams LLM calls, tool executions, and agent runs to Latitude as OTLP traces",
+  "version": "0.1.0",
+  "description": "OpenClaw plugin that streams agent runs to Latitude as OTLP traces: model calls with usage and cost, tool calls and definitions, memory, subagents, cron runs, and user identity",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
   "keywords": [
@@ -25,7 +25,9 @@
   "main": "./dist/plugin.js",
   "types": "./dist/plugin.d.ts",
   "openclaw": {
-    "extensions": ["./dist/plugin.js"]
+    "extensions": [
+      "./dist/plugin.js"
+    ]
   },
   "exports": {
     ".": {

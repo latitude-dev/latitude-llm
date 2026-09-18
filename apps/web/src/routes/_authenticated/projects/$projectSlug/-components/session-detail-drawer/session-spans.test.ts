@@ -24,6 +24,8 @@ function makeSpan(
     kind: "internal",
     statusCode: "ok",
     statusMessage: "",
+    errorType: "",
+    providerErrorClassification: null,
     operation: "",
     provider: "",
     model: "",
@@ -36,6 +38,8 @@ function makeSpan(
     costTotalMicrocents: 0,
     timeToFirstTokenNs: 0,
     isStreaming: false,
+    finishReasons: [],
+    finishReasonClassifications: [],
     ingestedAt: partial.endTime,
     ...partial,
   }

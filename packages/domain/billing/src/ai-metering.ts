@@ -5,6 +5,7 @@ import { buildBillingIdempotencyKey, type ChargeableAction } from "./constants.t
 import { AIMeteringRecordError } from "./errors.ts"
 import type { BillingUsageEventRepository } from "./ports/billing-usage-event-repository.ts"
 import type { BillingUsagePeriodRepository } from "./ports/billing-usage-period-repository.ts"
+import type { BillingMeteringKeyParts } from "./usage-breakdown.ts"
 import type { AuthorizedBillableActionContext } from "./use-cases/authorize-billable-action.ts"
 import { recordBillableActionUseCase } from "./use-cases/record-billable-action.ts"
 
@@ -41,8 +42,9 @@ export interface MakeAIMeteringScopeInput {
    * in call order, so retries of an operation whose calls replay deterministically
    * re-produce the same keys and dedupe instead of double-charging. Parallel AI
    * calls under one scope would break that guarantee — keep scoped calls sequential.
+   * The leading label is what the usage breakdown reads back from the ledger.
    */
-  readonly keyParts: readonly string[]
+  readonly keyParts: BillingMeteringKeyParts
   readonly context: AuthorizedBillableActionContext
   readonly traceId?: TraceId | undefined
 }

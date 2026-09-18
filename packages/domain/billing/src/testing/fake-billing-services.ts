@@ -3,6 +3,7 @@ import {
   type BillingOverride,
   type BillingUsageEvent,
   type BillingUsageEventRepository,
+  type BillingUsageLedgerSummaryRow,
   type BillingUsagePeriod,
   type BillingUsagePeriodRepository,
   calculateOverageAmountMills,
@@ -46,6 +47,17 @@ export const createFakeBillingOverrideRepository = (overrides?: Partial<BillingO
   return { repository, overridesByOrganizationId }
 }
 
+const isInPeriod = (
+  event: BillingUsageEvent,
+  period: { readonly organizationId: string; readonly periodStart: Date; readonly periodEnd: Date },
+) =>
+  event.organizationId === period.organizationId &&
+  event.billingPeriodStart.getTime() === period.periodStart.getTime() &&
+  event.billingPeriodEnd.getTime() === period.periodEnd.getTime()
+
+const meteringLabelOf = (event: BillingUsageEvent): string | null =>
+  event.action === "llm-call" || event.action === "semantic-query" ? (event.idempotencyKey.split(":")[2] ?? null) : null
+
 export const createFakeBillingUsageEventRepository = (overrides?: Partial<BillingUsageEventRepositoryShape>) => {
   const eventsByPeriodAndIdempotencyKey = new Map<string, BillingUsageEvent>()
 
@@ -84,6 +96,26 @@ export const createFakeBillingUsageEventRepository = (overrides?: Partial<Billin
           .filter((event) => event.idempotencyKey === key)
           .sort((a, b) => b.happenedAt.getTime() - a.happenedAt.getTime())[0] ?? null,
       ),
+    summarizeByPeriod: (input) =>
+      Effect.sync(() => {
+        const summaries = new Map<string, BillingUsageLedgerSummaryRow>()
+
+        for (const event of eventsByPeriodAndIdempotencyKey.values()) {
+          if (!isInPeriod(event, input)) continue
+
+          const meteringLabel = meteringLabelOf(event)
+          const key = `${event.projectId}:${event.action}:${meteringLabel ?? ""}`
+          const existing = summaries.get(key)
+          summaries.set(key, {
+            projectId: event.projectId,
+            action: event.action,
+            meteringLabel,
+            credits: (existing?.credits ?? 0) + event.credits,
+          })
+        }
+
+        return [...summaries.values()]
+      }),
     ...overrides,
   }
 

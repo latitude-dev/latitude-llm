@@ -11,7 +11,7 @@ Latitude uses a universal filter system across the platform. The same filters yo
 
 A filter is a set of field conditions. Active conditions combine with **AND** logic. For example, "Status is error" and "Cost is greater than $1" returns only traces that match both conditions.
 
-Filters appear on the Traces page (alongside the search query) and in the configuration UI for evaluation triggers.
+Filters appear on the Traces page (alongside the search query) and in the configuration UI for evaluation triggers. The filter panel groups fields by function: **Identity**, **Status**, **Models & tools**, **Performance & cost**, **Conversation**, **Scores**, and **Custom**.
 
 <Frame>
   <img

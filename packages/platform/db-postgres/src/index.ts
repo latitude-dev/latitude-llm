@@ -1,6 +1,10 @@
 export { InvalidEnvValueError, MissingEnvValueError } from "@platform/env"
 // Re-export drizzle-orm helpers to ensure consistent type instances
 export { and, asc, desc, eq, inArray, max } from "drizzle-orm"
+export {
+  type BoundedReadPostgresConfig,
+  createBoundedReadPostgresClient,
+} from "./bounded-read-client.ts"
 export type { Operator, PostgresClient, PostgresConfig, PostgresDb } from "./client.ts"
 export {
   closePostgres,
@@ -37,6 +41,7 @@ export { AgentDispatchConfigRepositoryLive } from "./repositories/agent-dispatch
 export { AgentDispatchCredentialRepositoryLive } from "./repositories/agent-dispatch-credential-repository.ts"
 export { AgentDispatchIntegrationRepositoryLive } from "./repositories/agent-dispatch-integration-repository.ts"
 export { AgentDispatchRepositoryLive } from "./repositories/agent-dispatch-repository.ts"
+export { AgentScoreSnapshotRepositoryLive } from "./repositories/agent-score-snapshot-repository.ts"
 export { IncidentRepositoryLive } from "./repositories/alert-incident-repository.ts"
 export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
 export { BillingOverrideRepositoryLive } from "./repositories/billing-override-repository.ts"
@@ -84,6 +89,7 @@ export { ProjectRepositoryLive } from "./repositories/project-repository.ts"
 export { SandboxRepositoryLive } from "./repositories/sandbox-repository.ts"
 export { SavedSearchRepositoryLive } from "./repositories/saved-search-repository.ts"
 export { ScoreRepositoryLive } from "./repositories/score-repository.ts"
+export { SessionAssessmentBulkJudgmentSourceLive } from "./repositories/session-assessment-bulk-source.ts"
 export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"
 export { ShowcaseRepositoryLive } from "./repositories/showcase-repository.ts"
 export { SignalRepositoryLive } from "./repositories/signal-repository.ts"

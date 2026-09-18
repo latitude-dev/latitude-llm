@@ -19,11 +19,22 @@ export { ClaudeCodeSpanReaderLive } from "./repositories/claude-code-span-reader
 export { CostAnalyticsRepositoryLive } from "./repositories/cost-analytics-repository.ts"
 export { DatasetRowRepositoryLive } from "./repositories/dataset-row-repository.ts"
 export { FacetProjectionRepositoryLive } from "./repositories/facet-projection-repository.ts"
+export { FlaggerCoverageRepositoryLive } from "./repositories/flagger-coverage-repository.ts"
+export { FlaggerScreeningDecisionRepositoryLive } from "./repositories/flagger-screening-decision-repository.ts"
+export { FleetLatencyReferenceRepositoryLive } from "./repositories/fleet-latency-reference-repository.ts"
+export { JevShadowObservationRepositoryLive } from "./repositories/jev-shadow-observation-repository.ts"
 export { MemoryAnalyticsRepositoryLive } from "./repositories/memory-analytics-repository.ts"
 export { MemoryRepositoryLive } from "./repositories/memory-repository.ts"
 export { MessageEmbeddingRepositoryLive } from "./repositories/message-embedding-repository.ts"
 export { MetricSeriesReaderLive } from "./repositories/metric-series-reader.ts"
+export { OutcomeWindowDecisionSourceLive } from "./repositories/outcome-window-decision-source.ts"
+export { SafetyWindowDecisionSourceLive } from "./repositories/safety-window-decision-source.ts"
 export { ScoreAnalyticsRepositoryLive } from "./repositories/score-analytics-repository.ts"
+export {
+  ScoreProjectSweepSourceLive,
+  ScoreWindowSourceLive,
+} from "./repositories/score-window-source.ts"
+export { SessionAssessmentBulkTelemetrySourceLive } from "./repositories/session-assessment-bulk-source.ts"
 export {
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,

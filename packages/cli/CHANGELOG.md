@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.13.0] - 2026-09-13
+
+### Added
+
+- `latitude agent-score get` — read today's published Agent Score and its five dimensions for a project.
+- `latitude agent-score history` — list a project's published Agent Scores over a date range.
+- `latitude agent-score causes` — inspect the ranked evidence explaining a project's current Agent Score.
+
+## [7.12.0] - 2026-09-08
+
+### Added
+
+- `latitude usage get` — the organization's credit usage for the current billing period: plan, period bounds, included/consumed/remaining/overage credits, and the split by product area (traces, flaggers, signals, behaviors, annotations) and by project.
+- `latitude projects usage --project-slug <slug>` — one project's credits for the current billing period, split by product area.
+- `latitude sessions get-assessment` — inspect a session's five Agent Score dimensions, reader coverage, and cursor-paginated evidence without embedding raw telemetry content.
 ## [7.11.0] - 2026-09-02
 
 ### Added

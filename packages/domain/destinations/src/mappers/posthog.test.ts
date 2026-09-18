@@ -92,7 +92,7 @@ const baseConfig: SpansSourceConfig = {
 }
 
 const buildSpanUrl = (span: SpanDetail) =>
-  `https://app.latitude.so/projects/${span.projectId}?traceId=${span.traceId}&spanId=${span.spanId}`
+  `https://console.latitude.so/projects/${span.projectId}?tab=traces&traceId=${span.traceId}&spanId=${span.spanId}`
 
 const map = (
   spans: readonly SpanDetail[],

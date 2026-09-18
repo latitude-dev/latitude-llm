@@ -60,6 +60,37 @@ describe("loadConfig", () => {
     expect(loadConfig({ apiKey: "k", project: "p", debug: true }).debug).toBe(true)
   })
 
+  it("reads enrichment and feature switches from pluginConfig", () => {
+    const config = loadConfig({
+      apiKey: "k",
+      project: "p",
+      serviceName: "alescript",
+      tags: ["prod", " eu "],
+      metadata: { deployment: "staging", replicas: 2 },
+      memory: false,
+      memoryContent: false,
+      toolDefinitions: false,
+      maxContentChars: 1024,
+    })
+    expect(config.serviceName).toBe("alescript")
+    expect(config.tags).toEqual(["prod", "eu"])
+    expect(config.metadata).toEqual({ deployment: "staging", replicas: "2" })
+    expect(config.memory).toBe(false)
+    expect(config.memoryContent).toBe(false)
+    expect(config.toolDefinitions).toBe(false)
+    expect(config.maxContentChars).toBe(1024)
+  })
+
+  it("accepts comma-separated tags and defaults the feature switches on", () => {
+    const config = loadConfig({ apiKey: "k", project: "p", tags: "a, b" })
+    expect(config.tags).toEqual(["a", "b"])
+    expect(config.serviceName).toBe("openclaw")
+    expect(config.memory).toBe(true)
+    expect(config.memoryContent).toBe(true)
+    expect(config.toolDefinitions).toBe(true)
+    expect(config.maxContentChars).toBe(262_144)
+  })
+
   it("reads custom redaction config from pluginConfig", () => {
     const config = loadConfig({
       apiKey: "k",
@@ -76,7 +107,20 @@ describe("loadConfig", () => {
   // exfiltration. The runtime bundle MUST contain zero `process.env` reads.
   it("contains no process.env references in the source (env-harvesting scan guard)", () => {
     const here = dirname(fileURLToPath(import.meta.url))
-    const sources = ["config.ts", "plugin.ts", "span-builder.ts", "client.ts", "otlp.ts", "messages.ts", "logger.ts"]
+    const sources = [
+      "config.ts",
+      "plugin.ts",
+      "span-builder.ts",
+      "transport.ts",
+      "otlp.ts",
+      "messages.ts",
+      "logger.ts",
+      "memory.ts",
+      "context.ts",
+      "usage.ts",
+      "tools.ts",
+      "redaction.ts",
+    ]
     for (const file of sources) {
       const content = readFileSync(join(here, file), "utf-8")
       expect(content, `${file} must not contain process.env (env-harvesting scan rule)`).not.toMatch(/process\.env/)

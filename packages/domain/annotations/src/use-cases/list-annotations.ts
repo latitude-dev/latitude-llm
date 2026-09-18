@@ -39,6 +39,10 @@ export const listTraceAnnotationsUseCase = Effect.fn("annotations.listTraceAnnot
 
   const scoreRepository = yield* ScoreRepository
 
+  // A flagger's positive reference verdict is a measurement, not an annotation
+  // a reviewer left, so it never joins this list. Excluded in the query rather
+  // than over the page, or a hidden verdict would spend the page budget and
+  // displace a real annotation.
   return yield* scoreRepository.listByTraceId({
     projectId: parsed.projectId,
     traceId: parsed.traceId,
@@ -47,6 +51,7 @@ export const listTraceAnnotationsUseCase = Effect.fn("annotations.listTraceAnnot
       limit: parsed.limit,
       offset: parsed.offset,
       draftMode: parsed.draftMode,
+      omitFlaggerReferenceVerdicts: true,
     },
   })
 })

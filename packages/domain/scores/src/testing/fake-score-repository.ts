@@ -88,6 +88,17 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
     listBySourceId: () => Effect.succeed(EMPTY_PAGE),
     listByTraceId: () => Effect.succeed(EMPTY_PAGE),
     listByTraceIds: () => Effect.succeed(EMPTY_PAGE),
+    listBySessionsAndTraces: ({ organizationId, projectId, sessionIds, traceIds, createdAtTo }) =>
+      Effect.succeed(
+        [...scores.values()].filter(
+          (score) =>
+            score.organizationId === organizationId &&
+            score.projectId === projectId &&
+            score.createdAt <= createdAtTo &&
+            ((score.sessionId !== null && sessionIds.includes(score.sessionId)) ||
+              (score.traceId !== null && traceIds.includes(score.traceId))),
+        ),
+      ),
     countAnnotationsByTraceIds: () => Effect.succeed([]),
     listBySessionId: () => Effect.succeed(EMPTY_PAGE),
     listBySpanId: () => Effect.succeed(EMPTY_PAGE),
@@ -120,7 +131,7 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
             score.draftedAt === null,
         ) ?? null,
       ),
-    listPublishedSystemAnnotationsBySession: ({ projectId, sessionId, limit = 200 }) =>
+    listPublishedSystemAnnotationsBySession: ({ projectId, sessionId, flaggerSlug, limit = 200 }) =>
       Effect.succeed(
         [...scores.values()]
           .filter(
@@ -129,7 +140,9 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
               score.sourceType === "annotation" &&
               score.sourceId === "SYSTEM" &&
               score.sessionId === sessionId &&
-              score.draftedAt === null,
+              score.draftedAt === null &&
+              (flaggerSlug === undefined ||
+                (score.metadata as { flaggerSlug?: string } | null)?.flaggerSlug === flaggerSlug),
           )
           .slice(0, limit),
       ),

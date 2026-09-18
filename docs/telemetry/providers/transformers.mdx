@@ -3,9 +3,14 @@ title: Hugging Face Transformers
 description: Connect your Hugging Face Transformers application to Latitude for observability.
 ---
 
+import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
+
+<SkillsCallout />
+
 ## Overview
 
-This guide shows you how to integrate **Latitude Telemetry** into an application that runs models locally with **Hugging Face Transformers**.
+This guide shows you how to integrate **Latitude Telemetry** into an application that runs models locally with **Hugging Face Transformers**. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 <Check>
   You'll keep calling Transformers exactly as you do today. Telemetry simply
@@ -21,7 +26,7 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - A project that uses the **Transformers** library (`transformers`)
 - A **Hugging Face token** for gated models (set as `HF_TOKEN`)
@@ -82,3 +87,7 @@ Once connected, traces appear automatically in Latitude:
 
 1. Open your **project** in the Latitude dashboard
 2. Each execution shows input/output messages, model, token usage, latency, and errors
+
+## See what was captured
+
+<FirstArtifact />

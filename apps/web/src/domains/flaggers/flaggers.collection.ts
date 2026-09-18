@@ -1,9 +1,16 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
 import { useLiveQuery } from "@tanstack/react-db"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
-import { type FlaggerRecord, listFlaggersByProject, updateFlagger } from "./flaggers.functions.ts"
+import { projectScopeData, projectScopeKey, useProjectScope } from "../projects/project-scope.tsx"
+import {
+  type FlaggerRecord,
+  getProjectFlaggerCoverage,
+  listFlaggersByProject,
+  updateFlagger,
+} from "./flaggers.functions.ts"
 
 const queryClient = getQueryClient()
 const flaggersQueryKey = (projectId: string) => ["flaggers", projectId] as const
@@ -81,4 +88,19 @@ export function updateFlaggerMutation(input: {
 
 export async function invalidateProjectFlaggers(projectId: string) {
   await queryClient.invalidateQueries({ queryKey: flaggersQueryKey(projectId) })
+}
+
+export function useProjectFlaggerCoverage(input: {
+  readonly projectId: string
+  readonly fromIso: string
+  readonly toIso: string
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "flagger-coverage", input],
+    queryFn: () => getProjectFlaggerCoverage({ data: { ...projectScopeData(scope), ...input } }),
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+    enabled: input.projectId.length > 0,
+  })
 }

@@ -168,6 +168,23 @@ describe("/v1/mcp", () => {
     expect(toolNames).toEqual(expect.arrayContaining(["createApiKey", "listApiKeys", "revokeApiKey"]))
   })
 
+  it<ApiTestContext>("tools/list keeps defaulted inputs optional", async ({ app, database }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const res = await sendMcpRequest(app, tenant.oauthAccessToken, { jsonrpc: "2.0", id: 3, method: "tools/list" })
+    expect(res.status).toBe(200)
+    const payload = (await readSseJsonRpc(res)) as {
+      result?: {
+        tools?: ReadonlyArray<{
+          name: string
+          inputSchema?: { required?: readonly string[]; properties?: Record<string, { default?: unknown }> }
+        }>
+      }
+    }
+    const listTraces = payload.result?.tools?.find((tool) => tool.name === "listTraces")
+    expect(listTraces?.inputSchema?.properties?.limit).toHaveProperty("default")
+    expect(listTraces?.inputSchema?.required).toEqual(["projectSlug"])
+  })
+
   it<ApiTestContext>("tools/list includes the tool-analytics tools", async ({ app, database }) => {
     const tenant = await createOAuthTenantSetup(database)
     const res = await sendMcpRequest(app, tenant.oauthAccessToken, { jsonrpc: "2.0", id: 20, method: "tools/list" })

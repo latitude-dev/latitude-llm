@@ -5,6 +5,7 @@ Full command reference for `latitude`.
 ## Commands
 
 - [`latitude account`](#latitude-account)
+- [`latitude agent-score`](#latitude-agent-score)
 - [`latitude analytics`](#latitude-analytics)
 - [`latitude annotations`](#latitude-annotations)
 - [`latitude api-keys`](#latitude-api-keys)
@@ -24,6 +25,7 @@ Full command reference for `latitude`.
 - [`latitude spans`](#latitude-spans)
 - [`latitude tools`](#latitude-tools)
 - [`latitude traces`](#latitude-traces)
+- [`latitude usage`](#latitude-usage)
 - [`latitude users`](#latitude-users)
 
 ---
@@ -48,11 +50,47 @@ Returns the caller's account snapshot: the organization the request is scoped to
 
 ---
 
+### `latitude agent-score`
+
+#### `latitude agent-score causes`
+
+Returns what explains the project's current Agent Score: ranked causes per dimension, and where Outcome failures and Safety harm concentrate. This is current evidence from the live window and does not reconstruct any stored score.
+
+`GET /v1/projects/{projectSlug}/agent-score/causes`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+
+#### `latitude agent-score get`
+
+Returns the project's Agent Score for today: one number from 0 to 100 and the five dimensions behind it. A score is published only when every dimension meets its coverage and confidence floors, so a project can have no score for a day.
+
+`GET /v1/projects/{projectSlug}/agent-score`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+
+#### `latitude agent-score history`
+
+Returns the project's published Agent Scores in a date range, oldest first. Days the project did not publish are absent from the list.
+
+`GET /v1/projects/{projectSlug}/agent-score/history`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--from` | `string (date)` | No | Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`. |
+| `--to` | `string (date)` | No | Inclusive end date as `YYYY-MM-DD`. Defaults to today. |
+
+---
+
 ### `latitude analytics`
 
 #### `latitude analytics query`
 
-Compute a metric over a filtered stream (`traces`/`sessions`/`spans`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and dashboards.
+Compute a metric over a filtered stream (`traces`, `sessions`, `spans`, `scores`, `behaviors`, `moments`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and reports.
 
 `POST /v1/projects/{projectSlug}/analytics/query`
 
@@ -510,7 +548,7 @@ Returns a single member of the caller's organization, including their role and u
 
 #### `latitude members invite`
 
-Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
+Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user). Only organization owners and admins can invite members.
 
 `POST /v1/members`
 
@@ -838,6 +876,16 @@ Updates a project's name and/or settings. Renaming never changes the slug, and t
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
+#### `latitude projects usage`
+
+Returns the credits one project spent in the current billing period, broken down by product area.
+
+`GET /v1/projects/{projectSlug}/usage`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+
 ---
 
 ### `latitude saved-searches`
@@ -953,6 +1001,18 @@ Returns a single session by id, including its `conversation`: the system instruc
 |------|------|----------|-------------|
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+
+#### `latitude sessions get-assessment`
+
+Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/assessment`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+| `--cursor` | `string` | No | Opaque cursor returned by a previous assessment page. Omit for the first page. |
 
 #### `latitude sessions get-memory`
 
@@ -1498,6 +1558,16 @@ Returns every span belonging to the trace, ordered by `startTime` ascending. Spa
 |------|------|----------|-------------|
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--trace-id` | `string` | Yes | 32-character trace identifier. |
+
+---
+
+### `latitude usage`
+
+#### `latitude usage get`
+
+Returns the organization's credit usage for the current billing period, broken down by product area and by project.
+
+`GET /v1/usage`
 
 ---
 

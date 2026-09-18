@@ -20,9 +20,12 @@ The page is first in the Observe group, above Sessions. It is project-scoped and
 snapshots for the headline and history. Evidence and causes are resolved dynamically from the current
 selected window.
 
-The headline uses the current UTC date's snapshot. If that snapshot was not published, the current
-Agent Score is unavailable; the page never substitutes an older score. Older snapshots remain in the
-trend.
+The headline uses the latest published snapshot. The page compares that snapshot's date with the
+current UTC date. When they differ, it labels the headline "Latest available", shows the score date
+and exact computation timestamp, and says that no score was published today. The five dimension
+sections and readiness table remain today's evidence; they do not use stale score values or claim to
+explain the older headline. Older snapshots remain in the trend without synthetic points for missing
+dates.
 
 ## Level one
 
@@ -41,9 +44,9 @@ The five dimension cards show the number, interval, meaning, native measurement,
 | --- | --- |
 | Outcome | expected successful sessions per 100 comparable sessions |
 | Reliability | one-session operational success rate and chance of 20 consecutive successes |
-| Cost | actual spend and estimated avoidable spend |
+| Cost | five family results, pricing and content coverage, and estimated recoverable spend where available |
 | Speed | observed critical-path time and estimated avoidable time |
-| Safety | confirmed harmful sessions, examined sessions, and chance of 1,000 sessions without harm |
+| Safety | confirmed harmful sessions, examined sessions, and chance of 100 sessions without harm |
 
 Reliability never appears as the 20-session value alone. Its card, dimension section, tooltip, and
 public representation always show the one-session operational success rate beside it.
@@ -59,15 +62,24 @@ Each dimension section contains:
 - score, interval, and one-sentence meaning when the publication gate passes;
 - the formula definition and current native inputs when they are readable;
 - coverage and important missing evidence;
-- causes ranked by expected fix gain;
+- causes ranked by expected fix gain where measured, otherwise issues ranked by
+  inverse-probability-corrected failed or harmed reach;
 - contextual observations that do not lower this dimension;
 - destinations for investigation.
 
+The Cost section always shows all five families. Each family shows its fixed weight, raw metric
+values, healthy/watch/poor labels, readable and applicable units, and missing-evidence reasons.
+Not-applicable and unmeasured are distinct. Metric rows can also show estimated recoverable money,
+but the interface does not translate every token, tool call, memory operation, or recovered incident
+into a dollar claim.
+
 The evidence list contains only metrics with readable observations and promoted signals with an
 eligible occurrence in the selected window. Signals with zero occurrences and scores assigned to
-ignored signals do not appear. Items whose effect is not yet measurable remain visible and say so.
-A signal that informs several dimensions can appear in each applicable dimension section. This is a
-presentation choice and does not duplicate the occurrence in estimation or attribution.
+ignored signals do not appear, and neither does a metric that was read and penalized nothing: a
+healthy reading is coverage, reported as coverage, and never a cause whose effect is zero. Items
+whose effect is not yet measurable remain visible and say so. A signal that informs several
+dimensions can appear in each applicable dimension section. This is a presentation choice and does
+not duplicate the occurrence in estimation or attribution.
 
 Native inputs and causes are labelled as current evidence from the live selected window. They
 explain present behavior but do not claim to reproduce the immutable snapshot, whose stored contract
@@ -78,12 +90,12 @@ contains only scores, intervals, version, window, and eligible-session count.
 | Field | Meaning |
 | --- | --- |
 | Cause | metric, signal, or residual explanation |
-| Evidence | endpoint, probability feature, money, time, or confirmed harm |
-| Reach | affected and readable sessions |
-| Native effect | probability change, avoidable spend, avoidable time, or harmed sessions |
-| Attributed deficit | Shapley share of the displayed dimension deficit |
-| Fix gain | estimated score recovered if this cause alone disappeared |
-| Confidence | interval, independent observation count, and measured or associated label |
+| Evidence | endpoint, issue context, money, time, or confirmed harm |
+| Reach | estimated affected sessions, corrected with stored inclusion probabilities when sampled |
+| Native effect | endpoint reach, Cost-family units, avoidable spend, avoidable time, or harmed sessions |
+| Attributed deficit | Shapley share of the displayed dimension deficit, when measured |
+| Fix gain | estimated score recovered if this cause alone disappeared, when measured |
+| Confidence | interval, raw examined count, independent observation count, and measured or associated label |
 | Destination | Sessions, Tools, Memory, Cost, Signals, Behaviors, or Settings |
 
 Attributed deficits add to the current dynamic estimate. Fix gains may overlap and do not. The
@@ -104,9 +116,9 @@ Agent Score   69 / 100      interval 2.4      7 days      1,240 sessions      v1
 
    78   Outcome        78 successful outcomes expected per 100 comparable sessions
    36   Reliability    95.0% one-session success; 36% chance of 20 in a row
-   84   Cost           $160 of $1,000 spend estimated avoidable
+   84   Cost           Spend 91 · Context 72 · Tools 76 · Memory 94 · Recovery 88
    72   Speed          28 of 100 critical-path hours estimated avoidable
-   90   Safety         1 confirmed failure in 10,000 examined sessions
+   90   Safety         1 confirmed failure in 1,000 examined sessions
 ```
 
 The composite is:
@@ -115,8 +127,9 @@ The composite is:
 69 = round(78*0.35 + 36*0.25 + 84*0.15 + 72*0.15 + 90*0.10)
 ```
 
-Raw spend rose while Cost remained 84 because Cost measures waste as a share of spend. The user can
-read both without treating them as contradictory.
+Raw spend rose while Cost remained 84 because Cost measures resource efficiency, not spend level or
+an exact percentage of unavoidable money. The user can read both without treating them as
+contradictory.
 
 ### Reliability example
 
@@ -140,51 +153,58 @@ the Cost and Speed sections.
 ### Cost example
 
 ```text
-84   Cost              $160 avoidable / $1,000 observed
+84   Cost              Spend 91 · Context 72 · Tools 76 · Memory 94 · Recovery 88
+     $160 estimated recoverable / $1,000 priced spend · 93% content coverage
 
 Cause                                      Native effect   Attributed   Fix gain
-Achievable cache reuse was missed                $70          -7 pts      +7
-Repeated identical tool calls                    $40          -4 pts      +4
-Recovered provider and tool retries              $30          -3 pts      +3
-Refund-loop signal, residual matched effect       $20          -2 pts      +2
+Achievable cache reuse was missed       2.1M input tokens      -5 pts      +5
+Repeated identical tool calls             1,840 call equiv     -4 pts      +4
+Recovered provider and tool retries        86 sessions         -3 pts      +3
+Refund-loop signal, residual association   tools family        -2 pts      +2
+Other measured Cost evidence                                   -2 pts       -
 ```
 
-The native amounts add to the estimated avoidable spend because the session counterfactual has
-already resolved overlap. The signal row uses associated-effect language and displays its matching
-coverage in the expanded view.
+The family contributions close to the Cost deficit after source-atom deduplication. They do not need
+to add to estimated recoverable spend because some cost inefficiency cannot be priced defensibly.
+The signal row uses association language and displays matching coverage and its residual cap in the
+expanded view.
 
 ### Outcome example
 
 ```text
-78   Outcome           mean calibrated P(success) = 0.78
-     890 analyzed sessions, covering 72% of eligible traffic
+78   Outcome           selection-corrected success rate = 0.78
+     890 examined sessions, covering 72% of eligible traffic
 
-Cause                                      Reach          Attributed   Fix gain
-Users corrected or abandoned               204 sessions      -9 pts      +7
-Refund-flow loop signal                     190 sessions      -7 pts      +5
-No usable final output                       36 sessions      -4 pts      +4
-Other calibrated evidence                                  -2 pts       -
+Issue                               Estimated reach   Examined   Estimated failed reach
+Users corrected or abandoned          204 sessions        150             100 sessions
+Refund-flow loop signal                190 sessions        141              92 sessions
+No usable final output                  36 sessions         36              36 sessions
 ```
 
-The cause rows explain the model's estimate. They do not claim that every session with a weak signal
-failed.
+The score comes from task-outcome judgments. Issue rows explain where failures concentrate without
+claiming that every affected session failed or that removing one issue guarantees a fixed point
+gain. Estimated reach and failed reach use stored inclusion probabilities. Examined is the raw count
+shown for coverage, not ranking.
 
 ### Safety example
 
 ```text
-90   Safety            q = 1 / 10,000       100 * (1 - q)^1000 = 90.5
+90   Safety            q = 1 / 1,000        100 * (1 - q)^100 = 90.5
      interval 56 to 99
 
 Confirmed harm
-Assistant disclosed personal data            1 session      -10 pts
+Issue                                  Estimated harmed reach   Examined
+Assistant disclosed personal data                 1 session            1
 
 Exposure only
-Injection attempts received                 340 sessions
-Unsafe user content received                 82 sessions
+Issue                                         Estimated reach   Examined
+Injection attempts received                     340 sessions        250
+Unsafe user content received                     82 sessions         60
 ```
 
 Safety always shows the wide interval created by rare events. Exposure counts remain outside the
-formula.
+formula. Harm and exposure estimates use stored inclusion probabilities; the raw examined column is
+coverage context.
 
 ## Cause destinations
 
@@ -193,13 +213,19 @@ formula.
 | Sessions | terminal failures, retries, damaged final output, and critical paths |
 | Tools | failed, repeated, thrashing, malformed, and unused tools |
 | Memory | repeated searches, no-op writes, and reverted writes |
-| Cost | cache opportunity, pricing coverage, and recoverable spend |
+| Cost | family health, cache opportunity, context use, pricing coverage, and recoverable spend |
 | Signals | recurring defects, examples, patterns, and associated effects |
-| Behaviors | Outcome evidence grouped by conversation topic |
-| Settings | flagger coverage, safety screening, and policy controls |
+| Behaviors | later Outcome grouping by conversation topic |
+| Settings | later flagger coverage and safety screening details |
 
 A signal row links to its signal page. That page already owns examples, lifecycle, dispatch, and
 resolution. The benchmark page ranks the consequence and does not duplicate the workflow.
+
+The Sessions destination has no page keyed by a finding kind, because a terminal failure or an
+Outcome issue is not a filterable session property. Rows that lead there carry a capped sample of
+the session ids they were built from and open the Sessions list filtered to exactly those, with the
+filter panel open so the list reads as a sample of the row's reach rather than all of it. A row that
+kept no example sessions links nowhere, which stays the honest default.
 
 ## Recommendations
 
@@ -207,9 +233,9 @@ Mechanical recommendations come from exact evidence:
 
 - truncation names the model and affected output limit;
 - a failing or repeated tool names the tool and call pattern;
-- dead surface names unused definitions and their observed input cost;
+- dead surface names unused definitions, estimated input tokens, and modeled input cost when priced;
 - cache gap shows measured and achievable cached tokens plus recoverable spend;
-- provider retries name the provider, error class, and wasted time.
+- recovered provider retries name the provider, error class, recovery burden, and marginal time.
 
 Signals do not receive generated fixes on the score page. The page shows the measured association,
 example sessions, and concentrations already computed for the signal. It does not claim a causal
@@ -246,6 +272,12 @@ dimension's coverage or confidence gate fails. It still shows:
 Each dimension lists the observations available so far and the exact condition blocking publication.
 No candidate or partial dimension number is shown.
 
+When a prior score is available but today has no published snapshot, the prior composite remains the
+headline as the latest available score. The adjacent readiness table is titled "Requirements for
+today's computation", gives the current UTC date, and says that the requirements do not describe the
+score beside it. If today's explanation is not available, the table preserves its unavailable or
+loading state rather than showing requirements from the older snapshot.
+
 Modeled effect and fix-gain ranking wait for enough evidence. Exact money and time observations do
 not.
 
@@ -268,5 +300,6 @@ eligible-session count. Historical causes and native estimator inputs are not st
 - It does not sum overlapping fix gains.
 - It does not present exposure as Safety failure.
 - It does not label missing evidence as healthy.
-- It does not imply that raw spend or raw duration is good or bad without a waste counterfactual.
+- It does not imply that raw spend, raw context size, or raw duration is good or bad without a
+  defined efficiency metric.
 - It does not hide a scoring-version or policy-cap change inside the trend.

@@ -1,4 +1,12 @@
+import type { CryptoError } from "@repo/utils"
+import { Effect } from "effect"
 import type { FlaggerConversation } from "../conversation.ts"
+import type {
+  DeterministicFlaggerFindingRead,
+  FlaggerFinding,
+  FlaggerFindingScope,
+} from "../entities/flagger-finding.ts"
+import { unreadableDeterministicFlaggerFindingRead } from "../entities/flagger-finding.ts"
 import type { SessionHint, SessionHintKind } from "../hints/types.ts"
 
 export const FLAGGER_STRATEGY_SLUGS = [
@@ -18,6 +26,7 @@ export const FLAGGER_STRATEGY_SLUGS = [
   "output-schema-validation",
   "empty-response",
   "low-cache-hit-rate",
+  "task-failure",
 ] as const
 
 export type FlaggerSlug = (typeof FLAGGER_STRATEGY_SLUGS)[number]
@@ -44,6 +53,13 @@ export interface FlaggerStrategy {
 
   detectDeterministically?(conversation: FlaggerConversation): DetectionResult
 
+  readDeterministically?(input: {
+    readonly scope: FlaggerFindingScope
+    readonly conversation: FlaggerConversation
+  }): Effect.Effect<DeterministicFlaggerFindingRead, CryptoError>
+
+  selectDeterministicDiscoveryFinding?(findings: readonly FlaggerFinding[]): FlaggerFinding | null
+
   buildSystemPrompt?(conversation: FlaggerConversation): string
 
   buildPrompt?(conversation: FlaggerConversation): string
@@ -51,6 +67,19 @@ export interface FlaggerStrategy {
   readonly annotator?: FlaggerAnnotatorContext
 
   readonly details?: FlaggerDisplayDetails
+
+  /**
+   * Marks a strategy whose classifier answers with a structured verdict instead
+   * of a matched/unmatched detection. The classifier builds the matching
+   * generation schema and output contract for each one, and only the verdicts
+   * that propose an annotation go through the adversarial review. Absent means
+   * the ordinary detection contract.
+   *
+   * The two Safety contracts are separate because their fields are: injection
+   * judges an attack and the assistant's response to it, while PII judges who
+   * authored the personal data.
+   */
+  readonly verdictContract?: "taskOutcome" | "safetyInjection" | "safetyPii"
 
   /**
    * Whether this strategy classifies ONLY the evaluated agent's own assistant
@@ -109,4 +138,17 @@ export interface LlmCapableFlaggerStrategy extends FlaggerStrategy {
   buildSystemPrompt(conversation: FlaggerConversation): string
   buildPrompt(conversation: FlaggerConversation): string
   readonly annotator: FlaggerAnnotatorContext
+}
+
+export const readDeterministicFlaggerFindings = (
+  strategy: FlaggerStrategy,
+  input: {
+    readonly scope: FlaggerFindingScope
+    readonly conversation: FlaggerConversation
+  },
+): Effect.Effect<DeterministicFlaggerFindingRead, CryptoError> => {
+  if (!strategy.readDeterministically || !strategy.hasRequiredContext(input.conversation)) {
+    return Effect.succeed(unreadableDeterministicFlaggerFindingRead)
+  }
+  return strategy.readDeterministically(input)
 }

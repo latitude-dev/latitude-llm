@@ -126,16 +126,25 @@ export function MultiSelectFilter({
       isItemEqualToValue={(a, b) => a === b}
       disabled={disabled}
     >
-      <ComboboxChips ref={anchorRef}>
+      <ComboboxChips ref={anchorRef} className="min-w-0 max-w-full">
         <ComboboxValue>
-          {(values: string[]) => (
-            <>
-              {values.map((v) => (
-                <ComboboxChip key={v}>{labelByValue.get(v) ?? v}</ComboboxChip>
-              ))}
-              <ComboboxChipsInput placeholder={placeholder} />
-            </>
-          )}
+          {(values: string[]) => {
+            return (
+              <>
+                {values.map((v) => {
+                  const label = labelByValue.get(v) ?? v
+                  return (
+                    <ComboboxChip key={v} className="min-w-0 max-w-full [&_[data-slot=combobox-chip-remove]]:shrink-0">
+                      <span className="min-w-0 truncate" title={label}>
+                        {label}
+                      </span>
+                    </ComboboxChip>
+                  )
+                })}
+                <ComboboxChipsInput placeholder={placeholder} />
+              </>
+            )
+          }}
         </ComboboxValue>
       </ComboboxChips>
       <ComboboxContent anchor={anchorRef} container={container}>

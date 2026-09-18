@@ -14,7 +14,7 @@ export interface ChSqlClientShape<X = unknown> {
   readonly organizationId: OrganizationId
   readonly transaction: <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
   readonly query: <T>(
-    fn: (client: X, organizationId: OrganizationId) => Promise<T>,
+    fn: (client: X, organizationId: OrganizationId, signal: AbortSignal) => Promise<T>,
   ) => Effect.Effect<T, RepositoryError>
 }
 

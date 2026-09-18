@@ -22,6 +22,7 @@ export const createFakeSessionRepository = (overrides?: Partial<SessionRepositor
     histogramByProjectId: () => Effect.succeed([]),
     findBySessionId: ({ sessionId }) => Effect.fail(new NotFoundError({ entity: "Session", id: sessionId as string })),
     listBySessionIds: () => Effect.succeed([]),
+    listDetailsBySessionIds: () => Effect.succeed([]),
     distinctFilterValues: () => Effect.succeed([]),
     getDistribution: () => Effect.succeed(emptyTraceDistribution()),
     ...overrides,

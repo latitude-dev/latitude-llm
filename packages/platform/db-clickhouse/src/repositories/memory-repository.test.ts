@@ -229,6 +229,65 @@ describe("MemoryRepository", () => {
     expect(oneTrace.map((e) => e.recordId)).toEqual(["rec1"])
   })
 
+  it("batches many sessions into one read, scoped by project and cutoff", async () => {
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({ recordId: "recA", spanId: spanN(1), sessionId: SessionId("sessA"), endTime: at(1) }),
+        makeEvent({ recordId: "recB", spanId: spanN(2), sessionId: SessionId("sessB"), endTime: at(2) }),
+        makeEvent({ recordId: "recLate", spanId: spanN(3), sessionId: SessionId("sessA"), endTime: at(9) }),
+        makeEvent({ recordId: "recOther", spanId: spanN(4), sessionId: SessionId("sessC"), endTime: at(1) }),
+        makeEvent({
+          recordId: "recOtherProject",
+          spanId: spanN(5),
+          projectId: ProjectId("q".repeat(24)),
+          sessionId: SessionId("sessA"),
+          endTime: at(1),
+        }),
+      ]),
+    )
+
+    const events = await withRepo((repo) =>
+      repo.readMemoryEventsBySessionIds({
+        organizationId,
+        projectId,
+        sessionIds: [SessionId("sessA"), SessionId("sessB")],
+        endTimeTo: at(5),
+      }),
+    )
+
+    expect(events.map((event) => event.recordId)).toEqual(["recA", "recB"])
+    expect(events.map((event) => event.sessionId)).toEqual([SessionId("sessA"), SessionId("sessB")])
+  })
+
+  it("matches the single-session read for the same session and returns nothing for no sessions", async () => {
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({ recordId: "rec1", spanId: spanN(1), sessionId: SessionId("sessA"), endTime: at(1) }),
+        makeEvent({
+          recordId: "rec2",
+          changeKind: "read",
+          queryText: "q",
+          recordCount: 0,
+          spanId: spanN(2),
+          sessionId: SessionId("sessA"),
+          endTime: at(2),
+        }),
+      ]),
+    )
+
+    const single = await withRepo((repo) =>
+      repo.readSessionMemoryEvents({ organizationId, projectId, sessionId: SessionId("sessA") }),
+    )
+    const batched = await withRepo((repo) =>
+      repo.readMemoryEventsBySessionIds({ organizationId, projectId, sessionIds: [SessionId("sessA")] }),
+    )
+
+    expect(batched).toEqual(single)
+    expect(
+      await withRepo((repo) => repo.readMemoryEventsBySessionIds({ organizationId, projectId, sessionIds: [] })),
+    ).toEqual([])
+  })
+
   it("keeps same span_id rows from different traces when reading a session", async () => {
     const sharedSpan = SpanId("sharedspan000001")
     await withRepo((repo) =>

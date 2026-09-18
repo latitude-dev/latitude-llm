@@ -317,7 +317,7 @@ describe("WrappedReportRepositoryLive", () => {
   })
 
   it("findLeaderboardRankForReport deduplicates by project — older report for same project is excluded", async () => {
-    const today = new Date()
+    const today = new Date("2026-01-15T12:00:00.000Z")
     const earlier = new Date(today.getTime() - 60 * 60 * 1000) // 1h earlier, still same day
     const dedupProj = ProjectId("dedup".padEnd(24, "a"))
     // Two reports for the same project — "new" and "old" on the same day.

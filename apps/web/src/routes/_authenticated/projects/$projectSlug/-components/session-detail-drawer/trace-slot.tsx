@@ -22,6 +22,8 @@ export function TraceSlot({
   const [activeTab, setActiveTab] = useParamState("traceTab", "trace", { validate: isTraceDetailTab })
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
   const [focusScoreId, setFocusScoreId] = useParamState("scoreId", "")
+  const [focusMessageIndex] = useParamState("messageIndex", "")
+  const parsedFocusMessageIndex = focusMessageIndex.length > 0 ? Number.parseInt(focusMessageIndex, 10) : undefined
 
   return (
     <TraceDetailBody
@@ -33,6 +35,7 @@ export function TraceSlot({
       onSelectedSpanIdChange={setSelectedSpanId}
       focusScoreId={focusScoreId}
       onFocusScoreIdChange={setFocusScoreId}
+      focusMessageIndex={Number.isNaN(parsedFocusMessageIndex) ? undefined : parsedFocusMessageIndex}
       {...(searchQuery ? { searchQuery } : {})}
     />
   )

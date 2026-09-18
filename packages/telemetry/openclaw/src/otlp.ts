@@ -6,116 +6,163 @@ import type { OtlpExportRequest, OtlpKeyValue, OtlpResourceSpans, OtlpSpan } fro
 const SCOPE_NAME = "@latitude-data/openclaw-telemetry"
 
 /**
- * Build-time-baked package version.
- *
- * `__SCOPE_VERSION__` is replaced at bundle time by tsdown's `define` (see
- * `tsdown.config.ts`) with a string literal of `package.json`'s `version`,
- * so the released bundle ships a constant — no runtime file read.
- *
- * Earlier versions read `package.json` at runtime via `readFileSync` to keep
- * one source of truth for the version. That tripped OpenClaw 2026.4.26's
- * `plugins.code_safety` scanner with a "potential-exfiltration: File read
- * combined with network send" warning (we have `fetch(` in `client.ts`).
- * Build-time bake preserves the single source of truth (the build reads
- * `package.json` and inlines the value) while keeping the runtime free of
- * `node:fs`.
- *
- * The `typeof` check is a runtime fallback for environments where the
- * `define` substitution didn't run — chiefly vitest, which executes the
- * source files directly without going through the build. `typeof` of an
- * undeclared identifier returns `"undefined"` rather than throwing, which
- * keeps tests working.
+ * Build-time-baked package version: `__SCOPE_VERSION__` is replaced by tsdown's
+ * `define` with `package.json`'s version, so the bundle never reads a file at
+ * runtime. The `typeof` guard covers vitest, which runs the source directly.
  */
 declare const __SCOPE_VERSION__: string
-const SCOPE_VERSION = typeof __SCOPE_VERSION__ === "string" ? __SCOPE_VERSION__ : "0.0.0-dev"
+export const SCOPE_VERSION = typeof __SCOPE_VERSION__ === "string" ? __SCOPE_VERSION__ : "0.0.0-dev"
+
+const GATED_SUFFIX = ":gated"
+// Keys Latitude reads as a native OTLP string array rather than a JSON string.
+const ARRAY_VALUE_KEYS: ReadonlySet<string> = new Set(["gen_ai.response.finish_reasons"])
+const TRUNCATION_MARKER = "\n…[truncated by latitude-openclaw]…\n"
 
 interface BuildOptions {
   /**
-   * When false, attributes whose key ends in `:gated` are scrubbed from
-   * spans before export — that's `gen_ai.input.messages`,
-   * `gen_ai.output.messages`, `gen_ai.system_instructions`, `user_prompt`,
-   * `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`,
-   * `before_compaction.messages`, `before_agent_start.{prompt,messages}`,
-   * `agent_end.messages`, and `openclaw.error.message` (the last because
-   * error strings can leak prompt/response content). Timing, token usage,
-   * model name, ids, agent name, durations, byte counts, and the
-   * `latitude.captured.content` boolean are always emitted.
+   * When false, attributes whose key ends in `:gated` are dropped before
+   * export: messages, system instructions, tool arguments and results, memory
+   * bodies and queries, error messages. Timing, usage, ids and names always ship.
    */
   allowConversationAccess: boolean
   redact?: RedactConfig | undefined
+  serviceName?: string
+  /** Per-attribute budget in UTF-16 units; larger values are truncated from the middle. */
+  maxContentChars?: number
 }
 
-/** Build an OTLP export request for a single completed agent run. */
-export function buildOtlpRequest(result: BuildResult, options: BuildOptions): OtlpExportRequest {
-  const spans = result.spans.map((span) => toOtlpSpan(span, options))
+export function buildOtlpRequest(results: readonly BuildResult[], options: BuildOptions): OtlpExportRequest {
+  const spans = results.flatMap((result) => result.spans.map((span) => toOtlpSpan(span, options)))
   const rs: OtlpResourceSpans = {
-    resource: { attributes: resourceAttrs() },
+    resource: { attributes: resourceAttrs(options.serviceName ?? "openclaw") },
     scopeSpans: [{ scope: { name: SCOPE_NAME, version: SCOPE_VERSION }, spans }],
   }
   return { resourceSpans: [rs] }
 }
 
-// ─── SpanRecord → OtlpSpan ─────────────────────────────────────────────────
-
 function toOtlpSpan(span: SpanRecord, options: BuildOptions): OtlpSpan {
-  const startNs = msToNs(span.startMs)
-  const endNs = msToNs(span.endMs ?? span.startMs)
-
   const attrs: OtlpKeyValue[] = []
   for (const [rawKey, value] of Object.entries(span.attrs)) {
     if (value === undefined || value === null) continue
-    const isGated = rawKey.endsWith(":gated")
+    const isGated = rawKey.endsWith(GATED_SUFFIX)
     if (isGated && !options.allowConversationAccess) continue
-    const key = isGated ? rawKey.slice(0, -":gated".length) : rawKey
-    const kv = encodeAttr(key, value)
+    const key = isGated ? rawKey.slice(0, -GATED_SUFFIX.length) : rawKey
+    const kv = encodeAttr(key, value, options.maxContentChars)
     if (kv !== undefined) attrs.push(kv)
   }
-
-  // Always emit the gate state so operators can see it in the UI without
-  // needing to grep the original config.
   attrs.push(bool("latitude.captured.content", options.allowConversationAccess))
-  // Mirror duration into the canonical name as well, when present.
-  if (span.endMs !== undefined) {
-    attrs.push(int("openclaw.duration_ms.computed", Math.max(0, span.endMs - span.startMs)))
-  }
-  const redactedAttrs = redactAttributes(attrs, options.redact)
 
-  const statusCode = span.outcome === "error" ? 2 : 1
   return {
     traceId: span.traceId,
     spanId: span.spanId,
     parentSpanId: span.parentSpanId,
     name: span.name,
-    // OTel SpanKind: 1 = INTERNAL. None of agent/model_call/tool_call/
-    // compaction/subagent map cleanly to CLIENT/SERVER/PRODUCER/CONSUMER —
-    // OpenClaw is the source-of-truth runtime for all of them.
-    kind: 1,
-    startTimeUnixNano: startNs,
-    endTimeUnixNano: endNs,
-    attributes: redactedAttrs,
-    status: { code: statusCode },
+    kind: span.kind,
+    startTimeUnixNano: msToNs(span.startMs),
+    endTimeUnixNano: msToNs(span.endMs ?? span.startMs),
+    attributes: redactAttributes(attrs, options.redact),
+    status: { code: span.outcome === "error" ? 2 : 1 },
   }
 }
 
-function encodeAttr(key: string, value: AttrValue): OtlpKeyValue | undefined {
+function encodeAttr(key: string, value: AttrValue, maxChars: number | undefined): OtlpKeyValue | undefined {
   if (value === undefined || value === null) return undefined
-  if (typeof value === "string") return str(key, value)
+  if (typeof value === "string") return str(key, budget(value, maxChars))
   if (typeof value === "boolean") return bool(key, value)
   if (typeof value === "number") {
     return Number.isInteger(value) ? int(key, value) : { key, value: { doubleValue: value } }
   }
-  // Arrays + objects → JSON string. The Latitude UI parses the gen_ai.* keys
-  // as JSON; anything else lands as opaque string and is queryable as a
-  // contains-substring filter.
-  return str(key, safeJson(value))
+  if (ARRAY_VALUE_KEYS.has(key) && Array.isArray(value)) {
+    return { key, value: { arrayValue: { values: value.map((v) => ({ stringValue: String(v) })) } } }
+  }
+  // Arrays and objects ship as JSON strings; Latitude parses the gen_ai.* ones.
+  return str(key, budgetJson(value, maxChars))
 }
 
-// ─── Resource + helper attribute encoders ──────────────────────────────────
+function budget(value: string, maxChars: number | undefined): string {
+  if (!maxChars || value.length <= maxChars) return value
+  const keep = Math.max(0, Math.floor((maxChars - TRUNCATION_MARKER.length) / 2))
+  let headEnd = keep
+  if (headEnd > 0 && isHighSurrogate(value.charCodeAt(headEnd - 1))) headEnd--
+  let tailStart = value.length - keep
+  if (tailStart < value.length && isLowSurrogate(value.charCodeAt(tailStart))) tailStart++
+  return `${value.slice(0, headEnd)}${TRUNCATION_MARKER}${value.slice(tailStart)}`
+}
 
-function resourceAttrs(): OtlpKeyValue[] {
+function isHighSurrogate(code: number): boolean {
+  return code >= 0xd800 && code <= 0xdbff
+}
+
+function isLowSurrogate(code: number): boolean {
+  return code >= 0xdc00 && code <= 0xdfff
+}
+
+/**
+ * A structured value must still parse after the budget, since Latitude reads
+ * messages, tool definitions and memory records as JSON: long strings inside
+ * it are truncated first, then whole items are shed from the middle of an
+ * array. Slicing the serialized text is the last resort, for a lone object.
+ */
+function budgetJson(value: unknown, maxChars: number | undefined): string {
+  const json = safeJson(value)
+  if (!maxChars || json.length <= maxChars) return json
+  const trimmed = budgetStrings(value, Math.max(1, Math.floor(maxChars / 4)))
+  const trimmedJson = safeJson(trimmed)
+  if (trimmedJson.length <= maxChars) return trimmedJson
+  if (Array.isArray(trimmed)) return safeJson(shedItems(trimmed, maxChars))
+  return budget(trimmedJson, maxChars)
+}
+
+function budgetStrings(value: unknown, maxChars: number): unknown {
+  if (typeof value === "string") return budget(value, maxChars)
+  if (Array.isArray(value)) return value.map((item) => budgetStrings(item, maxChars))
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, budgetStrings(v, maxChars)]))
+  }
+  return value
+}
+
+const OMISSION_RESERVE = 160
+
+/** Keeps the head and tail of an array within the budget; a message list gets a marker for what was dropped. */
+function shedItems(items: readonly unknown[], maxChars: number): unknown[] {
+  const sizes = items.map((item) => safeJson(item).length + 1)
+  const head: unknown[] = []
+  const tail: unknown[] = []
+  let budgetLeft = maxChars - OMISSION_RESERVE
+  let low = 0
+  let high = items.length - 1
+  while (low <= high) {
+    const fromHead = head.length <= tail.length
+    const size = (fromHead ? sizes[low] : sizes[high]) as number
+    if (budgetLeft - size < 0) break
+    budgetLeft -= size
+    if (fromHead) head.push(items[low++])
+    else tail.unshift(items[high--])
+  }
+  const omitted = items.length - head.length - tail.length
+  if (omitted <= 0) return [...items]
+  const marker = isMessageList(items) ? [omissionMessage(omitted)] : []
+  return [...head, ...marker, ...tail]
+}
+
+function isMessageList(items: readonly unknown[]): boolean {
+  const first = items[0]
+  return !!first && typeof first === "object" && typeof (first as { role?: unknown }).role === "string"
+}
+
+function omissionMessage(count: number): unknown {
+  return {
+    role: "system",
+    parts: [{ type: "text", content: `[… ${count} message(s) omitted by latitude-openclaw …]` }],
+  }
+}
+
+function resourceAttrs(serviceName: string): OtlpKeyValue[] {
   return [
-    str("service.name", "openclaw"),
+    str("service.name", serviceName),
     str("service.version", SCOPE_VERSION),
+    str("telemetry.sdk.name", SCOPE_NAME),
     str("host.name", hostname()),
     str("host.arch", arch()),
     str("os.type", platform()),

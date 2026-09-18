@@ -1,0 +1,172 @@
+import type { FlaggerScreeningDecision } from "@domain/flaggers"
+import type { SafetyFindingKind, ScoreSourceType } from "@domain/scores"
+import type { ScoreEvidenceContract, SessionId, SignalOrigin } from "@domain/shared"
+import type { CostFamilyDenominators } from "../scoring/aggregate-session-cost.ts"
+import type { CostMetricReading } from "./cost-metric-reading.ts"
+import type {
+  SessionAssessmentSource,
+  SessionEvidenceAnchor,
+  SessionEvidenceDestination,
+} from "./session-assessment.ts"
+
+export interface AssessmentFindingChronology {
+  readonly occurredAt?: Date
+  readonly messageIndex?: number
+}
+
+export interface AssessmentFindingReference {
+  readonly evidenceKey: string
+  readonly label: string
+  readonly description?: string
+  readonly source: SessionAssessmentSource
+  readonly metricId?: string
+  readonly signalIds: readonly string[]
+  readonly scoreIds: readonly string[]
+  readonly occurrenceCount: number
+  readonly chronology: AssessmentFindingChronology
+  readonly anchors: readonly SessionEvidenceAnchor[]
+  readonly destinations: readonly SessionEvidenceDestination[]
+  readonly independentHumanEvidence: boolean
+  readonly observationProbability?: number
+}
+
+export type AssessmentFinding = AssessmentFindingReference &
+  (
+    | { readonly kind: "usableCompletion" }
+    | {
+        readonly kind: "noOutput"
+        readonly findingKind: "blank" | "confirmedUnusablePattern" | "unconfirmedPattern"
+      }
+    | {
+        readonly kind: "outputDamage"
+        readonly findingKind: "trailingComma" | "unclosedString" | "invalidJson"
+        readonly generationPosition: "final" | "intermediate"
+      }
+    | {
+        readonly kind: "toolFailure"
+        readonly recovered: boolean
+        readonly sameSubjectRecovered?: boolean
+        readonly terminal: boolean
+      }
+    | {
+        readonly kind: "toolStructuralDefect"
+        readonly findingKind: "malformed" | "duplicate" | "undeclared" | "unknown-id"
+        readonly terminal: boolean
+      }
+    | { readonly kind: "toolRepetition"; readonly redundancy: "unconfirmed" }
+    | { readonly kind: "cacheGap" }
+    | {
+        readonly kind: "finishFailure"
+        readonly findingKind: "length" | "contentFilter" | "guardrail" | "malformedFunctionCall" | "generationError"
+        readonly generationPosition: "final" | "intermediate"
+        readonly observedMicrocents: number
+        readonly observedNs: number
+      }
+    | {
+        readonly kind: "providerError"
+        readonly findingKind: "rateLimit" | "overload" | "serviceFailure" | "providerRejection"
+        readonly recovered: boolean
+        readonly sameSubjectRecovered: boolean
+        readonly terminal: boolean
+        readonly successfulSpanId?: string
+        readonly observedMicrocents: number
+        readonly observedNs: number
+      }
+    | { readonly kind: "taskOutcome"; readonly verdict: "success" | "failure" }
+    | { readonly kind: "safetyFinding"; readonly findingKind: SafetyFindingKind }
+    | {
+        readonly kind: "classifiedJudgment"
+        readonly roles: readonly ScoreEvidenceContract[]
+        readonly negative: boolean
+        readonly judgmentKind: ScoreSourceType
+        readonly signalOrigin?: SignalOrigin
+        readonly findingKind?: string
+      }
+    | {
+        readonly kind: "standaloneScore"
+        readonly negative: boolean
+        readonly judgmentKind: ScoreSourceType
+        readonly signalOrigin?: SignalOrigin
+      }
+    | {
+        readonly kind: "moment"
+        readonly momentKinds: readonly string[]
+      }
+  )
+
+/** Why a reader could not read everything it applied to. */
+export const READER_LIMITATIONS = [
+  "missingTelemetry",
+  "unmappedTelemetry",
+  "missingPricing",
+  "missingContent",
+  "truncatedContent",
+  "unknownModelContext",
+  "criticalPathUnavailable",
+  "missingLatencyReference",
+] as const
+
+export interface AssessmentReaderFact {
+  readonly readerId: string
+  readonly label: string
+  readonly scoreDimensions: readonly ScoreEvidenceContract["scoreDimension"][]
+  readonly applicable: boolean
+  readonly findingCount: number
+  readonly readableCount: number
+  readonly totalCount: number
+  readonly limitation?: (typeof READER_LIMITATIONS)[number]
+}
+
+/**
+ * The session's Cost and Speed evidence, already read and composed.
+ *
+ * Present only once the Cost readers have run. `observedCriticalPathNs` is the reconstructed
+ * foreground path, which is a different quantity from the session's active execution time — an
+ * incomplete reconstruction reports zero here and says so through `criticalPathComplete`, rather
+ * than falling back to a duration that would read as necessary time.
+ */
+export interface NormalizedSessionCostEvidence {
+  readonly readings: readonly CostMetricReading[]
+  /**
+   * The workload this session is comparable with, for the matched signal estimator.
+   *
+   * Built from provider, model, input and output size, toolset, call scale and streaming mode because
+   * those are what make two sessions cost and take a similar amount without any signal being
+   * involved. Comparison only ever happens inside one key, so an agent whose signal-bearing sessions
+   * are also its biggest sessions cannot have that difference read as the signal's effect.
+   */
+  readonly workloadStratum: string
+  readonly denominators: CostFamilyDenominators
+  readonly observedCriticalPathNs: number
+  readonly criticalPathComplete: boolean
+  readonly measuredAvoidableNs: number
+  readonly estimatedAvoidableNs: number
+  readonly measuredAvoidableMicrocents: number
+  readonly estimatedAvoidableMicrocents: number
+  /** Avoidable critical-path nanoseconds by the claim that produced them, for Speed attribution. */
+  readonly avoidableNsByCause: Readonly<Record<string, number>>
+}
+
+export interface NormalizedSessionAssessmentInput {
+  readonly sessionId: SessionId
+  /**
+   * Whether the session states a task at all, which is what makes a delivery
+   * failure judgeable. A session with no user-authored request cannot fail
+   * Outcome; it is not applicable to it.
+   */
+  readonly hasReadableUserTask: boolean
+  readonly observedMicrocents: number
+  readonly observedDurationNs: number
+  readonly findings: readonly AssessmentFinding[]
+  readonly readers: readonly AssessmentReaderFact[]
+  readonly screeningDecisions: readonly FlaggerScreeningDecision[]
+  /**
+   * Signals on this session whose occurrences may inform a score.
+   *
+   * Recorded here because only this reader sees signal lifecycle: the window job receives ids and
+   * could not otherwise tell an ignored cluster from a live one, and workflow state must not be
+   * able to move a score's explanation by being invisible to it.
+   */
+  readonly scoringEligibleSignalIds: readonly string[]
+  readonly costEvidence?: NormalizedSessionCostEvidence
+}

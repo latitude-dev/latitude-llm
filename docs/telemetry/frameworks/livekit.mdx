@@ -3,9 +3,14 @@ title: LiveKit Agents
 description: Connect your LiveKit voice AI agents to Latitude for observability.
 ---
 
+import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
+
+<SkillsCallout />
+
 ## Overview
 
-This guide shows you how to send traces from a [**LiveKit Agents**](https://docs.livekit.io/agents/) application to Latitude.
+This guide shows you how to send traces from a [**LiveKit Agents**](https://docs.livekit.io/agents/) application to Latitude. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 LiveKit Agents ships with built-in OpenTelemetry support and owns its own tracer provider. Instead of bootstrapping telemetry with the `Latitude` class, you attach a **`LatitudeSpanProcessor`** to LiveKit's provider — Latitude then receives the same spans LiveKit emits for LLM, agent, and tool activity. This works the same way for the **Python** (`livekit-agents`) and **Node.js** (`@livekit/agents`) SDKs.
 
@@ -18,7 +23,7 @@ LiveKit Agents ships with built-in OpenTelemetry support and owns its own tracer
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - A project that uses **LiveKit Agents** (`livekit-agents` or `@livekit/agents`)
 
@@ -210,3 +215,7 @@ Once connected, traces appear automatically in Latitude:
 1. Open your **project** in the Latitude dashboard
 2. Each agent turn shows the LLM call with its input/output conversation
 3. Token usage and latency are aggregated at every level
+
+## See what was captured
+
+<FirstArtifact />

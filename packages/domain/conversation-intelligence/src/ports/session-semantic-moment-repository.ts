@@ -9,6 +9,12 @@ export interface SessionSemanticMomentRepositoryShape {
     readonly projectId: ProjectId
     readonly sessionId: SessionId
   }) => Effect.Effect<readonly SessionSemanticMoment[], RepositoryError, ChSqlClient>
+  readonly listBySessions: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionIds: readonly SessionId[]
+    readonly indexedAtTo: Date
+  }) => Effect.Effect<readonly SessionSemanticMoment[], RepositoryError, ChSqlClient>
   readonly listByTrace: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

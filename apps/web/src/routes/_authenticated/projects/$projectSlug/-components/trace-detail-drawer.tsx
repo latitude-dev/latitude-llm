@@ -215,6 +215,7 @@ export type TraceDetailBodyProps = {
   readonly onFiltersChange?: (filters: FilterSet) => void
   /** Active search query — drives literal/token highlights in the Conversation tab. */
   readonly searchQuery?: string
+  readonly focusMessageIndex?: number | undefined
 } & TraceDetailTabControlProps
 
 /**
@@ -239,6 +240,7 @@ export function TraceDetailBody({
   focusScoreId,
   onFocusScoreIdChange,
   searchQuery,
+  focusMessageIndex,
 }: TraceDetailBodyProps) {
   const isSandbox = useProjectScope().kind === "sandbox"
   const scoresEnabled = !isSandbox
@@ -466,6 +468,7 @@ export function TraceDetailBody({
             scrollContainerRef={scrollContainerRef}
             textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
             timeline={timeline}
+            focusMessageIndex={focusMessageIndex}
             {...(searchQuery ? { searchQuery } : {})}
           />
         )}

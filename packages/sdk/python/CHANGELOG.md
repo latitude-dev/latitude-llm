@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.12.0] - 2026-09-08
+
+### Added
+
+- `client.usage.get` — the organization's credit usage for the current billing period: plan, period bounds, included/consumed/remaining/overage credits, and the split by product area (traces, flaggers, signals, behaviors, annotations) and by project.
+- `client.projects.usage` — one project's credits for the current billing period, split by product area.
+
 ## [9.11.0] - 2026-09-02
 
 ### Added

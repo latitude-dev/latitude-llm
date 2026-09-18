@@ -1,4 +1,4 @@
-import { type SessionDetail, sessionConversationMessages } from "@domain/spans"
+import { assistantMessageHasOutputContent, type SessionDetail, sessionConversationMessages } from "@domain/spans"
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -38,6 +38,25 @@ export const buildFlaggerSessionContext = (session: SessionDetail, latestTraceId
     definedTools: session.definedTools,
   },
 })
+
+export interface CapturedAssistantTurn {
+  readonly message: GenAIMessage
+  readonly messageIndex: number
+}
+
+export const findFinalCapturedAssistantTurn = (
+  conversation: Pick<FlaggerConversation, "allMessages" | "outputMessages">,
+): CapturedAssistantTurn | null => {
+  const outputOffset = conversation.allMessages.length - conversation.outputMessages.length
+  for (let outputIndex = conversation.outputMessages.length - 1; outputIndex >= 0; outputIndex--) {
+    const message = conversation.outputMessages[outputIndex]!
+    if (message.role !== "assistant") continue
+    return { message, messageIndex: outputOffset + outputIndex }
+  }
+  return null
+}
+
+export const assistantTurnHasOutputContent = assistantMessageHasOutputContent
 
 const messageAnchorText = (message: GenAIMessage): string => {
   const chunks: string[] = []

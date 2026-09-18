@@ -1,5 +1,5 @@
-import type { FlaggerConversation } from "../conversation.ts"
-import { detectEmptyResponseFlagger } from "../helpers.ts"
+import { type FlaggerConversation, findFinalCapturedAssistantTurn } from "../conversation.ts"
+import { buildMessageFlaggerFindingRead, detectEmptyResponseFlagger } from "../helpers.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
 /**
@@ -14,7 +14,7 @@ export const emptyResponseStrategy: FlaggerStrategy = {
   },
 
   hasRequiredContext(conversation: FlaggerConversation): boolean {
-    return conversation.outputMessages.length > 0
+    return findFinalCapturedAssistantTurn(conversation) !== null
   },
 
   detectDeterministically(conversation: FlaggerConversation): DetectionResult {
@@ -22,5 +22,25 @@ export const emptyResponseStrategy: FlaggerStrategy = {
     return result.matched
       ? { kind: "matched", feedback: result.feedback, messageIndex: result.messageIndex }
       : { kind: "unmatched" }
+  },
+
+  readDeterministically({ scope, conversation }) {
+    const result = detectEmptyResponseFlagger(conversation)
+    if (!result.matched) return buildMessageFlaggerFindingRead({ scope, conversation, findings: [] })
+    if (result.messageIndex === undefined) throw new Error("Empty-response finding has no anchor")
+    return buildMessageFlaggerFindingRead({
+      scope,
+      conversation,
+      findings: [
+        {
+          finding: {
+            flaggerSlug: "empty-response",
+            findingKind: result.findingKind,
+            feedback: result.feedback,
+            messageIndex: result.messageIndex,
+          },
+        },
+      ],
+    })
   },
 }
