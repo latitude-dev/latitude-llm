@@ -244,7 +244,11 @@ describe("upsertFlaggerVerdictScore", () => {
   it("dedups a verdict beyond the historical 200-row scan window", async () => {
     const { upsert, upsertVerdict, scores } = makeHarness()
 
-    const first = await upsertVerdict({ verdict: "failure", feedback: "Task failed.", analysisHash: GENERATION_A })
+    const first = await upsertVerdict({
+      verdict: "failure",
+      feedback: "Task failed.",
+      analysisHash: GENERATION_A,
+    })
     const verdictScore = scores.get(first.scoreId)
     if (!verdictScore) throw new Error("missing verdict score")
     scores.set(first.scoreId, { ...verdictScore, createdAt: new Date("2020-01-01T00:00:00.000Z") })
@@ -258,7 +262,11 @@ describe("upsertFlaggerVerdictScore", () => {
 
     expect(scores.size).toBe(201)
 
-    const rerun = await upsertVerdict({ verdict: "failure", feedback: "Task failed again.", analysisHash: GENERATION_A })
+    const rerun = await upsertVerdict({
+      verdict: "failure",
+      feedback: "Task failed again.",
+      analysisHash: GENERATION_A,
+    })
     expect(rerun).toEqual({ status: "existing", scoreId: first.scoreId })
     expect(scores.size).toBe(201)
   })
