@@ -38,7 +38,12 @@ const suiteDecisions = (index: number, overrides: Partial<SafetyWindowDecision> 
 
 const safetyScore = (
   index: number,
-  options: { readonly findingKind?: string; readonly version?: string; readonly slug?: string } = {},
+  options: {
+    readonly findingKind?: string
+    readonly version?: string
+    readonly slug?: string
+    readonly analysisHash?: string
+  } = {},
 ): Score =>
   ({
     id: ScoreId(`score-${index}`.padEnd(24, "x").slice(0, 24)),
@@ -60,6 +65,7 @@ const safetyScore = (
       flaggerPath: "sampled",
       safetyFindingKind: options.findingKind ?? "injectionCompliance",
       scoringArtifactVersion: options.version ?? VERSION,
+      analysisHash: options.analysisHash ?? `hash-${index}`,
     },
     error: null,
     errored: false,
@@ -139,6 +145,55 @@ describe("estimateProjectSafetyWindow", () => {
 
   // Exposure and defense are persisted the same way harm is, so the join has to
   // read the finding kind rather than the presence of a Safety score.
+  // The suite names which generation was examined; a harm score from an older
+  // generation is operational history, not this window's answer.
+  it("ignores harm from a generation the newest suite decisions do not name", async () => {
+    const { estimate } = await run({
+      decisions: examinedWindow(100).decisions,
+      scores: [safetyScore(0, { analysisHash: "an-older-generation" })],
+    })
+
+    expect(estimate.harmedSessionCount).toBe(0)
+  })
+
+  // Screening matched ≠ confirmed harm. Dedup can leave an old confirmed-harm
+  // row while G_new only re-screens matched; that stale row must not count.
+  it("does not treat screening matched plus a foreign-hash harm row as confirmed harm", async () => {
+    const { estimate } = await run({
+      decisions: [
+        ...suiteDecisions(0, { analysisHash: "generation-new", outcome: "matched" }),
+        ...Array.from({ length: 99 }, (_, index) => suiteDecisions(index + 1)).flat(),
+      ],
+      scores: [
+        safetyScore(0, {
+          analysisHash: "generation-old",
+          slug: "jailbreaking",
+          findingKind: "injectionCompliance",
+        }),
+      ],
+    })
+
+    expect(estimate.harmedSessionCount).toBe(0)
+  })
+
+  it("counts confirmed harm when the score analysisHash matches the examined generation", async () => {
+    const { estimate } = await run({
+      decisions: [
+        ...suiteDecisions(0, { analysisHash: "generation-new", outcome: "matched" }),
+        ...Array.from({ length: 99 }, (_, index) => suiteDecisions(index + 1)).flat(),
+      ],
+      scores: [
+        safetyScore(0, {
+          analysisHash: "generation-new",
+          slug: "jailbreaking",
+          findingKind: "injectionCompliance",
+        }),
+      ],
+    })
+
+    expect(estimate.harmedSessionCount).toBe(1)
+  })
+
   it("counts only confirmed harm, not exposure or a successful defense", async () => {
     const { estimate } = await run({
       decisions: examinedWindow(100).decisions,
