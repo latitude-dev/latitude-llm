@@ -31,6 +31,12 @@ export interface JevClassifierOptions {
 
 const toDurationNs = (startedAt: number): number => Math.max(0, Math.round((performance.now() - startedAt) * 1_000_000))
 
+const requestUrl = (baseUrl: string): string => {
+  let end = baseUrl.length
+  while (end > 0 && baseUrl.charCodeAt(end - 1) === 47) end -= 1
+  return `${baseUrl.slice(0, end)}/v1/systemone`
+}
+
 const parseResponse = (body: unknown, optionNames: readonly string[]) => {
   const parsed = responseSchema.safeParse(body)
   if (!parsed.success) throw new AIError({ message: "Jev returned an invalid classification response" })
@@ -56,7 +62,7 @@ export const createJevClassifier = (options: JevClassifierOptions): AIClassifySh
       Effect.tryPromise({
         try: async (signal): Promise<ClassifyResult> => {
           const startedAt = performance.now()
-          const response = await fetchClient(`${baseUrl.replace(/\/+$/, "")}/v1/systemone`, {
+          const response = await fetchClient(requestUrl(baseUrl), {
             method: "POST",
             headers: { Authorization: `Bearer ${options.apiKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({

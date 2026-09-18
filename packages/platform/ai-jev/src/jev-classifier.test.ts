@@ -16,8 +16,10 @@ const input = {
 
 describe("Jev classifier", () => {
   it("sends a Choice question and returns all option probabilities", async () => {
+    let requestUrl: string | URL | Request | undefined
     let request: RequestInit | undefined
-    const fetch: typeof globalThis.fetch = async (_url, init) => {
+    const fetch: typeof globalThis.fetch = async (url, init) => {
+      requestUrl = url
       request = init
       return response({
         model: "jev-1.13",
@@ -33,8 +35,11 @@ describe("Jev classifier", () => {
       })
     }
 
-    const result = await Effect.runPromise(createJevClassifier({ apiKey: "secret", fetch }).classify(input))
+    const result = await Effect.runPromise(
+      createJevClassifier({ apiKey: "secret", baseUrl: "https://api.typesafe.ai///", fetch }).classify(input),
+    )
 
+    expect(requestUrl).toBe("https://api.typesafe.ai/v1/systemone")
     expect(JSON.parse(request?.body as string)).toEqual({
       state: input.state,
       model: "jev-latest",
