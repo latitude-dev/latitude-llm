@@ -1,6 +1,6 @@
 import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
-import { CacheStore, ChSqlClient, FlaggerId, generateId, OrganizationId, SessionId, SqlClient } from "@domain/shared"
+import { CacheStore, ChSqlClient, FlaggerId, generateId, OrganizationId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { SessionRepository, SpanRepository } from "@domain/spans"
 import { createFakeSessionRepository, createFakeSpanRepository } from "@domain/spans/testing"
