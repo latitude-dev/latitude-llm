@@ -24,6 +24,7 @@ The contract should stay aligned with the proposal:
 - `Passed(score?, feedback)` and `Failed(score?, feedback)` always require feedback
 - if present, the score value is passed before the feedback
 - `llm(prompt, { schema })` requires a schema on every call; remaining options are host-approved only
+- `classify(instructions, criteria)` asks Jev one Choice question about the current session and returns a probability for every named option; `criteria` must contain at least two unique option names with string or null descriptions
 - `semanticSimilarity(query)` returns `Promise<number>` in `[0,1]` — the max cosine between `query` and any embedded message in the current session (0 when the session has no embeddings). It reuses ingest-time `message_embeddings` (never re-embeds the session) and embeds the query at most once per distinct string; org/project/session come from the host closure, never the argument
 - `parse(value, schema)` validates an unknown value against a schema
 - the stored script body evaluates a conversation and returns a `Score`
@@ -44,7 +45,7 @@ The final runtime is a portable JavaScript-like sandbox shared by backend monito
 The important invariants are:
 
 - the persisted artifact is always script source text
-- the runtime exposes only host-controlled helpers such as `Passed`, `Failed`, `llm`, `parse`, and `z`
+- the runtime exposes only host-controlled helpers such as `Passed`, `Failed`, `classify`, `llm`, `parse`, and `z`
 - the MVP hosted bridge keeps provider/model selection Latitude-managed
 - if post-MVP runtime-configured execution lands, provider/model resolution should flow from evaluation settings to project settings to organization settings
 - the runtime must enforce resource limits and stay portable across executors
@@ -62,7 +63,7 @@ The object exposes:
 
 There is no raw per-span array. Orphan sessions (no session rollup row) fall back to the single triggering trace.
 
-Deterministic `rule` settings compile to pure scripts that read `session` and `session.traces` directly. Judge settings compile to `llm(\`${session.conversation}\` …)` scripts. Both share the same loader and sandbox contract.
+Deterministic `rule` settings compile to pure scripts that read `session` and `session.traces` directly. Classifier settings compile to a `classify()` call and use one selected option's probability as the score. Judge settings compile to `llm(\`${session.conversation}\` …)` scripts. All settings kinds share the same loader and sandbox contract.
 
 ## Evaluation Model
 
@@ -108,6 +109,12 @@ Membership is recorded as `scores.signal_id`, never `passed`. An evaluation run'
 type EvaluationSettings =
   | { kind: "judge"; criteria: string }
   | {
+      kind: "classifier"
+      instructions: string
+      options: { label: string; description: string | null }[] // 2..255, unique labels
+      target: string // one of the option labels
+    }
+  | {
       kind: "rule"
       match: "all" | "any"
       conditions: EvaluationRuleCondition[] // 1..EVALUATION_RULE_MAX_CONDITIONS
@@ -129,7 +136,7 @@ Because `trace-search` (which writes `message_embeddings`) runs after the initia
 
 Builder preview uses the same `hasSessionEmbeddings` check over the whole session before running a semantic rule.
 
-`compileSettingsToScript` (in `@domain/evaluations`, not `@domain/sandbox` — sandbox is the lower-level runtime contract and must not depend on the judge template) turns settings into a script. The judge form reuses the single-sourced baseline judge wrapper (`generateJudgePromptText` + `wrapPromptAsEvaluationScript`), so a settings-authored judge is the same shape as a discovered one and `llm()` capability detection holds. `validateEvaluationScriptCompiles` compiles the result in the QuickJS sandbox and surfaces a `ScriptCompileError` (HTTP 422) for an invalid script. `createEvaluationUseCase` ties these together: compile/validate → stamp `script_hash` → detect capability → persist unaligned.
+`compileSettingsToScript` (in `@domain/evaluations`, not `@domain/sandbox`) turns settings into a script. Classifier settings emit `classify(instructions, criteria)` and return `Score(probabilities[target])`. The judge form reuses the single-sourced baseline judge wrapper (`generateJudgePromptText` + `wrapPromptAsEvaluationScript`), so a settings-authored judge is the same shape as a discovered one and `llm()` capability detection holds. `validateEvaluationScriptCompiles` compiles the result in the QuickJS sandbox and surfaces a `ScriptCompileError` (HTTP 422) for an invalid script. `createEvaluationUseCase` ties these together: compile/validate → stamp `script_hash` → detect capability → persist unaligned.
 
 ## Background Tasks
 

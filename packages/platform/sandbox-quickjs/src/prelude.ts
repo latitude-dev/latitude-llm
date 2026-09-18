@@ -1,10 +1,11 @@
 /**
  * Host-controlled globals evaluated into every QuickJS context before the
- * script body runs. The prelude consumes (and deletes) three bootstrap
+ * script body runs. The prelude consumes (and deletes) four bootstrap
  * globals installed by the runtime:
  *
  * - `__hostLlm(call)`        — async host bridge behind `llm()` (only for llm-capability runs)
  * - `__hostSimilarity(call)` — async host bridge behind `semanticSimilarity()` (embedding-capability runs)
+ * - `__hostClassifier(call)` — async host bridge behind `classify()` (classifier-capability runs)
  * - `__hostParse(v, d)`      — sync host bridge behind `parse()` (real Zod runs host-side)
  * - `__contextData`          — `{ session }` plain data (the only runtime context)
  *
@@ -18,10 +19,12 @@ export const SANDBOX_PRELUDE = `;(() => {
   "use strict"
   const hostLlm = globalThis.__hostLlm
   const hostSimilarity = globalThis.__hostSimilarity
+  const hostClassifier = globalThis.__hostClassifier
   const hostParse = globalThis.__hostParse
   const bootstrap = globalThis.__contextData
   delete globalThis.__hostLlm
   delete globalThis.__hostSimilarity
+  delete globalThis.__hostClassifier
   delete globalThis.__hostParse
   delete globalThis.__contextData
 
@@ -97,6 +100,17 @@ export const SANDBOX_PRELUDE = `;(() => {
         throw new TypeError("semanticSimilarity() requires a string query")
       }
       return hostSimilarity({ query: String(query) })
+    }
+  }
+  if (hostClassifier) {
+    globalThis.classify = (instructions, criteria) => {
+      if (typeof instructions !== "string") {
+        throw new TypeError("classify() requires string instructions")
+      }
+      if (!criteria || typeof criteria !== "object" || Array.isArray(criteria)) {
+        throw new TypeError("classify() requires an options object")
+      }
+      return hostClassifier({ instructions, criteria: strip(criteria) })
     }
   }
 

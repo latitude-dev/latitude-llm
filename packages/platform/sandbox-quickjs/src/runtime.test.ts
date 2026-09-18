@@ -1,6 +1,7 @@
 import {
   DEFAULT_SCRIPT_MEMORY_BYTES,
   DEFAULT_SCRIPT_STACK_SIZE_BYTES,
+  type HostClassifierFunction,
   type HostLlmCall,
   type HostLlmFunction,
   type HostSimilarityFunction,
@@ -31,7 +32,12 @@ const runError = async (input: ScriptRunInput): Promise<ScriptRunError> => {
 
 const compileAndRun = async (
   source: string,
-  options?: { llm?: HostLlmFunction; similarity?: HostSimilarityFunction; limits?: ScriptRunLimits },
+  options?: {
+    llm?: HostLlmFunction
+    similarity?: HostSimilarityFunction
+    classifier?: HostClassifierFunction
+    limits?: ScriptRunLimits
+  },
 ): Promise<RunResult> => {
   const script = await compile(source)
   return run({
@@ -39,6 +45,7 @@ const compileAndRun = async (
     context: { session: minimalScriptSession([{ role: "user", content: "hello" }]) },
     ...(options?.llm ? { llm: options.llm } : {}),
     ...(options?.similarity ? { similarity: options.similarity } : {}),
+    ...(options?.classifier ? { classifier: options.classifier } : {}),
     ...(options?.limits ? { limits: options.limits } : {}),
   })
 }
@@ -62,6 +69,11 @@ describe("compile", () => {
 
     const semantic = await compile("const s = await semanticSimilarity('frustration'); return Score(s)")
     expect(semantic.capabilities).toEqual(["embedding"])
+
+    const classifier = await compile(
+      "const p = await classify('tone', { calm: null, angry: null }); return Score(p.angry)",
+    )
+    expect(classifier.capabilities).toEqual(["classifier"])
 
     const both = await compile("await llm(`x`); const s = await semanticSimilarity('y'); return Score(s)")
     expect(both.capabilities).toEqual(["llm", "embedding"])
@@ -142,6 +154,36 @@ describe("run: the score contract", () => {
 })
 
 describe("run: host-controlled globals", () => {
+  it("returns every classifier option probability and meters the host call", async () => {
+    const calls: unknown[] = []
+    const classifier: HostClassifierFunction = async (call) => {
+      calls.push(call)
+      return { probabilities: { resolved: 0.8, unresolved: 0.2 }, tokens: 14, duration: 10, cost: 59 }
+    }
+    const result = await compileAndRun(
+      `const probabilities = await classify("Outcome?", {
+        resolved: "The issue was resolved",
+        unresolved: "The issue remains"
+      }); return Score(probabilities.resolved)`,
+      { classifier },
+    )
+
+    expect(calls).toEqual([
+      {
+        instructions: "Outcome?",
+        criteria: { resolved: "The issue was resolved", unresolved: "The issue remains" },
+      },
+    ])
+    expect(result).toMatchObject({ value: 0.8, tokens: 14, cost: 59 })
+  })
+
+  it("rejects classifier scripts without a host classifier", async () => {
+    const script = await compile("await classify('tone', { calm: null, angry: null }); return Score(1)")
+    const error = await runError({ script, context: { session: minimalScriptSession() } })
+    expect(error._tag).toBe("ScriptRuntimeError")
+    expect(error.message).toContain("without a host classifier")
+  })
+
   it("exposes session.conversation as a read-only view that stringifies as prompt lines", async () => {
     const script = await compile(`
       const text = \`\${session.conversation}\`

@@ -22,6 +22,7 @@ import {
 } from "@domain/optimizations"
 import { BadRequestError, OrganizationId } from "@domain/shared"
 import { AIGenerateLive, withAi } from "@platform/ai"
+import { JevClassifierLive } from "@platform/ai-jev"
 import { RedisBillingSpendReservationLive } from "@platform/cache-redis"
 import { withPostgres } from "@platform/db-postgres"
 import {
@@ -210,6 +211,7 @@ export const optimizeEvaluationDraft = (input: {
             }).pipe(
               withAi(AIGenerateLive, getRedisClient()),
               Effect.provide(QuickJsScriptRuntimeLive),
+              Effect.provide(JevClassifierLive),
               withTracing,
               Effect.mapError((cause) => toOptimizationActivityError("optimizeEvaluationDraft", cause)),
             ),

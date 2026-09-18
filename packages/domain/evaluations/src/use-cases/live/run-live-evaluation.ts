@@ -19,8 +19,8 @@ import {
   DETECTOR_HEALTH_WINDOW_SECONDS,
   DetectorHealthTracker,
   detectScriptCapabilities,
+  hasAiCapability,
   hasEmbeddingCapability,
-  hasLlmCapability,
   type ScriptRuntime,
 } from "@domain/sandbox"
 import {
@@ -373,7 +373,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     // additionally bill each generation (and query embed) at cost through the
     // metering scope. Authorization uses the larger estimate for LLM scripts so
     // the free-cap/spend-cap gate reflects the expensive path.
-    const authorizeAction = hasLlmCapability(scriptCapabilities) ? ("llm-call" as const) : ("eval-scan" as const)
+    const authorizeAction = hasAiCapability(scriptCapabilities) ? ("llm-call" as const) : ("eval-scan" as const)
     const authorization = yield* authorizeBillableAction({
       organizationId: billingOrganizationId,
       action: authorizeAction,

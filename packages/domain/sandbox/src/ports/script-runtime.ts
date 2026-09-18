@@ -120,6 +120,20 @@ export interface HostSimilarityResult {
  */
 export type HostSimilarityFunction = (call: HostSimilarityCall) => Promise<HostSimilarityResult>
 
+export interface HostClassifierCall {
+  readonly instructions: string
+  readonly criteria: Readonly<Record<string, string | null>>
+}
+
+export interface HostClassifierResult {
+  readonly probabilities: Readonly<Record<string, number>>
+  readonly tokens: number
+  readonly duration: number
+  readonly cost: number
+}
+
+export type HostClassifierFunction = (call: HostClassifierCall) => Promise<HostClassifierResult>
+
 export interface CompileScriptInput {
   readonly source: string
   /** Explicit capability declaration; defaults to static detection. */
@@ -142,6 +156,8 @@ export interface ScriptRunInput {
   readonly llm?: HostLlmFunction
   /** Required for `embedding`-capability scripts; omitted otherwise. */
   readonly similarity?: HostSimilarityFunction
+  /** Required for `classifier`-capability scripts; omitted otherwise. */
+  readonly classifier?: HostClassifierFunction
 }
 
 export interface ScriptRuntimeShape {

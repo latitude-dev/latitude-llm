@@ -141,6 +141,24 @@ export interface RerankResult {
   readonly relevanceScore: number
 }
 
+export interface ClassifyInput {
+  readonly state: unknown
+  readonly instructions: string
+  readonly criteria: Readonly<Record<string, string | null>>
+}
+
+export interface ClassifyResult {
+  readonly probabilities: Readonly<Record<string, number>>
+  readonly tokens: number
+  readonly duration: number
+  readonly cost: number
+  readonly servedBy: { readonly provider: string; readonly model: string }
+  readonly tokenUsage?: {
+    readonly input: number
+    readonly output: number
+  }
+}
+
 // ---------------------------------------------------------------------------
 // AI capability services
 // ---------------------------------------------------------------------------
@@ -157,6 +175,10 @@ export interface AIRerankShape {
   rerank(input: RerankInput): Effect.Effect<readonly RerankResult[], AIError>
 }
 
+export interface AIClassifyShape {
+  classify(input: ClassifyInput): Effect.Effect<ClassifyResult, AIError | AICredentialError>
+}
+
 export type AIShape = AIGenerateShape & AIEmbedShape & AIRerankShape
 
 export class AIGenerate extends Context.Service<AIGenerate, AIGenerateShape>()("@domain/ai/AIGenerate") {}
@@ -164,6 +186,8 @@ export class AIGenerate extends Context.Service<AIGenerate, AIGenerateShape>()("
 export class AIEmbed extends Context.Service<AIEmbed, AIEmbedShape>()("@domain/ai/AIEmbed") {}
 
 export class AIRerank extends Context.Service<AIRerank, AIRerankShape>()("@domain/ai/AIRerank") {}
+
+export class AIClassify extends Context.Service<AIClassify, AIClassifyShape>()("@domain/ai/AIClassify") {}
 
 // ---------------------------------------------------------------------------
 // Agent loop (native tool-calling)

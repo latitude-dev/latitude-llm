@@ -5,8 +5,10 @@ import {
   DEFAULT_LLM_SCRIPT_LIMITS,
   DEFAULT_PURE_SCRIPT_LIMITS,
   HostCallError,
+  type HostClassifierFunction,
   type HostLlmFunction,
   type HostSimilarityFunction,
+  hasClassifierCapability,
   hasEmbeddingCapability,
   hasLlmCapability,
   type RunResult,
@@ -229,6 +231,108 @@ const installHostSimilarity = (
   fn.dispose()
 }
 
+const installHostClassifier = (
+  context: QuickJSContext,
+  runtime: QuickJSRuntime,
+  state: RunState,
+  hostClassifier: HostClassifierFunction,
+): void => {
+  const fn = context.newFunction("__hostClassifier", (callHandle) => {
+    const rawCall: unknown = callHandle === undefined ? undefined : context.dump(callHandle)
+    const call = rawCall as { instructions?: unknown; criteria?: unknown }
+    const validCriteria = typeof call.criteria === "object" && call.criteria !== null && !Array.isArray(call.criteria)
+    if (typeof call.instructions !== "string" || !validCriteria) {
+      throw new Error("classify() requires string instructions and an options object")
+    }
+
+    const criteria = call.criteria as Record<string, unknown>
+    const validOptions =
+      Object.keys(criteria).length >= 2 &&
+      Object.values(criteria).every((description) => typeof description === "string" || description === null)
+    if (!validOptions) throw new Error("classify() requires at least two string or null options")
+
+    const deferred = context.newPromise()
+    hostClassifier({ instructions: call.instructions, criteria: criteria as Record<string, string | null> }).then(
+      (result) => {
+        if (state.disposed) return
+        state.tokens += result.tokens
+        state.cost += result.cost
+        const handle = jsonToHandle(context, result.probabilities)
+        deferred.resolve(handle)
+        handle.dispose()
+      },
+      (cause: unknown) => {
+        if (state.disposed) return
+        const message = cause instanceof Error ? cause.message : String(cause)
+        state.hostCallError = new HostCallError({ message: `classify() host call failed: ${message}`, cause })
+        const errorHandle = context.newError(message)
+        context.setProp(errorHandle, "name", context.newString(HOST_CALL_ERROR_NAME))
+        deferred.reject(errorHandle)
+        errorHandle.dispose()
+      },
+    )
+    deferred.settled.then(() => {
+      if (state.disposed) return
+      runtime.executePendingJobs()
+    })
+    return deferred.handle
+  })
+  context.setProp(context.global, "__hostClassifier", fn)
+  fn.dispose()
+}
+
+interface RunCapabilities {
+  readonly llm: boolean
+  readonly embedding: boolean
+  readonly classifier: boolean
+}
+
+const validateRunCapabilities = (input: ScriptRunInput): RunCapabilities => {
+  const capabilities = {
+    llm: hasLlmCapability(input.script.capabilities),
+    embedding: hasEmbeddingCapability(input.script.capabilities),
+    classifier: hasClassifierCapability(input.script.capabilities),
+  }
+  if (capabilities.llm && input.llm === undefined) {
+    throw new ScriptRuntimeError({ message: "llm-capability script was run without a host llm implementation" })
+  }
+  if (capabilities.embedding && input.similarity === undefined) {
+    throw new ScriptRuntimeError({
+      message: "embedding-capability script was run without a host similarity implementation",
+    })
+  }
+  if (capabilities.classifier && input.classifier === undefined) {
+    throw new ScriptRuntimeError({
+      message: "classifier-capability script was run without a host classifier implementation",
+    })
+  }
+  return capabilities
+}
+
+const defaultLimitsForCapabilities = (capabilities: RunCapabilities): ScriptRunLimits => {
+  if (capabilities.llm || capabilities.classifier) return DEFAULT_LLM_SCRIPT_LIMITS
+  if (capabilities.embedding) return DEFAULT_EMBEDDING_SCRIPT_LIMITS
+  return DEFAULT_PURE_SCRIPT_LIMITS
+}
+
+const installHostBridges = (input: {
+  readonly context: QuickJSContext
+  readonly runtime: QuickJSRuntime
+  readonly state: RunState
+  readonly run: ScriptRunInput
+  readonly capabilities: RunCapabilities
+}): void => {
+  if (input.run.llm !== undefined && input.capabilities.llm) {
+    installHostLlm(input.context, input.runtime, input.state, input.run.llm)
+  }
+  if (input.run.similarity !== undefined && input.capabilities.embedding) {
+    installHostSimilarity(input.context, input.runtime, input.state, input.run.similarity)
+  }
+  if (input.run.classifier !== undefined && input.capabilities.classifier) {
+    installHostClassifier(input.context, input.runtime, input.state, input.run.classifier)
+  }
+}
+
 const WALL_CLOCK_TIMEOUT = Symbol("wall-clock-timeout")
 
 const raceWallClock = async <T>(work: Promise<T>, remainingMs: number): Promise<T | typeof WALL_CLOCK_TIMEOUT> => {
@@ -290,27 +394,10 @@ export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
   }
 
   const runScript = async (input: ScriptRunInput): Promise<RunResult> => {
-    const scriptHasLlm = hasLlmCapability(input.script.capabilities)
-    if (scriptHasLlm && input.llm === undefined) {
-      throw new ScriptRuntimeError({
-        message: "llm-capability script was run without a host llm implementation",
-      })
-    }
-    const scriptHasEmbedding = hasEmbeddingCapability(input.script.capabilities)
-    if (scriptHasEmbedding && input.similarity === undefined) {
-      throw new ScriptRuntimeError({
-        message: "embedding-capability script was run without a host similarity implementation",
-      })
-    }
+    const capabilities = validateRunCapabilities(input)
 
     const QuickJS = await getQuickJS()
-    const limits =
-      input.limits ??
-      (scriptHasLlm
-        ? DEFAULT_LLM_SCRIPT_LIMITS
-        : scriptHasEmbedding
-          ? DEFAULT_EMBEDDING_SCRIPT_LIMITS
-          : DEFAULT_PURE_SCRIPT_LIMITS)
+    const limits = input.limits ?? defaultLimitsForCapabilities(capabilities)
 
     const state: RunState = {
       disposed: false,
@@ -342,12 +429,7 @@ export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
 
     const context = runtime.newContext()
     try {
-      if (input.llm !== undefined && scriptHasLlm) {
-        installHostLlm(context, runtime, state, input.llm)
-      }
-      if (input.similarity !== undefined && scriptHasEmbedding) {
-        installHostSimilarity(context, runtime, state, input.similarity)
-      }
+      installHostBridges({ context, runtime, state, run: input, capabilities })
       installHostParse(context)
 
       const contextData = jsonToHandle(context, { session: input.context.session })
@@ -372,7 +454,7 @@ export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
       promiseHandle.dispose()
       if (settled === WALL_CLOCK_TIMEOUT) {
         state.trippedLimit = "wall-clock"
-        // An in-flight llm() host call keeps running detached after this
+        // An in-flight AI host call keeps running detached after this
         // (its callbacks are guarded by state.disposed); tokens it still
         // consumes are not metered into this RunResult — accepted
         // cost-accounting slack on an already-errored run.

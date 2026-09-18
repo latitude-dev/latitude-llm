@@ -7,6 +7,9 @@ import typing
 import pydantic
 import typing_extensions
 from ...core.pydantic_utilities import UniversalBaseModel
+from .create_signal_body_evaluation_settings_settings_classifier_options_item import (
+    CreateSignalBodyEvaluationSettingsSettingsClassifierOptionsItem,
+)
 from .create_signal_body_evaluation_settings_settings_rule_conditions_item import (
     CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem,
 )
@@ -17,7 +20,7 @@ from .create_signal_body_evaluation_settings_settings_rule_match import (
 
 class CreateSignalBodyEvaluationSettingsSettings_Judge(UniversalBaseModel):
     """
-    Declarative detector config. `judge` compiles to an LLM script; `rule` compiles to a deterministic script over the session.
+    Declarative detector config. `classifier` uses Jev probabilities, `judge` uses an LLM, and `rule` runs deterministic session checks.
     """
 
     kind: typing.Literal["judge"] = "judge"
@@ -26,9 +29,22 @@ class CreateSignalBodyEvaluationSettingsSettings_Judge(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
+class CreateSignalBodyEvaluationSettingsSettings_Classifier(UniversalBaseModel):
+    """
+    Declarative detector config. `classifier` uses Jev probabilities, `judge` uses an LLM, and `rule` runs deterministic session checks.
+    """
+
+    kind: typing.Literal["classifier"] = "classifier"
+    instructions: str
+    options: typing.List[CreateSignalBodyEvaluationSettingsSettingsClassifierOptionsItem]
+    target: str
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
 class CreateSignalBodyEvaluationSettingsSettings_Rule(UniversalBaseModel):
     """
-    Declarative detector config. `judge` compiles to an LLM script; `rule` compiles to a deterministic script over the session.
+    Declarative detector config. `classifier` uses Jev probabilities, `judge` uses an LLM, and `rule` runs deterministic session checks.
     """
 
     kind: typing.Literal["rule"] = "rule"
@@ -39,6 +55,10 @@ class CreateSignalBodyEvaluationSettingsSettings_Rule(UniversalBaseModel):
 
 
 CreateSignalBodyEvaluationSettingsSettings = typing_extensions.Annotated[
-    typing.Union[CreateSignalBodyEvaluationSettingsSettings_Judge, CreateSignalBodyEvaluationSettingsSettings_Rule],
+    typing.Union[
+        CreateSignalBodyEvaluationSettingsSettings_Judge,
+        CreateSignalBodyEvaluationSettingsSettings_Classifier,
+        CreateSignalBodyEvaluationSettingsSettings_Rule,
+    ],
     pydantic.Field(discriminator="kind"),
 ]

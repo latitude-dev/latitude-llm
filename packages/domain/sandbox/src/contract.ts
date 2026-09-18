@@ -19,9 +19,9 @@ export const runResultSchema = z.object({
   feedback: z.string().optional(),
   /** Wall time of the run including host calls, in nanoseconds. */
   duration: z.number().int().nonnegative(),
-  /** Total tokens consumed by `llm()` calls (0 for pure runs). */
+  /** Total tokens consumed by AI host calls (0 for pure runs). */
   tokens: z.number().int().nonnegative(),
-  /** Microcents consumed by `llm()` calls (0 for pure runs). */
+  /** Microcents consumed by AI host calls (0 for pure runs). */
   cost: z.number().int().nonnegative(),
 })
 export type RunResult = z.infer<typeof runResultSchema>

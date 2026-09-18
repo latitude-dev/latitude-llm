@@ -3,16 +3,40 @@
 import type * as Latitude from "../../../index.js";
 
 /**
- * Declarative detector config. `judge` compiles to an LLM script; `rule` compiles to a deterministic script over the session.
+ * Declarative detector config. `classifier` uses Jev probabilities, `judge` uses an LLM, and `rule` runs deterministic session checks.
  */
 export type CreateSignalBodyEvaluationSettingsSettings =
     | Latitude.CreateSignalBodyEvaluationSettingsSettings.Judge
+    | Latitude.CreateSignalBodyEvaluationSettingsSettings.Classifier
     | Latitude.CreateSignalBodyEvaluationSettingsSettings.Rule;
 
 export namespace CreateSignalBodyEvaluationSettingsSettings {
     export interface Judge {
         kind: "judge";
         criteria: string;
+    }
+
+    export interface Classifier {
+        kind: "classifier";
+        /** Question Jev answers about the evaluated session. */
+        instructions: string;
+        /** Distinct outcomes Jev can assign to the session. */
+        options: CreateSignalBodyEvaluationSettingsSettingsClassifier.Options.Item[];
+        /** Option whose probability becomes the signal score. */
+        target: string;
+    }
+
+    export namespace CreateSignalBodyEvaluationSettingsSettingsClassifier {
+        export type Options = Options.Item[];
+
+        export namespace Options {
+            export interface Item {
+                /** Option name returned as a key in the probability distribution. */
+                label: string;
+                /** Meaning of this option, or null when its name is self-explanatory. */
+                description: string | null;
+            }
+        }
     }
 
     export interface Rule {

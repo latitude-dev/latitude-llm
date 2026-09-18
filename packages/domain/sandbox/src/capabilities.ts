@@ -4,16 +4,18 @@
  * for generated scripts and detected statically for raw scripts, overridable
  * by explicit declaration.
  */
-export const SCRIPT_CAPABILITIES = ["llm", "embedding"] as const
+export const SCRIPT_CAPABILITIES = ["llm", "embedding", "classifier"] as const
 export type ScriptCapability = (typeof SCRIPT_CAPABILITIES)[number]
 
 const LLM_REFERENCE_PATTERN = /\bllm\s*\(/
 const EMBEDDING_REFERENCE_PATTERN = /\bsemanticSimilarity\s*\(/
+const CLASSIFIER_REFERENCE_PATTERN = /\bclassify\s*\(/
 
 export const detectScriptCapabilities = (source: string): readonly ScriptCapability[] => {
   const capabilities: ScriptCapability[] = []
   if (LLM_REFERENCE_PATTERN.test(source)) capabilities.push("llm")
   if (EMBEDDING_REFERENCE_PATTERN.test(source)) capabilities.push("embedding")
+  if (CLASSIFIER_REFERENCE_PATTERN.test(source)) capabilities.push("classifier")
   return capabilities
 }
 
@@ -29,3 +31,9 @@ export const hasLlmCapability = (capabilities: readonly ScriptCapability[]): boo
 
 export const hasEmbeddingCapability = (capabilities: readonly ScriptCapability[]): boolean =>
   capabilities.includes("embedding")
+
+export const hasClassifierCapability = (capabilities: readonly ScriptCapability[]): boolean =>
+  capabilities.includes("classifier")
+
+export const hasAiCapability = (capabilities: readonly ScriptCapability[]): boolean =>
+  hasLlmCapability(capabilities) || hasClassifierCapability(capabilities)

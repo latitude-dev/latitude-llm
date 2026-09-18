@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
   detectScriptCapabilities,
+  hasAiCapability,
+  hasClassifierCapability,
   hasEmbeddingCapability,
   hasLlmCapability,
   requiresEmbedding,
@@ -16,6 +18,11 @@ describe("detectScriptCapabilities", () => {
   it("detects semanticSimilarity() references as the embedding capability", () => {
     expect(detectScriptCapabilities("const s = await semanticSimilarity('frustration')")).toEqual(["embedding"])
     expect(detectScriptCapabilities("await semanticSimilarity ('x')")).toEqual(["embedding"])
+  })
+
+  it("detects classify() references as the classifier capability", () => {
+    expect(detectScriptCapabilities("const probabilities = await classify('tone', options)")).toEqual(["classifier"])
+    expect(detectScriptCapabilities("await classify ('tone', options)")).toEqual(["classifier"])
   })
 
   it("detects both capabilities when a script uses each", () => {
@@ -39,6 +46,9 @@ describe("detectScriptCapabilities", () => {
     expect(hasLlmCapability([])).toBe(false)
     expect(hasEmbeddingCapability(["embedding"])).toBe(true)
     expect(hasEmbeddingCapability(["llm"])).toBe(false)
+    expect(hasClassifierCapability(["classifier"])).toBe(true)
+    expect(hasClassifierCapability(["llm"])).toBe(false)
+    expect(hasAiCapability(["classifier"])).toBe(true)
   })
 
   it("requiresEmbedding is true only when the source calls semanticSimilarity()", () => {
