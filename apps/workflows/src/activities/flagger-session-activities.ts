@@ -172,30 +172,12 @@ export const screenSessionFlaggers = async (
 
   // Jev preclassifier spends provider tokens — authorize + meter like classify.
   // runJevPreclassifierUseCase records one llm-call per decideMany when a scope is present.
-  const screened = jevPreclassifierEnabled
-    ? screening.pipe(
-        withActivityAIMetering({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          label: "flagger",
-        }),
-      )
-    : screening
-
-  const postgresLayer = jevPreclassifierEnabled
-    ? Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, billingMeteringRepositoriesLive)
-    : Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive)
-
-  return Effect.runPromise(
-    (jevPreclassifierEnabled
-      ? screened.pipe(
-          withPostgres(postgresLayer, getPostgresClient(), OrganizationId(input.organizationId)),
-          Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
-        )
-      : screened.pipe(withPostgres(postgresLayer, getPostgresClient(), OrganizationId(input.organizationId)))
-    ).pipe(
+  // Separate runPromise branches (no Effect ternary) to satisfy exactOptionalPropertyTypes.
+  const finish = <E, R>(effect: Effect.Effect<ScreenSessionFlaggersResult, E, R>) =>
+    effect.pipe(
       withClickHouse(
         Layer.mergeAll(
+
           ScoreAnalyticsRepositoryLive,
           FlaggerScreeningDecisionRepositoryLive,
           JevPreclassifierObservationRepositoryLive,
@@ -235,9 +217,41 @@ export const screenSessionFlaggers = async (
           }),
         ),
       ),
+    )
+
+  if (jevPreclassifierEnabled) {
+    return Effect.runPromise(
+      finish(
+        screening.pipe(
+          withActivityAIMetering({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            label: "flagger",
+          }),
+          withPostgres(
+            Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, billingMeteringRepositoriesLive),
+            getPostgresClient(),
+            OrganizationId(input.organizationId),
+          ),
+          Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
+        ),
+      ),
+    )
+  }
+
+  return Effect.runPromise(
+    finish(
+      screening.pipe(
+        withPostgres(
+          Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
+          getPostgresClient(),
+          OrganizationId(input.organizationId),
+        ),
+      ),
     ),
   )
 }
+
 
 export interface ClassifySessionFlaggerActivityInput {
   readonly organizationId: string
