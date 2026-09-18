@@ -47,12 +47,6 @@ export const FEATURE_FLAGS = {
     description:
       "Runs Jev as a session-level pre-classifier that can gate LLM flaggers into classify when probability meets the threshold. Disabled by default.",
   },
-  jevFlaggerShadow: {
-    emoji: "👤",
-    name: "Jev flagger shadow",
-    description:
-      "Runs the Jev advisory classifier beside supported flaggers without changing their classifications, reviews, or billing.",
-  },
 } as const satisfies Record<
   string,
   {

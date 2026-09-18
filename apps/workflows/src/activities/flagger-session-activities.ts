@@ -25,14 +25,12 @@ import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import {
   JevPreclassifierDecisionProviderLive,
-  JevShadowDecisionProviderLive,
   JevShadowDecisionProviderUnconfigured,
 } from "@platform/ai-jev"
 import { checkRedisRateLimit, RedisBillingSpendReservationLive, RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   FlaggerScreeningDecisionRepositoryLive,
   JevPreclassifierObservationRepositoryLive,
-  JevShadowObservationRepositoryLive,
   ScoreAnalyticsRepositoryLive,
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
@@ -85,25 +83,6 @@ const getJevActivityIdentity = () => {
 }
 
 type HasJevFeatureFlag = (organizationId: string) => Effect.Effect<boolean, unknown>
-
-const hasJevShadowFeatureFlag: HasJevFeatureFlag = (organizationId) =>
-  hasFeatureFlagUseCase({ identifier: "jevFlaggerShadow" }).pipe(
-    withPostgres(FeatureFlagRepositoryLive, getJevShadowPostgresClient(), OrganizationId(organizationId)),
-  )
-
-export const isJevShadowEnabledForOrganization = (
-  organizationId: string,
-  hasFeatureFlag: HasJevFeatureFlag = hasJevShadowFeatureFlag,
-) =>
-  Effect.gen(function* () {
-    const globalEnabled = yield* parseEnvOptional("LAT_JEV_FLAGGER_SHADOW_ENABLED", "boolean")
-    const apiKey = yield* parseEnvOptional("LAT_JEV_API_KEY", "string")
-    if (globalEnabled !== true || !apiKey) return false
-
-    return yield* hasFeatureFlag(organizationId).pipe(Effect.timeout(JEV_FEATURE_FLAG_TIMEOUT_MS))
-  }).pipe(
-    Effect.catchCause((cause) => (Cause.hasInterruptsOnly(cause) ? Effect.failCause(cause) : Effect.succeed(false))),
-  )
 
 const hasJevPreclassifierFeatureFlag: HasJevFeatureFlag = (organizationId) =>
   hasFeatureFlagUseCase({ identifier: "jevFlaggerPreclassifier" }).pipe(
@@ -269,15 +248,9 @@ export interface ClassifySessionFlaggerActivityInput {
 export const classifySessionFlagger = async (
   input: ClassifySessionFlaggerActivityInput,
 ): Promise<ClassifySessionFlaggerResult> => {
-  const jevShadowEnabled = await Effect.runPromise(isJevShadowEnabledForOrganization(input.organizationId))
-  const activityIdentity = getJevActivityIdentity()
-
   return Effect.runPromise(
     classifySessionFlaggerUseCase({
       ...input,
-      ...(jevShadowEnabled
-        ? { jevShadow: { enabled: true, ...activityIdentity, screeningSelection: input.screeningSelection } }
-        : {}),
     }).pipe(
       withActivityAIMetering({
         organizationId: input.organizationId,
@@ -313,13 +286,11 @@ export const classifySessionFlagger = async (
           SessionRepositoryLive,
           SpanRepositoryLive,
           FlaggerScreeningDecisionRepositoryLive,
-          JevShadowObservationRepositoryLive,
         ),
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
       withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
-      Effect.provide(jevShadowEnabled ? JevShadowDecisionProviderLive : JevShadowDecisionProviderUnconfigured),
       Effect.provide(RedisCacheStoreLive(getRedisClient())),
       withTracing,
       Effect.tap((result) =>
