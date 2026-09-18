@@ -98,6 +98,13 @@ if (eligibility.enabledForAll) {
 
 If the flag has no DB row, eligibility comes back as `{ enabledForAll: false, organizationIds: [] }`.
 
+Feature flags do not necessarily suppress background computation. The `agentScore` flag gates the customer-facing
+navigation and page, while the daily sweep continues to calculate eligible projects across organizations. Staff can
+inspect the latest stored snapshot, its five dimensions, and matching cached cause evidence from the Backoffice project
+detail page regardless of flag state. The view is labelled with the organization's customer-access state and never
+triggers a recalculation. Cause evidence is only attached when its project, snapshot date, and scoring version match;
+an expired or missing explanation is reported explicitly instead of showing stale causes.
+
 ## Anti-patterns
 
 - **Reading the flag in a hot render path.** `useHasFeatureFlag` is fine (one React-Query subscription per consumer, shared cache), but resolving the same flag inside a deeply-memoized selector can mask unintended re-renders. If you find yourself doing that, lift the boolean to the parent and pass it as a prop.

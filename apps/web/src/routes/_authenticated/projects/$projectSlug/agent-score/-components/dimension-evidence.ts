@@ -22,6 +22,7 @@ export interface DimensionEvidenceRow {
   readonly label: string
   readonly description?: string
   readonly value: string
+  readonly valueKind?: "scorePoints"
   readonly progress: number
   readonly tone: EvidenceTone
   readonly details?: readonly DimensionEvidenceDetail[]
@@ -270,6 +271,7 @@ const addAttribution = (evidence: MutableEvidence, dimension: ScoreDimensionKey,
       label: "Other score impact",
       description: "This portion of the score shortfall could not be assigned to a specific metric or signal.",
       value: `${attribution.residual.toFixed(1)} score points`,
+      valueKind: "scorePoints",
       progress: clamp(attribution.residual / Math.max(1, attribution.totalDeficit)),
       tone: "negative",
     })
