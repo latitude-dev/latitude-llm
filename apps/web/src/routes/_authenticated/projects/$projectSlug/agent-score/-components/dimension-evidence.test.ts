@@ -298,7 +298,7 @@ describe("buildDimensionEvidence", () => {
     expect(evidence.affected).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ label: "Unused tool definitions", value: "75.0M tokens" }),
-        expect.objectContaining({ label: "Other score impact", value: "5.0 score points" }),
+        expect.objectContaining({ label: "Other score impact", value: "5.0 score points", valueKind: "scorePoints" }),
       ]),
     )
     expect(evidence.affected[0]).toEqual(

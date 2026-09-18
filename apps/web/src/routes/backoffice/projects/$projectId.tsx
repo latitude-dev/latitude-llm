@@ -2,6 +2,7 @@ import { ClaudeCodeIcon, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
 import { ArrowRightIcon, BrainCircuitIcon, CheckIcon, GaugeIcon, MinusIcon } from "lucide-react"
+import { adminGetAgentScore } from "../../../domains/admin/agent-score.functions.ts"
 import { adminGetProject } from "../../../domains/admin/projects.functions.ts"
 import { adminGetProjectTaxonomy } from "../../../domains/admin/taxonomy.functions.ts"
 import { ActionRow, ActionsSection } from "../-components/actions-section/section.tsx"
@@ -14,6 +15,7 @@ import {
 } from "../-components/dashboard/index.ts"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 import { AgentScoreRecalculateButton } from "./-components/agent-score-recalculate-button.tsx"
+import { AgentScoreSection } from "./-components/agent-score-section.tsx"
 import { MetricsSection } from "./-components/metrics-section.tsx"
 import { SessionIntelligenceBackfillButton } from "./-components/session-intelligence-backfill-button.tsx"
 import { TaxonomySection } from "./-components/taxonomy-section.tsx"
@@ -22,11 +24,12 @@ import { WrappedTriggerButton } from "./-components/wrapped-trigger-button.tsx"
 export const Route = createFileRoute("/backoffice/projects/$projectId")({
   loader: async ({ params }) => {
     try {
-      const [project, taxonomy] = await Promise.all([
+      const [project, taxonomy, agentScore] = await Promise.all([
         adminGetProject({ data: { projectId: params.projectId } }),
         adminGetProjectTaxonomy({ data: { projectId: params.projectId } }),
+        adminGetAgentScore({ data: { projectId: params.projectId } }),
       ])
-      return { project, taxonomy }
+      return { project, taxonomy, agentScore }
     } catch (error) {
       // Same `_tag`-discriminating error handling as the other detail
       // pages: NotFound (= "project doesn't exist" or "caller isn't an
@@ -44,7 +47,7 @@ export const Route = createFileRoute("/backoffice/projects/$projectId")({
 })
 
 function BackofficeProjectDetailPage() {
-  const { project, taxonomy } = Route.useLoaderData()
+  const { project, taxonomy, agentScore } = Route.useLoaderData()
   const [emoji, nameWithoutEmoji] = extractLeadingEmoji(project.name)
   const displayName = nameWithoutEmoji || project.name
 
@@ -128,6 +131,8 @@ function BackofficeProjectDetailPage() {
 
       <MetricsSection projectId={project.id} />
 
+      <AgentScoreSection agentScore={agentScore} />
+
       <TaxonomySection taxonomy={taxonomy} />
 
       <ActionsSection
@@ -143,7 +148,7 @@ function BackofficeProjectDetailPage() {
         <ActionRow
           icon={GaugeIcon}
           title="Recalculate Agent Score"
-          description="Recompute today's score and refresh the cause rows and coverage the Agent Score page shows. A score already published for today is not changed."
+          description="Recompute today's score and refresh the evidence for the latest displayed score. Published scores are not changed."
           action={<AgentScoreRecalculateButton projectId={project.id} projectName={project.name} />}
         />
         <ActionRow

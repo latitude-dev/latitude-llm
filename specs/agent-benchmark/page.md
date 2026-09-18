@@ -27,6 +27,21 @@ sections and readiness table remain today's evidence; they do not use stale scor
 explain the older headline. Older snapshots remain in the trend without synthetic points for missing
 dates.
 
+The staff-only Backoffice project detail shows the latest stored snapshot and all five dimensions
+even when the organization does not have customer access through the `agentScore` feature flag. It
+labels whether customer access is enabled and reports an explicit empty state when no snapshot has
+been published. When a cached explanation matches the snapshot's project, date, and scoring version,
+the view builds each dimension's "Affected by" reasons through the same evidence projection as the
+customer Agent Score page. That keeps attributed causes, issue-derived rows, residual explanations,
+withheld-score observations, labels, ordering, and non-point evidence values aligned between both
+surfaces. Backoffice intentionally omits point-valued amounts so the staff view stays focused on the
+reasons affecting the score. Missing or expired evidence has an explicit state; it never falls back
+to causes for another snapshot. Loading the Backoffice view only reads stored data; recomputation
+remains an explicit project action. That action always enqueues the current UTC date and, when the
+latest displayed snapshot is older, also enqueues that snapshot date so its evidence is refreshed.
+Forced recalculation can publish a missing score for the current date but never rewrites an existing
+published score.
+
 ## Level one
 
 The header contains:
