@@ -1,12 +1,4 @@
-/**
- * How long one refresh publish suppresses the next, and how long the page waits for its result.
- *
- * One module because the two are a pair. A poll window shorter than the throttle ends with the page
- * telling the reader to refresh again at the one moment the queue is still dropping that publish,
- * so the advice it gives is false and the second wait is spent on nothing. Scoring runs reach
- * several minutes on large projects, so the poll has to outlive the throttle rather than the other
- * way round.
- */
+/** The poll must outlive the publish throttle so a suggested retry can enqueue new work. */
 export const AGENT_SCORE_REFRESH_THROTTLE_MS = 5 * 60_000
 
 export const AGENT_SCORE_REFRESH_POLL_WINDOW_MS = AGENT_SCORE_REFRESH_THROTTLE_MS + 60_000
