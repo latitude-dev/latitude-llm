@@ -53,6 +53,7 @@ export namespace SessionAssessmentReaderCoverage {
             export const Method = {
                 Deterministic: "deterministic",
                 Hinted: "hinted",
+                JevPreclassifier: "jev-preclassifier",
                 UniformSample: "uniform-sample",
                 OrdinarySample: "ordinary-sample",
             } as const;
@@ -128,6 +129,7 @@ export namespace SessionAssessmentReaderCoverage {
             export const Method = {
                 Deterministic: "deterministic",
                 Hinted: "hinted",
+                JevPreclassifier: "jev-preclassifier",
                 UniformSample: "uniform-sample",
                 OrdinarySample: "ordinary-sample",
             } as const;
@@ -197,6 +199,7 @@ export namespace SessionAssessmentReaderCoverage {
             export const Method = {
                 Deterministic: "deterministic",
                 Hinted: "hinted",
+                JevPreclassifier: "jev-preclassifier",
                 UniformSample: "uniform-sample",
                 OrdinarySample: "ordinary-sample",
             } as const;

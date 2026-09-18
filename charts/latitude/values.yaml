@@ -52,12 +52,14 @@ config:
   #   value: openai
   # - name: LAT_JEV_FLAGGER_SHADOW_ENABLED
   #   value: "true"
+  # - name: LAT_JEV_FLAGGER_PRECLASSIFIER_ENABLED
+  #   value: "false"
   # - name: LAT_JEV_BASE_URL
   #   value: https://api.typesafe.ai
   # - name: LAT_JEV_MODEL
   #   value: jev-latest
   # - name: LAT_JEV_TIMEOUT_MS
-  #   value: "2000"
+  #   value: "12000"  # optional override; preclassifier provider default is 12000, shadow 2000
 
 secrets:
   # Name of a pre-created Secret to use instead of the chart-managed one.

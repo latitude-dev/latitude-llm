@@ -28,6 +28,7 @@ import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import { buildFlaggerSessionContext } from "../conversation.ts"
 import type { Flagger } from "../entities/flagger.ts"
+import type { JevPreclassifierObservation } from "../entities/jev-preclassifier-observation.ts"
 import {
   type FlaggerSlug,
   readDeterministicFlaggerFindings,
@@ -36,10 +37,13 @@ import {
 import { assistant, assistantToolCall, makeSessionDetail, tool, user } from "../flagger-strategies/test-helpers.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { FlaggerScreeningDecisionRepository } from "../ports/flagger-screening-decision-repository.ts"
+import { JevPreclassifierObservationRepository } from "../ports/jev-preclassifier-observation-repository.ts"
+import { JevShadowDecisionProvider } from "../ports/jev-shadow-decision-provider.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
 import { createFakeFlaggerScreeningDecisionRepository } from "../testing/fake-flagger-screening-decision-repository.ts"
 import {
   type CheckFlaggerLlmRateLimit,
+  type ScreenSessionFlaggersDeps,
   type ScreenSessionFlaggersResult,
   type SessionFlaggerDecision,
   screenSessionFlaggersUseCase,
@@ -102,7 +106,7 @@ const fakeCacheStore = Layer.succeed(CacheStore, {
 
 interface RateLimitCall {
   readonly flaggerSlug: string
-  readonly reason: "hinted" | "sampled"
+  readonly reason: "hinted" | "sampled" | "jev-preclassifier"
   readonly hasPositiveHints: boolean
 }
 
@@ -127,6 +131,10 @@ interface RunOptions {
   readonly analyses?: readonly ReturnType<typeof analyzedAnalysis>[]
   readonly deps: ReturnType<typeof makeDeps>["deps"]
   readonly attempt?: number
+  readonly jevPreclassifier?: ScreenSessionFlaggersDeps["jevPreclassifier"]
+  readonly jevProbabilities?: Readonly<Record<string, number | "bad">>
+  readonly jevProviderFails?: boolean
+  readonly jevAuditFails?: boolean
 }
 
 const runScreening = async (options: RunOptions) => {
@@ -143,6 +151,7 @@ const runScreening = async (options: RunOptions) => {
   const { repository: screeningDecisionRepo, decisions: screeningDecisions } =
     createFakeFlaggerScreeningDecisionRepository()
   const outboxEvents: unknown[] = []
+  const jevObservations: JevPreclassifierObservation[] = []
 
   const layer = Layer.mergeAll(
     Layer.succeed(SessionRepository, sessionRepo),
@@ -153,6 +162,49 @@ const runScreening = async (options: RunOptions) => {
     Layer.succeed(SessionAnalysisRepository, analysisRepo),
     Layer.succeed(SessionMomentLabelRepository, labelRepo),
     Layer.succeed(FlaggerScreeningDecisionRepository, screeningDecisionRepo),
+    Layer.succeed(JevShadowDecisionProvider, {
+      decide: () => Effect.die("Jev single-question path must not run"),
+      decideMany: ({ questions }) =>
+        options.jevProviderFails
+          ? Effect.die("provider failed")
+          : Effect.succeed(
+              Object.fromEntries(
+                questions.map((question) => {
+                  const value = options.jevProbabilities?.[question.id]
+                  return [
+                    question.id,
+                    typeof value === "number"
+                      ? {
+                          kind: "success" as const,
+                          probability: value,
+                          provider: "typesafe-ai",
+                          requestedModel: "jev-latest",
+                          resolvedModel: "jev-test",
+                          latencyMs: 10,
+                          inputTokens: 20,
+                          outputTokens: 2,
+                        }
+                      : {
+                          kind: "failure" as const,
+                          errorCategory: "malformed-response" as const,
+                          provider: "typesafe-ai",
+                          requestedModel: "jev-latest",
+                          resolvedModel: "jev-test",
+                          latencyMs: 10,
+                          inputTokens: 20,
+                          outputTokens: 2,
+                        },
+                  ]
+                }),
+              ),
+            ),
+    }),
+    Layer.succeed(JevPreclassifierObservationRepository, {
+      saveMany: (observations) =>
+        options.jevAuditFails
+          ? Effect.die("audit failed")
+          : Effect.sync(() => void jevObservations.push(...observations)),
+    }),
     Layer.succeed(OutboxEventWriter, {
       write: (event) => Effect.sync(() => void outboxEvents.push(event)),
     }),
@@ -170,11 +222,14 @@ const runScreening = async (options: RunOptions) => {
         analysisHash: ANALYSIS_HASH,
         attempt: options.attempt ?? 1,
       },
-      options.deps,
+      {
+        ...options.deps,
+        ...(options.jevPreclassifier ? { jevPreclassifier: options.jevPreclassifier } : {}),
+      },
     ).pipe(Effect.provide(layer)),
   )
 
-  return { result, scores, screeningDecisions, outboxEvents }
+  return { result, scores, screeningDecisions, outboxEvents, jevObservations }
 }
 
 const decisionFor = (decisions: readonly SessionFlaggerDecision[], slug: string) =>
@@ -185,6 +240,96 @@ describe("screenSessionFlaggersUseCase", () => {
 
   beforeEach(() => {
     fakeDeps = makeDeps()
+  })
+
+  it("gates only above-threshold LLM dimensions and keeps partial failures isolated", async () => {
+    const session = makeSessionDetail([user("Hello."), assistant("Hello.")])
+    const { result, jevObservations } = await runScreening({
+      session,
+      flaggers: [makeFlagger("frustration", 0), makeFlagger("refusal", 0), makeFlagger("nsfw", 0)],
+      deps: fakeDeps.deps,
+      jevPreclassifier: {
+        enabled: true,
+        workflowId: "workflow-id",
+        workflowRunId: "run-id",
+        activityId: "activity-id",
+        activityAttempt: 1,
+      },
+      jevProbabilities: {
+        "flagger.frustration": 0.8,
+        "flagger.refusal": 0.49,
+        "flagger.nsfw": "bad",
+      },
+    })
+
+    expect(result.classifications).toContainEqual(
+      expect.objectContaining({ flaggerSlug: "frustration", reason: "jev-preclassifier" }),
+    )
+    expect(result.classifications.some((classification) => classification.flaggerSlug === "refusal")).toBe(false)
+    expect(result.classifications.some((classification) => classification.flaggerSlug === "nsfw")).toBe(false)
+    expect(decisionFor(result.decisions, "frustration")).toMatchObject({
+      action: "classify",
+      reason: "jev-preclassifier",
+    })
+    expect(fakeDeps.rateLimitCalls).toContainEqual(
+      expect.objectContaining({ flaggerSlug: "frustration", reason: "jev-preclassifier" }),
+    )
+    expect(jevObservations.find((observation) => observation.flaggerSlug === "frustration")).toMatchObject({
+      decision: "gated-in",
+      classifyAdded: true,
+      selectionReason: "jev-preclassifier",
+    })
+    expect(jevObservations.find((observation) => observation.flaggerSlug === "refusal")).toMatchObject({
+      decision: "below-threshold",
+      classifyAdded: false,
+    })
+    expect(jevObservations.find((observation) => observation.flaggerSlug === "nsfw")).toMatchObject({
+      decision: "unknown",
+      classifyAdded: false,
+      errorCategory: "malformed-response",
+    })
+  })
+
+  it("keeps hinted selections and fails closed on provider or audit failure", async () => {
+    const hintedSession = makeSessionDetail([user("I already told you the deadline."), assistant("Sorry.")])
+    const hinted = await runScreening({
+      session: hintedSession,
+      flaggers: [makeFlagger("frustration", 0)],
+      deps: fakeDeps.deps,
+      jevPreclassifier: {
+        enabled: true,
+        workflowId: "workflow-id",
+        workflowRunId: "run-id",
+        activityId: "activity-id",
+        activityAttempt: 1,
+      },
+      jevProbabilities: { "flagger.frustration": 0.9 },
+    })
+    expect(hinted.result.classifications).toContainEqual(
+      expect.objectContaining({ flaggerSlug: "frustration", reason: "hinted" }),
+    )
+
+    for (const failure of [{ jevProviderFails: true }, { jevAuditFails: true }]) {
+      const screened = await runScreening({
+        session: makeSessionDetail([user("Please help."), assistant("No.")]),
+        flaggers: [makeFlagger("refusal", 0)],
+        deps: fakeDeps.deps,
+        jevPreclassifier: {
+          enabled: true,
+          workflowId: "workflow-id",
+          workflowRunId: "run-id",
+          activityId: "activity-id",
+          activityAttempt: 1,
+        },
+        jevProbabilities: { "flagger.refusal": 0.9 },
+        ...failure,
+      })
+      expect(screened.result.classifications).toEqual([])
+      expect(decisionFor(screened.result.decisions, "refusal")).toMatchObject({
+        action: "dropped",
+        reason: "sampled-out",
+      })
+    }
   })
 
   it("skips when the session is not found", async () => {
@@ -366,6 +511,11 @@ describe("screenSessionFlaggersUseCase", () => {
       Layer.succeed(SessionAnalysisRepository, analysisRepo),
       Layer.succeed(SessionMomentLabelRepository, labelRepo),
       Layer.succeed(FlaggerScreeningDecisionRepository, screeningDecisionRepo),
+      Layer.succeed(JevShadowDecisionProvider, {
+        decide: () => Effect.die("Jev must not run"),
+        decideMany: () => Effect.die("Jev must not run"),
+      }),
+      Layer.succeed(JevPreclassifierObservationRepository, { saveMany: () => Effect.die("Jev must not save") }),
       Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
       Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(ORG_ID) })),

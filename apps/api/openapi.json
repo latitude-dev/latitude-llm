@@ -14581,6 +14581,7 @@
                     "enum": [
                       "deterministic",
                       "hinted",
+                      "jev-preclassifier",
                       "uniform-sample",
                       "ordinary-sample"
                     ],
@@ -14682,6 +14683,7 @@
                     "enum": [
                       "deterministic",
                       "hinted",
+                      "jev-preclassifier",
                       "uniform-sample",
                       "ordinary-sample"
                     ],
@@ -14771,6 +14773,7 @@
                     "enum": [
                       "deterministic",
                       "hinted",
+                      "jev-preclassifier",
                       "uniform-sample",
                       "ordinary-sample"
                     ],

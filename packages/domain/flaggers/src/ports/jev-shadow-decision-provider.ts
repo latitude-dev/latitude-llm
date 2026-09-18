@@ -29,6 +29,11 @@ export interface JevShadowDecisionProviderRequest {
   }
 }
 
+export interface JevDecisionProviderManyRequest {
+  readonly questions: readonly JevShadowQuestion[]
+  readonly state: JevShadowDecisionProviderRequest["state"]
+}
+
 export const jevShadowProviderResultSchema = z.discriminatedUnion("kind", [
   jevShadowProviderAuditMetadataSchema.extend({
     kind: z.literal("success"),
@@ -43,6 +48,7 @@ export type JevShadowProviderResult = z.infer<typeof jevShadowProviderResultSche
 
 export interface JevShadowDecisionProviderShape {
   decide(input: JevShadowDecisionProviderRequest): Effect.Effect<JevShadowProviderResult>
+  decideMany?(input: JevDecisionProviderManyRequest): Effect.Effect<Readonly<Record<string, JevShadowProviderResult>>>
 }
 
 export class JevShadowDecisionProvider extends Context.Service<

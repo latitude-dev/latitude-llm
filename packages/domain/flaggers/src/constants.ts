@@ -12,6 +12,7 @@ export const FLAGGER_SCREENING_SELECTION_REASONS = [
   "ordinary-sample",
   "skipped",
   "rate-limited",
+  "jev-preclassifier",
 ] as const
 
 export const FLAGGER_SCREENING_OUTCOMES = [
@@ -23,6 +24,27 @@ export const FLAGGER_SCREENING_OUTCOMES = [
   "notApplicable",
   "error",
 ] as const
+
+export const JEV_PRECLASSIFIER_ENABLED = false
+export const JEV_PRECLASSIFIER_STRATEGY_SLUGS = [
+  "frustration",
+  "nsfw",
+  "refusal",
+  "laziness",
+  "jailbreaking",
+  "forgetting",
+  "trashing",
+  "bluffing",
+  "pii-leakage",
+  "incompletion",
+  "task-failure",
+] as const
+export const JEV_PRECLASSIFIER_THRESHOLD = 0.5
+export const JEV_PRECLASSIFIER_POLICY_VERSION = "jev-preclassifier-policy-v1"
+export const JEV_PRECLASSIFIER_STATE_BUILDER_VERSION = "jev-preclassifier-state-v1"
+export const JEV_PRECLASSIFIER_RETENTION_DAYS = 90
+export const JEV_PRECLASSIFIER_OPERATION_TIMEOUT_MS = 15_000
+export const JEV_PRECLASSIFIER_DECISIONS = ["gated-in", "below-threshold", "unknown"] as const
 
 export const JEV_SHADOW_ENABLED = false
 export const JEV_SHADOW_STRATEGY_SLUGS = ["frustration", "refusal"] as const

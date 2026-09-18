@@ -53,6 +53,35 @@ afterEach(() => {
 })
 
 describe("Jev shadow decision provider", () => {
+  it("sends multiple questions in one request and isolates malformed answers", async () => {
+    let request: RequestInit | undefined
+    const fetch: typeof globalThis.fetch = async (_url, init) => {
+      request = init
+      return response(
+        successBody({
+          frustration: { type: "noul", noul: 0.8 },
+          refusal: { type: "noul", noul: 3 },
+        }),
+      )
+    }
+    const provider = createJevShadowDecisionProvider({ apiKey, fetch })
+    const decideMany = provider.decideMany
+    if (!decideMany) throw new Error("decideMany is not configured")
+    const results = await Effect.runPromise(
+      decideMany({
+        state: input.state,
+        questions: [input.question, { id: "refusal", version: "v1", prompt: "Did the assistant refuse?" }],
+      }),
+    )
+
+    expect(JSON.parse(request?.body as string).questions).toEqual({
+      frustration: { type: "noul", instructions: "Is the user frustrated?" },
+      refusal: { type: "noul", instructions: "Did the assistant refuse?" },
+    })
+    expect(results.frustration).toMatchObject({ kind: "success", probability: 0.8 })
+    expect(results.refusal).toMatchObject({ kind: "failure", errorCategory: "malformed-response" })
+  })
+
   it("posts the TypeSafe System One request and maps a noul answer", async () => {
     let request: RequestInit | undefined
     let url: string | undefined
