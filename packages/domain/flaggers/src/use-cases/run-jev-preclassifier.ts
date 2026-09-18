@@ -186,7 +186,6 @@ const evaluateStrategy = (args: {
     return { index, decision: gated.decision, classification: gated.classification, observation }
   })
 
-
 const meterJevPreclassifierCall = (results: Readonly<Record<string, JevShadowProviderResult>>) =>
   Effect.gen(function* () {
     const scope = yield* Effect.serviceOption(AIMeteringScope)
