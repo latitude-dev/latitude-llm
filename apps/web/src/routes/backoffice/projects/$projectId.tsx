@@ -148,7 +148,7 @@ function BackofficeProjectDetailPage() {
         <ActionRow
           icon={GaugeIcon}
           title="Recalculate Agent Score"
-          description="Recompute today's score and refresh the cause rows and coverage the Agent Score page shows. A score already published for today is not changed."
+          description="Recompute today's score and refresh the evidence for the latest displayed score. Published scores are not changed."
           action={<AgentScoreRecalculateButton projectId={project.id} projectName={project.name} />}
         />
         <ActionRow

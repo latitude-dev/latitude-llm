@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { adminAgentScoreProjectInputSchema } from "./agent-score.functions.ts"
+import { adminAgentScoreProjectInputSchema, agentScoreRecalculationDates } from "./agent-score.functions.ts"
 
 describe("adminAgentScoreProjectInputSchema", () => {
   it("accepts a project id", () => {
@@ -23,5 +23,34 @@ describe("adminAgentScoreProjectInputSchema", () => {
     })
 
     expect(parsed).not.toHaveProperty("organizationId")
+  })
+})
+
+describe("agentScoreRecalculationDates", () => {
+  it("recalculates today and the older displayed snapshot", () => {
+    expect(
+      agentScoreRecalculationDates({
+        currentDate: "2026-09-18",
+        snapshotDate: "2026-09-17",
+      }),
+    ).toEqual(["2026-09-18", "2026-09-17"])
+  })
+
+  it("does not enqueue today twice when it is the displayed snapshot", () => {
+    expect(
+      agentScoreRecalculationDates({
+        currentDate: "2026-09-18",
+        snapshotDate: "2026-09-18",
+      }),
+    ).toEqual(["2026-09-18"])
+  })
+
+  it("only recalculates today when no snapshot has been published", () => {
+    expect(
+      agentScoreRecalculationDates({
+        currentDate: "2026-09-18",
+        snapshotDate: null,
+      }),
+    ).toEqual(["2026-09-18"])
   })
 })

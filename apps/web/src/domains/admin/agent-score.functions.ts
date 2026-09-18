@@ -118,13 +118,22 @@ export const adminGetAgentScore = createServerFn({ method: "GET" })
     )
   })
 
+export const agentScoreRecalculationDates = ({
+  currentDate,
+  snapshotDate,
+}: {
+  readonly currentDate: string
+  readonly snapshotDate: string | null
+}): readonly string[] => (snapshotDate && snapshotDate !== currentDate ? [currentDate, snapshotDate] : [currentDate])
+
 /**
  * Recompute one project's Agent Score now, without waiting for the daily sweep.
  *
- * The run is forced, so it recomputes a date that already has a snapshot. That is the point: the
- * expensive half of the work is the explanation — every session in the window, read with its
- * content — and this is how staff refresh it after a detector, a signal or a flagger setting
- * changes, rather than waiting a day to see the effect.
+ * Today's date is always enqueued. When the latest published snapshot is older, that date is also
+ * enqueued so the evidence shown beside the snapshot is actually refreshed. The runs are forced
+ * because the expensive half of the work is the explanation — every session in the window, read
+ * with its content — and this is how staff refresh it after a detector, a signal or a flagger
+ * setting changes, rather than waiting a day to see the effect.
  *
  * It cannot rewrite a published score. The worker's insert is conditional on the date being absent,
  * so a forced run on a scored day refreshes the evidence and leaves the number exactly as it was:
@@ -138,24 +147,41 @@ export const adminRecalculateAgentScore = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
   .inputValidator(adminAgentScoreProjectInputSchema)
   .handler(async ({ data }): Promise<{ enqueued: true; date: string }> => {
-    const project = await Effect.runPromise(
-      getProjectDetailsUseCase({ projectId: ProjectId(data.projectId) }).pipe(
-        withPostgres(AdminProjectRepositoryLive, getAdminPostgresClient()),
+    const { project, latest } = await Effect.runPromise(
+      Effect.gen(function* () {
+        const project = yield* getProjectDetailsUseCase({ projectId: ProjectId(data.projectId) })
+        const latest = yield* getLatestAgentScore({
+          organizationId: OrganizationId(project.organization.id),
+          projectId: ProjectId(project.id),
+        })
+        return { project, latest }
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(AdminProjectRepositoryLive, AgentScoreSnapshotRepositoryLive),
+          getAdminPostgresClient(),
+        ),
         withTracing,
       ),
     )
 
     const date = new Date().toISOString().slice(0, 10)
+    const dates = agentScoreRecalculationDates({
+      currentDate: date,
+      snapshotDate: latest.available ? latest.snapshot.date : null,
+    })
     const publisher = await getQueuePublisher()
     await Effect.runPromise(
-      publisher
-        .publish("agent-score", "snapshotProject", {
-          organizationId: project.organization.id,
-          projectId: project.id,
-          date,
-          force: true,
-        })
-        .pipe(withTracing),
+      Effect.forEach(
+        dates,
+        (taskDate) =>
+          publisher.publish("agent-score", "snapshotProject", {
+            organizationId: project.organization.id,
+            projectId: project.id,
+            date: taskDate,
+            force: true,
+          }),
+        { discard: true },
+      ).pipe(withTracing),
     )
 
     return { enqueued: true, date }

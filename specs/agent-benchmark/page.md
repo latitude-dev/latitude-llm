@@ -37,7 +37,10 @@ withheld-score observations, labels, ordering, and non-point evidence values ali
 surfaces. Backoffice intentionally omits point-valued amounts so the staff view stays focused on the
 reasons affecting the score. Missing or expired evidence has an explicit state; it never falls back
 to causes for another snapshot. Loading the Backoffice view only reads stored data; recomputation
-remains an explicit project action.
+remains an explicit project action. That action always enqueues the current UTC date and, when the
+latest displayed snapshot is older, also enqueues that snapshot date so its evidence is refreshed.
+Forced recalculation can publish a missing score for the current date but never rewrites an existing
+published score.
 
 ## Level one
 
