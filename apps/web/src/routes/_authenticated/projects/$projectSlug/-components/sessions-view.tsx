@@ -29,7 +29,6 @@ import type { TraceRecord } from "../../../../../domains/traces/traces.functions
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import type { SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
-import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { isLargeSession, MAX_SESSION_ANALYSIS_TRACE_COUNT } from "./session-detail-drawer/session-size.ts"
 import { sessionTracePageQueryOptions } from "./session-detail-drawer/use-session-traces.ts"
 import { SessionOutlierBadge } from "./session-outlier-badge.tsx"
@@ -150,7 +149,6 @@ function useExpandedSessionTraces({
 interface SessionsViewProps {
   readonly projectId: string
   readonly filters: FilterSet
-  readonly filtersOpen: boolean
   readonly activeSessionId: string | undefined
   readonly activeTraceId?: string | undefined
   readonly sorting: InfiniteTableSorting
@@ -158,9 +156,7 @@ interface SessionsViewProps {
   readonly selectionState: SelectionState<string>
   readonly onSelectionChange: (state: SelectionState<string>) => void
   readonly totalTraceCount: number
-  readonly onFiltersChange: (filters: FilterSet) => void
   readonly onShowAllSessions: () => void
-  readonly onFiltersClose: () => void
   readonly onOpenSession: (sessionId: string, traceId?: string) => void
   readonly onCloseSession: () => void
   readonly visibleColumnIds: readonly SessionColumnId[]
@@ -168,8 +164,6 @@ interface SessionsViewProps {
   readonly hasUserAppliedFilters: boolean
   readonly selectable?: boolean
   readonly searchQuery?: string
-  /** Filter fields to hide in the built-in sidebar (e.g. `topics`). */
-  readonly excludeFilterFields?: readonly string[]
   /** Optional shared ancestor scroll container for page-level scrolling + sticky headers. */
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
 }
@@ -177,7 +171,6 @@ interface SessionsViewProps {
 export function SessionsView({
   projectId,
   filters,
-  filtersOpen,
   activeSessionId,
   activeTraceId,
   sorting,
@@ -185,9 +178,7 @@ export function SessionsView({
   selectionState,
   onSelectionChange,
   totalTraceCount,
-  onFiltersChange,
   onShowAllSessions,
-  onFiltersClose,
   onOpenSession,
   onCloseSession,
   visibleColumnIds,
@@ -195,7 +186,6 @@ export function SessionsView({
   hasUserAppliedFilters,
   searchQuery,
   selectable = true,
-  excludeFilterFields,
   scrollContainerRef,
 }: SessionsViewProps) {
   // Annotations are an LLM-feedback feature — off under a sandbox scope. Skip
@@ -847,50 +837,31 @@ export function SessionsView({
     return paginateTraces(entry.data, row.session.traceCount)
   }
 
-  const hasExternalScrollArea = scrollContainerRef !== undefined
-
   return (
-    // `flex-none overflow-visible`: the default `flex-1 min-h-0 overflow-hidden` bounds
-    // and clips this to the visible viewport, which is right when the table scrolls
-    // itself — but with an external scroll container the table grows to its full row
-    // count and that ancestor (shared with content stacked above it, e.g. an
-    // aggregations chart) scrolls for it instead, so nothing here should clip.
-    <Layout.Body {...(hasExternalScrollArea ? { className: "flex-none overflow-visible" } : {})}>
-      {filtersOpen && (
-        <FiltersSidebar
-          mode="sessions"
-          projectId={projectId}
-          filters={filters}
-          onFiltersChange={onFiltersChange}
-          onClose={onFiltersClose}
-          {...(excludeFilterFields ? { excludeFields: excludeFilterFields } : {})}
-        />
-      )}
-      <Layout.List>
-        <InfiniteTable
-          {...(hasExternalScrollArea
-            ? { scrollAreaLayout: "external" as const, scrollContainerRef }
-            : listingLayoutIntrinsicScroll.infiniteTable)}
-          data={tableData}
-          isLoading={isLoading}
-          columns={columns}
-          getRowKey={getRowKey}
-          onRowClick={onRowClick}
-          onToggleExpand={onToggleExpand}
-          getRowAriaLabel={getRowAriaLabel}
-          getRowClassName={getRowClassName}
-          {...(activeTraceId || activeSessionId ? { activeRowKey: activeTraceId || (activeSessionId as string) } : {})}
-          {...(selectable ? { selection } : {})}
-          infiniteScroll={infiniteScroll}
-          sorting={sorting}
-          defaultSorting={searchQuery ? DEFAULT_SEARCH_SORTING : DEFAULT_SESSION_SORTING}
-          onSortChange={onSortingChange}
-          blankSlate={blankSlate}
-          expandedRowKeys={expandedIds}
-          getExpandedRows={getExpandedRows}
-          isRowExpandable={isSessionExpandable}
-        />
-      </Layout.List>
-    </Layout.Body>
+    <Layout.List>
+      <InfiniteTable
+        {...(scrollContainerRef
+          ? { scrollAreaLayout: "external" as const, scrollContainerRef }
+          : listingLayoutIntrinsicScroll.infiniteTable)}
+        data={tableData}
+        isLoading={isLoading}
+        columns={columns}
+        getRowKey={getRowKey}
+        onRowClick={onRowClick}
+        onToggleExpand={onToggleExpand}
+        getRowAriaLabel={getRowAriaLabel}
+        getRowClassName={getRowClassName}
+        {...(activeTraceId || activeSessionId ? { activeRowKey: activeTraceId || (activeSessionId as string) } : {})}
+        {...(selectable ? { selection } : {})}
+        infiniteScroll={infiniteScroll}
+        sorting={sorting}
+        defaultSorting={searchQuery ? DEFAULT_SEARCH_SORTING : DEFAULT_SESSION_SORTING}
+        onSortChange={onSortingChange}
+        blankSlate={blankSlate}
+        expandedRowKeys={expandedIds}
+        getExpandedRows={getExpandedRows}
+        isRowExpandable={isSessionExpandable}
+      />
+    </Layout.List>
   )
 }

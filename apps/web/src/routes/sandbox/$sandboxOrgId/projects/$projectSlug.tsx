@@ -23,6 +23,7 @@ import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
 import { EMPTY_SELECTION, type SelectionState } from "../../../../lib/hooks/useSelectableRows.ts"
 import { ColumnsSelector } from "../../../_authenticated/projects/$projectSlug/-components/columns-selector.tsx"
+import { FiltersSidebar } from "../../../_authenticated/projects/$projectSlug/-components/filters-sidebar.tsx"
 import {
   TRACE_COLUMN_OPTIONS,
   type TraceColumnId,
@@ -328,48 +329,53 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
         </Layout.ActionsRow>
       </Layout.Actions>
 
-      {activeTab === "traces" ? (
-        <TracesView
-          projectId={projectId}
-          filters={filters}
-          filtersOpen={filtersOpen}
-          activeTraceId={activeTraceId || undefined}
-          activeDrawerTab={detailTab}
-          sorting={sorting}
-          onSortingChange={onSortingChange}
-          selectionState={selectionState}
-          onSelectionChange={setSelectionState}
-          totalTraceCount={totalCount}
-          onFiltersChange={onFiltersChange}
-          onFiltersClose={() => setFiltersOpen(false)}
-          onActiveTraceChange={onActiveTraceChange}
-          traceIdsRef={traceIdsRef}
-          visibleColumnIds={traceColumnSettings.visibleColumnIds}
-          selectable={false}
-        />
-      ) : (
-        <SessionsView
-          projectId={projectId}
-          filters={filters}
-          filtersOpen={filtersOpen}
-          activeSessionId={activeSessionId || undefined}
-          activeTraceId={activeTraceId || undefined}
-          sorting={sorting}
-          onSortingChange={onSortingChange}
-          selectionState={selectionState}
-          onSelectionChange={setSelectionState}
-          totalTraceCount={totalCount}
-          onFiltersChange={onFiltersChange}
-          onShowAllSessions={onShowAllSessions}
-          onFiltersClose={() => setFiltersOpen(false)}
-          onOpenSession={onOpenSession}
-          onCloseSession={closeSessionPanel}
-          visibleColumnIds={sessionColumnSettings.visibleColumnIds}
-          isSearching={false}
-          hasUserAppliedFilters={hasActiveFilters}
-          selectable={false}
-        />
-      )}
+      <Layout.Body>
+        {filtersOpen ? (
+          <FiltersSidebar
+            mode={activeTab}
+            projectId={projectId}
+            filters={filters}
+            onFiltersChange={onFiltersChange}
+            onClose={() => setFiltersOpen(false)}
+          />
+        ) : null}
+        {activeTab === "traces" ? (
+          <TracesView
+            projectId={projectId}
+            filters={filters}
+            activeTraceId={activeTraceId || undefined}
+            activeDrawerTab={detailTab}
+            sorting={sorting}
+            onSortingChange={onSortingChange}
+            selectionState={selectionState}
+            onSelectionChange={setSelectionState}
+            totalTraceCount={totalCount}
+            onActiveTraceChange={onActiveTraceChange}
+            traceIdsRef={traceIdsRef}
+            visibleColumnIds={traceColumnSettings.visibleColumnIds}
+            selectable={false}
+          />
+        ) : (
+          <SessionsView
+            projectId={projectId}
+            filters={filters}
+            activeSessionId={activeSessionId || undefined}
+            activeTraceId={activeTraceId || undefined}
+            sorting={sorting}
+            onSortingChange={onSortingChange}
+            selectionState={selectionState}
+            onSelectionChange={setSelectionState}
+            totalTraceCount={totalCount}
+            onShowAllSessions={onShowAllSessions}
+            onOpenSession={onOpenSession}
+            onCloseSession={closeSessionPanel}
+            visibleColumnIds={sessionColumnSettings.visibleColumnIds}
+            isSearching={false}
+            hasUserAppliedFilters={hasActiveFilters}
+            selectable={false}
+          />
+        )}
+      </Layout.Body>
 
       {activeTab === "traces" && activeTraceId ? (
         <Layout.Aside>

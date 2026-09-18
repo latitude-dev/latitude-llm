@@ -9,14 +9,12 @@ import type { TraceRecord } from "../../../../../domains/traces/traces.functions
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
-import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { DEFAULT_TRACE_TABLE_SORTING, ProjectTracesTable, type TraceColumnId } from "./project-traces-table.tsx"
 import { DEFAULT_SEARCH_SORTING } from "./trace-page-state.ts"
 
 interface TracesViewProps {
   readonly projectId: string
   readonly filters: FilterSet
-  readonly filtersOpen: boolean
   readonly activeTraceId: string | undefined
   readonly activeDrawerTab: string
   readonly sorting: InfiniteTableSorting
@@ -24,8 +22,6 @@ interface TracesViewProps {
   readonly selectionState: SelectionState<string>
   readonly onSelectionChange: (state: SelectionState<string>) => void
   readonly totalTraceCount: number
-  readonly onFiltersChange: (filters: FilterSet) => void
-  readonly onFiltersClose: () => void
   readonly onActiveTraceChange: (traceId: string | undefined) => void
   readonly traceIdsRef: RefObject<string[]>
   readonly visibleColumnIds: readonly TraceColumnId[]
@@ -38,7 +34,6 @@ interface TracesViewProps {
 export function TracesView({
   projectId,
   filters,
-  filtersOpen,
   activeTraceId,
   activeDrawerTab,
   sorting,
@@ -46,8 +41,6 @@ export function TracesView({
   selectionState,
   onSelectionChange,
   totalTraceCount,
-  onFiltersChange,
-  onFiltersClose,
   onActiveTraceChange,
   traceIdsRef,
   visibleColumnIds,
@@ -150,50 +143,37 @@ export function TracesView({
     },
   ])
 
-  const hasExternalScrollArea = scrollContainerRef !== undefined
-
   return (
-    <Layout.Body {...(hasExternalScrollArea ? { className: "flex-none overflow-visible" } : {})}>
-      {filtersOpen && (
-        <FiltersSidebar
-          mode="traces"
-          projectId={projectId}
-          filters={filters}
-          onFiltersChange={onFiltersChange}
-          onClose={onFiltersClose}
-        />
-      )}
-      <Layout.List>
-        <ProjectTracesTable
-          {...(hasExternalScrollArea
-            ? { scrollAreaLayout: "external" as const, scrollContainerRef }
-            : listingLayoutIntrinsicScroll.projectTracesTable)}
-          projectId={projectId}
-          data={traces}
-          isLoading={isLoading}
-          visibleColumnIds={visibleColumnIds}
-          onTraceClick={handleTraceClick}
-          onErrorClick={handleErrorClick}
-          {...(annotationsEnabled ? { onAnnotationClick: handleAnnotationClick } : {})}
-          getTraceRowAriaLabel={getRowAriaLabel}
-          {...(activeTraceId ? { activeTraceId } : {})}
-          {...(selectable ? { selection } : {})}
-          infiniteScroll={infiniteScroll}
-          sorting={sorting}
-          defaultSorting={hasSearchQuery ? DEFAULT_SEARCH_SORTING : DEFAULT_TRACE_TABLE_SORTING}
-          onSortChange={onSortingChange}
-          blankSlate={
-            hasSearchQuery
-              ? "No traces match the search query"
-              : hasActiveFilters
-                ? "No traces match the current filters"
-                : "No traces found"
-          }
-          traceMetrics={traceMetrics}
-          metricsLoading={metricsLoading}
-          {...(annotationsEnabled ? { annotationCounts, annotationCountsPendingTraceIds } : {})}
-        />
-      </Layout.List>
-    </Layout.Body>
+    <Layout.List>
+      <ProjectTracesTable
+        {...(scrollContainerRef
+          ? { scrollAreaLayout: "external" as const, scrollContainerRef }
+          : listingLayoutIntrinsicScroll.projectTracesTable)}
+        projectId={projectId}
+        data={traces}
+        isLoading={isLoading}
+        visibleColumnIds={visibleColumnIds}
+        onTraceClick={handleTraceClick}
+        onErrorClick={handleErrorClick}
+        {...(annotationsEnabled ? { onAnnotationClick: handleAnnotationClick } : {})}
+        getTraceRowAriaLabel={getRowAriaLabel}
+        {...(activeTraceId ? { activeTraceId } : {})}
+        {...(selectable ? { selection } : {})}
+        infiniteScroll={infiniteScroll}
+        sorting={sorting}
+        defaultSorting={hasSearchQuery ? DEFAULT_SEARCH_SORTING : DEFAULT_TRACE_TABLE_SORTING}
+        onSortChange={onSortingChange}
+        blankSlate={
+          hasSearchQuery
+            ? "No traces match the search query"
+            : hasActiveFilters
+              ? "No traces match the current filters"
+              : "No traces found"
+        }
+        traceMetrics={traceMetrics}
+        metricsLoading={metricsLoading}
+        {...(annotationsEnabled ? { annotationCounts, annotationCountsPendingTraceIds } : {})}
+      />
+    </Layout.List>
   )
 }
