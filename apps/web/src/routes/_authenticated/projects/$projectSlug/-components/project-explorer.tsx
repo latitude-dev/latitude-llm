@@ -47,7 +47,6 @@ import { AddToDatasetModal } from "./add-to-dataset-modal.tsx"
 import { TraceAggregationsPanel } from "./aggregations/aggregations-panel.tsx"
 import { ColumnsSelector } from "./columns-selector.tsx"
 import { ExportConfirmationModal } from "./export-confirmation-modal.tsx"
-import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./project-traces-table.tsx"
 import { SaveSearchModal } from "./save-search-modal.tsx"
 import { SaveSearchSegment } from "./save-search-segment.tsx"
@@ -486,6 +485,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const sharedViewProps = {
     projectId: currentProject.id,
     filters: filtersWithDefaultTime,
+    filtersOpen,
     activeTraceId: activeTraceId || undefined,
     activeDrawerTab: traceDetailTab,
     sorting,
@@ -493,6 +493,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     selectionState,
     onSelectionChange: setSelectionState,
     totalTraceCount,
+    onFiltersChange,
+    onFiltersClose: () => setFiltersOpen(false),
     onActiveTraceChange,
     traceIdsRef,
     scrollContainerRef: sessionsScrollAreaRef,
@@ -653,70 +655,62 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
         </Layout.ActionsRow>
       </Layout.Actions>
 
-      <Layout.Body>
-        {filtersOpen ? (
-          <FiltersSidebar
+      <div ref={sessionsScrollAreaRef} className="flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto">
+        {selectedCount > 0 && (
+          <div className="sticky left-0 z-[1] flex items-center gap-2 bg-background px-6">
+            <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
+              <Icon icon={DownloadIcon} size="sm" />
+              Export Traces ({selectedCount.toLocaleString()})
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
+              <Icon icon={DatabaseIcon} size="sm" />
+              Add to Dataset ({selectedCount})
+            </Button>
+          </div>
+        )}
+
+        <div className="sticky left-0 z-[1] bg-background px-6">
+          <TraceAggregationsPanel
+            projectId={currentProject.id}
+            projectSlug={currentProject.slug}
+            filters={filtersWithDefaultTime}
             mode={activeTab}
+            onTimeRangeSelect={onTimeRangeSelect}
+            {...(histogramRangeOverride ? { histogramRangeOverride } : {})}
+          />
+        </div>
+
+        {isSessions ? (
+          <SessionsView
             projectId={currentProject.id}
             filters={filtersWithDefaultTime}
+            filtersOpen={filtersOpen}
+            activeSessionId={activeSessionId || undefined}
+            activeTraceId={activeTraceId || undefined}
+            sorting={sorting}
+            onSortingChange={onSortingChange}
+            selectionState={selectionState}
+            onSelectionChange={setSelectionState}
+            totalTraceCount={totalTraceCount}
             onFiltersChange={onFiltersChange}
-            onClose={() => setFiltersOpen(false)}
+            onShowAllSessions={onShowAllSessions}
+            onFiltersClose={() => setFiltersOpen(false)}
+            onOpenSession={onOpenSession}
+            onCloseSession={closeSessionPanel}
+            visibleColumnIds={sessionColumnSettings.visibleColumnIds}
+            isSearching={hasSearchQuery}
+            hasUserAppliedFilters={hasActiveFilters}
+            scrollContainerRef={sessionsScrollAreaRef}
+            {...(hasSearchQuery ? { searchQuery: query } : {})}
           />
-        ) : null}
-        <div ref={sessionsScrollAreaRef} className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto">
-          {selectedCount > 0 && (
-            <div className="sticky left-0 z-[1] flex items-center gap-2 bg-background px-6">
-              <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
-                <Icon icon={DownloadIcon} size="sm" />
-                Export Traces ({selectedCount.toLocaleString()})
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
-                <Icon icon={DatabaseIcon} size="sm" />
-                Add to Dataset ({selectedCount})
-              </Button>
-            </div>
-          )}
-
-          <div className="sticky left-0 z-[1] bg-background px-6">
-            <TraceAggregationsPanel
-              projectId={currentProject.id}
-              projectSlug={currentProject.slug}
-              filters={filtersWithDefaultTime}
-              mode={activeTab}
-              onTimeRangeSelect={onTimeRangeSelect}
-              {...(histogramRangeOverride ? { histogramRangeOverride } : {})}
-            />
-          </div>
-
-          {isSessions ? (
-            <SessionsView
-              projectId={currentProject.id}
-              filters={filtersWithDefaultTime}
-              activeSessionId={activeSessionId || undefined}
-              activeTraceId={activeTraceId || undefined}
-              sorting={sorting}
-              onSortingChange={onSortingChange}
-              selectionState={selectionState}
-              onSelectionChange={setSelectionState}
-              totalTraceCount={totalTraceCount}
-              onShowAllSessions={onShowAllSessions}
-              onOpenSession={onOpenSession}
-              onCloseSession={closeSessionPanel}
-              visibleColumnIds={sessionColumnSettings.visibleColumnIds}
-              isSearching={hasSearchQuery}
-              hasUserAppliedFilters={hasActiveFilters}
-              scrollContainerRef={sessionsScrollAreaRef}
-              {...(hasSearchQuery ? { searchQuery: query } : {})}
-            />
-          ) : (
-            <TracesView
-              {...sharedViewProps}
-              visibleColumnIds={traceColumnSettings.visibleColumnIds}
-              {...(hasSearchQuery ? { searchQuery: query } : {})}
-            />
-          )}
-        </div>
-      </Layout.Body>
+        ) : (
+          <TracesView
+            {...sharedViewProps}
+            visibleColumnIds={traceColumnSettings.visibleColumnIds}
+            {...(hasSearchQuery ? { searchQuery: query } : {})}
+          />
+        )}
+      </div>
 
       {!isSessions && activeTraceId ? (
         <Layout.Aside>

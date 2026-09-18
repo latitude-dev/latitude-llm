@@ -3,7 +3,6 @@ import type { InfiniteTableSorting } from "@repo/ui"
 import { type ReactNode, useMemo, useState } from "react"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { EMPTY_SELECTION } from "../../../../../lib/hooks/useSelectableRows.ts"
-import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { SessionDetailDrawer } from "./session-detail-drawer.tsx"
 import { DEFAULT_SESSION_SORTING, getSessionColumnOptions, SessionsView } from "./sessions-view.tsx"
 
@@ -44,35 +43,27 @@ export function FilterSessionsPreview({
     <Layout>
       <Layout.Content>
         {header}
-        <Layout.Body>
-          {filtersOpen ? (
-            <FiltersSidebar
-              mode="sessions"
-              projectId={projectId}
-              filters={filters}
-              onFiltersChange={onFilterChange}
-              onClose={() => setFiltersOpen(false)}
-              {...(excludeFilterFields ? { excludeFields: excludeFilterFields } : {})}
-            />
-          ) : null}
-          <SessionsView
-            projectId={projectId}
-            filters={filters}
-            activeSessionId={activeSessionId || undefined}
-            sorting={sorting}
-            onSortingChange={setSorting}
-            selectionState={EMPTY_SELECTION}
-            onSelectionChange={noop}
-            totalTraceCount={0}
-            onShowAllSessions={noop}
-            onOpenSession={(sessionId) => setActiveSessionId(sessionId)}
-            onCloseSession={() => setActiveSessionId("")}
-            visibleColumnIds={visibleColumnIds}
-            isSearching={false}
-            hasUserAppliedFilters
-            selectable={false}
-          />
-        </Layout.Body>
+        <SessionsView
+          projectId={projectId}
+          filters={filters}
+          filtersOpen={filtersOpen}
+          activeSessionId={activeSessionId || undefined}
+          sorting={sorting}
+          onSortingChange={setSorting}
+          selectionState={EMPTY_SELECTION}
+          onSelectionChange={noop}
+          totalTraceCount={0}
+          onFiltersChange={onFilterChange}
+          onShowAllSessions={noop}
+          onFiltersClose={() => setFiltersOpen(false)}
+          onOpenSession={(sessionId) => setActiveSessionId(sessionId)}
+          onCloseSession={() => setActiveSessionId("")}
+          visibleColumnIds={visibleColumnIds}
+          isSearching={false}
+          hasUserAppliedFilters
+          selectable={false}
+          {...(excludeFilterFields ? { excludeFilterFields } : {})}
+        />
       </Layout.Content>
       {activeSessionId ? (
         <Layout.Aside>
