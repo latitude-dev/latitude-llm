@@ -23,8 +23,9 @@ type ClassifierSettings = Extract<EvaluationSettings, { kind: "classifier" }>
 
 const compileClassifierToScript = (settings: ClassifierSettings): string => {
   const criteria = Object.fromEntries(settings.options.map((option) => [option.label, option.description]))
+  const serializedCriteria = JSON.stringify(criteria)
   return [
-    `const probabilities = await classify(${JSON.stringify(settings.instructions)}, ${JSON.stringify(criteria)})`,
+    `const probabilities = await classify(${JSON.stringify(settings.instructions)}, JSON.parse(${JSON.stringify(serializedCriteria)}))`,
     `const probability = probabilities[${JSON.stringify(settings.target)}] ?? 0`,
     `return Score(probability, ${JSON.stringify(`Jev probability for ${settings.target}`)})`,
   ].join("\n")

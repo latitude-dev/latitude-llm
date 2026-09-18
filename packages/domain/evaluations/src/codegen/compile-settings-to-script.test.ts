@@ -52,6 +52,21 @@ describe("compileSettingsToScript", () => {
     expect(script).toContain('probabilities["Resolved"]')
     expect(detectScriptCapabilities(script)).toEqual(["classifier"])
   })
+
+  it("preserves classifier option labels with object prototype names", () => {
+    const script = compileSettingsToScript({
+      kind: "classifier",
+      instructions: "What is the outcome?",
+      options: [
+        { label: "__proto__", description: null },
+        { label: "Other", description: null },
+      ],
+      target: "__proto__",
+    })
+
+    expect(script).toContain('JSON.parse("{\\"__proto__\\":null,\\"Other\\":null}")')
+    expect(script).toContain('probabilities["__proto__"]')
+  })
 })
 
 // The generated rule script is plain ES (RegExp/JSON/String/Array over `session` + Passed/Failed) — it
