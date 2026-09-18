@@ -178,6 +178,34 @@ describe("assessment finding resolver", () => {
     expect(resolved[0]?.observationProbability).toBe(0.1)
   })
 
+  it("keeps a metric's census probability when its merged signal has no recorded probability", () => {
+    const metric: AssessmentFinding = {
+      ...base,
+      evidenceKey: "shared-fact",
+      signalIds: [],
+      scoreIds: [],
+      kind: "toolRepetition",
+      redundancy: "unconfirmed",
+    }
+    const signal: AssessmentFinding = {
+      ...base,
+      evidenceKey: "shared-fact",
+      source: "signal",
+      signalIds: ["signal-1"],
+      scoreIds: ["score-1"],
+      kind: "classifiedJudgment",
+      roles: [{ scoreDimension: "outcome", role: "taskOutcome" }],
+      negative: true,
+      judgmentKind: "evaluation",
+      signalOrigin: "system",
+    }
+
+    const resolved = resolveSessionAssessmentItemsWithChronology([metric, signal])
+
+    expect(resolved).toHaveLength(1)
+    expect(resolved[0]?.observationProbability).toBe(1)
+  })
+
   it("keeps independent human evidence separate from an automatic observation", () => {
     const automatic: AssessmentFinding = {
       ...base,

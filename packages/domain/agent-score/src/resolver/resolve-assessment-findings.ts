@@ -580,7 +580,7 @@ const mergeResolvedItems = (left: ResolvedAssessmentItem, right: ResolvedAssessm
   const secondary = primary === left ? right : left
   const signalItem = [left, right].find(({ item }) => item.source === "signal")
   const chronology = compareResolvedAssessmentItems(left, right) <= 0 ? left.chronology : right.chronology
-  const observationProbability = signalItem ? signalItem.observationProbability : primary.observationProbability
+  const observationProbability = signalItem?.observationProbability ?? primary.observationProbability
   return {
     item: {
       ...primary.item,
