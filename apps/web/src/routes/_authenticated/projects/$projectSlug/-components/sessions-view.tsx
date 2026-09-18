@@ -856,7 +856,7 @@ export function SessionsView({
     // count and that ancestor (shared with content stacked above it, e.g. an
     // aggregations chart) scrolls for it instead, so nothing here should clip.
     <Layout.Body {...(hasExternalScrollArea ? { className: "flex-none overflow-visible" } : {})}>
-      {filtersOpen && (
+      {filtersOpen && !activeSessionId && (
         <FiltersSidebar
           mode="sessions"
           projectId={projectId}
