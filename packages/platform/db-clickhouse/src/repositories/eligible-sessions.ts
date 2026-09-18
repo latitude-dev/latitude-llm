@@ -18,16 +18,18 @@ export const SESSION_END_DEBOUNCE_SECONDS = 5 * 60
  * `debounceSeconds`, and `noReflagTag` — build them with `eligibleSessionScopeParams`.
  */
 // `screenSessionFlaggersUseCase` exits on no-reflag sessions before writing any decision.
+const ELIGIBLE_SESSION_LAST_ACTIVITY = `if(
+      max(max_start_time) >= min(min_start_time),
+      max(max_start_time),
+      max(max_end_time)
+    )`
+
 const ELIGIBLE_SESSION_AGGREGATES = `
     sum(tokens_total) AS tokens_total,
     groupUniqArrayIfMerge(models) AS models,
     argMaxIfMerge(simulation_id) AS simulation_id,
     groupUniqArrayArray(tags) AS tags,
-    if(
-      max(max_start_time) >= min(min_start_time),
-      max(max_start_time),
-      max(max_end_time)
-    ) AS last_activity_time`
+    ${ELIGIBLE_SESSION_LAST_ACTIVITY} AS last_activity_time`
 
 /**
  * The predicate that decides eligibility, shared by every reader so none can drift from the others.
@@ -39,21 +41,27 @@ const ELIGIBLE_SESSION_HAVING = `
     AND simulation_id = ''
     AND NOT has(tags, {noReflagTag:String})`
 
-/**
- * `partitionFrom` is what bounds the read in time. The window itself is applied in `HAVING`, on an
- * aggregate (`last_activity_time`), which cannot prune anything: without this clause a project's
- * every month is read and grouped to answer a question about its last few days. `sessions` is
- * partitioned by month on `min_start_time`, so a bound on that column is the one that prunes, and
- * it reaches far enough back (`ELIGIBLE_SESSION_PARTITION_LOOKBACK_DAYS`) that a session which began
- * before the window and was still active inside it is still counted.
- */
+/** Restores complete aggregates for recent candidate ids before applying eligibility. */
 export const ELIGIBLE_SESSIONS_SUBQUERY = `
+  WITH candidate_sessions AS (
+    SELECT session_id
+    FROM sessions
+    WHERE organization_id = {organizationId:String}
+      AND project_id = {projectId:String}
+      AND min_start_time >= {partitionFrom:DateTime64(9, 'UTC')}
+    GROUP BY session_id
+    HAVING ${ELIGIBLE_SESSION_LAST_ACTIVITY} >= {from:DateTime64(9, 'UTC')}
+      AND ${ELIGIBLE_SESSION_LAST_ACTIVITY} <= subtractSeconds(
+        {to:DateTime64(9, 'UTC')},
+        {debounceSeconds:UInt32}
+      )
+  )
   SELECT
     session_id,${ELIGIBLE_SESSION_AGGREGATES}
   FROM sessions
   WHERE organization_id = {organizationId:String}
     AND project_id = {projectId:String}
-    AND min_start_time >= {partitionFrom:DateTime64(9, 'UTC')}
+    AND session_id IN (SELECT session_id FROM candidate_sessions)
   GROUP BY session_id
   ${ELIGIBLE_SESSION_HAVING}
 `

@@ -172,6 +172,16 @@ describe("ScoreWindowSourceLive", () => {
     ])
   })
 
+  it("keeps exclusions recorded on a session fragment before the partition floor", async () => {
+    await ch.client.insert({
+      table: "sessions",
+      values: [sessionRow("resumed-session", 95, { tags: [FLAGGER_NO_REFLAG_TAG] }), sessionRow("resumed-session", 2)],
+      format: "JSONEachRow",
+    })
+
+    expect(await sessionIds(7)).toEqual([])
+  })
+
   it("asks for nothing when no step was requested", async () => {
     const result = await run(
       Effect.gen(function* () {
