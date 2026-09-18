@@ -48,8 +48,9 @@ const sessionCount = (value: number): string => `${formatCount(value)} ${value =
 
 const issueValue = (estimated: number | undefined, observed: number): string => {
   if (estimated === undefined) return `${formatCount(observed)} observed`
-  if (Math.abs(estimated - observed) < 0.001) return sessionCount(observed)
-  return `~${sessionCount(Math.round(estimated))} · ${formatCount(observed)} observed`
+  const roundedEstimate = Math.round(estimated)
+  if (roundedEstimate === observed) return sessionCount(observed)
+  return `~${sessionCount(roundedEstimate)} · ${formatCount(observed)} observed`
 }
 
 /** Example sessions only when there are some, so a row without them stays inert rather than linking nowhere. */

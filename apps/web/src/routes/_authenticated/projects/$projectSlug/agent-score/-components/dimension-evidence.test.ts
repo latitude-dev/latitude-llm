@@ -186,6 +186,32 @@ describe("buildDimensionEvidence", () => {
     expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 sessions" })])
   })
 
+  it("uses a plain session count when estimated reach rounds to the observed count", () => {
+    const withRoundedEstimate = {
+      ...explanation,
+      issues: {
+        ...explanation.issues,
+        outcome: [
+          {
+            issueKey: "issue:rounded-estimate",
+            label: "Rounded estimate",
+            signalIds: [],
+            estimatedReach: 10.2,
+            estimatedAdverseReach: 10.2,
+            examinedSessions: 10,
+            examinedAdverseSessions: 10,
+            ranked: true,
+            exampleSessionIds: ["session-a"],
+          },
+        ],
+      },
+    } as unknown as Explanation
+
+    const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withRoundedEstimate })
+
+    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 sessions" })])
+  })
+
   it("carries the example sessions a Reliability cause ended", () => {
     const withheld = {
       ...explanation,
