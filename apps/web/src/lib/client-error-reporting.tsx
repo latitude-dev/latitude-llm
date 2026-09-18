@@ -4,6 +4,7 @@ import { CatchBoundary, useRouterState } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
 import { type ReactNode, useMemo } from "react"
 import { z } from "zod"
+import { CHUNK_LOAD_RELOAD_SESSION_KEY, isChunkLoadError } from "./chunk-load-error.ts"
 
 const logger = createLogger("client-error")
 
@@ -55,6 +56,16 @@ export function ErrorFallback({
   const errorId = useMemo(() => generateErrorId(), [])
 
   useMountEffect(() => {
+    // A stale tab's chunk hash from a prior deploy: one reload fetches the current
+    // asset manifest and resolves it. Guarded by sessionStorage so a persistent
+    // failure (e.g. the asset is actually gone) falls through to the fallback UI
+    // instead of reloading forever.
+    if (isChunkLoadError(error) && window.sessionStorage.getItem(CHUNK_LOAD_RELOAD_SESSION_KEY) !== "1") {
+      window.sessionStorage.setItem(CHUNK_LOAD_RELOAD_SESSION_KEY, "1")
+      window.location.reload()
+      return
+    }
+
     reportClientError({
       data: {
         errorId,
