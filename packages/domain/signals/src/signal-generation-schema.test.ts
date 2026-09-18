@@ -36,6 +36,9 @@ const baseDraft: GeneratedSignalDraft = {
   ruleMatch: "all",
   ruleConditions: [condition({ type: "tool_failed", toolName: "cancel_ticket" })],
   judgeCriteria: "",
+  classifierInstructions: "",
+  classifierOptions: [],
+  classifierTarget: "",
   script: "",
   filters: emptyFilters,
   sampling: 100,
@@ -85,6 +88,33 @@ describe("mapGeneratedSignalDraft", () => {
     if (!result.ok) return
     expect(result.draft.evaluation).toEqual({ script: "return Passed(1, 'ok')" })
     expect(result.draft.sampling).toBe(100)
+  })
+
+  it("maps a classifier draft", () => {
+    const result = mapGeneratedSignalDraft({
+      ...baseDraft,
+      evaluationKind: "classifier",
+      ruleConditions: [],
+      classifierInstructions: "How should this session be routed?",
+      classifierOptions: [
+        { label: "Human", description: "The user asks for a person" },
+        { label: "Assistant", description: "The assistant can continue" },
+      ],
+      classifierTarget: "Human",
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.draft.evaluation).toEqual({
+      settings: {
+        kind: "classifier",
+        instructions: "How should this session be routed?",
+        options: [
+          { label: "Human", description: "The user asks for a person" },
+          { label: "Assistant", description: "The assistant can continue" },
+        ],
+        target: "Human",
+      },
+    })
   })
 
   it("returns issues (never throws) when a rule kind has no conditions", () => {

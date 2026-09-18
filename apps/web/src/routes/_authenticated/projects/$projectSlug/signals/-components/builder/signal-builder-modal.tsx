@@ -1,5 +1,10 @@
 import { compileSettingsToScript, DEFAULT_EVALUATION_SAMPLING, type SignalPreviewResult } from "@domain/evaluations"
-import type { EvaluationRuleCondition, EvaluationSettings, FilterSet } from "@domain/shared"
+import {
+  type EvaluationRuleCondition,
+  type EvaluationSettings,
+  evaluationSettingsSchema,
+  type FilterSet,
+} from "@domain/shared"
 import { Button, Input, Modal, Tabs, Text, Textarea, useMountEffect, useStagedStatus, useToast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
 import { useRef, useState } from "react"
@@ -13,6 +18,11 @@ import {
 } from "../../../../../../../domains/signals/signals.collection.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
 import { AdvancedDetectorEditor } from "./advanced-detector-editor.tsx"
+import {
+  ClassifierDetectorEditor,
+  type ClassifierDraft,
+  EMPTY_CLASSIFIER_DRAFT,
+} from "./classifier-detector-editor.tsx"
 import { isConditionValid } from "./condition-meta.tsx"
 import { DescribeSignalIntro } from "./describe-signal-intro.tsx"
 import { JudgeDetectorEditor } from "./judge-detector-editor.tsx"
@@ -21,9 +31,23 @@ import { SignalPreviewStep } from "./signal-preview-step.tsx"
 import { SignalScopeEditor } from "./signal-scope-editor.tsx"
 import { StepIndicator } from "./step-indicator.tsx"
 
-type DetectorTab = "rules" | "llm" | "advanced"
+type DetectorTab = "rules" | "llm" | "classifier" | "advanced"
+type SettingsTab = Exclude<DetectorTab, "advanced">
 type StepId = "detector" | "scope" | "test" | "details"
 type EditTab = "detector" | "scope" | "test"
+
+const SETTINGS_TAB_BY_KIND = {
+  rule: "rules",
+  judge: "llm",
+  classifier: "classifier",
+} as const satisfies Record<EvaluationSettings["kind"], SettingsTab>
+
+const DETECTOR_KIND_BY_TAB = {
+  rules: "rule",
+  llm: "judge",
+  classifier: "classifier",
+  advanced: "script",
+} as const
 
 const DETECTOR_TABS: ReadonlyArray<{ readonly id: DetectorTab; readonly title: string }> = [
   {
@@ -33,6 +57,10 @@ const DETECTOR_TABS: ReadonlyArray<{ readonly id: DetectorTab; readonly title: s
   {
     id: "llm",
     title: "LLM as judge",
+  },
+  {
+    id: "classifier",
+    title: "Jev classifier",
   },
   {
     id: "advanced",
@@ -86,6 +114,7 @@ function detectorPayload(
   tab: DetectorTab,
   ruleDraft: RuleDraft,
   criteria: string,
+  classifierDraft: ClassifierDraft,
   scriptDraft: string,
 ): DetectorPayload | null {
   if (tab === "rules") {
@@ -95,6 +124,10 @@ function detectorPayload(
   if (tab === "llm") {
     if (criteria.trim().length === 0) return null
     return { settings: { kind: "judge", criteria: criteria.trim() } }
+  }
+  if (tab === "classifier") {
+    const parsed = evaluationSettingsSchema.safeParse(classifierDraft)
+    return parsed.success ? { settings: parsed.data } : null
   }
   const script = scriptDraft.trim()
   return script.length === 0 ? null : { script }
@@ -152,11 +185,15 @@ export function SignalBuilderModal({
 
   const [filters, setFilters] = useState<FilterSet>(initial?.filters ?? initialFilters ?? {})
   const [tab, setTab] = useState<DetectorTab>(() =>
-    initial?.detector.kind === "script" ? "advanced" : initialSettings?.kind === "judge" ? "llm" : "rules",
+    initial?.detector.kind === "script"
+      ? "advanced"
+      : initialSettings
+        ? SETTINGS_TAB_BY_KIND[initialSettings.kind]
+        : "rules",
   )
   // The settings tab whose draft the Custom script tab renders as compiled code.
-  const [lastSettingsTab, setLastSettingsTab] = useState<"rules" | "llm">(() =>
-    initialSettings?.kind === "judge" ? "llm" : "rules",
+  const [lastSettingsTab, setLastSettingsTab] = useState<SettingsTab>(
+    initialSettings ? SETTINGS_TAB_BY_KIND[initialSettings.kind] : "rules",
   )
   const [ruleDraft, setRuleDraft] = useState<RuleDraft>(() =>
     initialSettings?.kind === "rule"
@@ -164,6 +201,9 @@ export function SignalBuilderModal({
       : emptyRuleDraft,
   )
   const [criteria, setCriteria] = useState(() => (initialSettings?.kind === "judge" ? initialSettings.criteria : ""))
+  const [classifierDraft, setClassifierDraft] = useState<ClassifierDraft>(() =>
+    initialSettings?.kind === "classifier" ? initialSettings : EMPTY_CLASSIFIER_DRAFT,
+  )
   const [scriptDraft, setScriptDraft] = useState(() => initialScript)
   const [sampling, setSampling] = useState<number>(initial?.sampling ?? DEFAULT_EVALUATION_SAMPLING)
   const [conditionEdit, setConditionEdit] = useState<ConditionEditState>(null)
@@ -195,7 +235,7 @@ export function SignalBuilderModal({
   // The Custom script tab without a raw script is a *view* of the active settings draft: preview
   // and save keep using the settings payload, so merely looking at the compiled code never
   // re-authors the evaluation. Only "Edit as custom script" (detach) flips it to a raw script.
-  const settingsPayload = detectorPayload(lastSettingsTab, ruleDraft, criteria, "")
+  const settingsPayload = detectorPayload(lastSettingsTab, ruleDraft, criteria, classifierDraft, "")
   const compiledView =
     settingsPayload !== null && "settings" in settingsPayload
       ? { kind: settingsPayload.settings.kind, script: compileSettingsToScript(settingsPayload.settings) }
@@ -203,7 +243,7 @@ export function SignalBuilderModal({
   const evaluation =
     tab === "advanced" && scriptDraft.trim().length === 0 && settingsPayload !== null
       ? settingsPayload
-      : detectorPayload(tab, ruleDraft, criteria, scriptDraft)
+      : detectorPayload(tab, ruleDraft, criteria, classifierDraft, scriptDraft)
   const detectorValid = evaluation !== null
 
   const runPreview = (): void => {
@@ -256,6 +296,7 @@ export function SignalBuilderModal({
     setScriptDraft(compiledView.script)
     setRuleDraft(emptyRuleDraft)
     setCriteria("")
+    setClassifierDraft(EMPTY_CLASSIFIER_DRAFT)
   }
 
   const handleGenerated = ({ slug }: { readonly slug: string }) => {
@@ -514,6 +555,9 @@ export function SignalBuilderModal({
               <RuleConditionList draft={ruleDraft} onChange={setRuleDraft} onEditCondition={openConditionEditor} />
             ) : null}
             {tab === "llm" ? <JudgeDetectorEditor criteria={criteria} onCriteriaChange={setCriteria} /> : null}
+            {tab === "classifier" ? (
+              <ClassifierDetectorEditor draft={classifierDraft} onChange={setClassifierDraft} />
+            ) : null}
             {tab === "advanced" ? (
               <AdvancedDetectorEditor
                 compiled={compiledView}
@@ -544,7 +588,7 @@ export function SignalBuilderModal({
             onChange={setFilters}
             sampling={sampling}
             onSamplingChange={setSampling}
-            detectorKind={tab === "rules" ? "rule" : tab === "llm" ? "judge" : "script"}
+            detectorKind={DETECTOR_KIND_BY_TAB[tab]}
           />
         ) : null}
 

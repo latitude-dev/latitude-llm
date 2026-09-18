@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.14.0] - 2026-09-18
+
+### Added
+
+- `latitude signals create` accepts Jev classifier settings with named options and a target option whose probability becomes the signal score.
+
 ## [7.13.0] - 2026-09-13
 
 ### Added

@@ -8,6 +8,7 @@ import {
 import type { QueueConsumer } from "@domain/queue"
 import { describeError, type FilterSet, OrganizationId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
+import { JevClassifierLive } from "@platform/ai-jev"
 import type { RedisClient } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
@@ -78,6 +79,7 @@ const runSignalsPreviewJob =
         OrganizationId(payload.organizationId),
       ),
       Effect.provide(QuickJsScriptRuntimeLive),
+      Effect.provide(JevClassifierLive),
       withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), deps.redisClient),
       withTracing,
       Effect.matchEffect({

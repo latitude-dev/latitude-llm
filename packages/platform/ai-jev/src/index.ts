@@ -1,4 +1,9 @@
 export {
+  createJevClassifier,
+  JevClassifierLive,
+  type JevClassifierOptions,
+} from "./jev-classifier.ts"
+export {
   createJevShadowDecisionProvider,
   createUnconfiguredJevShadowDecisionProvider,
   DEFAULT_JEV_BASE_URL,

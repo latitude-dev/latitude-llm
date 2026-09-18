@@ -12,6 +12,26 @@ describe("evaluationSettingsSchema", () => {
     expect(evaluationSettingsSchema.parse({ kind: "judge", criteria: "x" })).toEqual({ kind: "judge", criteria: "x" })
   })
 
+  it("parses a classifier and validates its target and option labels", () => {
+    const classifier = {
+      kind: "classifier",
+      instructions: "What is the outcome?",
+      options: [
+        { label: "Resolved", description: "The issue was resolved" },
+        { label: "Unresolved", description: null },
+      ],
+      target: "Resolved",
+    }
+    expect(evaluationSettingsSchema.parse(classifier)).toEqual(classifier)
+    expect(evaluationSettingsSchema.safeParse({ ...classifier, target: "Missing" }).success).toBe(false)
+    expect(
+      evaluationSettingsSchema.safeParse({
+        ...classifier,
+        options: [classifier.options[0], classifier.options[0]],
+      }).success,
+    ).toBe(false)
+  })
+
   it("parses a rule and applies condition + match defaults", () => {
     const parsed = evaluationSettingsSchema.parse({
       kind: "rule",

@@ -137,7 +137,9 @@ export const generatedSignalDraftSchema = z.object({
     .string()
     .min(1)
     .describe("One or two sentences a teammate would recognize; record the interpretation you took"),
-  evaluationKind: z.enum(["rule", "judge", "script"]).describe("Prefer rule, then judge, then script"),
+  evaluationKind: z
+    .enum(["rule", "classifier", "judge", "script"])
+    .describe("Prefer rule, then classifier, then judge, then script"),
   ruleMatch: z.enum(["all", "any"]).describe('Used when evaluationKind is rule; "all" otherwise'),
   ruleConditions: z
     .array(generatedRuleConditionSchema)
@@ -145,6 +147,13 @@ export const generatedSignalDraftSchema = z.object({
   judgeCriteria: z
     .string()
     .describe('When evaluationKind is judge, phrased as "A session matches when …"; "" otherwise'),
+  classifierInstructions: z.string().describe('One focused question when evaluationKind is classifier; "" otherwise'),
+  classifierOptions: z
+    .array(z.object({ label: z.string(), description: z.string() }))
+    .describe("At least two distinct outcomes when evaluationKind is classifier; [] otherwise"),
+  classifierTarget: z
+    .string()
+    .describe('Option whose probability becomes the score when evaluationKind is classifier; "" otherwise'),
   script: z.string().describe('When evaluationKind is script, the raw sandbox script body; "" otherwise'),
   filters: generatedFiltersSchema.describe(
     "All arrays empty unless a filter discards sessions that surely cannot match",
@@ -219,6 +228,20 @@ export const mapGeneratedSignalDraft = (generated: GeneratedSignalDraft): MapGen
         return invalid("evaluationKind is judge but judgeCriteria is empty")
       }
       evaluation = { settings: { kind: "judge", criteria } }
+      break
+    }
+    case "classifier": {
+      const settings = evaluationSettingsSchema.safeParse({
+        kind: "classifier",
+        instructions: generated.classifierInstructions,
+        options: generated.classifierOptions.map((option) => ({
+          label: option.label,
+          description: option.description.trim() || null,
+        })),
+        target: generated.classifierTarget,
+      })
+      if (!settings.success) return invalid(formatZodIssues(settings.error))
+      evaluation = { settings: settings.data }
       break
     }
     case "script": {

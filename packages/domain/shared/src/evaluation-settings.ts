@@ -99,6 +99,7 @@ export type EvaluationRuleCondition = z.infer<typeof evaluationRuleConditionSche
  * Optional declarative config a user edits in the builder; compiles deterministically to the
  * evaluation's `script`. NULL when the script is hand-written (raw) or GEPA-generated.
  *   - judge — a script that calls `llm(`${session.conversation}` …)`, generated + aligned via optimize-evaluation.
+ *   - classifier — a script that calls Jev with named outcomes and scores one selected outcome.
  *   - rule  — deterministic conditions combined with `all`/`any`, compiled to a pure script over `session`.
  */
 /**
@@ -111,8 +112,42 @@ export type SemanticSimilarityPreset = keyof typeof SEMANTIC_SIMILARITY_PRESETS
 
 export const EVALUATION_RULE_MAX_CONDITIONS = 25
 
+export const EVALUATION_CLASSIFIER_MAX_OPTIONS = 255
+
+const evaluationClassifierOptionSchema = z.object({
+  label: z.string().trim().min(1).describe("Option name returned as a key in the probability distribution."),
+  description: z
+    .string()
+    .trim()
+    .min(1)
+    .nullable()
+    .describe("Meaning of this option, or null when its name is self-explanatory."),
+})
+
+const evaluationClassifierSettingsSchema = z
+  .object({
+    kind: z.literal("classifier"),
+    instructions: z.string().trim().min(1).describe("Question Jev answers about the evaluated session."),
+    options: z
+      .array(evaluationClassifierOptionSchema)
+      .min(2)
+      .max(EVALUATION_CLASSIFIER_MAX_OPTIONS)
+      .describe("Distinct outcomes Jev can assign to the session."),
+    target: z.string().trim().min(1).describe("Option whose probability becomes the signal score."),
+  })
+  .superRefine((settings, ctx) => {
+    const labels = settings.options.map((option) => option.label)
+    if (new Set(labels).size !== labels.length) {
+      ctx.addIssue({ code: "custom", message: "Classifier option labels must be unique", path: ["options"] })
+    }
+    if (!labels.includes(settings.target)) {
+      ctx.addIssue({ code: "custom", message: "Classifier target must match an option label", path: ["target"] })
+    }
+  })
+
 export const evaluationSettingsSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("judge"), criteria: z.string().min(1) }),
+  evaluationClassifierSettingsSchema,
   z.object({
     kind: z.literal("rule"),
     match: z.enum(["all", "any"]).default("all"),
