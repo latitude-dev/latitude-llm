@@ -80,3 +80,31 @@ describe("value axis", () => {
     expect(option.yAxis).toMatchObject({ show: false, min: 0, max: 100, splitLine: { show: false } })
   })
 })
+
+describe("line points", () => {
+  const showSymbolOf = (showPoints?: boolean) => {
+    const option = buildChartOption({
+      categories: ["c0"],
+      series: [
+        {
+          kind: "line",
+          name: "score",
+          values: [66],
+          color: "#000",
+          ...(showPoints === undefined ? {} : { showPoints }),
+        },
+      ],
+      colors,
+    }) as { series: [{ showSymbol: boolean }] }
+
+    return option.series[0].showSymbol
+  }
+
+  it("hides points by default", () => {
+    expect(showSymbolOf()).toBe(false)
+  })
+
+  it("shows points when the series opts in", () => {
+    expect(showSymbolOf(true)).toBe(true)
+  })
+})

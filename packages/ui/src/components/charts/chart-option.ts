@@ -48,6 +48,7 @@ export interface ChartLineSeries {
   readonly stack?: string
   readonly area?: boolean
   readonly areaOpacity?: number
+  readonly showPoints?: boolean
   readonly smooth?: boolean
   readonly step?: "start" | "middle" | "end"
 }
@@ -215,7 +216,7 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
       yAxisIndex,
       ...(s.stack ? { stack: s.stack } : {}),
       ...(s.step ? { step: s.step } : { smooth: s.smooth ?? false }),
-      showSymbol: false,
+      showSymbol: s.showPoints ?? false,
       lineStyle: { width: s.area ? 1 : 2, color: s.color, opacity: s.area ? 0.8 : 1 },
       itemStyle: { color: s.color },
       ...(s.area ? { areaStyle: { color: s.color, opacity: s.areaOpacity ?? 0.45 } } : {}),
