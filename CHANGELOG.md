@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## v0.3.106 - 2026-09-18
+
+### Agent Score
+
+- Safety now counts confirmed harm only when the score belongs to the screening generation the suite decisions name, so a stale harm row left by dedup after a clean re-screen no longer depresses Safety or trips the composite policy cap (ref: #4634).
+- Tool calls whose `execute_tool` span carried an error status are now scored as failures even when the result was plain text, restoring recovered incidents to Reliability, the Cost recovery family, and Speed retry attribution. Both detectors are deduplicated by tool-call identity, unset status is reported as missing telemetry, and successful same-tool retries contribute their spans to recovery rate and critical-path time (ref: #4680).
+- Cost and Speed causes that resolve to a zero penalty are no longer recorded, so a healthy metric stops appearing as a red "Affected by" row reading "$0" on withheld scores. Outcome issues and Reliability causes now carry a capped sample of the sessions behind them, adverse first, and open the Sessions list filtered to exactly those with the filter panel expanded (ref: #4679).
+- Filter sidebar chips show exact values and stay contained when long (ref: #4679).
+
+### Flaggers
+
+- Classification workflow ids include the analysis hash, so a newer screening generation arriving while a prior classification is still running no longer hits `WorkflowExecutionAlreadyStartedError` and skips the retry (ref: #4634).
+
 ## v0.3.105 - 2026-09-17
 
 ### Agent Score
