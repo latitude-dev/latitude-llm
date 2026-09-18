@@ -241,6 +241,36 @@ describe("upsertFlaggerVerdictScore", () => {
     expect(scores.size).toBe(1)
   })
 
+  it("dedups a verdict beyond the historical 200-row scan window", async () => {
+    const { upsert, upsertVerdict, scores } = makeHarness()
+
+    const first = await upsertVerdict({
+      verdict: "failure",
+      feedback: "Task failed.",
+      analysisHash: GENERATION_A,
+    })
+    const verdictScore = scores.get(first.scoreId)
+    if (!verdictScore) throw new Error("missing verdict score")
+    scores.set(first.scoreId, { ...verdictScore, createdAt: new Date("2020-01-01T00:00:00.000Z") })
+
+    for (let index = 0; index < 200; index++) {
+      await upsert({
+        feedback: `Filler finding ${index}.`,
+        contentHash: `${(index + 1).toString(16).padStart(64, "0")}`,
+      })
+    }
+
+    expect(scores.size).toBe(201)
+
+    const rerun = await upsertVerdict({
+      verdict: "failure",
+      feedback: "Task failed again.",
+      analysisHash: GENERATION_A,
+    })
+    expect(rerun).toEqual({ status: "existing", scoreId: first.scoreId })
+    expect(scores.size).toBe(201)
+  })
+
   // The anchor dedup the detection path uses survives re-screens on purpose,
   // which would drop the newer verdict of a session that changed.
   it("records a later generation that reverses an earlier verdict on the same anchor", async () => {
