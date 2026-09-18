@@ -50,7 +50,7 @@ const issueValue = (estimated: number | undefined, observed: number): string => 
   if (estimated === undefined) return `${formatCount(observed)} observed`
   const roundedEstimate = Math.round(estimated)
   if (roundedEstimate === observed) return sessionCount(observed)
-  return `~${sessionCount(roundedEstimate)} · ${formatCount(observed)} observed`
+  return `${formatCount(observed)} observed · ~${formatCount(roundedEstimate)} estimated total`
 }
 
 /** Example sessions only when there are some, so a row without them stays inert rather than linking nowhere. */

@@ -157,7 +157,7 @@ describe("buildDimensionEvidence", () => {
 
     const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withSampledIssue })
 
-    expect(evidence.affected).toEqual([expect.objectContaining({ value: "~100 sessions · 10 observed" })])
+    expect(evidence.affected).toEqual([expect.objectContaining({ value: "10 observed · ~100 estimated total" })])
   })
 
   it("uses a plain session count when estimated and observed reach agree", () => {
@@ -264,7 +264,7 @@ describe("buildDimensionEvidence", () => {
 
     expect(evidence.affected).toEqual([])
     expect(evidence.context).toEqual([
-      expect.objectContaining({ label: "Prompt injection exposure", value: "~10 sessions · 2 observed" }),
+      expect.objectContaining({ label: "Prompt injection exposure", value: "2 observed · ~10 estimated total" }),
     ])
   })
 
@@ -382,7 +382,7 @@ describe("buildDimensionEvidence", () => {
     expect(evidence.affected).toEqual([
       expect.objectContaining({
         label: "Personal information exposed",
-        value: "~6 sessions · 3 observed",
+        value: "3 observed · ~6 estimated total",
         description:
           "The agent exposed personal data in its output that the user did not provide or was not meant to receive.",
       }),
