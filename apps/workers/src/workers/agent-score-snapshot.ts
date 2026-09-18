@@ -84,6 +84,12 @@ const withheldReason = (result: AgentScoreResult): string => {
 export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")(function* (
   input: SnapshotProjectInput,
 ) {
+  // The job span is where a failed run is found; without these a failure cannot be traced back to
+  // the project that owns it, and the reads that fail most are the ones outside `computeAgentScore`.
+  yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("agentScore.date", input.date)
+
   const to = input.to ?? resolveScoringCutoff(input.date, new Date())
   const snapshots = yield* AgentScoreSnapshotRepository
   const existing = yield* snapshots.findByDate({

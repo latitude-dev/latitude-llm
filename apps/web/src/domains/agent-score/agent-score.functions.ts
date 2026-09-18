@@ -17,6 +17,7 @@ import { z } from "zod"
 import { getPostgresClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
+import { AGENT_SCORE_REFRESH_THROTTLE_MS } from "./agent-score.constants.ts"
 
 export interface AgentScoreRecord {
   readonly date: string
@@ -50,7 +51,6 @@ const toRecord = (snapshot: AgentScoreSnapshot): AgentScoreRecord => ({
 })
 
 const projectInput = z.object({ projectId: z.string() })
-const AGENT_SCORE_REFRESH_THROTTLE_MS = 5 * 60_000
 
 export const getProjectAgentScore = createServerFn({ method: "GET" })
   .inputValidator(projectInput)

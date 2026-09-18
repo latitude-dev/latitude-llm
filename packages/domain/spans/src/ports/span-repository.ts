@@ -260,6 +260,8 @@ export interface SpanRepositoryShape {
    * materialization, so this catches subagent spans that override `session_id`
    * to the child's own value and would be invisible to a `session_id` membership
    * scan. Attribute maps come back empty (same memory hazard as listBySessionId).
+   * Reads use bounded trace batches and merge back into one `start_time` order,
+   * so a query's working set does not grow with the caller's trace list.
    */
   listByTraceIds(input: {
     readonly organizationId: OrganizationId
@@ -420,7 +422,8 @@ export interface SpanRepositoryShape {
   /**
    * Compact tool-call facts for every `execute_tool` span in `traceIds`, deduped by
    * `(trace_id, span_id)`. Payload hashes are computed in ClickHouse so tool I/O — which can hold
-   * whole files — is never transferred for a scoring window.
+   * whole files — is never transferred for a scoring window. Reads use bounded trace batches and
+   * merge back into one `start_time` order.
    */
   listToolCallFactsByTraceIds(input: {
     readonly organizationId: OrganizationId

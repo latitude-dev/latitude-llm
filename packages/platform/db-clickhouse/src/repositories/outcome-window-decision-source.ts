@@ -1,17 +1,13 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import { type OutcomeWindowDecision, OutcomeWindowDecisionSource } from "@domain/agent-score"
-import {
-  FLAGGER_NO_REFLAG_TAG,
-  type FlaggerScreeningOutcome,
-  type FlaggerScreeningSelectionReason,
-} from "@domain/flaggers"
+import type { FlaggerScreeningOutcome, FlaggerScreeningSelectionReason } from "@domain/flaggers"
 import { ChSqlClient, type ChSqlClientShape, SessionId, toRepositoryError } from "@domain/shared"
-import { formatCHDate, normalizeCHString } from "@repo/utils"
+import { normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import {
   ELIGIBLE_SESSION_COUNT_QUERY,
   ELIGIBLE_SESSION_IDS_QUERY,
-  SESSION_END_DEBOUNCE_SECONDS,
+  eligibleSessionScopeParams,
 } from "./eligible-sessions.ts"
 
 const TASK_OUTCOME_FLAGGER_SLUG = "task-failure"
@@ -87,13 +83,8 @@ export const OutcomeWindowDecisionSourceLive = Layer.succeed(OutcomeWindowDecisi
       return yield* chSqlClient
         .query(async (client) => {
           const queryParams = {
-            organizationId: organizationId as string,
-            projectId: projectId as string,
+            ...eligibleSessionScopeParams({ organizationId, projectId, from, to }),
             flaggerSlug: TASK_OUTCOME_FLAGGER_SLUG,
-            from: formatCHDate(from),
-            to: formatCHDate(to),
-            debounceSeconds: SESSION_END_DEBOUNCE_SECONDS,
-            noReflagTag: FLAGGER_NO_REFLAG_TAG,
           }
           const [eligibleResult, decisionResult] = await Promise.all([
             client.query({ query: ELIGIBLE_SESSION_COUNT_QUERY, query_params: queryParams, format: "JSONEachRow" }),
