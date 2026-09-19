@@ -1,6 +1,6 @@
 import { Button, Icon } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
-import { ImportIcon, Plus } from "lucide-react"
+import { ExternalLinkIcon, ImportIcon, Plus } from "lucide-react"
 import { useState } from "react"
 import { BlankSlate } from "../../../../../../../components/blank-slate.tsx"
 import {
@@ -37,12 +37,14 @@ export function ImportsPage({
           icon={ImportIcon}
           title="No imports yet"
           description="Import your existing sessions, traces and spans from other observability platforms into this project."
-          action={{
-            label: "Import traces",
-            icon: Plus,
-            onClick: () => setCreating(true),
-          }}
-          docsHref="https://docs.latitude.so/telemetry/imports/overview"
+          actions={[
+            { label: "Import traces", icon: Plus, onClick: () => setCreating(true) },
+            {
+              label: "Read the docs",
+              icon: ExternalLinkIcon,
+              href: "https://docs.latitude.so/telemetry/imports/overview",
+            },
+          ]}
         />
       ) : (
         <>

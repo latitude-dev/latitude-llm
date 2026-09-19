@@ -1,6 +1,7 @@
 import { COST_BREAKDOWN_DIMENSIONS, type CostBreakdown, type CostBreakdownDimension } from "@domain/spans"
 import {
   Button,
+  EmptyState,
   Icon,
   Table,
   TableBody,
@@ -25,7 +26,6 @@ import {
   splitBreakdownRows,
 } from "./cost-formatters.ts"
 import { CostTableHead, HeaderSummary } from "./cost-table-head.tsx"
-import { EmptyState } from "./empty-state.tsx"
 
 const DASH = "—"
 

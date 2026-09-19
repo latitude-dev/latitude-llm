@@ -1,4 +1,4 @@
-import { BarChart, Button, HistogramSkeleton, Icon, Skeleton, Text, Tooltip } from "@repo/ui"
+import { BarChart, Button, EmptyState, HistogramSkeleton, Icon, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { BarChart2, ChevronDown, ChevronUp, ShieldAlertIcon, ShieldOffIcon } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
@@ -215,9 +215,7 @@ export function SignalsAnalyticsPanel({
             <HistogramSkeleton height={160} />
           </div>
         ) : analytics.histogram.length === 0 || analytics.histogram.every((bucket) => bucket.count === 0) ? (
-          <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">
-            <Text.H6 color="foregroundMuted">No signal occurrences in this time window</Text.H6>
-          </div>
+          <EmptyState icon={BarChart2} message="No signal occurrences in this time window" />
         ) : (
           <>
             <ChartHeader
