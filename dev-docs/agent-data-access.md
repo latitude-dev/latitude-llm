@@ -183,19 +183,30 @@ fragmenting.
 - **No raw payloads.** `queryAnalytics` returns aggregates only. `querySpans` rows exclude per-message
   LLM content (use a span point-lookup for the conversation payload).
 
-## Dashboards (HTML output)
+## Artifacts (agent-rendered HTML)
 
-**B1 — data-only (the model).** The dispatched agent is itself a coding agent. Latitude makes the
-data arbitrarily sliceable via `queryAnalytics` / `querySpans`; the agent embeds the returned series
-inline and renders a **self-contained HTML artifact** it commits to the customer repo or hosts
-itself. Latitude adds no rendering surface — matching the dispatch spec's "provider, not runtime"
-stance, and keeping the OSS/self-host story clean.
+**Artifacts** are self-contained HTML reports and refreshable KPI dashboards an agent builds from
+the same read surface documented here. Latitude exposes the data (`queryAnalytics`, `querySpans`, and
+the curated investigation tools); the agent renders the page, embeds the returned series as inline
+JSON, and commits or hosts it. Latitude adds no server-side rendering surface — matching agent
+dispatch's "provider, not runtime" stance and keeping the OSS/self-host story clean.
 
-**B2 — hosted dashboards (deferred).** A future option: Latitude persists a dashboard definition
-(widgets → `AnalyticsQuery` objects) and renders it server-side, reusing the existing ECharts +
-Satori/Resvg pipeline used for incident-trend emails. This adds storage, sharing, and RLS on
-dashboard rows; it is gated on real demand for hosted (vs agent-rendered) dashboards and is not part
-of the current surface.
+Three modalities share the same page shape:
+
+| Modality | Data path | Refresh |
+| --- | --- | --- |
+| One-off report | MCP (or CLI) in the conversation | None — static HTML |
+| Refreshable dashboard | Agent-written script calls the REST API | Cron, CI, or manual rerun |
+| Agent-refreshed dashboard | Scheduled agent run executes the refresh script | Same script plus rewritten findings |
+
+The MCP server instructions (`MCP_INFO.instructions` in `apps/api/src/constants.ts`) point agents at
+the public Artifacts guide and the `latitude-artifacts` skill. Operator docs:
+[`docs/more/artifacts.mdx`](../docs/more/artifacts.mdx).
+
+**Hosted dashboards (deferred).** A future option persists a dashboard definition (widgets →
+`AnalyticsQuery` objects) and renders server-side via the existing ECharts + Satori/Resvg pipeline
+used for incident-trend emails. That adds storage, sharing, and RLS on dashboard rows; it is gated
+on demand for hosted (vs agent-rendered) dashboards and is not part of the current surface.
 
 ## Related
 
