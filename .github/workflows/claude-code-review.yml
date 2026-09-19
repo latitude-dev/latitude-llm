@@ -43,7 +43,7 @@ jobs:
             Focus on:
             - Bugs, correctness issues, and regressions in the diff
             - Security, tenancy, and authorization gaps
-            - Architecture or boundary violations against CLAUDE.md / AGENTS.md
+            - Architecture or boundary violations against AGENTS.md
             - Missing tests for new behavior
 
             Skip style nits the linter will catch, pre-existing issues outside the diff, and speculative suggestions.
