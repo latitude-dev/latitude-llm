@@ -1,0 +1,202 @@
+---
+title: OpenRouter
+description: Connect your OpenRouter-powered application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to send traces from **OpenRouter** to **Latitude**.
+
+There are two ways to do it:
+
+- **Broadcast** (recommended): OpenRouter sends traces to Latitude for you. No code changes, and it covers every request that goes through your OpenRouter account.
+- **SDK instrumentation**: instrument your application with Latitude Telemetry, the same way you would for any OpenAI-compatible client.
+
+<Check>
+  You'll keep calling OpenRouter exactly as you do today, with your own OpenRouter API key. Latitude only observes those calls.
+</Check>
+
+---
+
+## Option 1: Broadcast (no code)
+
+OpenRouter's [Broadcast](https://openrouter.ai/docs/guides/features/broadcast/otel-collector) feature exports traces over OTLP/HTTP, which is what Latitude's ingestion endpoint speaks.
+
+### Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- An **OpenRouter account** with access to **Settings → Observability**
+
+<Steps>
+
+  <Step title="Open Broadcast settings">
+    In OpenRouter, go to **Settings → Observability** and toggle **Enable Broadcast**. Then click the edit icon next to **OpenTelemetry Collector**.
+  </Step>
+
+  <Step title="Point it at Latitude">
+    Set **Endpoint** to Latitude's OTLP traces endpoint:
+
+    ```text
+    https://ingest.latitude.so/v1/traces
+    ```
+
+    Set **Headers** to your Latitude credentials, as a JSON object:
+
+    ```json
+    {
+      "Authorization": "Bearer YOUR_LATITUDE_API_KEY",
+      "X-Latitude-Project": "YOUR_PROJECT_SLUG"
+    }
+    ```
+
+    Replace `YOUR_LATITUDE_API_KEY` with an API key from your project settings, and `YOUR_PROJECT_SLUG` with your project slug.
+  </Step>
+
+  <Step title="Verify">
+    Click **Test Connection**, then make an API request through OpenRouter. The trace appears in your Latitude project.
+  </Step>
+
+</Steps>
+
+<Note>
+  Custom metadata you attach to the OpenRouter `trace` field arrives as span metadata in Latitude. A `environment` key on that field is sent as `trace.metadata.environment`, and Latitude reads it back as `environment`.
+</Note>
+
+Broadcast traces carry the model, token usage, latency, input and output messages, and any tool definitions and tool calls.
+
+---
+
+## Option 2: SDK instrumentation
+
+OpenRouter exposes an OpenAI-compatible API, so you can instrument it with Latitude's OpenAI instrumentation and point the client at OpenRouter's base URL.
+
+### Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **OpenAI SDK**
+- An **OpenRouter API key** (set as `OPENROUTER_API_KEY`)
+
+<Steps>
+
+  <Step title="Install">
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm install @latitude-data/telemetry openai
+          ```
+
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry openai
+          ```
+
+          ```bash yarn
+          yarn add @latitude-data/telemetry openai
+          ```
+
+          ```bash bun
+          bun add @latitude-data/telemetry openai
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry openai
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry openai
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry openai
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Initialize and use">
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
+        import { Latitude, capture } from "@latitude-data/telemetry"
+        import OpenAI from "openai"
+
+        const latitude = new Latitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          project: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: [createOpenAIInstrumentation(OpenAI)],
+        })
+
+        await latitude.ready
+
+        const openrouter = new OpenAI({
+          apiKey: process.env.OPENROUTER_API_KEY!,
+          baseURL: "https://openrouter.ai/api/v1",
+        })
+
+        await capture("generate-support-reply", async () => {
+          const completion = await openrouter.chat.completions.create({
+            model: "openai/gpt-4o-mini",
+            messages: [{ role: "user", content: "Hello" }],
+          })
+          return completion.choices[0].message.content
+        })
+
+        await latitude.shutdown()
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python
+        import os
+
+        import openai
+        from openai import OpenAI
+
+        from latitude_telemetry import Latitude, capture
+
+        latitude = Latitude(
+            api_key="your-api-key",
+            project="your-project-slug",
+            instrumentations={"openai": openai},
+        )
+
+        client = OpenAI(
+            api_key=os.environ["OPENROUTER_API_KEY"],
+            base_url="https://openrouter.ai/api/v1",
+        )
+
+        def generate_support_reply():
+            completion = client.chat.completions.create(
+                model="openai/gpt-4o-mini",
+                messages=[{"role": "user", "content": "Hello"}],
+            )
+            return completion.choices[0].message.content
+
+        capture("generate-support-reply", generate_support_reply)
+
+        latitude.shutdown()
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+</Steps>
+
+<Note>
+  OpenRouter model IDs are namespaced by provider, such as `openai/gpt-4o-mini`. Latitude records the ID as sent, so you can group and compare the models you route to.
+</Note>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors
