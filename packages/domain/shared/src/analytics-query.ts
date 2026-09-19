@@ -1,6 +1,11 @@
 import { z } from "zod"
 import { type MonitorMetric, monitorMetricSchema } from "./alert-incident-condition.ts"
-import { filterSetSchema, spanRowFilterSetSchema } from "./filter.ts"
+import {
+  rejectGtePercentileFilterSetSchema,
+  sessionFilterSetSchema,
+  spanRowFilterSetSchema,
+  traceFilterSetSchema,
+} from "./filter.ts"
 
 /**
  * Breakdown dimensions per stream — logical names the API accepts, mapped to
@@ -112,11 +117,10 @@ const rangeSchema = z
   })
   .describe("The time window.")
 
-// Fields common to every stream (metric is per-stream, added on each variant).
+// Fields common to every stream (metric and filters are per-stream, added on each variant —
+// each stream's filter builder resolves/rejects `gtePercentile` differently, so a shared
+// permissive schema here would let unsupported operators reach the filter builder and 500).
 const commonFields = {
-  filters: filterSetSchema
-    .optional()
-    .describe("Structured filter set applied to the stream (same DSL as `listTraces`)."),
   timeBucket: analyticsTimeBucketSchema
     .optional()
     .describe("Bucket the metric over time. Omit for a single aggregate."),
@@ -159,6 +163,9 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
       query: semanticQuery.optional(),
       breakdown: z.enum(TRACE_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
       metric: traceFamilyMetric,
+      filters: traceFilterSetSchema
+        .optional()
+        .describe("Structured filter set applied to the stream (same DSL as `listTraces`)."),
       ...commonFields,
     })
     .strict(),
@@ -168,6 +175,9 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
       query: semanticQuery.optional(),
       breakdown: z.enum(SESSION_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
       metric: traceFamilyMetric,
+      filters: sessionFilterSetSchema
+        .optional()
+        .describe("Structured filter set applied to the stream (same DSL as `listTraces`)."),
       ...commonFields,
     })
     .strict(),
@@ -203,6 +213,11 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
       metric: scoreMetricSchema.describe(
         "The metric: `count`, `passRate`, `errorRate` (over the pass/error flags), or `{avg|min|max|median}` of the 0–1 score `value`.",
       ),
+      filters: rejectGtePercentileFilterSetSchema("scores")
+        .optional()
+        .describe(
+          "Structured filter set applied to the stream (same DSL as `listTraces`). `gtePercentile` is not supported — use absolute thresholds.",
+        ),
       ...commonFields,
     })
     .strict(),
@@ -218,6 +233,11 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
       metric: behaviorMetricSchema.describe(
         "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`.",
       ),
+      filters: rejectGtePercentileFilterSetSchema("behaviors")
+        .optional()
+        .describe(
+          "Structured filter set applied to the stream (same DSL as `listTraces`). `gtePercentile` is not supported — use absolute thresholds.",
+        ),
       ...commonFields,
     })
     .strict(),
@@ -233,6 +253,11 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
       metric: momentMetricSchema.describe(
         "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`.",
       ),
+      filters: rejectGtePercentileFilterSetSchema("moments")
+        .optional()
+        .describe(
+          "Structured filter set applied to the stream (same DSL as `listTraces`). `gtePercentile` is not supported — use absolute thresholds.",
+        ),
       ...commonFields,
     })
     .strict(),
