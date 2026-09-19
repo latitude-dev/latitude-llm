@@ -168,7 +168,7 @@ Therefore **ingested content cannot be removed before its retention TTL expires.
 | Regex/deterministic, in-process TS | Structured identifiers + prefixed secrets | sub-ms per KB, deterministic | MIT | **Phase 1 tier** |
 | GLiNER `urchade/gliner_multi_pii-v1` | Names, addresses; tops the open-model SPY benchmark | ~350 MB int8, in-proc via transformers.js/onnxruntime-node or sidecar | Apache-2.0 | **Phase 4 ML tier** |
 | `openai/privacy-filter` | SOTA-claimed | ~5.4 GB CPU (15× heavier) | Apache-2.0 | Overkill |
-| Piiranha / most ai4privacy fine-tunes | High | Small | **CC-BY-NC** | **Excluded**: non-commercial, violates the OSS/self-host rule in `CLAUDE.md` |
+| Piiranha / most ai4privacy fine-tunes | High | Small | **CC-BY-NC** | **Excluded**: non-commercial, violates the OSS/self-host rule in `AGENTS.md` |
 | LLM-based | Best contextual | 35-180 ms+/span, per-token cost, non-deterministic | varies | Offline only, never inline |
 
 ---
@@ -380,7 +380,7 @@ Why not resolve in the worker: it would add an uncached `SettingsReader` Postgre
 
 **Org settings do need a read at the boundary.** `SettingsReaderLive` is already in `traceIngestionBillingLayers` (`apps/ingest/src/routes/traces.ts:32-39`), so `getOrganizationSettings()` is reachable, but an uncached query on the hottest path in the product is not acceptable. Add a Redis-cached resolver modeled exactly on `packages/platform/db-postgres/src/resolve-effective-plan-cached.ts`:
 
-- Key `org:${organizationId}:settings:redaction` (org prefix first, per the repo-wide rule in `CLAUDE.md`).
+- Key `org:${organizationId}:settings:redaction` (org prefix first, per the repo-wide rule in `AGENTS.md`).
 - 60 s TTL, Zod-validated cached payload, `cache.hit` span annotation, and an `invalidateOrganizationRedactionCache(organizationId)` export mirroring `invalidateEffectivePlanCache` (`:95-101`).
 - **A cache failure degrades to a database read. A database failure propagates.** An earlier draft of this spec had the row read degrade to "no org policy" on the theory that the org layer can only raise strictness. That was wrong: degrading lets a `locked` org policy fall back to a weaker project policy and write plaintext, which is the exact failure the design invariant exists to prevent. It also buys no availability, because project resolution on this path already hard-depends on Postgres (`ingest-spans.ts:146-149`; `RepositoryError` is already in the use case's error union) and the request fails regardless.
 - Cache the *absence* of a policy explicitly rather than as a bare `null`. Almost every organization has no policy, and if a cached absence were indistinguishable from a miss the cache would never serve the common case.
@@ -876,7 +876,7 @@ partial, 2 mislabelled, 5 false positives.
 - Names and addresses are redacted in an integration test against the reference sidecar.
 - With no `LAT_PII_REDACTOR_URL`, behavior is byte-identical to Phase 3.
 - Sidecar down plus fail-closed does not wedge the queue indefinitely; the breaker is asserted by test.
-- Every new dependency is MIT/Apache-2.0/BSD/ISC, audited transitively per `CLAUDE.md`.
+- Every new dependency is MIT/Apache-2.0/BSD/ISC, audited transitively per `AGENTS.md`.
 
 ### Phase 5 - Content deletion path
 
