@@ -106,18 +106,7 @@ const speedWindowGateSchema = z.object({
   completeShareOfEligible: z.number(),
 })
 
-/**
- * Why a project's score is what it is, as the page reads it.
- *
- * Deliberately not part of the snapshot. A stored decomposition would keep looking precise while the
- * evidence under it moved, and `score.md` is explicit that causes are resolved from the current
- * window and are never presented as the history of a number. This carries its own `computedAt` so
- * the page can say when the evidence was read rather than implying it explains the stored score.
- *
- * A schema rather than an interface because this shape round-trips through a cache: a reader that
- * cast whatever JSON it found would hand the page an object missing the fields it dereferences, and
- * the page would break instead of saying the explanation is not ready yet.
- */
+/** Score evidence is stored with published snapshots; unpublished computations use the cache. */
 export const agentScoreExplanationSchema = z.object({
   organizationId: z.string().min(1),
   projectId: z.string().min(1),
@@ -219,12 +208,6 @@ export const toAgentScoreExplanation = ({
   }
 }
 
-/**
- * Organization-prefixed, as every scoped cache key must be, and keyed by the score date.
- *
- * A project may not publish a score today. Keeping each day's cached explanation separate lets the
- * page show today's readiness beside the latest published score's breakdown.
- */
 export const agentScoreExplanationCacheKey = ({
   organizationId,
   projectId,

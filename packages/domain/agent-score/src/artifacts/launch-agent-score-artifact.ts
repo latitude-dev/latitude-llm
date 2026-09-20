@@ -4,7 +4,7 @@ import { PROVISIONAL_COST_METRIC_CATALOG } from "../entities/cost-metric-catalog
 import { LAUNCH_COST_ARTIFACT_VERSION } from "./launch-cost-scoring-artifact.ts"
 import { LAUNCH_LATENCY_ARTIFACT_VERSION } from "./launch-latency-reference-artifact.ts"
 
-export const LAUNCH_SCORING_VERSION = "agent-score-v2-provisional"
+export const LAUNCH_SCORING_VERSION = "agent-score-v3-provisional"
 
 const BUNDLED_JUDGE = FLAGGER_DEFAULT_CLASSIFIER_MODEL
 
@@ -24,7 +24,7 @@ export const LAUNCH_AGENT_SCORE_ARTIFACT = {
   calibration: "provisional",
   compositeWeights: { outcome: 0.35, reliability: 0.25, cost: 0.15, speed: 0.15, safety: 0.1 },
   referenceRuns: { reliability: 20, safety: 100 },
-  window: { stepDays: [7, 14, 21, 28], sessionTarget: 200, sessionFloor: 200, hysteresisMargin: 0.1 },
+  window: { stepDays: [7, 14, 21, 28], sessionTarget: 100, sessionFloor: 100, hysteresisMargin: 0.1 },
   dimensionFloors: {
     outcome: { examinedSessions: 100, examinedShareOfEligible: 0.05 },
     // A census rather than a sample, so the bar is how much of the base could be read at all.

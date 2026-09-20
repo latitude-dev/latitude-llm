@@ -11,7 +11,7 @@ from .agent_score_explanation import AgentScoreExplanation
 class AgentScoreCauses(UniversalBaseModel):
     status: AgentScoreCausesStatus = pydantic.Field()
     """
-    `notComputed` when the explanation has not been prepared yet; the scores are still valid.
+    `notComputed` when no matching explanation is available for today; any published score remains valid.
     """
 
     explanation: typing.Optional[AgentScoreExplanation] = None

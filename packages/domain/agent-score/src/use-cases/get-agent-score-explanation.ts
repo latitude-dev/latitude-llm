@@ -9,6 +9,7 @@ import {
   latestAgentScoreExplanationCacheKey,
   toAgentScoreExplanation,
 } from "../entities/agent-score-explanation.ts"
+import { AgentScoreSnapshotRepository } from "../ports/agent-score-snapshot-repository.ts"
 
 export type AgentScoreExplanationResult =
   | { readonly status: "ready"; readonly explanation: AgentScoreExplanation }
@@ -90,17 +91,6 @@ export const cacheAgentScoreExplanation = Effect.fn("agentScore.cacheExplanation
   return true
 })
 
-/**
- * A score window's cause rows, coverage and native inputs.
- *
- * Served from the cache the daily job warms, because computing it means reading every session in the
- * window with its generation content — daily-job work, not page-load work, and doing it per viewer
- * would multiply it by however many people opened the page.
- *
- * A miss is reported rather than computed here. The page shows its scores from the snapshot and says
- * the explanation is still being prepared, which is honest and instant; a request that blocked for
- * the length of a window read would look like the page was broken.
- */
 const readAgentScoreExplanation = (key: string) =>
   Effect.gen(function* () {
     const cache = yield* CacheStore
@@ -127,7 +117,22 @@ export const getAgentScoreExplanation = Effect.fn("agentScore.getExplanation")(f
   readonly projectId: ProjectId
   readonly date: string
 }) {
-  return yield* readAgentScoreExplanation(agentScoreExplanationCacheKey(input))
+  const snapshots = yield* AgentScoreSnapshotRepository
+  const snapshot = yield* snapshots.findByDate(input)
+  if (snapshot?.explanation)
+    return { status: "ready", explanation: snapshot.explanation } satisfies AgentScoreExplanationResult
+  const dated = yield* readAgentScoreExplanation(agentScoreExplanationCacheKey(input))
+  const result = dated.status === "ready" ? dated : yield* getLatestAgentScoreExplanation(input)
+  if (result.status !== "ready") return result
+  const explanation = result.explanation
+  if (
+    explanation.organizationId !== input.organizationId ||
+    explanation.projectId !== input.projectId ||
+    explanation.date !== input.date ||
+    (snapshot && explanation.scoringVersion !== snapshot.scoringVersion)
+  )
+    return { status: "notComputed" } satisfies AgentScoreExplanationResult
+  return result
 })
 
 // TODO: remove once every pre-split entry has aged out; they were written with a 26-hour TTL.

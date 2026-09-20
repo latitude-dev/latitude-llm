@@ -10,6 +10,7 @@ import {
   deriveSamplingRates,
   type LatencyReferenceArtifact,
   type ScoringJudge,
+  toAgentScoreExplanation,
 } from "@domain/agent-score"
 import { FlaggerRepository, SAFETY_SUITE_SLUGS } from "@domain/flaggers"
 import type { OrganizationId, ProjectId, ScoreDimension } from "@domain/shared"
@@ -148,6 +149,9 @@ export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")
     return { status: "withheld", reason: "missingDimensionScore" } satisfies SnapshotProjectResult
   }
 
+  const explanation = toAgentScoreExplanation({ result, date: input.date })
+  if (!explanation) return { status: "withheld", reason: "missingScoreEvidence" } satisfies SnapshotProjectResult
+
   const wrote = yield* snapshots.insertIfAbsent({
     organizationId: input.organizationId,
     projectId: input.projectId,
@@ -159,6 +163,7 @@ export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")
     interval: result.composite.interval,
     dimensions: dimensions as Record<ScoreDimension, DimensionSnapshot>,
     ...(result.composite.policyCap?.applied ? { policyCap: result.composite.policyCap.cap } : {}),
+    explanation,
     createdAt: new Date(),
   })
 

@@ -39,9 +39,6 @@ export const agentScoreRefreshMarker = ({
 export const isCurrentAgentScoreSnapshot = (snapshot: Pick<AgentScoreRecord, "date"> | null, date: string): boolean =>
   snapshot?.date === date
 
-export const isStaleAgentScoreSnapshot = (snapshot: Pick<AgentScoreRecord, "date"> | null, date: string): boolean =>
-  snapshot !== null && snapshot.date !== date
-
 export const agentVitalityIsLoading = (snapshot: Pick<AgentScoreRecord, "date"> | null, isLoading: boolean): boolean =>
   snapshot === null && isLoading
 
@@ -80,18 +77,6 @@ export const agentScoreExplanationForSnapshot = ({
   if (snapshot && explanation.scoringVersion !== snapshot.scoringVersion) return null
   return explanation
 }
-
-export const agentScoreSnapshotEvidenceCompleted = ({
-  needsSnapshotEvidence,
-  previousSnapshotExplanationTime,
-  snapshotExplanation,
-}: {
-  readonly needsSnapshotEvidence: boolean
-  readonly previousSnapshotExplanationTime: string | undefined
-  readonly snapshotExplanation: AgentScoreExplanationRecord["explanation"]
-}): boolean =>
-  !needsSnapshotEvidence ||
-  (snapshotExplanation !== null && snapshotExplanation.computedAt !== previousSnapshotExplanationTime)
 
 export const waitForAgentScoreRefresh = async ({
   previousMarker,

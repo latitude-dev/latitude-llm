@@ -12,7 +12,7 @@ from .agent_score_issue_row import AgentScoreIssueRow
 
 class AgentScoreExplanation(UniversalBaseModel):
     """
-    The evidence, or `null` when it is not ready.
+    Evidence for today's UTC date, retained with the published score when available, or `null` if unavailable.
     """
 
     computed_at: typing_extensions.Annotated[
@@ -20,7 +20,7 @@ class AgentScoreExplanation(UniversalBaseModel):
         FieldMetadata(alias="computedAt"),
         pydantic.Field(
             alias="computedAt",
-            description="When this evidence was read, as an ISO-8601 timestamp. It explains present behaviour, not the stored score.",
+            description="When this evidence was computed, as an ISO-8601 timestamp. Retained explanations keep the original score computation time.",
         ),
     ]
     scoring_version: typing_extensions.Annotated[

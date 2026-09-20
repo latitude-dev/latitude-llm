@@ -102,11 +102,9 @@ function DimensionReadiness({
 function ScoreReadiness({
   explanation,
   date,
-  hasStaleSnapshot,
 }: {
   readonly explanation: AgentScoreExplanationRecord["explanation"]
   readonly date: string
-  readonly hasStaleSnapshot: boolean
 }) {
   const readiness = agentScoreReadiness(explanation)
   const summary =
@@ -119,13 +117,8 @@ function ScoreReadiness({
   return (
     <div className="flex min-h-[200px] flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <Text.H6 color="foregroundMuted">Requirements for today’s computation</Text.H6>
+        <Text.H6 color="foregroundMuted">Requirements for this date</Text.H6>
         <Text.H7 color="foregroundMuted">{formatFullDate(date)} UTC</Text.H7>
-        {hasStaleSnapshot ? (
-          <Text.H7 color="foregroundMuted">
-            These requirements do not describe the score shown beside this table.
-          </Text.H7>
-        ) : null}
       </div>
       {summary ? (
         <Text.H6 color="foregroundMuted" className="self-end">
@@ -140,7 +133,7 @@ function ScoreReadiness({
             </Text.H4M>
             <Text.H6 color="foregroundMuted">
               {formatCount(readiness.remaining)} more {readiness.remaining === 1 ? "session" : "sessions"} needed in the
-              current {formatCount(readiness.windowDays)}-day window.
+              selected {formatCount(readiness.windowDays)}-day window.
             </Text.H6>
           </div>
           <ReadinessProgress readiness={readiness} />
@@ -151,7 +144,7 @@ function ScoreReadiness({
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
           <Text.H6B>Evidence has not been calculated yet</Text.H6B>
-          <Text.H6 color="foregroundMuted">Refresh to evaluate the latest sessions.</Text.H6>
+          <Text.H6 color="foregroundMuted">Refresh to evaluate sessions for this date.</Text.H6>
         </div>
       )}
     </div>
@@ -161,14 +154,12 @@ function ScoreReadiness({
 export function ScoreTrend({
   endDate,
   isCurrentSnapshot,
-  hasStaleSnapshot,
   history,
   explanation,
   isLoading,
 }: {
   readonly endDate: string
   readonly isCurrentSnapshot: boolean
-  readonly hasStaleSnapshot: boolean
   readonly history: readonly AgentScoreRecord[] | undefined
   readonly explanation: AgentScoreExplanationRecord["explanation"]
   readonly isLoading: boolean
@@ -237,7 +228,7 @@ export function ScoreTrend({
         </>
       ) : (
         <div className="p-6">
-          <ScoreReadiness explanation={explanation} date={endDate} hasStaleSnapshot={hasStaleSnapshot} />
+          <ScoreReadiness explanation={explanation} date={endDate} />
         </div>
       )}
     </div>

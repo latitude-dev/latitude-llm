@@ -39,6 +39,7 @@ import {
 import { scores } from "@platform/db-postgres/schema/scores"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect, Layer } from "effect"
+import { z } from "zod"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 import { snapshotProjectAgentScore } from "../workers/agent-score-snapshot.ts"
 
@@ -56,7 +57,8 @@ trend by running the daily job once per date.
 Options:
   --organization-id <id>  Organization to seed (default: the seed organization)
   --project-id <id>       Project to seed (default: the seed project)
-  --days <n>              How many dates to publish, ending today (default: ${DEFAULT_TREND_DAYS})
+  --days <n>              How many dates to publish (default: ${DEFAULT_TREND_DAYS})
+  --end-date <date>       Last UTC date to publish, YYYY-MM-DD (default: today)
   --help                  Show this help
 `.trim()
 
@@ -579,9 +581,32 @@ const publishDate = ({
   )
 }
 
-const datesEndingToday = (days: number): readonly string[] => {
-  const todayMs = new Date(`${utcDateOf(new Date())}T00:00:00.000Z`).getTime()
-  return Array.from({ length: days }, (_, offset) => utcDateOf(new Date(todayMs - (days - 1 - offset) * 86_400_000)))
+const datesEndingOn = ({ days, date }: { readonly days: number; readonly date: string }): readonly string[] => {
+  const endMs = new Date(`${date}T00:00:00.000Z`).getTime()
+  return Array.from({ length: days }, (_, offset) => utcDateOf(new Date(endMs - (days - 1 - offset) * 86_400_000)))
+}
+
+const publishTrend = async ({
+  organizationId,
+  projectId,
+  dates,
+}: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly dates: readonly string[]
+}) => {
+  for (const date of dates) {
+    const result = await Effect.runPromise(
+      publishDate({ organizationId, projectId, date, force: date === dates.at(-1) }),
+    )
+    console.log(
+      result.status === "published" || result.status === "refreshed"
+        ? `- ${date}: ${result.score.toFixed(1)}`
+        : result.status === "withheld"
+          ? `- ${date}: withheld (${result.reason})`
+          : `- ${date}: already published`,
+    )
+  }
 }
 
 const main = async () => {
@@ -593,6 +618,7 @@ const main = async () => {
       "organization-id": { type: "string" },
       "project-id": { type: "string" },
       days: { type: "string" },
+      "end-date": { type: "string" },
       help: { type: "boolean" },
     },
   })
@@ -612,6 +638,9 @@ const main = async () => {
   const projectId = ProjectId(values["project-id"] ?? SEED_PROJECT_ID)
   const trendDays = values.days ? Number(values.days) : DEFAULT_TREND_DAYS
   if (!Number.isInteger(trendDays) || trendDays <= 0) throw new Error("--days must be a positive integer")
+
+  const endDate = z.iso.date().parse(values["end-date"] ?? utcDateOf(new Date()))
+  if (endDate > utcDateOf(new Date())) throw new Error("--end-date cannot be in the future")
 
   const artifacts = resolveLaunchArtifacts({ judge: FLAGGER_DEFAULT_CLASSIFIER_MODEL })
   const sessions = await readScorableSessions({ organizationId, projectId })
@@ -657,22 +686,8 @@ const main = async () => {
   await Effect.runPromise(writeScores({ rows: scoreRows, ownedIds: ownedScoreIds, organizationId }))
   console.log(`- wrote ${scoreRows.length} judgments`)
 
-  const dates = datesEndingToday(trendDays)
-  for (const date of dates) {
-    // The cache the page reads is keyed by project, not date, so only the newest run has to warm it
-    // — and it has to, because an unforced run on a date that already scored returns before it
-    // computes anything.
-    const result = await Effect.runPromise(
-      publishDate({ organizationId, projectId, date, force: date === dates.at(-1) }),
-    )
-    console.log(
-      result.status === "published" || result.status === "refreshed"
-        ? `- ${date}: ${result.score.toFixed(1)}`
-        : result.status === "withheld"
-          ? `- ${date}: withheld (${result.reason})`
-          : `- ${date}: already published`,
-    )
-  }
+  const dates = datesEndingOn({ days: trendDays, date: endDate })
+  await publishTrend({ organizationId, projectId, dates })
 }
 
 main()

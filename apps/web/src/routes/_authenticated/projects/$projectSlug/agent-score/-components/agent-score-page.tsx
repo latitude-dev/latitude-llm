@@ -16,20 +16,19 @@ import {
   agentScoreExplanationForSnapshot,
   agentScoreRefreshCompleted,
   agentScoreRefreshMarker,
-  agentScoreSnapshotEvidenceCompleted,
   agentScoreSnapshotMarker,
   agentVitalityIsLoading,
   isCurrentAgentScoreSnapshot,
-  isStaleAgentScoreSnapshot,
   waitForAgentScoreRefresh,
 } from "./agent-score-refresh.ts"
 import { AgentVitality } from "./agent-vitality.tsx"
 import { buildDimensionEvidence, type DimensionEvidence } from "./dimension-evidence.ts"
 import { DIMENSION_META } from "./dimension-meta.ts"
 import { DimensionSection, DimensionSectionSkeleton } from "./dimension-section.tsx"
+import { ScoreDateNavigator } from "./score-date-navigator.tsx"
 import { ScoreTrend } from "./score-trend.tsx"
 
-type RouteProject = ReturnType<typeof useRouteProject>
+type RouteProject = Pick<ReturnType<typeof useRouteProject>, "id" | "slug">
 
 const EMPTY_EVIDENCE: DimensionEvidence = { affected: [], coverageGaps: [], healthy: [], context: [] }
 
@@ -45,68 +44,70 @@ const scoreTrendIsLoading = ({
   readonly isCurrentSnapshot: boolean
 }): boolean => isReloading || isHistoryLoading || (!isCurrentSnapshot && isExplanationLoading)
 
-export function AgentScorePage({ project }: { readonly project: RouteProject }) {
+export function AgentScorePage({
+  project,
+  selectedDate,
+  onDateChange,
+}: {
+  readonly project: RouteProject
+  readonly selectedDate?: string | undefined
+  readonly onDateChange: (date: string) => void
+}) {
   const { toast } = useToast()
   const [isReloading, setIsReloading] = useState(false)
-  const scoreQuery = useProjectAgentScore(project.id)
-  const historyQuery = useProjectAgentScoreHistory(project.id)
-  const explanationQuery = useProjectAgentScoreExplanation(project.id)
+  const scoreQuery = useProjectAgentScore(project.id, selectedDate)
   const scoreData = scoreQuery.data
+  const date = scoreData?.date ?? selectedDate
+  const historyQuery = useProjectAgentScoreHistory(project.id, date)
+  const explanationQuery = useProjectAgentScoreExplanation(project.id, date)
   const snapshot = scoreData?.snapshot ?? null
-  const date = scoreData?.date ?? new Date().toISOString().slice(0, 10)
-  const isCurrentSnapshot = isCurrentAgentScoreSnapshot(snapshot, date)
-  const hasStaleSnapshot = isStaleAgentScoreSnapshot(snapshot, date)
-  const currentExplanation = explanationQuery.data?.currentExplanation ?? null
+  const displayDate = date ?? new Date().toISOString().slice(0, 10)
+  const isCurrentSnapshot = isCurrentAgentScoreSnapshot(snapshot, displayDate)
   const explanation = agentScoreExplanationForSnapshot({
     explanation: explanationQuery.data?.explanation ?? null,
-    date: snapshot?.date ?? date,
+    date: displayDate,
     snapshot,
   })
   const isRefreshing = scoreQuery.isRefetching || historyQuery.isRefetching || explanationQuery.isRefetching
   const refresh = async () => {
     if (isReloading) return
-    const needsSnapshotEvidence = snapshot !== null && explanation === null
-    const previousMarker = [
-      agentScoreRefreshMarker({ snapshot, explanation: currentExplanation }),
-      explanation?.computedAt ?? "none",
-    ].join(":")
+    if (!date) {
+      await scoreQuery.refetch()
+      return
+    }
+    const previousMarker = agentScoreRefreshMarker({ snapshot, explanation })
     const previousSnapshotMarker = agentScoreSnapshotMarker(snapshot)
-    const previousExplanationTime = currentExplanation?.computedAt
-    const previousSnapshotExplanationTime = explanation?.computedAt
+    const previousExplanationTime = explanation?.computedAt
     setIsReloading(true)
     try {
-      const { date: refreshDate } = await refreshProjectAgentScore({ data: { projectId: project.id } })
-      const completed = await waitForAgentScoreRefresh({
-        previousMarker,
-        refetch: async () => {
-          const [scoreResult, explanationResult] = await Promise.all([scoreQuery.refetch(), explanationQuery.refetch()])
-          const nextSnapshot = scoreResult.data?.snapshot ?? null
-          const nextExplanation = explanationResult.data?.currentExplanation ?? null
-          const nextSnapshotExplanation = agentScoreExplanationForSnapshot({
-            explanation: explanationResult.data?.explanation ?? null,
-            date: nextSnapshot?.date ?? refreshDate,
-            snapshot: nextSnapshot,
-          })
-          const nextMarker = [
-            agentScoreRefreshMarker({ snapshot: nextSnapshot, explanation: nextExplanation }),
-            nextSnapshotExplanation?.computedAt ?? "none",
-          ].join(":")
-          const todayDone = agentScoreRefreshCompleted({
-            previousSnapshotMarker,
-            previousExplanationTime,
-            date: refreshDate,
-            snapshot: nextSnapshot,
-            explanation: nextExplanation,
-          })
-          const snapshotEvidenceDone = agentScoreSnapshotEvidenceCompleted({
-            needsSnapshotEvidence,
-            previousSnapshotExplanationTime,
-            snapshotExplanation: nextSnapshotExplanation,
-          })
-          return todayDone && snapshotEvidenceDone ? nextMarker : previousMarker
-        },
-      })
-      await historyQuery.refetch()
+      const { enqueued } = await refreshProjectAgentScore({ data: { projectId: project.id, date } })
+      const completed =
+        !enqueued ||
+        (await waitForAgentScoreRefresh({
+          previousMarker,
+          refetch: async () => {
+            const [scoreResult, explanationResult] = await Promise.all([
+              scoreQuery.refetch(),
+              explanationQuery.refetch(),
+            ])
+            const nextSnapshot = scoreResult.data?.snapshot ?? null
+            const nextExplanation = agentScoreExplanationForSnapshot({
+              explanation: explanationResult.data?.explanation ?? null,
+              date,
+              snapshot: nextSnapshot,
+            })
+            return agentScoreRefreshCompleted({
+              previousSnapshotMarker,
+              previousExplanationTime,
+              date,
+              snapshot: nextSnapshot,
+              explanation: nextExplanation,
+            })
+              ? agentScoreRefreshMarker({ snapshot: nextSnapshot, explanation: nextExplanation })
+              : previousMarker
+          },
+        }))
+      await Promise.all([scoreQuery.refetch(), explanationQuery.refetch(), historyQuery.refetch()])
       if (!completed) {
         toast({
           title: "Agent Score has not updated yet",
@@ -136,23 +137,29 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
             />
           }
           actions={
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              isLoading={isReloading || isRefreshing}
-              onClick={() => void refresh()}
-            >
-              <Icon icon={RotateCwIcon} size="sm" />
-              Refresh
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <ScoreDateNavigator date={date} onDateChange={onDateChange} disabled={isReloading} />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={scoreQuery.isLoading}
+                isLoading={isReloading || isRefreshing}
+                onClick={() => void refresh()}
+              >
+                <Icon icon={RotateCwIcon} size="sm" />
+                Refresh
+              </Button>
+            </div>
           }
         />
         <div className="flex flex-col gap-6 px-6 pb-6">
+          {[scoreQuery.isError, historyQuery.isError, explanationQuery.isError].some(Boolean) ? (
+            <Text.H6 color="destructive">Some score data could not be loaded. Refresh to try again.</Text.H6>
+          ) : null}
           <div className="flex flex-row gap-3 @max-[64rem]:flex-col">
             <AgentVitality
               snapshot={snapshot}
-              date={date}
               history={historyQuery.data}
               dimensionWeights={scoreData?.dimensionWeights}
               explanation={explanation}
@@ -162,14 +169,13 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
               )}
             />
             <ScoreTrend
-              endDate={date}
+              endDate={displayDate}
               isCurrentSnapshot={isCurrentSnapshot}
-              hasStaleSnapshot={hasStaleSnapshot}
               history={historyQuery.data}
-              explanation={currentExplanation}
+              explanation={explanation}
               isLoading={scoreTrendIsLoading({
                 isReloading,
-                isHistoryLoading: historyQuery.isLoading,
+                isHistoryLoading: scoreQuery.isLoading || historyQuery.isLoading,
                 isExplanationLoading: explanationQuery.isLoading,
                 isCurrentSnapshot,
               })}
@@ -177,7 +183,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
           </div>
 
           <div className="flex flex-col gap-3">
-            {isReloading || explanationQuery.isLoading
+            {isReloading || scoreQuery.isLoading || explanationQuery.isLoading
               ? SCORE_DIMENSION_ORDER.map((dimension) => <DimensionSectionSkeleton key={dimension} />)
               : SCORE_DIMENSION_ORDER.map((dimension) => {
                   const meta = DIMENSION_META[dimension]
@@ -201,7 +207,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                       emptyAffectedMessage={
                         explanation
                           ? "No material issues affected this score."
-                          : "Evidence has not been prepared for the latest score yet."
+                          : "Evidence is not available for this date."
                       }
                     />
                   )

@@ -1,20 +1,7 @@
-import { date, doublePrecision, integer, uniqueIndex, varchar } from "drizzle-orm/pg-core"
+import type { AgentScoreExplanation } from "@domain/agent-score"
+import { date, doublePrecision, integer, jsonb, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, tzTimestamp } from "../schemaHelpers.ts"
 
-/**
- * One immutable Agent Score per project per UTC date.
- *
- * Scores and nothing else, as `score.md` fixes: the causes, coverage and native inputs a page shows
- * are resolved from the live window instead, because evidence keeps arriving after a snapshot is
- * written and a stored decomposition would go stale while still looking precise.
- *
- * Columns rather than a blob, because the trend chart reads one series per dimension and the
- * intervals are plotted, not just displayed. The unique key is what makes a rerun a no-op: a day's
- * score is a record of what was published, never a value to correct.
- *
- * `window_days` is also load-bearing beyond display — it is where tomorrow's window selection reads
- * yesterday's step from, which is what stops a project on the boundary changing window daily.
- */
 export const agentScoreSnapshots = latitudeSchema.table(
   "agent_score_snapshots",
   {
@@ -45,6 +32,7 @@ export const agentScoreSnapshots = latitudeSchema.table(
     safetyUpper: doublePrecision("safety_upper").notNull(),
     // Null when no policy rule applied, so the page can attribute capped points to the rule itself.
     policyCap: doublePrecision("policy_cap"),
+    explanation: jsonb("explanation").$type<AgentScoreExplanation>(),
     createdAt: tzTimestamp("created_at").defaultNow().notNull(),
   },
   (t) => [
