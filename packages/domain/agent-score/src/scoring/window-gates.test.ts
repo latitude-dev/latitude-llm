@@ -125,7 +125,7 @@ describe("gateSpeedWindow", () => {
   it("withholds below the complete-path session floor", () => {
     expect(
       gateSpeed({
-        speed: speedAggregate({ includedSessionCount: 50 }),
+        speed: speedAggregate({ includedSessionCount: 49 }),
         eligibleSessionCount: 1_000,
         floors: SPEED_FLOORS,
       }),

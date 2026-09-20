@@ -621,3 +621,10 @@ export type {
   ShadowResourceSample,
 } from "./use-cases/run-cost-speed-shadow.ts"
 export { runCostSpeedShadow, SHADOW_BATCH_SIZE } from "./use-cases/run-cost-speed-shadow.ts"
+export {
+  agentScoreSnapshotWorkflowId,
+  resolveScoringCutoff,
+  type SnapshotProjectInput,
+  type SnapshotProjectResult,
+  snapshotProjectAgentScore,
+} from "./use-cases/snapshot-project-agent-score.ts"

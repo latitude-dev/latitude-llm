@@ -1,5 +1,26 @@
 # Agent Score
 
+## Execution and recovery
+
+The daily BullMQ sweep selects eligible projects and publishes one lightweight `snapshotProject`
+task per project and UTC date. That task starts `agentScoreSnapshotWorkflow` with a workflow ID that
+contains the organization, project, date, and request mode. Forced refreshes use a distinct workflow
+ID, so an active scheduled run cannot discard a request to rebuild legacy evidence. It does not
+calculate the score in the BullMQ worker.
+
+Temporal runs the calculation in `snapshotAgentScoreActivity`. The activity owns the scoped
+Postgres, ClickHouse, and cache reads, derived sampling updates, and conditional snapshot insert.
+Temporal records the execution history and retries transient activity failures with the shared
+bounded retry policy. The organization/project/date unique key makes activity retries safe. A retry
+cannot replace an existing score or its stored explanation.
+
+Starting the same workflow while it is running is a successful no-op. A later refresh can start a
+new run with the same workflow ID after the earlier run has closed. Workflow and activity logs carry
+the organization, project, and score date so operators can follow the run in Temporal and the
+application logs.
+
+Customer and backoffice refresh actions start Temporal directly. They do not depend on BullMQ.
+
 The Agent Score page uses one selected UTC date for the score, dimension values, evidence, and
 computation requirements. The date is stored in the route's `date` search parameter. Without a
 selected date, the page opens the latest published score through today. If no score exists, it
@@ -35,11 +56,12 @@ A forced calculation can refresh legacy cached evidence but cannot rewrite the p
 
 ## Evidence requirements
 
-`agent-score-v3-provisional` uses 100 eligible sessions for both the window target and publication
-minimum. Outcome, Reliability, Speed, and Safety retain their 100-session count requirements.
-Percentage coverage requirements are unchanged. Window selection still uses whole-week steps and
-hysteresis. Historical snapshots retain their original scoring versions; the trend marks a range
-that crosses versions.
+`agent-score-v4-provisional` uses 50 eligible sessions for both the window target and publication
+minimum. Outcome requires 50 compatible verdicts, Reliability requires 50 readable sessions, Speed
+requires 50 complete critical paths, and Safety requires 50 compatible evaluations. Percentage
+coverage requirements are unchanged. Window selection still uses whole-week steps and hysteresis.
+Historical snapshots retain their original scoring versions; the trend marks a range that crosses
+versions.
 
 ## Local seed data
 

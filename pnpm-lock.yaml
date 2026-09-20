@@ -940,6 +940,9 @@ importers:
 
   apps/workflows:
     dependencies:
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../../packages/domain/agent-score
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
