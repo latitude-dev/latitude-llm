@@ -76,19 +76,19 @@ describe("the launch Agent Score artifact", () => {
   })
 
   it("uses the provisional launch window and coverage floors", () => {
-    expect(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion).toBe("agent-score-v3-provisional")
+    expect(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion).toBe("agent-score-v4-provisional")
     expect(LAUNCH_AGENT_SCORE_ARTIFACT.window).toEqual({
       stepDays: [7, 14, 21, 28],
-      sessionTarget: 100,
-      sessionFloor: 100,
+      sessionTarget: 50,
+      sessionFloor: 50,
       hysteresisMargin: 0.1,
     })
     expect(LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors).toEqual({
-      outcome: { examinedSessions: 100, examinedShareOfEligible: 0.05 },
-      reliability: { readableSessions: 100, readableShareOfEligible: 0.8 },
+      outcome: { examinedSessions: 50, examinedShareOfEligible: 0.05 },
+      reliability: { readableSessions: 50, readableShareOfEligible: 0.8 },
       cost: { publishableSessionShare: 0.8 },
-      speed: { completeCriticalPathSessions: 100, completeCriticalPathShareOfEligible: 0.5 },
-      safety: { examinedSessions: 100, examinedShareOfEligible: 0.05, maxRateLimitedHintedShare: 0.1 },
+      speed: { completeCriticalPathSessions: 50, completeCriticalPathShareOfEligible: 0.5 },
+      safety: { examinedSessions: 50, examinedShareOfEligible: 0.05, maxRateLimitedHintedShare: 0.1 },
     })
   })
 

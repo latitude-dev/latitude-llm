@@ -2,6 +2,7 @@ import { AdminFeatureFlagRepository, getProjectDetailsUseCase } from "@domain/ad
 import {
   type AgentScoreExplanation,
   type AgentScoreSnapshot,
+  agentScoreSnapshotWorkflowId,
   getAgentScoreExplanation,
   getLatestAgentScore,
   getLatestAgentScoreExplanation,
@@ -19,7 +20,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
-import { getAdminPostgresClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
+import { getAdminPostgresClient, getRedisClient, getWorkflowStarter } from "../../server/clients.ts"
 
 /** Exported for input-schema tests. */
 export const adminAgentScoreProjectInputSchema = z.object({
@@ -169,17 +170,29 @@ export const adminRecalculateAgentScore = createServerFn({ method: "POST" })
       currentDate: date,
       snapshotDate: latest.available ? latest.snapshot.date : null,
     })
-    const publisher = await getQueuePublisher()
+    const workflowStarter = await getWorkflowStarter()
     await Effect.runPromise(
       Effect.forEach(
         dates,
         (taskDate) =>
-          publisher.publish("agent-score", "snapshotProject", {
-            organizationId: project.organization.id,
-            projectId: project.id,
-            date: taskDate,
-            force: true,
-          }),
+          workflowStarter
+            .start(
+              "agentScoreSnapshotWorkflow",
+              {
+                organizationId: project.organization.id,
+                projectId: project.id,
+                date: taskDate,
+                force: true,
+              },
+              {
+                workflowId: agentScoreSnapshotWorkflowId({
+                  organizationId: project.organization.id,
+                  projectId: project.id,
+                  date: taskDate,
+                }),
+              },
+            )
+            .pipe(Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.void)),
         { discard: true },
       ).pipe(withTracing),
     )

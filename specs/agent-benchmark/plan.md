@@ -664,8 +664,9 @@ persistence branch, and the window arithmetic. Do not rebuild these:
   `FLAGGER_DEFAULT_ENABLED` and `FLAGGER_DEFAULT_SAMPLING`. Ten LLM flaggers already sample at 10%
   each, so this is roughly a tenth more flagger spend, not a new order of magnitude. Unlike the
   others it has no deterministic prefilter, so it runs on the whole sampled share. The provisional
-  Outcome coverage floor is 100 compatible verdicts and 5% of the eligible base; both numbers are
-  calibration candidates frozen in PR 6, not constants buried in a reader.
+  Outcome coverage floor is 50 compatible verdicts and 5% of the eligible base; the launch window
+  and every dimension's count floor are also 50. These numbers are calibration candidates frozen in
+  PR 6, not constants buried in a reader.
 - **D8. No new session-assessment contract surface.** Incompatible judgment version and insufficient
   examined population are window concerns, not session concerns, so `SessionCoverageLimitation`
   gains no member and the generated contracts do not change shape. Adding the slug still changes the

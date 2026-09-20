@@ -1,6 +1,7 @@
 import {
   type AgentScoreExplanation,
   type AgentScoreSnapshot,
+  agentScoreSnapshotWorkflowId,
   getAgentScoreExplanation,
   getAgentScoreForDate,
   getCurrentAgentScore,
@@ -14,10 +15,9 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
-import { getPostgresClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
+import { getPostgresClient, getRedisClient, getWorkflowStarter } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
-import { AGENT_SCORE_REFRESH_THROTTLE_MS } from "./agent-score.constants.ts"
 import { agentScoreDateSchema } from "./agent-score-date.ts"
 
 export interface AgentScoreRecord {
@@ -119,19 +119,18 @@ export const refreshProjectAgentScore = createServerFn({ method: "POST" })
       ),
     )
     if (current.available && current.snapshot.explanation) return { enqueued: false, date: data.date }
-    const publisher = await getQueuePublisher()
+    const workflowStarter = await getWorkflowStarter()
     await Effect.runPromise(
-      publisher
-        .publish(
-          "agent-score",
-          "snapshotProject",
+      workflowStarter
+        .start(
+          "agentScoreSnapshotWorkflow",
           { organizationId: orgId, projectId, date: data.date, force: true },
-          {
-            dedupeKey: `org:${orgId}:agent-score:refresh:${projectId}:${data.date}`,
-            leadingThrottleMs: AGENT_SCORE_REFRESH_THROTTLE_MS,
-          },
+          { workflowId: agentScoreSnapshotWorkflowId({ organizationId: orgId, projectId, date: data.date }) },
         )
-        .pipe(withTracing),
+        .pipe(
+          Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.void),
+          withTracing,
+        ),
     )
     return { enqueued: true, date: data.date }
   })

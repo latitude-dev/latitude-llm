@@ -285,9 +285,8 @@ const bootstrap = async () => {
     createAgentScoreWorker({
       consumer: ctx.consumer,
       publisher: ctx.publisher,
-      postgresClient: ctx.postgresClient,
       clickhouseClient: ctx.clickhouseClient,
-      redisClient: ctx.redisClient,
+      workflowStarter: ctx.workflowStarter,
     })
     createSandboxesWorker({
       consumer: ctx.consumer,

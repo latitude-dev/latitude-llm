@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { AGENT_SCORE_REFRESH_THROTTLE_MS } from "../../../../../../domains/agent-score/agent-score.constants.ts"
+import { AGENT_SCORE_REFRESH_POLL_WINDOW_MS } from "../../../../../../domains/agent-score/agent-score.constants.ts"
 import type { AgentScoreExplanationRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
 import {
   agentScoreExplanationForSnapshot,
@@ -63,7 +63,7 @@ describe("agentScoreExplanationForSnapshot", () => {
 })
 
 describe("agentScoreRefreshPollDelayMs", () => {
-  it("outlasts the publish throttle so the retry it suggests is one the queue accepts", async () => {
+  it("polls for the configured refresh window", async () => {
     let waited = 0
     const refetch = vi.fn().mockResolvedValue("before")
     const wait = vi.fn().mockImplementation(async (duration: number) => {
@@ -72,7 +72,7 @@ describe("agentScoreRefreshPollDelayMs", () => {
 
     await expect(waitForAgentScoreRefresh({ previousMarker: "before", refetch, wait })).resolves.toBe(false)
 
-    expect(waited).toBeGreaterThan(AGENT_SCORE_REFRESH_THROTTLE_MS)
+    expect(waited).toBeGreaterThanOrEqual(AGENT_SCORE_REFRESH_POLL_WINDOW_MS - 10_000)
   })
 
   it("watches closely while a short run can still land, then backs off", () => {

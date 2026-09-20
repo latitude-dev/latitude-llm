@@ -1,4 +1,8 @@
 export {
+  type SnapshotAgentScoreActivityInput,
+  snapshotAgentScoreActivity,
+} from "./agent-score-activities.ts"
+export {
   type AnalyzeSessionActivityInput,
   type AnalyzeSessionActivityResult,
   analyzeSessionActivity,

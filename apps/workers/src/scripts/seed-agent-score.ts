@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { parseArgs } from "node:util"
-import { deriveSamplingRates, resolveLaunchArtifacts, utcDateOf } from "@domain/agent-score"
+import { deriveSamplingRates, resolveLaunchArtifacts, snapshotProjectAgentScore, utcDateOf } from "@domain/agent-score"
 import {
   FLAGGER_DEFAULT_CLASSIFIER_MODEL,
   SAFETY_SUITE_SLUGS,
@@ -41,7 +41,6 @@ import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
-import { snapshotProjectAgentScore } from "../workers/agent-score-snapshot.ts"
 
 const DEFAULT_TREND_DAYS = 14
 const POPULATION_DAYS = 60
