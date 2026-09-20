@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.13.0] - 2026-09-13
+
+### Added
+
+- `client.agentScore.get` — read today's published Agent Score and its five dimensions for a project.
+- `client.agentScore.history` — list a project's published Agent Scores over a date range.
+- `client.agentScore.causes` — inspect the ranked evidence explaining a project's current Agent Score.
+
 ## [9.12.0] - 2026-09-08
 
 ### Added
