@@ -17,20 +17,17 @@ generic point deduction is not enough.
 ## Location
 
 The page is first in the Observe group, above Sessions. It is project-scoped and uses immutable daily
-snapshots for the headline and history. Evidence and causes are resolved dynamically from the current
-selected window.
+snapshots for the headline, dimensions, evidence, and history.
 
-The headline uses the latest published snapshot. The page compares that snapshot's date with the
-current UTC date. When they differ, it labels the headline "Latest available", shows the score date
-and exact computation timestamp, and says that no score was published today. The five dimension
-sections and readiness table remain today's evidence; they do not use stale score values or claim to
-explain the older headline. Older snapshots remain in the trend without synthetic points for missing
-dates.
+A top-level UTC date navigator selects the date for the whole page. The default is the latest
+published score date, or today if no score exists. The headline, dimension sections, evidence, and
+computation requirements all use that selected date. The trend ends on the selected date and leaves
+gaps for missing scores. A date without a snapshot never displays a score from an older date.
 
 The staff-only Backoffice project detail shows the latest stored snapshot and all five dimensions
 even when the organization does not have customer access through the `agentScore` feature flag. It
 labels whether customer access is enabled and reports an explicit empty state when no snapshot has
-been published. When a cached explanation matches the snapshot's project, date, and scoring version,
+been published. When a stored or legacy cached explanation matches the snapshot's project, date, and scoring version,
 the view builds each dimension's "Affected by" reasons through the same evidence projection as the
 customer Agent Score page. That keeps attributed causes, issue-derived rows, residual explanations,
 withheld-score observations, labels, ordering, and non-point evidence values aligned between both
@@ -38,9 +35,9 @@ surfaces. Backoffice intentionally omits point-valued amounts so the staff view 
 reasons affecting the score. Missing or expired evidence has an explicit state; it never falls back
 to causes for another snapshot. Loading the Backoffice view only reads stored data; recomputation
 remains an explicit project action. That action always enqueues the current UTC date and, when the
-latest displayed snapshot is older, also enqueues that snapshot date so its evidence is refreshed.
+latest displayed snapshot is older, also enqueues that snapshot date so legacy cached evidence can be refreshed.
 Forced recalculation can publish a missing score for the current date but never rewrites an existing
-published score.
+published score or its stored evidence.
 
 ## Level one
 
@@ -96,9 +93,8 @@ whose effect is not yet measurable remain visible and say so. A signal that info
 dimensions can appear in each applicable dimension section. This is a presentation choice and does
 not duplicate the occurrence in estimation or attribution.
 
-Native inputs and causes are labelled as current evidence from the live selected window. They
-explain present behavior but do not claim to reproduce the immutable snapshot, whose stored contract
-contains only scores, intervals, version, window, and eligible-session count.
+Native inputs and causes come from the evidence stored with the selected snapshot. The page shows
+the evidence computation time. Legacy cached evidence must match the snapshot date and version.
 
 ### Cause rows
 
@@ -113,10 +109,9 @@ contains only scores, intervals, version, window, and eligible-session count.
 | Confidence | interval, raw examined count, independent observation count, and measured or associated label |
 | Destination | Sessions, Tools, Memory, Cost, Signals, Behaviors, or Settings |
 
-Attributed deficits add to the current dynamic estimate. Fix gains may overlap and do not. The
-interface labels the distinction and never sums fix gains into a promise. Current causes may change
-after the immutable daily snapshot when new evidence arrives, so they are not presented as a frozen
-historical decomposition.
+Attributed deficits add to the computed deficit. Fix gains may overlap and do not. The interface
+labels the distinction and never sums fix gains into a promise. Published causes remain attached to
+their score; later evidence affects future snapshots.
 
 Exact observations use direct language such as "wasted $430" or "ended 32 sessions." Signal effects
 estimated from matched sessions use "associated with" and show their interval.
@@ -299,11 +294,9 @@ dimension's coverage or confidence gate fails. It still shows:
 Each dimension lists the observations available so far and the exact condition blocking publication.
 No candidate or partial dimension number is shown.
 
-When a prior score is available but today has no published snapshot, the prior composite remains the
-headline as the latest available score. The adjacent readiness table is titled "Requirements for
-today's computation", gives the current UTC date, and says that the requirements do not describe the
-score beside it. If today's explanation is not available, the table preserves its unavailable or
-loading state rather than showing requirements from the older snapshot.
+A selected date with a published snapshot shows the score evolution graph. A selected date without a
+snapshot shows "Requirements for this date" and that UTC date. Missing evidence has an explicit
+unavailable state; requirements from another date are never substituted.
 
 Modeled effect and fix-gain ranking wait for enough evidence. Exact money and time observations do
 not.
@@ -318,7 +311,8 @@ The daily chart shows the composite and each dimension as separate series. It ma
 - dates without a published score as gaps.
 
 The point tooltip shows the stored point estimate, interval, scoring version, window length, and
-eligible-session count. Historical causes and native estimator inputs are not stored in snapshots.
+eligible-session count. Historical causes and native estimator values are retained in the stored
+explanation.
 
 ## Statements the page must avoid
 

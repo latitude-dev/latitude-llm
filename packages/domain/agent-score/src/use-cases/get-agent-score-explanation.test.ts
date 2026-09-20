@@ -1,10 +1,11 @@
-import { CacheError, CacheStore, OrganizationId, ProjectId } from "@domain/shared"
+import { CacheError, CacheStore, OrganizationId, ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import {
   agentScoreExplanationCacheKey,
   latestAgentScoreExplanationCacheKey,
 } from "../entities/agent-score-explanation.ts"
+import { AgentScoreSnapshotRepository } from "../ports/agent-score-snapshot-repository.ts"
 import {
   cacheAgentScoreExplanation,
   getAgentScoreExplanation,
@@ -80,6 +81,13 @@ const read = (value: string | null | Effect.Effect<string | null, CacheError>) =
   Effect.runPromise(
     getAgentScoreExplanation({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, date: DATE }).pipe(
       Effect.provide(withCachedValue(value)),
+      Effect.provideService(AgentScoreSnapshotRepository, {
+        findByDate: () => Effect.succeed(null),
+        findLatest: () => Effect.succeed(null),
+        listHistory: () => Effect.succeed([]),
+        insertIfAbsent: () => Effect.succeed(false),
+      }),
+      Effect.provideService(SqlClient, {} as SqlClientShape),
     ),
   )
 
@@ -119,6 +127,18 @@ describe("getAgentScoreExplanation", () => {
 
     expect(result.status).toBe("ready")
     expect(result.status === "ready" && result.explanation.eligibleSessionCount).toBe(5037)
+  })
+
+  it("does not substitute another date's cached evidence", async () => {
+    await expect(read(JSON.stringify({ ...EXPLANATION, date: "2026-09-11" }))).resolves.toEqual({
+      status: "notComputed",
+    })
+  })
+
+  it("does not use cached evidence for another project", async () => {
+    await expect(read(JSON.stringify({ ...EXPLANATION, projectId: "another-project" }))).resolves.toEqual({
+      status: "notComputed",
+    })
   })
 
   it("returns the latest published explanation independently from the current date", async () => {

@@ -76,11 +76,11 @@ describe("the launch Agent Score artifact", () => {
   })
 
   it("uses the provisional launch window and coverage floors", () => {
-    expect(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion).toBe("agent-score-v2-provisional")
+    expect(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion).toBe("agent-score-v3-provisional")
     expect(LAUNCH_AGENT_SCORE_ARTIFACT.window).toEqual({
       stepDays: [7, 14, 21, 28],
-      sessionTarget: 200,
-      sessionFloor: 200,
+      sessionTarget: 100,
+      sessionFloor: 100,
       hysteresisMargin: 0.1,
     })
     expect(LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors).toEqual({

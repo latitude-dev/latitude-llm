@@ -55,7 +55,7 @@ function VitalityDetails({
     return (
       <div className="flex flex-col items-center gap-1">
         <Text.H6 color="foregroundMuted">Score not ready</Text.H6>
-        <Text.H7 color="foregroundMuted">No score was published today.</Text.H7>
+        <Text.H7 color="foregroundMuted">No score was published for this date.</Text.H7>
       </div>
     )
   }
@@ -76,7 +76,7 @@ function VitalityDetails({
       </div>
       <Text.H7 color="foregroundMuted">Score date: {scoreDate} UTC</Text.H7>
       <Text.H7 color="foregroundMuted">Computed: {formatDateTime(snapshot.createdAt)}</Text.H7>
-      {!isCurrent ? <Text.H7 color="foregroundMuted">No score was published today.</Text.H7> : null}
+      {!isCurrent ? <Text.H7 color="foregroundMuted">No score was published for this date.</Text.H7> : null}
     </div>
   )
 }

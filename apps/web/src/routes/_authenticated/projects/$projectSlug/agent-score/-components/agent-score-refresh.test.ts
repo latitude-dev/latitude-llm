@@ -5,11 +5,9 @@ import {
   agentScoreExplanationForSnapshot,
   agentScoreRefreshCompleted,
   agentScoreRefreshPollDelayMs,
-  agentScoreSnapshotEvidenceCompleted,
   agentScoreSnapshotMarker,
   agentVitalityIsLoading,
   isCurrentAgentScoreSnapshot,
-  isStaleAgentScoreSnapshot,
   waitForAgentScoreRefresh,
 } from "./agent-score-refresh.ts"
 
@@ -64,50 +62,6 @@ describe("agentScoreExplanationForSnapshot", () => {
   })
 })
 
-describe("agentScoreSnapshotEvidenceCompleted", () => {
-  const snapshotExplanation = { computedAt: "2026-09-15T04:00:00.000Z" } as unknown as Explanation
-
-  it("is done when no backfill was needed", () => {
-    expect(
-      agentScoreSnapshotEvidenceCompleted({
-        needsSnapshotEvidence: false,
-        previousSnapshotExplanationTime: undefined,
-        snapshotExplanation: null,
-      }),
-    ).toBe(true)
-  })
-
-  it("waits while the backfilled evidence has not arrived", () => {
-    expect(
-      agentScoreSnapshotEvidenceCompleted({
-        needsSnapshotEvidence: true,
-        previousSnapshotExplanationTime: undefined,
-        snapshotExplanation: null,
-      }),
-    ).toBe(false)
-  })
-
-  it("waits while the evidence timestamp is unchanged", () => {
-    expect(
-      agentScoreSnapshotEvidenceCompleted({
-        needsSnapshotEvidence: true,
-        previousSnapshotExplanationTime: "2026-09-15T04:00:00.000Z",
-        snapshotExplanation,
-      }),
-    ).toBe(false)
-  })
-
-  it("finishes when the backfilled evidence arrives", () => {
-    expect(
-      agentScoreSnapshotEvidenceCompleted({
-        needsSnapshotEvidence: true,
-        previousSnapshotExplanationTime: undefined,
-        snapshotExplanation,
-      }),
-    ).toBe(true)
-  })
-})
-
 describe("agentScoreRefreshPollDelayMs", () => {
   it("outlasts the publish throttle so the retry it suggests is one the queue accepts", async () => {
     let waited = 0
@@ -155,8 +109,6 @@ describe("isCurrentAgentScoreSnapshot", () => {
   it("does not treat a latest-available fallback as today’s snapshot", () => {
     expect(isCurrentAgentScoreSnapshot({ date: "2026-09-11" }, "2026-09-12")).toBe(false)
     expect(isCurrentAgentScoreSnapshot({ date: "2026-09-12" }, "2026-09-12")).toBe(true)
-    expect(isStaleAgentScoreSnapshot({ date: "2026-09-11" }, "2026-09-12")).toBe(true)
-    expect(isStaleAgentScoreSnapshot(null, "2026-09-12")).toBe(false)
   })
 })
 

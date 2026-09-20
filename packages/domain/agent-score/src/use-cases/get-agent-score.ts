@@ -84,3 +84,16 @@ export const listAgentScoreHistory = Effect.fn("agentScore.listAgentScoreHistory
     to,
   })
 })
+
+export const getAgentScoreForDate = Effect.fn("agentScore.getForDate")(function* (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly date?: string | undefined
+  readonly now?: Date
+}) {
+  yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+  const result = input.date
+    ? yield* getCurrentAgentScore({ ...input, now: new Date(`${input.date}T00:00:00.000Z`) })
+    : yield* getLatestAgentScore(input)
+  return result.available ? { ...result, date: result.snapshot.date } : result
+})

@@ -63,6 +63,7 @@ export {
   AGENT_SCORE_EXPLANATION_TTL_SECONDS,
   type AgentScoreExplanation,
   agentScoreExplanationCacheKey,
+  agentScoreExplanationSchema,
   toAgentScoreExplanation,
 } from "./entities/agent-score-explanation.ts"
 export {
@@ -596,6 +597,7 @@ export {
 export {
   AGENT_SCORE_HISTORY_DEFAULT_DAYS,
   type CurrentAgentScore,
+  getAgentScoreForDate,
   getCurrentAgentScore,
   getLatestAgentScore,
   listAgentScoreHistory,

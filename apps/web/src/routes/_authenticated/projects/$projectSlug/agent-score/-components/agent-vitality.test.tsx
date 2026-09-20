@@ -98,7 +98,7 @@ describe("AgentVitality", () => {
 
     expect(screen.getByText("Agent vitality")).toBeDefined()
     expect(screen.getByText("Score not ready")).toBeDefined()
-    expect(screen.getByText("No score was published today.")).toBeDefined()
+    expect(screen.getByText("No score was published for this date.")).toBeDefined()
     expect(screen.getByText("—")).toBeDefined()
   })
 
@@ -117,7 +117,7 @@ describe("AgentVitality", () => {
     expect(screen.getByText("Latest available")).toBeDefined()
     expect(screen.getByText("Score date: Sep 11, 2026 UTC")).toBeDefined()
     expect(screen.getByText("Computed: Sep 12, 2026 at 4:30 AM UTC")).toBeDefined()
-    expect(screen.getByText("No score was published today.")).toBeDefined()
+    expect(screen.getByText("No score was published for this date.")).toBeDefined()
   })
 
   it("shows the computation timestamp without stale wording for today’s score", () => {
@@ -134,7 +134,7 @@ describe("AgentVitality", () => {
 
     expect(screen.getByText("Computed: Sep 12, 2026 at 4:30 AM UTC")).toBeDefined()
     expect(screen.queryByText("Latest available")).toBeNull()
-    expect(screen.queryByText("No score was published today.")).toBeNull()
+    expect(screen.queryByText("No score was published for this date.")).toBeNull()
   })
 
   it("keeps the hover card open after the tooltip opening delay", () => {

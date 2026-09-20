@@ -90,15 +90,14 @@ describe("ScoreTrend", () => {
         history={[]}
         explanation={sessionFloorExplanation}
         isCurrentSnapshot={false}
-        hasStaleSnapshot={false}
         isLoading={false}
       />,
     )
 
-    expect(screen.getByText("Requirements for today’s computation")).toBeDefined()
+    expect(screen.getByText("Requirements for this date")).toBeDefined()
     expect(screen.getByText("Collecting automatically")).toBeDefined()
     expect(screen.getByText("86 / 200 eligible sessions")).toBeDefined()
-    expect(screen.getByText(/114 more sessions needed in the current 28-day window/i)).toBeDefined()
+    expect(screen.getByText(/114 more sessions needed in the selected 28-day window/i)).toBeDefined()
     expect(screen.getByRole("progressbar", { name: "86 of 200 eligible sessions" })).toBeDefined()
     expect(screen.queryByText("7d")).toBeNull()
   })
@@ -110,7 +109,6 @@ describe("ScoreTrend", () => {
         history={[]}
         explanation={dimensionExplanation}
         isCurrentSnapshot={false}
-        hasStaleSnapshot={false}
         isLoading={false}
       />,
     )
@@ -127,35 +125,27 @@ describe("ScoreTrend", () => {
 
   it("explains when readiness has not been calculated", () => {
     render(
-      <ScoreTrend
-        endDate="2026-09-12"
-        history={[]}
-        explanation={null}
-        isCurrentSnapshot={false}
-        hasStaleSnapshot={false}
-        isLoading={false}
-      />,
+      <ScoreTrend endDate="2026-09-12" history={[]} explanation={null} isCurrentSnapshot={false} isLoading={false} />,
     )
 
     expect(screen.getByText("Evidence has not been calculated yet")).toBeDefined()
-    expect(screen.getByText("Refresh to evaluate the latest sessions.")).toBeDefined()
+    expect(screen.getByText("Refresh to evaluate sessions for this date.")).toBeDefined()
   })
 
-  it("keeps today’s readiness visible beside a stale score even when history has scores", () => {
+  it("shows selected-day requirements when that date has no score", () => {
     render(
       <ScoreTrend
         endDate="2026-09-12"
         history={[{ date: "2026-09-11", score: 66 } as never]}
         explanation={sessionFloorExplanation}
         isCurrentSnapshot={false}
-        hasStaleSnapshot
         isLoading={false}
       />,
     )
 
-    expect(screen.getByText("Requirements for today’s computation")).toBeDefined()
+    expect(screen.getByText("Requirements for this date")).toBeDefined()
     expect(screen.getByText("Sep 12, 2026 UTC")).toBeDefined()
-    expect(screen.getByText("These requirements do not describe the score shown beside this table.")).toBeDefined()
+    expect(screen.queryByText(/today/)).toBeNull()
     expect(screen.queryByText("Score evolution")).toBeNull()
   })
 })

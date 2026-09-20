@@ -1,4 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
+import { z } from "zod"
+import { agentScoreDateSchema } from "../../../../../domains/agent-score/agent-score-date.ts"
 import { listEnabledFeatureFlagIdentifiers } from "../../../../../domains/feature-flags/feature-flags.functions.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../-route-data.ts"
@@ -16,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/agen
       throw redirect({ to: "/projects/$projectSlug", params: { projectSlug: params.projectSlug } })
     }
   },
+  validateSearch: z.object({ date: agentScoreDateSchema.optional().catch(undefined) }),
   staticData: {
     breadcrumb: AgentScoreBreadcrumb,
   },
@@ -23,5 +26,15 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/agen
 })
 
 function AgentScoreIndexPage() {
-  return <AgentScorePage project={useRouteProject()} />
+  const project = useRouteProject()
+  const { date } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  return (
+    <AgentScorePage
+      key={`${project.id}:${date ?? "latest"}`}
+      project={project}
+      selectedDate={date}
+      onDateChange={(date) => void navigate({ search: { date } })}
+    />
+  )
 }
