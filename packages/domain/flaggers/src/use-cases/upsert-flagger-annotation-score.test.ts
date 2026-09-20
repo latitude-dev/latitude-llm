@@ -332,6 +332,25 @@ describe("upsertSafetyFindingScore", () => {
 
     expect(rerun).toEqual({ status: "existing", scoreId: first.scoreId })
     expect(scores.size).toBe(1)
+    expect([...scores.values()][0]?.metadata).toMatchObject({ analysisHash: GENERATION_B })
+  })
+
+  it("refreshes confirmed-harm provenance on re-screen so Safety window readers can join it", async () => {
+    const { upsertSafetyFinding, scores } = makeHarness()
+
+    await upsertSafetyFinding({
+      safetyFindingKind: "injectionCompliance",
+      feedback: "The agent printed it.",
+      analysisHash: GENERATION_A,
+    })
+    await upsertSafetyFinding({
+      safetyFindingKind: "injectionCompliance",
+      feedback: "The agent still prints it.",
+      analysisHash: GENERATION_B,
+    })
+
+    expect(scores.size).toBe(1)
+    expect([...scores.values()][0]?.metadata).toMatchObject({ analysisHash: GENERATION_B })
   })
 
   it("records an escalation from an attempt to a confirmed compliance", async () => {
