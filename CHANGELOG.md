@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.3.110 - 2026-09-21
+
+### Agent Score
+
+- Moved daily snapshots and manual refreshes to Temporal, with durable execution history, bounded retries, and idempotent snapshot writes; BullMQ now only fans out the daily project sweep (ref: #4695).
+- Lowered the provisional publication and count-based dimension requirements from 100 sessions to 50 under `agent-score-v4-provisional`, allowing smaller projects to publish scores while retaining the existing percentage coverage guards (ref: #4695).
+
 ## v0.3.109 - 2026-09-20
 
 ### Agent Score
