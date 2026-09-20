@@ -45,11 +45,9 @@ function ScoreDelta({ value }: { readonly value: number | null }) {
 function VitalityDetails({
   snapshot,
   delta,
-  date,
 }: {
   readonly snapshot: AgentScoreRecord | null
   readonly delta: number | null
-  readonly date: string
 }) {
   if (!snapshot) {
     return (
@@ -60,12 +58,10 @@ function VitalityDetails({
     )
   }
 
-  const isCurrent = snapshot.date === date
   const scoreDate = formatFullDate(snapshot.date)
 
   return (
     <div className="flex flex-col items-center gap-1">
-      {!isCurrent ? <Text.H6B>Latest available</Text.H6B> : null}
       <div className="flex flex-row flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
         <Text.H6 color="foregroundMuted">
           {snapshot.windowDays}-day window ending {scoreDate}
@@ -76,7 +72,6 @@ function VitalityDetails({
       </div>
       <Text.H7 color="foregroundMuted">Score date: {scoreDate} UTC</Text.H7>
       <Text.H7 color="foregroundMuted">Computed: {formatDateTime(snapshot.createdAt)}</Text.H7>
-      {!isCurrent ? <Text.H7 color="foregroundMuted">No score was published for this date.</Text.H7> : null}
     </div>
   )
 }
@@ -103,14 +98,12 @@ function AgentVitalitySkeleton() {
 
 export function AgentVitality({
   snapshot,
-  date,
   history,
   dimensionWeights,
   explanation,
   isLoading,
 }: {
   readonly snapshot: AgentScoreRecord | null
-  readonly date: string
   readonly history: readonly AgentScoreRecord[] | undefined
   readonly dimensionWeights: Readonly<Record<ScoreDimensionKey, number>> | undefined
   readonly isLoading: boolean
@@ -161,7 +154,7 @@ export function AgentVitality({
         <div className="flex flex-row items-center gap-1.5">
           <Text.H5M>Agent vitality</Text.H5M>
         </div>
-        <VitalityDetails snapshot={snapshot} delta={delta} date={date} />
+        <VitalityDetails snapshot={snapshot} delta={delta} />
       </div>
     </div>
   )

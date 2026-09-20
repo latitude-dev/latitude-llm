@@ -160,7 +160,6 @@ export function AgentScorePage({
           <div className="flex flex-row gap-3 @max-[64rem]:flex-col">
             <AgentVitality
               snapshot={snapshot}
-              date={displayDate}
               history={historyQuery.data}
               dimensionWeights={scoreData?.dimensionWeights}
               explanation={explanation}
