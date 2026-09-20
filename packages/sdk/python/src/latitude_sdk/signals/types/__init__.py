@@ -11,8 +11,15 @@ if typing.TYPE_CHECKING:
     from .create_signal_body_evaluation_settings import CreateSignalBodyEvaluationSettings
     from .create_signal_body_evaluation_settings_settings import (
         CreateSignalBodyEvaluationSettingsSettings,
+        CreateSignalBodyEvaluationSettingsSettings_Classifier,
         CreateSignalBodyEvaluationSettingsSettings_Judge,
         CreateSignalBodyEvaluationSettingsSettings_Rule,
+    )
+    from .create_signal_body_evaluation_settings_settings_classifier import (
+        CreateSignalBodyEvaluationSettingsSettingsClassifier,
+    )
+    from .create_signal_body_evaluation_settings_settings_classifier_options_item import (
+        CreateSignalBodyEvaluationSettingsSettingsClassifierOptionsItem,
     )
     from .create_signal_body_evaluation_settings_settings_judge import CreateSignalBodyEvaluationSettingsSettingsJudge
     from .create_signal_body_evaluation_settings_settings_rule import CreateSignalBodyEvaluationSettingsSettingsRule
@@ -110,6 +117,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalBodyEvaluationScript": ".create_signal_body_evaluation_script",
     "CreateSignalBodyEvaluationSettings": ".create_signal_body_evaluation_settings",
     "CreateSignalBodyEvaluationSettingsSettings": ".create_signal_body_evaluation_settings_settings",
+    "CreateSignalBodyEvaluationSettingsSettingsClassifier": ".create_signal_body_evaluation_settings_settings_classifier",
+    "CreateSignalBodyEvaluationSettingsSettingsClassifierOptionsItem": ".create_signal_body_evaluation_settings_settings_classifier_options_item",
     "CreateSignalBodyEvaluationSettingsSettingsJudge": ".create_signal_body_evaluation_settings_settings_judge",
     "CreateSignalBodyEvaluationSettingsSettingsRule": ".create_signal_body_evaluation_settings_settings_rule",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
@@ -148,6 +157,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolUsed": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
     "CreateSignalBodyEvaluationSettingsSettingsRuleMatch": ".create_signal_body_evaluation_settings_settings_rule_match",
+    "CreateSignalBodyEvaluationSettingsSettings_Classifier": ".create_signal_body_evaluation_settings_settings",
     "CreateSignalBodyEvaluationSettingsSettings_Judge": ".create_signal_body_evaluation_settings_settings",
     "CreateSignalBodyEvaluationSettingsSettings_Rule": ".create_signal_body_evaluation_settings_settings",
     "CreateSignalBodyPriority": ".create_signal_body_priority",
@@ -184,6 +194,8 @@ __all__ = [
     "CreateSignalBodyEvaluationScript",
     "CreateSignalBodyEvaluationSettings",
     "CreateSignalBodyEvaluationSettingsSettings",
+    "CreateSignalBodyEvaluationSettingsSettingsClassifier",
+    "CreateSignalBodyEvaluationSettingsSettingsClassifierOptionsItem",
     "CreateSignalBodyEvaluationSettingsSettingsJudge",
     "CreateSignalBodyEvaluationSettingsSettingsRule",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem",
@@ -222,6 +234,7 @@ __all__ = [
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolUsed",
     "CreateSignalBodyEvaluationSettingsSettingsRuleMatch",
+    "CreateSignalBodyEvaluationSettingsSettings_Classifier",
     "CreateSignalBodyEvaluationSettingsSettings_Judge",
     "CreateSignalBodyEvaluationSettingsSettings_Rule",
     "CreateSignalBodyPriority",

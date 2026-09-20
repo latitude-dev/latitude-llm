@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/ai": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",

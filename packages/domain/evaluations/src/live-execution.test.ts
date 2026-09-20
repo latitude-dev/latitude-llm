@@ -1,6 +1,9 @@
+import { AIClassify } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
+import { AIMeteringScope, creditsForLlmGenerationCost, type RecordMeteredAIActionInput } from "@domain/billing"
 import { minimalScriptSession, ScriptRuntimeError } from "@domain/sandbox"
 import { createFakeScriptRuntime } from "@domain/sandbox/testing"
+import { OrganizationId } from "@domain/shared"
 import { MessageEmbeddingRepository, TraceSearchRepository } from "@domain/spans"
 import { createFakeMessageEmbeddingRepository, createFakeTraceSearchRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
@@ -151,5 +154,77 @@ describe("executeLiveEvaluationUseCase", () => {
       evaluationId,
       message: "detector blew up",
     } satisfies Partial<LiveEvaluationExecutionError>)
+  })
+
+  it("backs the classifier host call with AIClassify and the current session", async () => {
+    const { layer: aiLayer } = createFakeAI()
+    const calls: unknown[] = []
+    const meteringRecords: RecordMeteredAIActionInput[] = []
+    const classifierCostMicrocents = 400_000
+    const classifierLayer = Layer.succeed(AIClassify, {
+      classify: (input) => {
+        calls.push(input)
+        return Effect.succeed({
+          probabilities: { match: 0.75, other: 0.25 },
+          tokens: 12,
+          duration: 50,
+          cost: classifierCostMicrocents,
+          servedBy: { provider: "typesafe-ai", model: "jev-latest" },
+          tokenUsage: { input: 10, output: 2 },
+        })
+      },
+    })
+    const meteringLayer = Layer.succeed(AIMeteringScope, {
+      organizationId: OrganizationId(validInput.organizationId),
+      record: (input) =>
+        Effect.sync(() => {
+          meteringRecords.push(input)
+        }),
+    })
+    const fakeRuntime = createFakeScriptRuntime({
+      run: (input) =>
+        Effect.tryPromise(async () => {
+          if (!input.classifier) throw new Error("classifier host missing")
+          const result = await input.classifier({
+            instructions: "Does this match?",
+            criteria: { match: "Matches", other: "Does not match" },
+          })
+          return { value: result.probabilities.match ?? 0, duration: 50, tokens: result.tokens, cost: result.cost }
+        }),
+    })
+
+    const result = await Effect.runPromise(
+      executeLiveEvaluationUseCase({
+        ...validInput,
+        script:
+          'const p = await classify("Does this match?", { match: "Matches", other: "Does not match" }); return Score(p.match)',
+      }).pipe(
+        Effect.provide(Layer.mergeAll(aiLayer, classifierLayer, fakeRuntime.layer, semanticLayer, meteringLayer)),
+      ),
+    )
+
+    expect(result.result.value).toBe(0.75)
+    expect(calls).toEqual([
+      {
+        state: session,
+        instructions: "Does this match?",
+        criteria: { match: "Matches", other: "Does not match" },
+      },
+    ])
+    expect(meteringRecords).toEqual([
+      {
+        action: "llm-call",
+        credits: creditsForLlmGenerationCost(classifierCostMicrocents / 100_000_000),
+        metadata: {
+          provider: "typesafe-ai",
+          model: "jev-latest",
+          pricing: "cost-based",
+          estimatedCostUsd: classifierCostMicrocents / 100_000_000,
+          source: "evaluation-classifier",
+          tokensInput: 10,
+          tokensOutput: 2,
+        },
+      },
+    ])
   })
 })

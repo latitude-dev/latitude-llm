@@ -34,11 +34,13 @@ Cost tiers, cheapest first:
    - rule: prefer this whenever the ask fits rule conditions, because it also stays editable as a form in the builder.
    - script with no llm() call: use when the ask needs logic beyond what rule conditions express but is still decidable by code alone. A deterministic script costs the same as a rule — use it instead of a judge whenever code can decide the answer.
 2. Embeddings — the semantic_similarity rule condition. Matches when the conversation's meaning is close to a query. Far cheaper than a judge; prefer it for "sessions about X" semantic matching.
-3. LLM judgment — costs money on every sampled session it runs on. Use only when the behavior is genuinely subjective or semantic and cannot be decided deterministically or by similarity (tone, frustration, refusal quality, helpfulness).
+3. Jev classification — use for a focused closed-set decision. It is faster and cheaper than an LLM judge. Define one question, at least two distinct options, and the target option whose probability becomes the signal score.
+   - classifier: use classifierInstructions for the question, classifierOptions for the named outcomes and their descriptions, and classifierTarget for the outcome that means the signal is present.
+4. LLM judgment — costs money on every sampled session it runs on. Use only when the behavior is genuinely subjective or semantic and cannot be decided with Jev (tone, frustration, refusal quality, helpfulness).
    - judge: an LLM reads each session. judgeCriteria is one tight "A session matches when …" sentence. Keep it short and specific — a smaller prompt is cheaper per run, so include only what's needed to decide, with no restated context or examples unless they're essential to the judgment.
    - script with llm(): only when the ask genuinely mixes deterministic logic with a judgment call. Structure it so cheap deterministic checks run first and llm() runs only on the survivors, as rarely as possible.
 
-Fill only the active kind's payload and leave the others empty ("" for judgeCriteria/script, [] for ruleConditions).
+Fill only the active kind's payload and leave the others empty ("" for judgeCriteria/classifierInstructions/classifierTarget/script, [] for ruleConditions/classifierOptions).
 
 Rule conditions: set ruleMatch ("all" = every condition must hold, "any" = one suffices) and 1-10 ruleConditions. Each condition is a flat object: set "type" plus only that type's fields and null for every other field — text_match uses scope/textOperator/text/caseSensitive; output_length uses unit/comparison/numberValue; json_output uses expectation; metric uses metricField/aggregation/comparison/numberValue; tool_used and tool_failed use toolName (optional for tool_failed); tool_call_count uses comparison/numberValue; finish_reason uses text; semantic_similarity uses text (the query) and threshold; empty_output and error need nothing else. Metric values are in base units: duration in nanoseconds, cost in microcents, tokens/counts raw.
 
@@ -78,8 +80,8 @@ This is not the same as a rare behavior. A detector whose method is grounded (in
 
 Sampling is the percentage of in-scope sessions the evaluation actually runs on. It's your main lever for LLM cost.
 
-- Deterministic detectors (a rule, or a script with no llm()) — always 100. They're free, so there's no reason to sample down.
-- LLM detectors (judge, or a script that runs llm()) — scale sampling to the traffic so the daily LLM spend stays bounded, aiming for roughly a few hundred evaluated sessions per day at most. You know the ingestion rate from the grounding (sessions/day) and can research it further. Low traffic (under ~500 sessions/day) → 100; scale down as traffic grows (e.g. ~5000/day → 10, ~50000/day → 1). Never below 1. A common behavior at high traffic stays well-tracked even at low sampling, because the sampled sessions still surface it.
+- Deterministic detectors (a rule, or a script with no AI calls) — always 100. They're free, so there's no reason to sample down.
+- AI detectors (classifier, judge, or a script that runs classify() or llm()) — scale sampling to the traffic so daily spend stays bounded, aiming for roughly a few hundred evaluated sessions per day at most. You know the ingestion rate from the grounding (sessions/day) and can research it further. Low traffic (under ~500 sessions/day) → 100; scale down as traffic grows (e.g. ~5000/day → 10, ~50000/day → 1). Never below 1. A common behavior at high traffic stays well-tracked even at low sampling, because the sampled sessions still surface it.
 
 ## How you work
 

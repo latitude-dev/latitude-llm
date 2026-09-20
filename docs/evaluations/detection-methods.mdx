@@ -1,17 +1,18 @@
 ---
 title: Detection methods
-description: "The three ways an evaluation decides whether a session matches a signal: a set of conditions, an LLM judge, or a custom script."
+description: "How an evaluation decides whether a session matches a signal: conditions, a Jev classifier, an LLM judge, or a custom script."
 ---
 
-When you create a signal, you define how Latitude decides whether a session belongs to it. That check is the signal's evaluation, and you can build it three ways.
+When you create a signal, you define how Latitude decides whether a session belongs to it. That check is the signal's evaluation, and you can build it four ways.
 
 | Method | How it decides | Cost | Good for |
 | --- | --- | --- | --- |
 | [Set of conditions](#set-of-conditions) | Deterministic checks on facts about the session | Free, instant | Concrete facts: a phrase, a failed tool, latency over a limit |
+| [Jev classifier](#jev-classifier) | Jev assigns probabilities to options you define | One classification call per checked session | Routing, categories, and focused semantic decisions |
 | [LLM as judge](#llm-as-judge) | An LLM reads each session and decides | One LLM call per checked session | Fuzzy behavior: tone, frustration, made-up answers |
 | [Custom script](#custom-script) | JavaScript you write | Depends on the script | Logic the other two can't express |
 
-All three produce the same kind of detector, and a signal has one active detector at a time. You can switch methods while you build or edit a signal.
+All four produce the same kind of detector, and a signal has one active detector at a time. You can switch methods while you build or edit a signal.
 
 ## Set of conditions
 
@@ -60,6 +61,14 @@ The sensitivity presets map to a similarity threshold:
 
 Broad matches loosely and catches more. Strict matches only close paraphrases. Start with Balanced and adjust from the preview, or set an exact threshold and operator under Advanced.
 
+## Jev classifier
+
+A Jev classifier asks one focused question about the session and assigns a probability to every option you define. Choose which option means the signal is present. Its probability becomes the signal score.
+
+For example, ask "How should this support session be routed?" with options for billing, technical support, and account management. If billing is the signal match option and Jev returns `0.82` for billing, the evaluation returns a score of `0.82`.
+
+Use a classifier when the answer fits a closed set of distinct outcomes. Use the preview to check the option descriptions and sampling rate against real sessions.
+
 ## LLM as judge
 
 An LLM judge reads each matching session and decides whether the behavior is present, with a short reason. You describe the behavior in plain language in the "A session matches when..." field:
@@ -79,7 +88,8 @@ The [Custom scripts](./custom-scripts) page documents the full API: the `session
 ## Choosing a method
 
 - If the behavior is a concrete fact you can name, use a set of conditions. It is free, fast, and easy to reason about.
-- If the behavior is fuzzy or semantic, use an LLM judge.
+- If the behavior is a focused choice between known outcomes, use a Jev classifier.
+- If the behavior needs a more open-ended judgment, use an LLM judge.
 - If you need logic the builder can't express, write a custom script.
 
 You aren't locked in. Editing a signal lets you switch methods, and the Custom script tab always shows the script your conditions or criteria compiled to, so you can start simple and take over by hand later.

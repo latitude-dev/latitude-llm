@@ -61,6 +61,7 @@
     "@domain/scores": "workspace:*",
     "@platform/agent-dispatch": "workspace:*",
     "@platform/ai": "workspace:*",
+    "@platform/ai-jev": "workspace:*",
     "@platform/analytics-posthog": "workspace:*",
     "@platform/api-key-auth": "workspace:*",
     "@platform/cache-redis": "workspace:*",

@@ -18,6 +18,7 @@ import {
 } from "@domain/evaluations"
 import { BadRequestError, OrganizationId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
+import { JevClassifierLive } from "@platform/ai-jev"
 import { RedisBillingSpendReservationLive } from "@platform/cache-redis"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
@@ -245,6 +246,7 @@ export const evaluateBaselineEvaluationDraft = (input: {
       }),
       withAi(AIGenerateLive, getRedisClient()),
       Effect.provide(QuickJsScriptRuntimeLive),
+      Effect.provide(JevClassifierLive),
       withPostgres(
         evaluationGenerationBillingRepositoriesLive,
         getPostgresClient(),
@@ -295,6 +297,7 @@ export const evaluateIncrementalEvaluationDraft = (input: {
       }),
       withAi(AIGenerateLive, getRedisClient()),
       Effect.provide(QuickJsScriptRuntimeLive),
+      Effect.provide(JevClassifierLive),
       withPostgres(
         evaluationGenerationBillingRepositoriesLive,
         getPostgresClient(),

@@ -25,7 +25,7 @@ export function SignalScopeEditor({
   readonly onChange: (next: FilterSet) => void
   readonly sampling: number
   readonly onSamplingChange: (next: number) => void
-  readonly detectorKind: "rule" | "judge" | "script"
+  readonly detectorKind: "rule" | "judge" | "classifier" | "script"
 }) {
   const [popoverContainerEl, setPopoverContainerEl] = useState<HTMLDivElement | null>(null)
   const popoverContainerRef = useMemo<RefObject<HTMLElement | null>>(
@@ -75,7 +75,9 @@ export function SignalScopeEditor({
                 ? "Conditions are free and instant, so checking 100% of matching sessions is usually right."
                 : detectorKind === "judge"
                   ? "Each check sends the session to an LLM, which costs money and time. If you get a lot of traffic, checking a slice of it still catches the pattern for much less."
-                  : "A custom script might call an LLM, depending on what it does. If yours does, checking a slice keeps costs down and still catches the pattern."}
+                  : detectorKind === "classifier"
+                    ? "Each check classifies the session with Jev. Sampling can reduce cost on high-volume projects."
+                    : "A custom script might call an LLM, depending on what it does. If yours does, checking a slice keeps costs down and still catches the pattern."}
           </Text.H6>
         </div>
       </div>

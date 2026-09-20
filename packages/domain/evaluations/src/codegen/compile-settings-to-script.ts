@@ -12,9 +12,23 @@ export const compileSettingsToScript = (settings: EvaluationSettings): string =>
   switch (settings.kind) {
     case "judge":
       return wrapPromptAsEvaluationScript(generateJudgePromptText(settings.criteria))
+    case "classifier":
+      return compileClassifierToScript(settings)
     case "rule":
       return compileRuleToScript(settings)
   }
+}
+
+type ClassifierSettings = Extract<EvaluationSettings, { kind: "classifier" }>
+
+const compileClassifierToScript = (settings: ClassifierSettings): string => {
+  const criteria = Object.fromEntries(settings.options.map((option) => [option.label, option.description]))
+  const serializedCriteria = JSON.stringify(criteria)
+  return [
+    `const probabilities = await classify(${JSON.stringify(settings.instructions)}, JSON.parse(${JSON.stringify(serializedCriteria)}))`,
+    `const probability = probabilities[${JSON.stringify(settings.target)}] ?? 0`,
+    `return Score(probability, ${JSON.stringify(`Jev probability for ${settings.target}`)})`,
+  ].join("\n")
 }
 
 // ---------------------------------------------------------------------------

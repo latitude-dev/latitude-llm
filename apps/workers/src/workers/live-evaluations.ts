@@ -3,6 +3,7 @@ import { type QueueConsumer, QueuePublisher, type QueuePublisherShape } from "@d
 import type { EvaluationScore } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
+import { JevClassifierLive } from "@platform/ai-jev"
 import {
   RedisBillingSpendReservationLive,
   type RedisClient,
@@ -166,6 +167,7 @@ export const createLiveEvaluationsWorker = ({
         OrganizationId(payload.organizationId),
       ),
       Effect.provide(QuickJsScriptRuntimeLive),
+      Effect.provide(JevClassifierLive),
       Effect.provide(Layer.succeed(QueuePublisher, publisher)),
       Effect.provide(RedisBillingSpendReservationLive(rdClient)),
       Effect.provide(RedisDetectorHealthTrackerLive(rdClient)),

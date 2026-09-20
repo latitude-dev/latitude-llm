@@ -55,6 +55,7 @@ import type {
   TraceSearchRepository,
 } from "@domain/spans"
 import { AIAgentLive, AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
+import { JevClassifierLive } from "@platform/ai-jev"
 import type { RedisClient } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
@@ -224,6 +225,7 @@ const runAgenticGeneration = async (params: {
           orgId,
         ),
         Effect.provide(QuickJsScriptRuntimeLive),
+        Effect.provide(JevClassifierLive.pipe(Layer.orDie)),
         withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), deps.redisClient),
         withTracing,
       )

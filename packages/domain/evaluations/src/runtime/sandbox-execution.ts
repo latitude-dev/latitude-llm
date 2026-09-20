@@ -1,13 +1,22 @@
-import { AI, AICredentialError, AIError, type GenerateTelemetryCapture, resolveGenerationConfig } from "@domain/ai"
+import {
+  AI,
+  AIClassify,
+  AICredentialError,
+  AIError,
+  type GenerateTelemetryCapture,
+  resolveGenerationConfig,
+} from "@domain/ai"
+import { AIMeteringScope, creditsForLlmGenerationCost } from "@domain/billing"
 import {
   buildSchemaFromDescriptor,
+  type HostClassifierFunction,
   type HostLlmFunction,
   type HostSimilarityFunction,
   isScoreMatch,
   ScriptRuntime,
   type ScriptSessionContext,
 } from "@domain/sandbox"
-import { Effect } from "effect"
+import { Effect, Option } from "effect"
 import { EvaluationExecutionError } from "../errors.ts"
 import {
   EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
@@ -16,6 +25,8 @@ import {
   estimateEvaluationScriptCostMicrocents,
   fitPromptToJudgeContextWindow,
 } from "./evaluation-execution.ts"
+
+const MICROCENTS_PER_USD = 100_000_000
 
 const toExecutionError = (error: { readonly message: string; readonly cause?: unknown }) =>
   new EvaluationExecutionError({ message: error.message, cause: "cause" in error ? error.cause : error })
@@ -45,6 +56,8 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
 
     const runtime = yield* ScriptRuntime
     const ai = yield* AI
+    const classifierService = yield* Effect.serviceOption(AIClassify)
+    const meteringScope = yield* Effect.serviceOption(AIMeteringScope)
     const services = yield* Effect.context<never>()
     const modelConfig = yield* resolveGenerationConfig("EVALUATION_JUDGE", EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL)
 
@@ -78,11 +91,49 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
       }
     }
 
+    const classifier: HostClassifierFunction | undefined = Option.isSome(classifierService)
+      ? async (call) => {
+          const result = await Effect.runPromiseWith(services)(
+            classifierService.value.classify({
+              state: input.session,
+              instructions: call.instructions,
+              criteria: call.criteria,
+            }),
+          )
+          if (Option.isSome(meteringScope)) {
+            await Effect.runPromiseWith(services)(
+              meteringScope.value
+                .record({
+                  action: "llm-call",
+                  credits: creditsForLlmGenerationCost(result.cost / MICROCENTS_PER_USD),
+                  metadata: {
+                    provider: result.servedBy.provider,
+                    model: result.servedBy.model,
+                    pricing: "cost-based",
+                    estimatedCostUsd: result.cost / MICROCENTS_PER_USD,
+                    source: "evaluation-classifier",
+                    ...(result.tokenUsage
+                      ? { tokensInput: result.tokenUsage.input, tokensOutput: result.tokenUsage.output }
+                      : {}),
+                  },
+                })
+                .pipe(
+                  Effect.mapError(
+                    (cause) => new AIError({ message: "Failed to record Jev classification usage", cause }),
+                  ),
+                ),
+            )
+          }
+          return result
+        }
+      : undefined
+
     const runResult = yield* runtime
       .run({
         script: compiled,
         context: { session: input.session },
         llm,
+        ...(classifier ? { classifier } : {}),
         ...(input.similarity ? { similarity: input.similarity } : {}),
       })
       .pipe(

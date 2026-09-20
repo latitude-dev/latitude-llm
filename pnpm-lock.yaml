@@ -846,6 +846,9 @@ importers:
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
+      '@platform/ai-jev':
+        specifier: workspace:*
+        version: link:../../packages/platform/ai-jev
       '@platform/analytics-posthog':
         specifier: workspace:*
         version: link:../../packages/platform/analytics-posthog
@@ -2423,6 +2426,9 @@ importers:
 
   packages/platform/ai-jev:
     dependencies:
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../../domain/ai
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../domain/flaggers

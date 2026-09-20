@@ -5,7 +5,7 @@ description: Write a JavaScript detector that reads a session and decides whethe
 
 A custom script is a detector you write by hand in JavaScript. It reads one session and returns a score saying how strongly a behavior is present. Reach for it when a [set of conditions](./detection-methods#set-of-conditions) is too rigid and an [LLM judge](./detection-methods#llm-as-judge) is too loose, or when you need logic that combines several checks.
 
-Conditions and LLM judges compile down to the same kind of script, so a custom script can express anything they can, plus whatever else you write.
+Conditions, Jev classifiers, and LLM judges compile down to the same kind of script, so a custom script can express anything they can, plus whatever else you write.
 
 <Note>
 Most signals don't need a custom script. Start with conditions or a judge, and drop to a script when you hit their limits.
@@ -133,6 +133,22 @@ const result = await llm(
 return result.promised ? Passed(1, result.quote) : Failed()
 ```
 
+### classify(instructions, options)
+
+Asks Jev to choose between named options and returns the probability for every option. The current session is the state Jev evaluates. Each option value is a description or `null` when the name is clear enough.
+
+```js
+const probabilities = await classify('How should this support session be routed?', {
+  billing: 'Payments, invoices, or refunds',
+  technical: 'Bugs, outages, or integrations',
+  account: 'Access, profile, or account settings',
+})
+
+return Score(probabilities.billing, 'Probability that billing should handle this session')
+```
+
+The probabilities sum to `1`. Your script decides which probability to score, how to combine probabilities, and where to set thresholds.
+
 ### z
 
 A schema builder for shaping `llm()` output and `parse()` input. It mirrors a subset of Zod: `z.string()`, `z.number()`, `z.boolean()`, `z.literal()`, `z.enum()`, `z.array()`, `z.object()`, and `z.union()`, with `.optional()`, `.nullable()`, `.describe()`, `.min()`, `.max()`, and `.int()`.
@@ -153,12 +169,12 @@ try {
 ```
 
 <Note>
-Call `llm` and `semanticSimilarity` by name in your source. Latitude reads those names to allocate the right resources and to make the functions available, so building the call dynamically won't work.
+Call `classify`, `llm`, and `semanticSimilarity` by name in your source. Latitude reads those names to allocate the right resources and to make the functions available, so building the call dynamically won't work.
 </Note>
 
 ### What isn't available
 
-The sandbox is deliberately small. There is no network access, no `fetch`, no timers, no `Date.now` or `Math.random`, and no Node or browser APIs. The only import allowed is `zod`. A script's verdict depends only on the session and any `llm()` call, which keeps results reproducible.
+The sandbox is deliberately small. There is no network access, no `fetch`, no timers, no `Date.now` or `Math.random`, and no Node or browser APIs. The only import allowed is `zod`. A script's verdict depends only on the session and its declared AI calls.
 
 ## Where scripts run and their limits
 
@@ -170,6 +186,7 @@ Latitude picks a resource budget from what your script uses:
 | --- | --- |
 | Uses neither `llm()` nor `semanticSimilarity()` | about 1 second |
 | Calls `semanticSimilarity()` | about 15 seconds |
+| Calls `classify()` | about 120 seconds |
 | Calls `llm()` | about 120 seconds |
 
 Every script gets 64 MiB of memory. These limits are enforced automatically and are generous for typical detectors.
@@ -179,17 +196,17 @@ Errors are handled at two points:
 - Invalid JavaScript is caught when you save, so a script that won't compile can't be stored.
 - A script that throws at runtime, or exceeds its time or memory budget, scores that session as `errored`. Errored sessions show up in the preview. A detector that errors often is flagged as unhealthy.
 
-LLM and embedding calls cost money, so use the sampling control in the [Scope step](../signals/create#scope) to check a slice of traffic rather than every session.
+Classifier, LLM, and embedding calls cost money, so use the sampling control in the [Scope step](../signals/create#scope) to check a slice of traffic rather than every session.
 
 ## Editing and detaching
 
-If you build a detector with conditions or an LLM judge, the Custom script tab shows the exact script Latitude compiled from your settings, read-only. Choose "Edit as custom script" to take it over by hand. This clears the conditions or criteria form and switches the detector to your script.
+If you build a detector with conditions, a Jev classifier, or an LLM judge, the Custom script tab shows the exact script Latitude compiled from your settings, read-only. Choose "Edit as custom script" to take it over by hand. This clears the settings form and switches the detector to your script.
 
 It is a one-way move. Once the script is the source of truth, the settings form is gone. Switching between the conditions and judge tabs before you detach keeps both drafts, so detach only when you're ready to hand-write.
 
 ## Related pages
 
-- [Detection methods](./detection-methods): conditions and LLM judges, the other two ways to define a detector
+- [Detection methods](./detection-methods): the builder methods for defining a detector
 - [Create a signal](../signals/create): the full creation flow
 - [Scores](../scores/overview): what a detector produces when it matches
 - [Sessions](../observability/sessions): what a session is

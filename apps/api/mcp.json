@@ -8659,6 +8659,63 @@
                         "properties": {
                           "kind": {
                             "type": "string",
+                            "const": "classifier"
+                          },
+                          "instructions": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Question Jev answers about the evaluated session."
+                          },
+                          "options": {
+                            "minItems": 2,
+                            "maxItems": 255,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "description": "Option name returned as a key in the probability distribution."
+                                },
+                                "description": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Meaning of this option, or null when its name is self-explanatory."
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "description"
+                              ]
+                            },
+                            "description": "Distinct outcomes Jev can assign to the session."
+                          },
+                          "target": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Option whose probability becomes the signal score."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "instructions",
+                          "options",
+                          "target"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
                             "const": "rule"
                           },
                           "match": {
@@ -8980,7 +9037,7 @@
                         ]
                       }
                     ],
-                    "description": "Declarative detector config. `judge` compiles to an LLM script; `rule` compiles to a deterministic script over the session."
+                    "description": "Declarative detector config. `classifier` uses Jev probabilities, `judge` uses an LLM, and `rule` runs deterministic session checks."
                   }
                 },
                 "required": [

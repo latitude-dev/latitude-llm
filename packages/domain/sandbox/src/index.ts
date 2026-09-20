@@ -1,5 +1,7 @@
 export {
   detectScriptCapabilities,
+  hasAiCapability,
+  hasClassifierCapability,
   hasEmbeddingCapability,
   hasLlmCapability,
   requiresEmbedding,
@@ -40,6 +42,9 @@ export {
 export {
   type CompiledScript,
   type CompileScriptInput,
+  type HostClassifierCall,
+  type HostClassifierFunction,
+  type HostClassifierResult,
   type HostLlmCall,
   type HostLlmFunction,
   type HostLlmResult,

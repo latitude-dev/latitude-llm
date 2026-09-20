@@ -36,6 +36,37 @@ describe("compileSettingsToScript", () => {
     // biome-ignore lint/suspicious/noTemplateCurlyInString: legacy literal placeholder that must be absent, not a TS template
     expect(script).not.toContain("${conversation}")
   })
+
+  it("compiles a Jev classifier whose selected option probability becomes the score", () => {
+    const script = compileSettingsToScript({
+      kind: "classifier",
+      instructions: "What is the session outcome?",
+      options: [
+        { label: "Resolved", description: "The issue was resolved" },
+        { label: "Unresolved", description: "The issue remains" },
+      ],
+      target: "Resolved",
+    })
+
+    expect(script).toContain('await classify("What is the session outcome?"')
+    expect(script).toContain('probabilities["Resolved"]')
+    expect(detectScriptCapabilities(script)).toEqual(["classifier"])
+  })
+
+  it("preserves classifier option labels with object prototype names", () => {
+    const script = compileSettingsToScript({
+      kind: "classifier",
+      instructions: "What is the outcome?",
+      options: [
+        { label: "__proto__", description: null },
+        { label: "Other", description: null },
+      ],
+      target: "__proto__",
+    })
+
+    expect(script).toContain('JSON.parse("{\\"__proto__\\":null,\\"Other\\":null}")')
+    expect(script).toContain('probabilities["__proto__"]')
+  })
 })
 
 // The generated rule script is plain ES (RegExp/JSON/String/Array over `session` + Passed/Failed) — it

@@ -873,7 +873,7 @@ const SignalEvaluationBodySchema = z
   .union([
     z.object({
       settings: evaluationSettingsSchema.describe(
-        "Declarative detector config. `judge` compiles to an LLM script; `rule` compiles to a deterministic script over the session.",
+        "Declarative detector config. `classifier` uses Jev probabilities, `judge` uses an LLM, and `rule` runs deterministic session checks.",
       ),
     }),
     z.object({
