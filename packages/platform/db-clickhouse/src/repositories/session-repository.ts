@@ -53,7 +53,12 @@ import { countSessionsBySearchQuery, type FetchFullSessions, listSessionsBySearc
 import { isActiveSearch } from "./search-plan.ts"
 import { TOKEN_ANALYTICS_SUM_SELECT, toTokenAnalytics } from "./token-analytics.ts"
 
-export const LIST_SELECT = `
+/**
+ * Listing core: columns the sessions table always renders or sorts/paginates
+ * on, cheap to merge (numeric SimpleAggregateFunction states plus the session's
+ * identity + recency/title fields).
+ */
+const LIST_SELECT_CORE = `
   organization_id,
   project_id,
   session_id,
@@ -94,18 +99,34 @@ export const LIST_SELECT = `
   sum(cost_total_microcents)   AS cost_total_microcents,
   sum(unpriced_span_count)     AS unpriced_span_count,
   argMaxIfMerge(user_id)       AS user_id,
-  argMaxIfMerge(user_email)    AS user_email,
   groupUniqArrayArray(tags)    AS tags,
-  maxMap(metadata)             AS metadata,
   groupUniqArrayIfMerge(models)        AS models,
   groupUniqArrayIfMerge(providers)     AS providers,
+  argMinIfMerge(root_span_name)        AS root_span_name
+`
+
+/**
+ * Wider facet states only used when the caller actually filters (or needs the
+ * user's email). The array/map/column-string states (metadata above all) are
+ * the bulk of the rollup's read width; measuring the production dogfood
+ * project cost them several hundred MB per project-wide scan. The list UI
+ * renders none of them, so a filter-free listing skips them entirely and the
+ * corresponding `Session` fields come back empty.
+ */
+const LIST_SELECT_FACETS = `
+  argMaxIfMerge(user_email)    AS user_email,
+  maxMap(metadata)             AS metadata,
   groupUniqArrayIfMerge(service_names) AS service_names,
   groupUniqArrayIfMerge(agent_names)   AS agent_names,
   groupUniqArrayIfMerge(tools)         AS tools,
   groupUniqArrayArray(defined_tools)   AS defined_tools,
   argMaxIfMerge(simulation_id)         AS simulation_id,
-  argMinIfMerge(root_span_id)          AS root_span_id,
-  argMinIfMerge(root_span_name)        AS root_span_name
+  argMinIfMerge(root_span_id)          AS root_span_id
+`
+
+export const LIST_SELECT = `
+  ${LIST_SELECT_CORE},
+  ${LIST_SELECT_FACETS}
 `
 
 const DETAIL_SELECT = `${LIST_SELECT},
@@ -116,6 +137,29 @@ const DETAIL_SELECT = `${LIST_SELECT},
 `
 
 const ROOT_SPAN_FILTER = "((parent_span_id = '') OR (parent_span_id = '0000000000000000'))"
+
+/**
+ * Rolling recency floor for the project-wide LIST_SELECT scans (listing +
+ * percentile-filter resolution). Those queries can only prune by the sparse
+ * primary key (org, project, session), so an unbounded one decompresses the
+ * project's whole rollup — seconds and gigabytes as the project's history
+ * grows. The window anchors on the project's own latest `max_end_time`
+ * (falling back to now() for an empty project) rather than `now()`: a project
+ * that went dormant keeps its freshest 90 days visible. 90 days also matches
+ * the rollup's default retention_days TTL (00034), so nothing user-visible is
+ * cut that retention would already have dropped. `last_activity_time` is
+ * derived from max_start_time/max_end_time, both <= max_end_time, so filtering
+ * on max_end_time cannot drop a row the DESC activity sort would have
+ * returned inside the window.
+ */
+const SESSION_ACTIVITY_WINDOW_DAYS = 90
+const ACTIVITY_CUTOFF_SQL = `
+AND max_end_time >= coalesce(
+  (SELECT max(max_end_time) FROM sessions
+   WHERE organization_id = {organizationId:String}
+     AND project_id = {projectId:String}),
+  now()) - toIntervalDay(${SESSION_ACTIVITY_WINDOW_DAYS})`
+
 const ROOT_DURATION = `if(${ROOT_SPAN_FILTER} AND evidence_end_time > evidence_start_time,
   reinterpretAsInt64(evidence_end_time) - reinterpretAsInt64(evidence_start_time),
   toInt64(0))`
@@ -207,17 +251,17 @@ type SessionListRow = {
   cost_total_microcents: string
   unpriced_span_count: string
   user_id: string
-  user_email: string
+  user_email: string | undefined
   tags: string[]
-  metadata: Record<string, string>
+  metadata: Record<string, string> | undefined
   models: string[]
   providers: string[]
-  service_names: string[]
-  agent_names: string[]
-  tools: string[]
-  defined_tools: string[]
-  simulation_id: string
-  root_span_id: string
+  service_names: string[] | undefined
+  agent_names: string[] | undefined
+  tools: string[] | undefined
+  defined_tools: string[] | undefined
+  simulation_id: string | undefined
+  root_span_id: string | undefined
   root_span_name: string
 }
 
@@ -403,10 +447,10 @@ const toDomainSession = (row: SessionListRow): Session => ({
   metadata: row.metadata ?? {},
   models: row.models.map(normalizeCHString),
   providers: row.providers.map(normalizeCHString),
-  serviceNames: row.service_names.map(normalizeCHString),
-  agentNames: row.agent_names.map(normalizeCHString),
-  definedTools: row.defined_tools.map(normalizeCHString),
-  rootSpanId: SpanId(normalizeCHString(row.root_span_id)),
+  serviceNames: row.service_names?.map(normalizeCHString) ?? [],
+  agentNames: row.agent_names?.map(normalizeCHString) ?? [],
+  definedTools: row.defined_tools?.map(normalizeCHString) ?? [],
+  rootSpanId: SpanId(normalizeCHString(row.root_span_id ?? "")),
   rootSpanName: normalizeCHString(row.root_span_name),
 })
 
@@ -566,6 +610,7 @@ export const resolvePercentileFilters = (
                     FROM sessions
                     WHERE organization_id = {organizationId:String}
                       AND project_id = {projectId:String}
+                      ${ACTIVITY_CUTOFF_SQL}
                     GROUP BY organization_id, project_id, session_id
                   )`,
           query_params: params,
@@ -667,13 +712,19 @@ export const SessionRepositoryLive = Layer.effect(
         const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
+        // Filter-free pages skip the wide facet states (see LIST_SELECT_FACETS):
+        // the list UI renders none of them and they dominate the scan width.
+        const hasFacetNeeds = resolvedFilters !== undefined && Object.keys(resolvedFilters).length > 0
+        const listSelect = hasFacetNeeds ? LIST_SELECT : LIST_SELECT_CORE
+
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              query: `SELECT ${LIST_SELECT}
+              query: `SELECT ${listSelect}
                       FROM sessions
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
+                        ${ACTIVITY_CUTOFF_SQL}
                         ${extraWhere}
                       GROUP BY organization_id, project_id, session_id
                       ${havingClause}
