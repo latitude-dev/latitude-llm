@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## v0.3.109 - 2026-09-20
+
+### Agent Score
+
+- Scores and their evidence are now persisted together in the snapshot row, so the selected date immutably keeps its score and explanation after publication; recomputing or forcing a refresh can no longer rewrite a published score (ref: #4693). This adds an `explanation` JSONB column to `agent_score_snapshots` (Postgres migration included).
+- The Agent Score page now keys all score, evidence, and trend queries on the selected date, so navigating between dates never shows another day's score or evidence while loading; unscored dates no longer borrow older scores, and missing evidence is an explicit empty state (ref: #4693).
+- The selected date moved into the page URL (`date` search parameter), and shared scoring logic between the API and SDK now selects the date window consistently (ref: #4693).
+
+### SDKs
+
+- TypeScript and Python SDKs 9.13.0: the Agent Score causes and explanation types now carry field descriptions for the new persisted evidence (ref: #4692).
+
 ## v0.3.108 - 2026-09-18
 
 ### Agent Score
