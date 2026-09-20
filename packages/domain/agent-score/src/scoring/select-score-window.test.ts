@@ -25,8 +25,8 @@ describe("selectScoreWindow", () => {
   })
 
   it("lengthens until a step reaches the target", () => {
-    expect(select({ 7: 30, 14: 60, 21: 90, 28: 120 })).toMatchObject({ stepDays: 28, reason: "reachedTarget" })
-    expect(select({ 7: 40, 14: 80, 21: 110, 28: 150 })).toMatchObject({ stepDays: 21, reason: "reachedTarget" })
+    expect(select({ 7: 15, 14: 30, 21: 45, 28: 60 })).toMatchObject({ stepDays: 28, reason: "reachedTarget" })
+    expect(select({ 7: 20, 14: 40, 21: 55, 28: 75 })).toMatchObject({ stepDays: 21, reason: "reachedTarget" })
   })
 
   it("settles on the longest step above a lower floor when no step reaches the target", () => {
@@ -44,9 +44,9 @@ describe("selectScoreWindow", () => {
   })
 
   it("withholds below the floor and says what it saw", () => {
-    expect(select({ 7: 20, 14: 40, 21: 60, 28: 80 })).toEqual({
+    expect(select({ 7: 10, 14: 20, 21: 30, 28: 40 })).toEqual({
       status: "withheld",
-      eligibleSessionCount: 80,
+      eligibleSessionCount: 40,
       sessionFloor: settings.sessionFloor,
     })
   })
@@ -58,43 +58,43 @@ describe("selectScoreWindow", () => {
 
 describe("window hysteresis", () => {
   it("keeps the longer step until the shorter one clears the target by the margin", () => {
-    expect(select({ 7: 105, 14: 210, 21: 315, 28: 420 }, 14)).toMatchObject({
+    expect(select({ 7: 52, 14: 105, 21: 157, 28: 210 }, 14)).toMatchObject({
       stepDays: 14,
       reason: "heldByHysteresis",
     })
   })
 
   it("shortens once the shorter step clears the margin", () => {
-    expect(select({ 7: 115, 14: 230, 21: 345, 28: 460 }, 14)).toMatchObject({
+    expect(select({ 7: 58, 14: 115, 21: 173, 28: 230 }, 14)).toMatchObject({
       stepDays: 7,
       reason: "reachedTarget",
     })
   })
 
   it("lengthens when the current step falls below the publication floor", () => {
-    expect(select({ 7: 95, 14: 190, 21: 285, 28: 380 }, 7)).toMatchObject({
+    expect(select({ 7: 45, 14: 95, 21: 143, 28: 190 }, 7)).toMatchObject({
       stepDays: 14,
       reason: "reachedTarget",
     })
   })
 
   it("lengthens once the current step falls the margin below the target", () => {
-    expect(select({ 7: 85, 14: 170, 21: 255, 28: 340 }, 7)).toMatchObject({
+    expect(select({ 7: 42, 14: 85, 21: 128, 28: 170 }, 7)).toMatchObject({
       stepDays: 14,
       reason: "reachedTarget",
     })
   })
 
   it("does not stick to a step that has dropped below the floor", () => {
-    expect(select({ 7: 50, 14: 90, 21: 140, 28: 190 }, 7)).toMatchObject({ stepDays: 21 })
+    expect(select({ 7: 25, 14: 45, 21: 70, 28: 95 }, 7)).toMatchObject({ stepDays: 21 })
   })
 
   it("chooses freshly with no previous snapshot", () => {
-    expect(select({ 7: 105, 14: 210, 21: 315, 28: 420 })).toMatchObject({ stepDays: 7 })
+    expect(select({ 7: 52, 14: 105, 21: 157, 28: 210 })).toMatchObject({ stepDays: 7 })
   })
 
   it("chooses freshly when the previous step is not one of the candidates", () => {
-    expect(select({ 7: 105, 14: 210, 21: 315, 28: 420 }, 10)).toMatchObject({ stepDays: 7 })
+    expect(select({ 7: 52, 14: 105, 21: 157, 28: 210 }, 10)).toMatchObject({ stepDays: 7 })
   })
 
   it("never holds a window for a project that has fallen under the floor entirely", () => {
@@ -102,7 +102,7 @@ describe("window hysteresis", () => {
   })
 
   it("does not oscillate: a project sitting in the margin keeps whichever step it had", () => {
-    const inTheBand = { 7: 102, 14: 204, 21: 306, 28: 408 }
+    const inTheBand = { 7: 51, 14: 102, 21: 153, 28: 204 }
 
     expect(select(inTheBand, 7)).toMatchObject({ stepDays: 7 })
     expect(select(inTheBand, 14)).toMatchObject({ stepDays: 14 })
@@ -110,15 +110,15 @@ describe("window hysteresis", () => {
 })
 
 describe("launch evidence minimum", () => {
-  it("accepts exactly 100 eligible sessions", () => {
-    expect(select({ 7: 100 })).toMatchObject({ status: "selected", stepDays: 7, eligibleSessionCount: 100 })
+  it("accepts exactly 50 eligible sessions", () => {
+    expect(select({ 7: 50 })).toMatchObject({ status: "selected", stepDays: 7, eligibleSessionCount: 50 })
   })
 
-  it("withholds a window with only 99 eligible sessions", () => {
-    expect(select({ 7: 99, 14: 99, 21: 99, 28: 99 })).toEqual({
+  it("withholds a window with only 49 eligible sessions", () => {
+    expect(select({ 7: 49, 14: 49, 21: 49, 28: 49 })).toEqual({
       status: "withheld",
-      eligibleSessionCount: 99,
-      sessionFloor: 100,
+      eligibleSessionCount: 49,
+      sessionFloor: 50,
     })
   })
 })
