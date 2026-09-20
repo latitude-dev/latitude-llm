@@ -3,10 +3,10 @@
 import type * as Latitude from "../index.js";
 
 /**
- * The evidence, or `null` when it is not ready.
+ * Evidence for today's UTC date, retained with the published score when available, or `null` if unavailable.
  */
 export interface AgentScoreExplanation {
-    /** When this evidence was read, as an ISO-8601 timestamp. It explains present behaviour, not the stored score. */
+    /** When this evidence was computed, as an ISO-8601 timestamp. Retained explanations keep the original score computation time. */
     computedAt: string;
     /** Scoring version the evidence was read under. */
     scoringVersion: string;
