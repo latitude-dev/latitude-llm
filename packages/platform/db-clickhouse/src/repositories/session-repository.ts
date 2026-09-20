@@ -54,11 +54,10 @@ import { isActiveSearch } from "./search-plan.ts"
 import { TOKEN_ANALYTICS_SUM_SELECT, toTokenAnalytics } from "./token-analytics.ts"
 
 /**
- * Listing core: columns the sessions table always renders or sorts/paginates
- * on, cheap to merge (numeric SimpleAggregateFunction states plus the session's
- * identity + recency/title fields).
+ * Full listing row. The filter-free listing reads this bar only for the
+ * page's sessions (see LIST_CANDIDATES); project-wide scans carry this width.
  */
-const LIST_SELECT_CORE = `
+export const LIST_SELECT = `
   organization_id,
   project_id,
   session_id,
@@ -99,34 +98,18 @@ const LIST_SELECT_CORE = `
   sum(cost_total_microcents)   AS cost_total_microcents,
   sum(unpriced_span_count)     AS unpriced_span_count,
   argMaxIfMerge(user_id)       AS user_id,
+  argMaxIfMerge(user_email)    AS user_email,
   groupUniqArrayArray(tags)    AS tags,
+  maxMap(metadata)             AS metadata,
   groupUniqArrayIfMerge(models)        AS models,
   groupUniqArrayIfMerge(providers)     AS providers,
-  argMinIfMerge(root_span_name)        AS root_span_name
-`
-
-/**
- * Wider facet states only used when the caller actually filters (or needs the
- * user's email). The array/map/column-string states (metadata above all) are
- * the bulk of the rollup's read width; measuring the production dogfood
- * project cost them several hundred MB per project-wide scan. The list UI
- * renders none of them, so a filter-free listing skips them entirely and the
- * corresponding `Session` fields come back empty.
- */
-const LIST_SELECT_FACETS = `
-  argMaxIfMerge(user_email)    AS user_email,
-  maxMap(metadata)             AS metadata,
   groupUniqArrayIfMerge(service_names) AS service_names,
   groupUniqArrayIfMerge(agent_names)   AS agent_names,
   groupUniqArrayIfMerge(tools)         AS tools,
   groupUniqArrayArray(defined_tools)   AS defined_tools,
   argMaxIfMerge(simulation_id)         AS simulation_id,
-  argMinIfMerge(root_span_id)          AS root_span_id
-`
-
-export const LIST_SELECT = `
-  ${LIST_SELECT_CORE},
-  ${LIST_SELECT_FACETS}
+  argMinIfMerge(root_span_id)          AS root_span_id,
+  argMinIfMerge(root_span_name)        AS root_span_name
 `
 
 const DETAIL_SELECT = `${LIST_SELECT},
@@ -139,26 +122,37 @@ const DETAIL_SELECT = `${LIST_SELECT},
 const ROOT_SPAN_FILTER = "((parent_span_id = '') OR (parent_span_id = '0000000000000000'))"
 
 /**
- * Rolling recency floor for the project-wide LIST_SELECT scans (listing +
- * percentile-filter resolution). Those queries can only prune by the sparse
- * primary key (org, project, session), so an unbounded one decompresses the
- * project's whole rollup — seconds and gigabytes as the project's history
- * grows. The window anchors on the project's own latest `max_end_time`
- * (falling back to now() for an empty project) rather than `now()`: a project
- * that went dormant keeps its freshest 90 days visible. 90 days also matches
- * the rollup's default retention_days TTL (00034), so nothing user-visible is
- * cut that retention would already have dropped. `last_activity_time` is
- * derived from max_start_time/max_end_time, both <= max_end_time, so filtering
- * on max_end_time cannot drop a row the DESC activity sort would have
- * returned inside the window.
+ * Candidate stage for the filter-free listing: sort keys + LLM eligibility
+ * only. Stage B re-reads the full SELECT bar for at most `limit` ids.
  */
-const SESSION_ACTIVITY_WINDOW_DAYS = 90
-const ACTIVITY_CUTOFF_SQL = `
-AND max_end_time >= coalesce(
-  (SELECT max(max_end_time) FROM sessions
-   WHERE organization_id = {organizationId:String}
-     AND project_id = {projectId:String}),
-  now()) - toIntervalDay(${SESSION_ACTIVITY_WINDOW_DAYS})`
+const LIST_CANDIDATES = `
+  organization_id,
+  project_id,
+  session_id,
+  min(min_start_time)          AS start_time,
+  max(max_end_time)            AS end_time,
+  -- Same sentinel rule as LIST_SELECT.
+  if(max(max_start_time) >= min(min_start_time),
+     max(max_start_time),
+     max(max_end_time))         AS last_activity_time,
+  -- sessions_mv only sums empty-parent spans, so local roots nested under a never-exported parent (e.g. Vercel AI SDK under the app's HTTP span) store 0; fall back to wall-clock.
+  if(sum(duration_ns) > 0,
+     sum(duration_ns),
+     greatest(0, reinterpretAsInt64(max(max_end_time))
+                   - reinterpretAsInt64(min(min_start_time)))) AS duration_ns,
+  if(
+    min(time_of_first_token) < toDateTime64('2261-01-01', 9, 'UTC')
+      AND min(time_of_first_token) > min(min_start_time),
+    reinterpretAsInt64(min(time_of_first_token))
+      - reinterpretAsInt64(min(min_start_time)),
+    0
+  )                              AS time_to_first_token_ns,
+  sum(span_count)              AS span_count,
+  uniqExactMerge(trace_count)  AS trace_count,
+  sum(cost_total_microcents)   AS cost_total_microcents,
+  sum(tokens_total)            AS tokens_total,
+  groupUniqArrayIfMerge(models)        AS models
+`
 
 const ROOT_DURATION = `if(${ROOT_SPAN_FILTER} AND evidence_end_time > evidence_start_time,
   reinterpretAsInt64(evidence_end_time) - reinterpretAsInt64(evidence_start_time),
@@ -610,7 +604,6 @@ export const resolvePercentileFilters = (
                     FROM sessions
                     WHERE organization_id = {organizationId:String}
                       AND project_id = {projectId:String}
-                      ${ACTIVITY_CUTOFF_SQL}
                     GROUP BY organization_id, project_id, session_id
                   )`,
           query_params: params,
@@ -712,55 +705,117 @@ export const SessionRepositoryLive = Layer.effect(
         const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-        // Filter-free pages skip the wide facet states (see LIST_SELECT_FACETS):
-        // the list UI renders none of them and they dominate the scan width.
-        const hasFacetNeeds = resolvedFilters !== undefined && Object.keys(resolvedFilters).length > 0
-        const listSelect = hasFacetNeeds ? LIST_SELECT : LIST_SELECT_CORE
+        /**
+         * Filter-free requests run a two-stage list: candidates by narrow
+         * aggregate columns, then full rows keyed by the selected ids. The
+         * wide facet states are only read for the page's sessions, and the
+         * public API body keeps all Session fields populated.
+         */
+        const hasFilters = resolvedFilters !== undefined && Object.keys(resolvedFilters).length > 0
 
-        return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${listSelect}
-                      FROM sessions
-                      WHERE organization_id = {organizationId:String}
-                        AND project_id = {projectId:String}
-                        ${ACTIVITY_CUTOFF_SQL}
-                        ${extraWhere}
-                      GROUP BY organization_id, project_id, session_id
-                      ${havingClause}
-                      ORDER BY ${sort.expr} ${orderDir}, session_id ${orderDir}
-                      LIMIT {limit:UInt32}`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                limit: limit + 1,
-                ...filterParams,
-                ...(options.cursor
-                  ? {
-                      cursorSortValue: options.cursor.sortValue,
-                      cursorSessionId: options.cursor.sessionId,
-                    }
-                  : {}),
-              },
-              format: "JSONEachRow",
+        const cursorParams = options.cursor
+          ? {
+              cursorSortValue: options.cursor.sortValue,
+              cursorSessionId: options.cursor.sessionId,
+            }
+          : {}
+
+        const fetchByIds = (ids: readonly string[]) =>
+          chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${LIST_SELECT}
+                        FROM sessions
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND session_id IN ({sessionIds:Array(String)})
+                        GROUP BY organization_id, project_id, session_id`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  sessionIds: ids as string[],
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionListRow>()
             })
-            return result.json<SessionListRow>()
-          })
-          .pipe(
-            Effect.map((rows): SessionListPage => {
-              const hasMore = rows.length > limit
-              const pageRows = hasMore ? rows.slice(0, limit) : rows
-              const items = pageRows.map(toDomainSession)
-              const last = hasMore ? pageRows[pageRows.length - 1] : undefined
-              if (!last) return { items, hasMore }
-              return {
-                items,
-                hasMore,
-                nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
-              }
-            }),
-            Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
-          )
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "listByProjectId")))
+
+        const fetchList = () =>
+          chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${LIST_SELECT}
+                        FROM sessions
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          ${extraWhere}
+                        GROUP BY organization_id, project_id, session_id
+                        ${havingClause}
+                        ORDER BY ${sort.expr} ${orderDir}, session_id ${orderDir}
+                        LIMIT {limit:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  limit: limit + 1,
+                  ...filterParams,
+                  ...cursorParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionListRow>()
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "listByProjectId")))
+
+        // Filter-free requests: stage A picks the page's ids with narrow
+        // aggregate columns, stage B re-reads the full row for those ids so
+        // the API body keeps every Session field populated.
+        const leanList = Effect.gen(function* () {
+          const candidates = yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${LIST_CANDIDATES}
+                        FROM sessions
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                        GROUP BY organization_id, project_id, session_id
+                        ${havingClause}
+                        ORDER BY ${sort.expr} ${orderDir}, session_id ${orderDir}
+                        LIMIT {limit:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  limit: limit + 1,
+                  ...cursorParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ session_id: string }>()
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "listByProjectId")))
+          if (candidates.length === 0) return []
+          const ids = candidates.map((c) => c.session_id)
+          const fullRows = yield* fetchByIds(ids)
+          const byId = new Map(fullRows.map((r) => [normalizeCHString(r.session_id), r] as const))
+          return ids.flatMap((id) => (byId.has(normalizeCHString(id)) ? [byId.get(normalizeCHString(id))!] : []))
+        })
+
+        const page = hasFilters ? fetchList() : leanList
+        return yield* page.pipe(
+          Effect.map((rows): SessionListPage => {
+            const hasMore = rows.length > limit
+            const pageRows = hasMore ? rows.slice(0, limit) : rows
+            const items = pageRows.map(toDomainSession)
+            const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+            if (!last) return { items, hasMore }
+            return {
+              items,
+              hasMore,
+              nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
+            }
+          }),
+          Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
+        )
       })
 
     const getCohortBaseline: SessionRepositoryShape["getCohortBaseline"] = ({
