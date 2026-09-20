@@ -4,7 +4,9 @@
 
 The daily BullMQ sweep selects eligible projects and publishes one lightweight `snapshotProject`
 task per project and UTC date. That task starts `agentScoreSnapshotWorkflow` with a workflow ID that
-contains the organization, project, and date. It does not calculate the score in the BullMQ worker.
+contains the organization, project, date, and request mode. Forced refreshes use a distinct workflow
+ID, so an active scheduled run cannot discard a request to rebuild legacy evidence. It does not
+calculate the score in the BullMQ worker.
 
 Temporal runs the calculation in `snapshotAgentScoreActivity`. The activity owns the scoped
 Postgres, ClickHouse, and cache reads, derived sampling updates, and conditional snapshot insert.

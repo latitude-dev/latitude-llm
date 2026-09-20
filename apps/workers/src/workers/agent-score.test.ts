@@ -48,8 +48,31 @@ describe("createAgentScoreWorker", () => {
       {
         workflow: "agentScoreSnapshotWorkflow",
         input: payload,
-        options: { workflowId: "agent-score:org-1:project-1:2026-09-18" },
+        options: { workflowId: "agent-score:org-1:project-1:2026-09-18:force:date-cutoff" },
       },
+    ])
+  })
+
+  it("keeps a forced refresh distinct from a scheduled snapshot", async () => {
+    const workflowIds: string[] = []
+    const consumer = createWorker({
+      start: (_workflow, _input, options) =>
+        Effect.sync(() => {
+          workflowIds.push(options.workflowId)
+        }),
+      signalWithStart: () => Effect.die("signalWithStart should not be called"),
+    })
+    const scope = { organizationId: "org-1", projectId: "project-1", date: "2026-09-18" }
+
+    await consumer.dispatchTask("agent-score", "snapshotProject", {
+      ...scope,
+      to: "2026-09-19T00:00:00.000Z",
+    })
+    await consumer.dispatchTask("agent-score", "snapshotProject", { ...scope, force: true })
+
+    expect(workflowIds).toEqual([
+      "agent-score:org-1:project-1:2026-09-18:scheduled",
+      "agent-score:org-1:project-1:2026-09-18:force:date-cutoff",
     ])
   })
 

@@ -12,7 +12,6 @@ export interface AgentScoreSnapshotWorkflowInput {
 
 const { snapshotAgentScoreActivity } = proxyActivities<typeof activities>({
   startToCloseTimeout: "30 minutes",
-  scheduleToCloseTimeout: "2 hours",
   retry: defaultActivityRetryPolicy,
 })
 

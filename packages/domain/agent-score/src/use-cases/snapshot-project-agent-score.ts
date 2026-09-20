@@ -19,11 +19,16 @@ export const agentScoreSnapshotWorkflowId = ({
   organizationId,
   projectId,
   date,
+  to,
+  force,
 }: {
   readonly organizationId: string
   readonly projectId: string
   readonly date: string
-}): string => `agent-score:${organizationId}:${projectId}:${date}`
+  readonly to?: string
+  readonly force?: boolean
+}): string =>
+  `agent-score:${organizationId}:${projectId}:${date}:${force ? `force:${to ?? "date-cutoff"}` : "scheduled"}`
 
 export interface SnapshotProjectInput {
   readonly organizationId: OrganizationId
