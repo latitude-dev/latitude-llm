@@ -735,6 +735,9 @@ importers:
       '@bull-board/hono':
         specifier: 'catalog:'
         version: 6.12.1(hono@4.12.34)
+      '@domain/admin':
+        specifier: workspace:*
+        version: link:../../packages/domain/admin
       '@domain/agent-dispatch':
         specifier: workspace:*
         version: link:../../packages/domain/agent-dispatch

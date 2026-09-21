@@ -129,6 +129,25 @@ const toThroughputCohort = (sample: LatencyCohortSample, context: GateContext): 
   }
 }
 
+const cohortKey = (cohort: TtftReferenceCohort | ThroughputReferenceCohort): string =>
+  [
+    cohort.provider,
+    cohort.model,
+    cohort.granularity,
+    cohort.inputBucket ?? "",
+    cohort.streaming === undefined ? "" : cohort.streaming ? "streaming" : "unary",
+    "outputBucket" in cohort ? (cohort.outputBucket ?? "") : "",
+  ].join("\u0000")
+
+const sortCohorts = <Cohort extends TtftReferenceCohort | ThroughputReferenceCohort>(
+  cohorts: readonly Cohort[],
+): Cohort[] =>
+  [...cohorts].sort((left, right) => {
+    const leftKey = cohortKey(left)
+    const rightKey = cohortKey(right)
+    return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0
+  })
+
 /**
  * Turns cross-organisation cohort samples into the frozen reference Speed reads.
  *
@@ -154,14 +173,18 @@ export const buildLatencyReferenceArtifact = ({
   readonly minimumOrganizationCount: number
 }): LatencyReferenceBuildReport => {
   const context: GateContext = { minimumSampleCount, minimumOrganizationCount, rejected: emptyRejections() }
-  const ttft = ttftSamples.flatMap((sample) => {
-    const cohort = toTtftCohort(sample, context)
-    return cohort ? [cohort] : []
-  })
-  const throughput = throughputSamples.flatMap((sample) => {
-    const cohort = toThroughputCohort(sample, context)
-    return cohort ? [cohort] : []
-  })
+  const ttft = sortCohorts(
+    ttftSamples.flatMap((sample) => {
+      const cohort = toTtftCohort(sample, context)
+      return cohort ? [cohort] : []
+    }),
+  )
+  const throughput = sortCohorts(
+    throughputSamples.flatMap((sample) => {
+      const cohort = toThroughputCohort(sample, context)
+      return cohort ? [cohort] : []
+    }),
+  )
 
   return {
     artifact: {
