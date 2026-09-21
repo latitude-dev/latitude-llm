@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## v0.3.113 - 2026-09-21
+
+### Annotations
+
+- The API now covers the full annotation lifecycle: `GET`, `PATCH`, and `DELETE` on `/projects/{projectSlug}/annotations/{annotationId}` read, update, and remove API-created annotations by their Latitude-generated identifier. Updates keep the original identifier, leave omitted fields untouched, retract the annotation from the signal it was previously attached to, and republish it to issue discovery and human-annotation scoring. Exposed as `annotations.get` / `update` / `delete` in the TypeScript and Python SDKs (9.14.0) and as `latitude annotations get|update|delete` in the CLI (7.14.0) (ref: #4704).
+- Score analytics are now rebuilt from the stored score after an annotation changes, so a retried update no longer duplicates analytics rows, and analytics belonging to a score that is still mutable are dropped instead of left stale (ref: #4704).
+
+### Flaggers
+
+- The Jev preclassifier gate is now a Pulumi setting and is turned on in production, so organization feature flags drive its rollout (ref: e2460d7e).
+
 ## v0.3.112 - 2026-09-21
 
 ### Agent Score
