@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.114 - 2026-09-21
+
+### Documentation
+
+- Documented that a sandbox organization is readable over the public REST API and the CLI using its own `lat_sandbox_` key, that a live key cannot see sandbox data, and that MCP cannot reach a sandbox at all because an OAuth token binds to an organization you are a member of and sandboxes have no membership rows. Corrected the claim that sandbox keys are created from inside the sandbox: there is one key per sandbox, surfaced under Sandbox configuration. Pinned the behavior with an API integration test (ref: #4707).
+
 ## v0.3.113 - 2026-09-21
 
 ### Annotations
