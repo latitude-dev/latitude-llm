@@ -45,7 +45,7 @@ export const updateApiAnnotationUseCase = Effect.fn("annotations.updateApiAnnota
   input: UpdateApiAnnotationInput,
 ) {
   const sqlClient = yield* SqlClient
-  const result = yield* sqlClient.transaction(
+  const score = yield* sqlClient.transaction(
     Effect.gen(function* () {
       const existing = yield* findApiAnnotation(input)
       const rawFeedback = input.feedback ?? existing.metadata.rawFeedback
@@ -53,7 +53,7 @@ export const updateApiAnnotationUseCase = Effect.fn("annotations.updateApiAnnota
       const passed = input.passed ?? existing.passed
 
       if (rawFeedback === existing.metadata.rawFeedback && value === existing.value && passed === existing.passed) {
-        return { changed: false, score: existing } as const
+        return existing
       }
 
       const updatedAt = new Date()
@@ -87,14 +87,12 @@ export const updateApiAnnotationUseCase = Effect.fn("annotations.updateApiAnnota
         },
       })
 
-      return { changed: true, score } as const
+      return score
     }),
   )
 
-  if (result.changed) {
-    yield* replaceScoreAnalyticsUseCase({ scoreId: result.score.id })
-  }
-  return result.score as AnnotationScore
+  yield* replaceScoreAnalyticsUseCase({ scoreId: score.id })
+  return score as AnnotationScore
 })
 
 export const deleteApiAnnotationUseCase = Effect.fn("annotations.deleteApiAnnotation")(function* (

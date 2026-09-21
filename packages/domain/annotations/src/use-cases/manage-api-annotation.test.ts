@@ -1,5 +1,5 @@
 import { OutboxEventWriter } from "@domain/events"
-import { ScoreAnalyticsRepository, ScoreRepository, scoreSchema } from "@domain/scores"
+import { annotationScoreSchema, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import { ChSqlClient, OrganizationId, ProjectId, ScoreId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
@@ -20,7 +20,7 @@ const createPassthroughSqlClient = (): SqlClientShape => {
   return client
 }
 
-const score = scoreSchema.parse({
+const score = annotationScoreSchema.parse({
   id: scoreId,
   organizationId,
   projectId,
@@ -93,5 +93,34 @@ describe("updateApiAnnotationUseCase", () => {
         }),
       }),
     ])
+  })
+
+  it("repairs missing analytics when an unchanged update is retried", async () => {
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: analyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
+    const events: unknown[] = []
+    scores.set(score.id, score)
+
+    const updated = await Effect.runPromise(
+      updateApiAnnotationUseCase({
+        projectId,
+        annotationId: score.id,
+        value: score.value,
+        passed: score.passed,
+        feedback: score.metadata.rawFeedback,
+      }).pipe(
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(ScoreAnalyticsRepository, analyticsRepository),
+        Effect.provideService(OutboxEventWriter, {
+          write: (event) => Effect.sync(() => void events.push(event)),
+        }),
+        Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(organizationId) })),
+      ),
+    )
+
+    expect(updated).toEqual(score)
+    expect(inserted).toEqual([score.id])
+    expect(events).toEqual([])
   })
 })
