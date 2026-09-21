@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.3.111 - 2026-09-21
+
+### Agent Score
+
+- Speed now uses frozen TTFT and throughput references calibrated from a closed fleet window, with provider/model fallbacks that fail closed when no qualified reference exists. Added a repeatable operator command for later calibration freezes and advanced the scoring version to `agent-score-v5-provisional` (ref: #4702).
+- Bounded span, generation, content, and tool-call reads to the selected sessions' time range, preventing daily snapshots from scanning older ClickHouse partitions while preserving evidence for retained sessions (ref: #4699).
+- Forced refreshes and backoffice recalculations now use workflow IDs distinct from scheduled snapshots, so an in-flight daily run no longer prevents a requested recalculation (ref: #4700).
+- Simplified the score date control by removing its redundant helper label while retaining its accessible name (ref: #4701).
+
 ## v0.3.110 - 2026-09-21
 
 ### Agent Score
