@@ -88,6 +88,12 @@ The CLI authenticates with an **organization-scoped API key**. Create one in the
   </Tab>
 </Tabs>
 
+The key also decides **which environment** you're reading: a `lat_sandbox_` key from a [sandbox](/observability/features/sandbox) scopes every command to that sandbox's traces, and a live key to production. Because the environment variable beats the keyring, you can keep your live key in the keyring and switch per command:
+
+```bash
+LATITUDE_API_KEY=lat_sandbox_... latitude traces list --project-slug my-app
+```
+
 ## Usage
 
 The general shape is `latitude <resource> <command> [flags]`, where each resource mirrors an area of the Latitude API:

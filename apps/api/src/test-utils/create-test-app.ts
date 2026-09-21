@@ -1,4 +1,5 @@
 import type { ClickHouseClient } from "@clickhouse/client"
+import { DEFAULT_API_KEY_NAME, SANDBOX_API_KEY_TOKEN_PREFIX } from "@domain/api-keys"
 import { type ImportSourceAdapterRegistry, ImportSourceError } from "@domain/imports"
 import { createFakeImportAdapterRegistry } from "@domain/imports/testing"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
@@ -13,6 +14,7 @@ import {
   organizations,
   users,
 } from "@platform/db-postgres/schema/better-auth"
+import { sandboxes } from "@platform/db-postgres/schema/sandboxes"
 import { FakeStorageDisk } from "@platform/storage-object/testing"
 import {
   closeInMemoryPostgres,
@@ -209,6 +211,59 @@ export const createTenantSetup = async (database: InMemoryPostgres): Promise<Ten
   })
 
   return { userId, organizationId, apiKeyToken, authApiKeyId }
+}
+
+interface SandboxTenantSetup {
+  readonly organizationId: string
+  readonly apiKeyToken: string
+  readonly authApiKeyId: string
+}
+
+/**
+ * A sandbox (Test Mode) org hanging off `parent`, shaped like what
+ * `createSandboxUseCase` writes: a child `organizations` row, its `sandboxes`
+ * attributes row, and the `lat_sandbox_`-prefixed default key.
+ *
+ * Deliberately inserts **no** `members` row: production sandboxes have none
+ * either (sandbox access is authorized against *parent* membership — see
+ * `resolveSandboxAccess`), and that absence is exactly why an OAuth token can
+ * never bind to a sandbox. Any test that passes here must therefore be
+ * authorizing off the key alone.
+ */
+export const createSandboxTenantSetup = async (
+  database: InMemoryPostgres,
+  parent: { readonly organizationId: string; readonly userId: string },
+): Promise<SandboxTenantSetup> => {
+  const organizationId = generateId()
+  const apiKeyToken = `${SANDBOX_API_KEY_TOKEN_PREFIX}${crypto.randomUUID()}`
+  const authApiKeyId = generateId()
+
+  await database.db.insert(organizations).values({
+    id: organizationId,
+    name: "Sandbox",
+    slug: `sandbox-${organizationId}`,
+    parentOrgId: parent.organizationId,
+  })
+
+  await database.db.insert(sandboxes).values({
+    id: generateId(),
+    organizationId,
+    status: "active",
+    createdByUserId: parent.userId,
+  })
+
+  const encryptedToken = await Effect.runPromise(encrypt(apiKeyToken, TEST_ENCRYPTION_KEY))
+  const tokenHash = await Effect.runPromise(hash(apiKeyToken))
+
+  await database.db.insert(apiKeys).values({
+    id: authApiKeyId,
+    organizationId,
+    token: encryptedToken,
+    tokenHash,
+    name: DEFAULT_API_KEY_NAME,
+  })
+
+  return { organizationId, apiKeyToken, authApiKeyId }
 }
 
 interface OAuthTenantSetup extends TenantSetup {
