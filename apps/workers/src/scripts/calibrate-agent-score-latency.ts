@@ -22,6 +22,7 @@ The module is written to stdout. The calibration report is written to stderr.
 Options:
   --since <ISO date>                 Inclusive window start (required)
   --until <ISO date>                 Exclusive window end, not later than now (required)
+  --ingested-until <ISO date>        Exclusive ingestion snapshot, not earlier than until (required)
   --artifact-version <version>       Version for the emitted artifact (required)
   --minimum-samples <n>              Minimum observations per cohort (default 200)
   --minimum-organizations <n>        Minimum organizations per cohort (default 5)
@@ -83,10 +84,12 @@ const renderModule = ({
   artifact,
   since,
   until,
+  ingestedAtUntil,
 }: {
   readonly artifact: LatencyReferenceArtifact
   readonly since: Date
   readonly until: Date
+  readonly ingestedAtUntil: Date
 }): string => `import type {
   LatencyReferenceArtifact,
   ThroughputReferenceCohort,
@@ -98,6 +101,7 @@ export const LAUNCH_LATENCY_ARTIFACT_VERSION = ${JSON.stringify(artifact.artifac
 export const LAUNCH_LATENCY_REFERENCE_FREEZE = {
   since: ${JSON.stringify(since.toISOString())},
   until: ${JSON.stringify(until.toISOString())},
+  ingestedAtUntil: ${JSON.stringify(ingestedAtUntil.toISOString())},
   minimumSampleCount: ${artifact.minimumSampleCount},
   minimumOrganizationCount: ${artifact.minimumOrganizationCount},
 } as const
@@ -130,6 +134,7 @@ const main = async () => {
     options: {
       since: { type: "string" },
       until: { type: "string" },
+      "ingested-until": { type: "string" },
       "artifact-version": { type: "string" },
       "minimum-samples": { type: "string" },
       "minimum-organizations": { type: "string" },
@@ -144,8 +149,11 @@ const main = async () => {
 
   const since = instant(values.since, "--since")
   const until = instant(values.until, "--until")
+  const ingestedAtUntil = instant(values["ingested-until"], "--ingested-until")
   if (since >= until) throw new Error("--since must be before --until")
   if (until > new Date()) throw new Error("--until must describe a closed window")
+  if (ingestedAtUntil < until) throw new Error("--ingested-until must not be before --until")
+  if (ingestedAtUntil > new Date()) throw new Error("--ingested-until must describe a closed snapshot")
   const artifactVersion = values["artifact-version"]
   if (!artifactVersion) throw new Error("--artifact-version is required")
 
@@ -155,8 +163,9 @@ const main = async () => {
   const report = await Effect.runPromise(
     Effect.gen(function* () {
       const repository = yield* FleetLatencyReferenceRepository
+      const window = { since, until, ingestedAtUntil }
       const [ttftSamples, throughputSamples] = yield* Effect.all(
-        [repository.listTtftSamples({ since, until }), repository.listThroughputSamples({ since, until })],
+        [repository.listTtftSamples(window), repository.listThroughputSamples(window)],
         { concurrency: 2 },
       )
       return buildLatencyReferenceArtifact({
@@ -167,23 +176,29 @@ const main = async () => {
         minimumOrganizationCount,
       })
     }).pipe(withClickHouse(FleetLatencyReferenceRepositoryLive, client, OrganizationId("system")), withTracing),
-  )
+  ).finally(() => client.close())
 
   console.error(
     JSON.stringify({
-      window: { since: since.toISOString(), until: until.toISOString() },
+      window: {
+        since: since.toISOString(),
+        until: until.toISOString(),
+        ingestedAtUntil: ingestedAtUntil.toISOString(),
+      },
       gates: { minimumSampleCount, minimumOrganizationCount },
       ttftCohortCount: report.ttftCohortCount,
       throughputCohortCount: report.throughputCohortCount,
       rejected: report.rejected,
     }),
   )
-  console.log(renderModule({ artifact: report.artifact, since, until }))
+  await new Promise<void>((resolve, reject) => {
+    process.stdout.write(`${renderModule({ artifact: report.artifact, since, until, ingestedAtUntil })}\n`, (error) =>
+      error ? reject(error) : resolve(),
+    )
+  })
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error)
-    process.exit(1)
-  })
+main().catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})

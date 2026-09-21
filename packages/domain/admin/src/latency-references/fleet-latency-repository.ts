@@ -26,6 +26,8 @@ export interface ListFleetLatencySamplesInput {
   readonly since: Date
   /** Exclusive upper bound, so a freeze covers a closed window and reruns reproduce it. */
   readonly until: Date
+  /** Exclusive ingestion snapshot, so late or backfilled spans cannot change a rerun. */
+  readonly ingestedAtUntil: Date
 }
 
 /**
@@ -33,10 +35,10 @@ export interface ListFleetLatencySamplesInput {
  * throughput references.
  *
  * WARNING: cross-tenant by design — the queries scan `spans` over every organisation in the
- * cluster. Only ever wire it into handlers that have already passed `adminMiddleware`, and never
- * alongside per-tenant ClickHouse repositories on a customer-facing path. Nothing here may reach a
- * live score: the score reads the frozen artifact, so one project's traffic can never move
- * another's number.
+ * cluster. Only wire it into handlers that have passed `adminMiddleware` or trusted operator-only
+ * CLI scripts. Never expose it through a customer-facing route, queue, or workflow. Nothing here
+ * may reach a live score: the score reads the frozen artifact, so one project's traffic can never
+ * move another's number.
  */
 export class FleetLatencyReferenceRepository extends Context.Service<
   FleetLatencyReferenceRepository,

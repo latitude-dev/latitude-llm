@@ -9,6 +9,7 @@ export const LAUNCH_LATENCY_ARTIFACT_VERSION = "latency-reference-v2-calibrated-
 export const LAUNCH_LATENCY_REFERENCE_FREEZE = {
   since: "2026-06-23T00:00:00.000Z",
   until: "2026-09-21T00:00:00.000Z",
+  ingestedAtUntil: "2026-09-21T08:00:00.000Z",
   minimumSampleCount: 200,
   minimumOrganizationCount: 5,
 } as const

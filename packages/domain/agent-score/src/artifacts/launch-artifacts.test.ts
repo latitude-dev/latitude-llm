@@ -82,6 +82,7 @@ describe("validateLaunchArtifacts", () => {
     expect(LAUNCH_LATENCY_REFERENCE_FREEZE).toEqual({
       since: "2026-06-23T00:00:00.000Z",
       until: "2026-09-21T00:00:00.000Z",
+      ingestedAtUntil: "2026-09-21T08:00:00.000Z",
       minimumSampleCount: 200,
       minimumOrganizationCount: 5,
     })

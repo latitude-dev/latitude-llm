@@ -66,10 +66,11 @@ versions.
 ## Frozen latency references
 
 Speed loads the calibrated `latency-reference-v2-calibrated-20260921` artifact. It was built from
-the closed fleet window from 2026-06-23 through 2026-09-21, with a minimum of 200 observations and
-5 organizations for every published cohort. The artifact contains detailed input/output token and
-streaming cohorts plus provider/model roll-ups. A detailed miss can use its exact provider/model
-roll-up. It never uses another model or a fleet-wide fallback.
+the closed fleet window from 2026-06-23 through 2026-09-21 and the exclusive ingestion snapshot at
+2026-09-21 08:00 UTC, with a minimum of 200 observations and 5 organizations for every published
+cohort. The artifact contains detailed input/output token and streaming cohorts plus provider/model
+roll-ups. A detailed miss can use its exact provider/model roll-up. It never uses another model or a
+fleet-wide fallback.
 
 An exact provider/model pair that is absent from the artifact is unmeasured. If an applicable
 critical-path generation uses that pair, Speed does not publish. This includes a model introduced
@@ -78,10 +79,11 @@ result preserves score comparability and prevents a thin tenant-specific cohort 
 shared reference.
 
 Create a later freeze with `pnpm --filter @app/workers agent-score:calibrate-latency`. The command
-requires an inclusive `--since`, an exclusive `--until`, and a new `--artifact-version`. It writes
-the deterministic TypeScript artifact to stdout and the cohort and rejection report to stderr. A
-reviewed freeze replaces the bundled artifact and bumps the Agent Score scoring version. Score jobs
-never query live fleet distributions, so reference values change only through a reviewed release.
+requires an inclusive `--since`, an exclusive `--until`, an exclusive `--ingested-until` snapshot,
+and a new `--artifact-version`. It writes the deterministic TypeScript artifact to stdout and the
+cohort and rejection report to stderr. A reviewed freeze replaces the bundled artifact and bumps
+the Agent Score scoring version. Score jobs never query live fleet distributions, so reference
+values change only through a reviewed release.
 Run this before a new model becomes score-bearing when the fleet already has enough evidence, and
 rerun it when `missingLatencyReference` coverage shows that active models have reached the gates.
 
@@ -89,6 +91,7 @@ rerun it when `missingLatencyReference` coverage shows that active models have r
 pnpm --filter @app/workers agent-score:calibrate-latency -- \
   --since 2026-06-23T00:00:00.000Z \
   --until 2026-09-21T00:00:00.000Z \
+  --ingested-until 2026-09-21T08:00:00.000Z \
   --artifact-version latency-reference-v2-calibrated-20260921 \
   > packages/domain/agent-score/src/artifacts/launch-latency-reference-artifact.ts
 ```
