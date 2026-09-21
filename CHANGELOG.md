@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## v0.3.112 - 2026-09-21
+
+### Agent Score
+
+- Outcome and Safety no longer require the judged sample to cover a share of eligible traffic; the floor of fifty compatible verdicts is unchanged. That share floor was unreachable above roughly five thousand eligible sessions for Outcome and thirty thousand for Safety, because the sampler bounds evaluation spend to a fixed number of examined sessions. Large projects therefore reported Not Ready and, since the composite withholds all five dimensions when one is unmeasured, published no Agent Score at all. Scoring version moves to `agent-score-v6-provisional`; the estimator itself is unchanged, only the decision to publish (ref: #4705).
+- Score readiness no longer projects a completion date from the evaluation count, which is a rolling-window level rather than a running total and told permanently stalled projects they were days away. Outcome evidence also stopped counting deterministic failure-census sessions as judged samples (ref: #4705).
+- The Agent Score page now tracks scheduled and forced Temporal snapshot runs for the selected date: score data stays visible while a run is in flight, a progress notice persists until it finishes, duplicate refresh requests are disabled, and refreshing an already-complete snapshot reloads score, history, and evidence (ref: #4703).
+
+### Flaggers
+
+- Verdict deduplication now queries the published SYSTEM verdict for a generation directly instead of scanning a session's newest 200 scores. Busy sessions could miss an existing verdict for the same analysis hash, write a duplicate, and flip the Outcome dimension depending on which row the window kept (ref: #4650).
+
+### Signals
+
+- Signal promotion now persists score evidence on conflicting upserts, so dimensions classified during promotion are no longer discarded (ref: #4558).
+
 ## v0.3.111 - 2026-09-21
 
 ### Agent Score
