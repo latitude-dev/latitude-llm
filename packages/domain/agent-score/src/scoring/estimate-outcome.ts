@@ -12,6 +12,7 @@ export type OutcomeExclusionReason = (typeof OUTCOME_EXCLUSION_REASONS)[number]
 
 export type OutcomeIntervalMethod = StratifiedIntervalMethod
 
+/** `coverageFloor` has no producer; stored snapshots still carry it. */
 export type OutcomeUnmeasuredReason = "examinedFloor" | "coverageFloor"
 
 export interface OutcomeSessionVerdict {
@@ -125,13 +126,8 @@ export const estimateProjectOutcome = (input: EstimateProjectOutcomeInput): Proj
     deterministicFailureSessionIds: [...deterministic],
   }
 
-  const examinedShare = input.eligibleSessionCount > 0 ? base.examinedSessionCount / input.eligibleSessionCount : 0
-
   if (eligible.length < floors.examinedSessions) {
     return { ...base, coverage: "unmeasured", unmeasuredReason: "examinedFloor" }
-  }
-  if (examinedShare < floors.examinedShareOfEligible) {
-    return { ...base, coverage: "unmeasured", unmeasuredReason: "coverageFloor" }
   }
 
   // The deterministic stratum is a census of sessions that demonstrably failed,

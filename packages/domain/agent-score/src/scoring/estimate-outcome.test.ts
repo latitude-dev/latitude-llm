@@ -147,11 +147,11 @@ describe("estimateProjectOutcome", () => {
       expect(result.intervalMethod).toBeUndefined()
     })
 
-    it("names the coverage floor when the judged share is too thin", () => {
-      const result = estimate({ eligibleSessionCount: 100_000 })
+    it("names the examined floor one verdict below it", () => {
+      const result = estimate({ judgedSessions: verdicts({ successes: 40, failures: 9, inclusionProbability: 0.08 }) })
 
-      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "coverageFloor" })
-      expect(result.outcome).toBeUndefined()
+      expect(result.sampledSessionCount).toBe(49)
+      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" })
     })
 
     // Deterministic failures alone would otherwise publish a score of zero for a
@@ -165,12 +165,33 @@ describe("estimateProjectOutcome", () => {
       expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" })
       expect(result.outcome).toBeUndefined()
     })
+  })
+
+  describe("how much traffic the sample was drawn from", () => {
+    it("publishes the same score whatever the eligible base", () => {
+      const small = estimate({ eligibleSessionCount: 2_000 })
+      const large = estimate({ eligibleSessionCount: 100_000 })
+
+      expect(large.coverage).toBe("measured")
+      expect(large.outcome).toBe(small.outcome)
+    })
+
+    it("publishes for a large project whose judged share is far below five percent", () => {
+      const result = estimate({
+        eligibleSessionCount: 2_600,
+        judgedSessions: verdicts({ successes: 66, failures: 9, inclusionProbability: 0.08 }),
+      })
+
+      expect(result.sampledSessionCount / result.eligibleSessionCount).toBeLessThan(0.05)
+      expect(result.coverage).toBe("measured")
+      expect(result.outcome).toBeCloseTo(88, 10)
+    })
 
     it("does not divide by an empty eligible base", () => {
       const result = estimate({ eligibleSessionCount: 0 })
 
-      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "coverageFloor" })
-      expect(result.outcome).toBeUndefined()
+      expect(result.coverage).toBe("measured")
+      expect(result.outcome).toBeCloseTo(80, 10)
     })
   })
 })

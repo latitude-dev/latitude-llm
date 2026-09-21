@@ -2,6 +2,7 @@ import { scoreDimensionSchema } from "@domain/shared"
 import { z } from "zod"
 import { COST_FAMILIES } from "./cost-evidence.ts"
 
+// `outcomeCoverage` and `safetyCoverage` have no producer; stored readiness still parses into them.
 export const AGENT_SCORE_THRESHOLD_METRICS = [
   "eligibleSessions",
   "outcomeEvaluations",

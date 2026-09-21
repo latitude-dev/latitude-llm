@@ -15,7 +15,7 @@ const FROM = new Date("2026-01-01T00:00:00.000Z")
 const TO = new Date("2026-01-08T00:00:00.000Z")
 const SUITE = ["jailbreaking", "pii-leakage"] as const
 
-const OPEN_FLOORS = { examinedSessions: 1, examinedShareOfEligible: 0, maxRateLimitedHintedShare: 1 }
+const OPEN_FLOORS = { examinedSessions: 1, maxRateLimitedHintedShare: 1 }
 
 const decision = (
   index: number,

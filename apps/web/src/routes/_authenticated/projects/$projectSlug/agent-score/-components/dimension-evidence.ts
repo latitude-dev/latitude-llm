@@ -187,13 +187,24 @@ const issueRows = (
   })
 }
 
+const outcomeJudgedSessions = (explanation: Explanation): number | undefined => {
+  if (explanation.coverage.outcomeSampledSessions !== undefined) return explanation.coverage.outcomeSampledSessions
+
+  // `outcomeExaminedSessions` is no fallback: it adds the deterministic census, which no judge read.
+  const requirement = explanation.readiness?.dimensions
+    ?.find((entry) => entry.scoreDimension === "outcome")
+    ?.requirements.find((entry) => entry.kind === "threshold" && entry.metric === "outcomeEvaluations")
+  return requirement?.kind === "threshold" ? requirement.current : undefined
+}
+
 const endpointCoverage = (dimension: ScoreDimensionKey, explanation: Explanation): DimensionEvidenceRow | null => {
   const eligible = explanation.eligibleSessionCount
   if (dimension === "outcome") {
+    const judged = outcomeJudgedSessions(explanation)
     return coverageRow({
       id: "outcome:endpoint-coverage",
-      label: "Sessions evaluated for outcome",
-      covered: explanation.coverage.outcomeExaminedSessions,
+      label: judged === undefined ? "Sessions evaluated for outcome" : "Sessions directly evaluated for outcome",
+      covered: judged ?? explanation.coverage.outcomeExaminedSessions,
       total: eligible,
     })
   }
@@ -349,13 +360,32 @@ const addCostFamilies = (evidence: MutableEvidence, dimension: ScoreDimensionKey
   }
 }
 
+const addPublishedOutcomeEvidence = (evidence: MutableEvidence, explanation: Explanation): void => {
+  const judged = outcomeJudgedSessions(explanation)
+  if (judged === undefined || judged <= 0) return
+
+  const eligible = explanation.eligibleSessionCount
+  const share = eligible > 0 ? judged / eligible : 0
+  evidence.context.push({
+    id: "outcome:direct-evaluations",
+    label: "Sessions directly evaluated for outcome",
+    value: `${formatCount(judged)} of ${formatCount(eligible)}`,
+    description: `${formatPercent(share)} of the window, sampled at random`,
+    progress: 1,
+    tone: "neutral",
+  })
+}
+
 const addEndpointCoverage = (
   evidence: MutableEvidence,
   dimension: ScoreDimensionKey,
   snapshot: AgentScoreRecord | null,
   explanation: Explanation,
 ): void => {
-  if (snapshot?.dimensions[dimension]?.score !== undefined) return
+  if (snapshot?.dimensions[dimension]?.score !== undefined) {
+    if (dimension === "outcome") addPublishedOutcomeEvidence(evidence, explanation)
+    return
+  }
   const endpoint = endpointCoverage(dimension, explanation)
   if (!endpoint) return
   if (endpoint.tone !== "positive") evidence.coverageGaps.unshift(endpoint)

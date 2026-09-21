@@ -162,7 +162,7 @@ describe("one judged session across every Outcome layer", () => {
       deterministicFailureSessionIds: selectDeterministicOutcomeFailures([assessmentInput]),
       judgedSessions: [verdict],
       supportedJudgmentVersions: [JUDGMENT_VERSION],
-      floors: { examinedSessions: 1, examinedShareOfEligible: 0 },
+      floors: { examinedSessions: 1 },
     })
 
     // No deterministic endpoint on this session, so the judge is the only

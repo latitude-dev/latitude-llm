@@ -3,6 +3,7 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import {
   agentScoreExplanationCacheKey,
+  agentScoreExplanationSchema,
   latestAgentScoreExplanationCacheKey,
 } from "../entities/agent-score-explanation.ts"
 import { AgentScoreSnapshotRepository } from "../ports/agent-score-snapshot-repository.ts"
@@ -300,5 +301,52 @@ describe("cacheAgentScoreExplanation latest pointer", () => {
       cacheAgentScoreExplanation({ result: makeResult("2026-09-18"), date: "2026-09-18" }).pipe(Effect.provide(layer)),
     )
     expect(latestDateOf(store)).toBe("2026-09-18")
+  })
+})
+
+describe("explanations stored under an earlier scoring version", () => {
+  const v4 = {
+    ...EXPLANATION,
+    scoringVersion: "agent-score-v5-provisional",
+    publication: {
+      ...EXPLANATION.publication,
+      status: "withheld",
+      reason: "unmeasuredDimensions",
+      dimensions: [{ scoreDimension: "outcome", coverage: "unmeasured", unmeasuredReason: "coverageFloor" }],
+    },
+    readiness: {
+      ...EXPLANATION.readiness,
+      dimensions: [
+        {
+          scoreDimension: "outcome",
+          requirements: [
+            {
+              kind: "threshold",
+              metric: "outcomeCoverage",
+              current: 0.029,
+              required: 0.05,
+              comparison: "atLeast",
+              unit: "fraction",
+              met: false,
+            },
+          ],
+        },
+      ],
+    },
+  }
+
+  it("still decode, retired share requirement and all", () => {
+    const parsed = agentScoreExplanationSchema.safeParse(v4)
+
+    expect(parsed.success).toBe(true)
+    expect(parsed.data?.readiness.dimensions[0]?.requirements[0]).toMatchObject({ metric: "outcomeCoverage" })
+    expect(parsed.data?.publication.dimensions[0]).toMatchObject({ unmeasuredReason: "coverageFloor" })
+  })
+
+  it("decode without the judged-sample count, which only v6 writes", () => {
+    const parsed = agentScoreExplanationSchema.safeParse(v4)
+
+    expect(parsed.data?.coverage.outcomeSampledSessions).toBeUndefined()
+    expect(parsed.data?.coverage.outcomeExaminedSessions).toBe(400)
   })
 })

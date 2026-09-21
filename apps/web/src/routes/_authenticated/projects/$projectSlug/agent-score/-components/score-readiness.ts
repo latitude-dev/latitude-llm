@@ -57,6 +57,7 @@ const blockerMetric = (dimension: PublicationDimension): string | undefined => {
   if (reason === "examinedFloor") {
     return dimension.scoreDimension === "safety" ? "safetyEvaluations" : "outcomeEvaluations"
   }
+  // Only Reliability still produces `coverageFloor`; the other two are here for stored snapshots.
   if (reason === "coverageFloor") {
     if (dimension.scoreDimension === "safety") return "safetyCoverage"
     if (dimension.scoreDimension === "reliability") return "reliabilityCoverage"
@@ -75,9 +76,8 @@ const blockerMetric = (dimension: PublicationDimension): string | undefined => {
 }
 
 const requirementStatus = (requirement: ReadinessRequirement): string => {
-  if (requirement.metric === "outcomeEvaluations" || requirement.metric === "outcomeCoverage") {
-    return "Collecting evaluations"
-  }
+  if (requirement.metric === "outcomeEvaluations") return "Collecting direct evaluations"
+  if (requirement.metric === "outcomeCoverage") return "Collecting evaluations"
   if (requirement.metric === "safetyEvaluations" || requirement.metric === "safetyCoverage") {
     return "Collecting evaluations"
   }

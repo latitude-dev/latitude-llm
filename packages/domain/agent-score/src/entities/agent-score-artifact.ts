@@ -41,8 +41,6 @@ export type ScoreWindowSettings = z.infer<typeof scoreWindowSettingsSchema>
 export const outcomeCoverageFloorsSchema = z.object({
   /** Compatible sampled verdicts required before the rate means anything. */
   examinedSessions: z.number().int().nonnegative(),
-  /** Share of the eligible base the examined population must describe. */
-  examinedShareOfEligible: unitFractionSchema,
 })
 export type OutcomeCoverageFloors = z.infer<typeof outcomeCoverageFloorsSchema>
 
@@ -55,7 +53,6 @@ export type ReliabilityCoverageFloors = z.infer<typeof reliabilityCoverageFloors
 
 export const safetyCoverageFloorsSchema = z.object({
   examinedSessions: z.number().int().nonnegative(),
-  examinedShareOfEligible: unitFractionSchema,
   /**
    * How much of the hinted stratum may be lost to rate limiting before the missingness stops being
    * ignorable. Hinted Safety sessions are the ones most likely to contain harm, so dropping them

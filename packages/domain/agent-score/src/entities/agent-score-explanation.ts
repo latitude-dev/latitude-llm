@@ -137,7 +137,10 @@ export const agentScoreExplanationSchema = z.object({
     cost: costWindowGateSchema,
     speed: speedWindowGateSchema,
     readers: z.array(readerCoverageSchema).readonly(),
+    /** The judged sample plus the deterministic failure census. */
     outcomeExaminedSessions: z.number(),
+    /** The judged sample alone. Absent on stored explanations that predate the field. */
+    outcomeSampledSessions: z.number().optional(),
     safetyExaminedSessions: z.number(),
     reliabilityReadableSessions: z.number(),
     unmeasuredSignalEffects: z.number(),
@@ -194,6 +197,7 @@ export const toAgentScoreExplanation = ({
       speed: result.coverage.speed,
       readers: result.coverage.readers,
       outcomeExaminedSessions: result.coverage.outcome.examinedSessionCount,
+      outcomeSampledSessions: result.coverage.outcome.sampledSessionCount,
       safetyExaminedSessions: result.coverage.safety.examinedSessionCount,
       reliabilityReadableSessions: result.coverage.reliability.readableSessionCount,
       unmeasuredSignalEffects: result.coverage.unmeasuredSignalEffects,
