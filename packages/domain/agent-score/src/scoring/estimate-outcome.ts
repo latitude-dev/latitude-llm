@@ -12,11 +12,7 @@ export type OutcomeExclusionReason = (typeof OUTCOME_EXCLUSION_REASONS)[number]
 
 export type OutcomeIntervalMethod = StratifiedIntervalMethod
 
-/**
- * `coverageFloor` is no longer emitted: it required the examined population to be a share of
- * eligible traffic, which a count-targeted sampler cannot reach on a large project. The member
- * stays so snapshots written before v6 and carrying it still narrow to this type when read back.
- */
+/** `coverageFloor` has no producer; stored snapshots still carry it. */
 export type OutcomeUnmeasuredReason = "examinedFloor" | "coverageFloor"
 
 export interface OutcomeSessionVerdict {
@@ -130,10 +126,6 @@ export const estimateProjectOutcome = (input: EstimateProjectOutcomeInput): Proj
     deterministicFailureSessionIds: [...deterministic],
   }
 
-  // One floor, on the count of compatible verdicts. How large a share of the window they are is
-  // reported as coverage context and gates nothing: the judge is aimed at a fixed number of
-  // sessions, so that share necessarily falls as a project grows, and a floor under it would
-  // withhold hardest from the projects with the most evidence.
   if (eligible.length < floors.examinedSessions) {
     return { ...base, coverage: "unmeasured", unmeasuredReason: "examinedFloor" }
   }

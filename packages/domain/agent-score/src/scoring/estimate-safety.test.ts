@@ -265,8 +265,6 @@ describe("estimateProjectSafety coverage gates", () => {
     expect(result.interval).toBeUndefined()
   })
 
-  // The suite is aimed at a fixed number of examined sessions, so its share of a large project's
-  // traffic is small by construction and says nothing about whether the rate can be estimated.
   it("publishes when the examined population is a thin share of a large base", () => {
     const result = estimate(cleanSessions(10), {
       eligibleSessionCount: 100_000,

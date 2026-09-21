@@ -57,9 +57,7 @@ const blockerMetric = (dimension: PublicationDimension): string | undefined => {
   if (reason === "examinedFloor") {
     return dimension.scoreDimension === "safety" ? "safetyEvaluations" : "outcomeEvaluations"
   }
-  // Outcome and Safety stopped emitting `coverageFloor` in v6 — a share of eligible traffic is not
-  // something their count-targeted sampler can reach. Reliability still does, and an older
-  // snapshot still needs its blocker named, so the mapping stays.
+  // Only Reliability still produces `coverageFloor`; the other two are here for stored snapshots.
   if (reason === "coverageFloor") {
     if (dimension.scoreDimension === "safety") return "safetyCoverage"
     if (dimension.scoreDimension === "reliability") return "reliabilityCoverage"

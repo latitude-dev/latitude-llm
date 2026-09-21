@@ -191,8 +191,8 @@ const outcomeJudgedSessions = (explanation: Explanation): number | undefined => 
   if (explanation.coverage.outcomeSampledSessions !== undefined) return explanation.coverage.outcomeSampledSessions
 
   // `outcomeExaminedSessions` is no fallback: it adds the deterministic census, which no judge read.
-  const requirement = explanation.readiness.dimensions
-    .find((entry) => entry.scoreDimension === "outcome")
+  const requirement = explanation.readiness?.dimensions
+    ?.find((entry) => entry.scoreDimension === "outcome")
     ?.requirements.find((entry) => entry.kind === "threshold" && entry.metric === "outcomeEvaluations")
   return requirement?.kind === "threshold" ? requirement.current : undefined
 }

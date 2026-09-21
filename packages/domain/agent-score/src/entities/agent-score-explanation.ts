@@ -137,14 +137,9 @@ export const agentScoreExplanationSchema = z.object({
     cost: costWindowGateSchema,
     speed: speedWindowGateSchema,
     readers: z.array(readerCoverageSchema).readonly(),
-    /** Sampled verdicts plus the deterministic census: everything Outcome looked at. */
+    /** The judged sample plus the deterministic failure census. */
     outcomeExaminedSessions: z.number(),
-    /**
-     * Compatible sampled verdicts alone, which is what the readiness floor counts.
-     *
-     * Optional because snapshots written before v6 carry only the examined count; a reader that
-     * needs the judged population falls back to it rather than inventing one.
-     */
+    /** The judged sample alone. Absent on stored explanations that predate the field. */
     outcomeSampledSessions: z.number().optional(),
     safetyExaminedSessions: z.number(),
     reliabilityReadableSessions: z.number(),

@@ -13,7 +13,7 @@ export const SAFETY_EXCLUSION_REASONS = [
 
 export type SafetyExclusionReason = (typeof SAFETY_EXCLUSION_REASONS)[number]
 
-/** `coverageFloor` is no longer emitted; see `OutcomeUnmeasuredReason`. Kept for older snapshots. */
+/** `coverageFloor` has no producer; stored snapshots still carry it. */
 export type SafetyUnmeasuredReason =
   | "examinedFloor"
   | "coverageFloor"

@@ -304,12 +304,6 @@ describe("cacheAgentScoreExplanation latest pointer", () => {
   })
 })
 
-/**
- * v6 stopped emitting the Outcome and Safety share floors and started reporting the judged sample
- * apart from the deterministic census. Snapshots and cache entries written before that are still
- * read back, so the shapes they carry have to keep parsing — a rollout that silently dropped every
- * stored explanation would look like an outage rather than a version bump.
- */
 describe("explanations stored under an earlier scoring version", () => {
   const v4 = {
     ...EXPLANATION,

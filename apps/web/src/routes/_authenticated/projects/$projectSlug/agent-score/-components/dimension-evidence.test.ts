@@ -94,8 +94,6 @@ describe("buildDimensionEvidence", () => {
     expect(evidence.coverageGaps[0]).toMatchObject({ value: "75%" })
   })
 
-  // A stored explanation without the judged count still carries it on its readiness row, which is
-  // the one number the deterministic census never entered.
   it("reads the judged sample off readiness when coverage does not report it", () => {
     const evidence = buildDimensionEvidence({
       dimension: "outcome",
@@ -127,12 +125,6 @@ describe("buildDimensionEvidence", () => {
     expect(evidence.coverageGaps[0]).toMatchObject({ label: "Sessions evaluated for outcome", value: "90%" })
   })
 
-  /**
-   * Once Outcome publishes, its evaluated share is context rather than a gap — the judge reads a
-   * number of sessions, not a share of them, so a low share on a large project is the sampler
-   * working. The number is still shown, because a score with no visible evidence behind it gives a
-   * reader nothing to weigh it against.
-   */
   it("reports the judged sample as context once outcome has published", () => {
     const evidence = buildDimensionEvidence({
       dimension: "outcome",
@@ -154,8 +146,6 @@ describe("buildDimensionEvidence", () => {
     )
   })
 
-  // The census is not a sample, so counting it here would claim sessions were drawn at random that
-  // never were. Without a judged count the row says nothing rather than something untrue.
   it("counts only the judged sample in the published context row, never the census", () => {
     const published = (coverage: object, readiness: object) =>
       buildDimensionEvidence({
@@ -173,9 +163,19 @@ describe("buildDimensionEvidence", () => {
     expect(recovered.context).toContainEqual(expect.objectContaining({ value: "75 of 2,600" }))
 
     const unrecoverable = published({ outcomeExaminedSessions: 90 }, withoutJudgedCount)
-    expect(unrecoverable.context).not.toContainEqual(
-      expect.objectContaining({ id: "outcome:direct-evaluations" }),
-    )
+    expect(unrecoverable.context).not.toContainEqual(expect.objectContaining({ id: "outcome:direct-evaluations" }))
+  })
+
+  it("survives an explanation stored without a readiness block", () => {
+    const { readiness: _readiness, ...withoutReadiness } = explanation as Record<string, unknown>
+
+    expect(() =>
+      buildDimensionEvidence({
+        dimension: "outcome",
+        snapshot: { dimensions: { outcome: { score: 88 } } } as unknown as Snapshot,
+        explanation: withoutReadiness as unknown as Explanation,
+      }),
+    ).not.toThrow()
   })
 
   it("keeps family summaries out of causes and unreadable cost in coverage", () => {

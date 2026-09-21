@@ -124,14 +124,6 @@ describe("the launch Agent Score artifact", () => {
     })
   })
 
-  /**
-   * A scoring-version bump must not invalidate the verdicts already stored.
-   *
-   * The whole v6 rollout is a recomputation over existing evidence, which only works because a
-   * verdict's `scoringArtifactVersion` names the judge that produced it and nothing else. If the
-   * scoring version ever leaked into that identity, a bump would move every stored verdict into
-   * `incompatibleJudgmentVersion` and silently empty the sample.
-   */
   it("identifies supported judgments by judge alone, so a scoring-version bump keeps stored verdicts", () => {
     const supported = LAUNCH_AGENT_SCORE_ARTIFACT.supportedJudgmentVersions
 

@@ -26,9 +26,6 @@ export const LAUNCH_AGENT_SCORE_ARTIFACT = {
   referenceRuns: { reliability: 20, safety: 100 },
   window: { stepDays: [7, 14, 21, 28], sessionTarget: 50, sessionFloor: 50, hysteresisMargin: 0.1 },
   dimensionFloors: {
-    // A count and no share: the sampler targets a fixed number of examined sessions, so a share
-    // requirement is unreachable on exactly the large projects it would govern. See
-    // `outcomeCoverageFloorsSchema`.
     outcome: { examinedSessions: 50 },
     // A census rather than a sample, so the bar is how much of the base could be read at all.
     reliability: { readableSessions: 50, readableShareOfEligible: 0.8 },

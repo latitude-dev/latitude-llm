@@ -2,13 +2,7 @@ import { scoreDimensionSchema } from "@domain/shared"
 import { z } from "zod"
 import { COST_FAMILIES } from "./cost-evidence.ts"
 
-/**
- * `outcomeCoverage` and `safetyCoverage` are no longer emitted.
- *
- * They required the examined population to be a share of eligible traffic, which a count-targeted
- * sampler cannot reach on a large project. They stay in the list so readiness stored under an
- * earlier scoring version still parses; nothing produces them.
- */
+// `outcomeCoverage` and `safetyCoverage` have no producer; stored readiness still parses into them.
 export const AGENT_SCORE_THRESHOLD_METRICS = [
   "eligibleSessions",
   "outcomeEvaluations",

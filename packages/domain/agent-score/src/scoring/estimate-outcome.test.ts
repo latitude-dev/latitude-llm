@@ -167,9 +167,6 @@ describe("estimateProjectOutcome", () => {
     })
   })
 
-  // The sampler aims the judge at a fixed number of sessions so a large project's cost stays
-  // bounded, which means the judged share necessarily falls as traffic grows. A floor under that
-  // share would withhold hardest from the projects carrying the most evidence, so there is none.
   describe("how much traffic the sample was drawn from", () => {
     it("publishes the same score whatever the eligible base", () => {
       const small = estimate({ eligibleSessionCount: 2_000 })
@@ -179,8 +176,6 @@ describe("estimateProjectOutcome", () => {
       expect(large.outcome).toBe(small.outcome)
     })
 
-    // The reported production shape: 2,600 eligible sessions, an 8% derived rate, and 75 verdicts
-    // surviving to the estimator. Under a five-percent share floor this project published nothing.
     it("publishes for a large project whose judged share is far below five percent", () => {
       const result = estimate({
         eligibleSessionCount: 2_600,
@@ -192,8 +187,6 @@ describe("estimateProjectOutcome", () => {
       expect(result.outcome).toBeCloseTo(88, 10)
     })
 
-    // Nothing divides by it any more, so a base that contradicts its own sample cannot produce a
-    // number the rate was never a function of.
     it("does not divide by an empty eligible base", () => {
       const result = estimate({ eligibleSessionCount: 0 })
 

@@ -62,8 +62,6 @@ export const buildAgentScoreReadiness = ({
       {
         scoreDimension: "outcome",
         requirements: [
-          // The only Outcome requirement. Its share of the window is coverage context, not a bar:
-          // the judge is aimed at a fixed number of sessions, so the share falls as a project grows.
           atLeast({
             metric: "outcomeEvaluations",
             current: coverage.outcome.sampledSessionCount,

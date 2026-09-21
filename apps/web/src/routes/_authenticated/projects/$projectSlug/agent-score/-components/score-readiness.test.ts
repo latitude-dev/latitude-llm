@@ -65,11 +65,6 @@ const outcomeRow = (explanation: Explanation) => {
 }
 
 describe("agentScoreReadiness", () => {
-  /**
-   * The shape this change exists for: 75 verdicts out of 2,600 eligible sessions is a 2.9% share,
-   * and the judge is aimed at a count rather than a share, so that share is the sampler working as
-   * designed. The dimension is ready.
-   */
   it("reports outcome ready on a large project whose judged share is far below five percent", () => {
     const row = outcomeRow(explanation({ outcomeEvaluations: { current: 75, required: 50 } }))
 
@@ -87,8 +82,7 @@ describe("agentScoreReadiness", () => {
     expect(row?.value).not.toContain("%")
   })
 
-  // The count is a rolling-window level, not a running total: a project steady at 37 verdicts per
-  // window stays at 37, so no arrival rate can be read off it and no completion date is offered.
+  // 37 verdicts per seven-day window is a level, not a running total: next week it is 37 again.
   it("offers no completion estimate, because the count does not accumulate", () => {
     const row = outcomeRow(
       explanation({
@@ -101,12 +95,6 @@ describe("agentScoreReadiness", () => {
     expect(row?.value).toBe("37 / 50 evaluated")
   })
 
-  /**
-   * A snapshot stored under an earlier scoring version can still carry the retired share
-   * requirement and the
-   * `coverageFloor` reason it produced. The page has to name its blocker rather than fall through
-   * to a generic message.
-   */
   it("still renders an older snapshot withheld on the retired outcome share floor", () => {
     const row = outcomeRow(
       explanation({
@@ -135,7 +123,6 @@ describe("agentScoreReadiness", () => {
     )
 
     expect(row).toMatchObject({ state: "collecting", status: "Collecting evaluations" })
-    // The exact string the reported project showed before this change.
     expect(row?.value).toBe("2.9% / 5.0% coverage")
   })
 })
