@@ -26,6 +26,14 @@ computation requirements. The date is stored in the route's `date` search parame
 selected date, the page opens the latest published score through today. If no score exists, it
 opens today. The latest lookup has no history-range limit.
 
+The page reads the Temporal descriptions for both the scheduled and forced workflow IDs for the
+selected date. Any non-terminal execution is shown as an in-progress calculation, including after
+a reload or navigation back to the page. The page polls more often while work is active and keeps a
+lower-frequency check while it is idle so externally started calculations also appear. During a
+calculation, Refresh is disabled and the current score and evidence remain visible. The workflow
+run and status form a query marker, so score, history, and evidence reload when the execution
+changes state. Placeholder data is reused only for the same UTC date.
+
 A selected date uses an exact snapshot lookup. An unscored date never borrows an older score.
 The 7-day or 30-day history graph ends on the selected date. Missing days remain gaps. A published
 selected date shows the graph, even when today's computation is pending. Dates without a score

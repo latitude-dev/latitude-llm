@@ -15,9 +15,10 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
-import { getPostgresClient, getRedisClient, getWorkflowStarter } from "../../server/clients.ts"
+import { getPostgresClient, getRedisClient, getWorkflowQuerier, getWorkflowStarter } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
+import { type AgentScoreComputationRecord, toAgentScoreComputationRecord } from "./agent-score-computation.ts"
 import { agentScoreDateSchema } from "./agent-score-date.ts"
 
 export interface AgentScoreRecord {
@@ -91,6 +92,41 @@ export interface AgentScoreExplanationRecord {
   readonly status: "ready" | "notComputed"
   readonly explanation: AgentScoreExplanation | null
 }
+
+export const getProjectAgentScoreComputation = createServerFn({ method: "GET" })
+  .inputValidator(projectInput)
+  .handler(async ({ data, context }): Promise<AgentScoreComputationRecord> => {
+    const orgId = await resolveOrgScope(context)
+    const projectId = ProjectId(data.projectId)
+    const date =
+      data.date ??
+      (
+        await Effect.runPromise(
+          getAgentScoreForDate({ organizationId: orgId, projectId }).pipe(
+            withScopedPostgres(AgentScoreSnapshotRepositoryLive, getPostgresClient(), orgId),
+            withTracing,
+          ),
+        )
+      ).date
+    const workflowQuerier = await getWorkflowQuerier()
+    const descriptions = await Effect.runPromise(
+      Effect.all(
+        [false, true].map((force) =>
+          workflowQuerier.describe(
+            agentScoreSnapshotWorkflowId({
+              organizationId: orgId,
+              projectId,
+              date,
+              force,
+            }),
+          ),
+        ),
+        { concurrency: "unbounded" },
+      ).pipe(withTracing),
+    )
+
+    return toAgentScoreComputationRecord({ date, descriptions })
+  })
 
 export const getProjectAgentScoreExplanation = createServerFn({ method: "GET" })
   .inputValidator(datedProjectInput)
