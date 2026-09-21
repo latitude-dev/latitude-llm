@@ -105,34 +105,6 @@ const requirementStatus = (requirement: ReadinessRequirement): string => {
   return "Collecting data"
 }
 
-/**
- * Metrics that close by waiting, so a date can be offered for them.
- *
- * The two sampled dimensions fill up as traffic arrives. A readable-telemetry or timing gap does
- * not, and projecting one would promise something more traffic cannot deliver.
- */
-const TRAFFIC_FILLED_METRICS: ReadonlySet<string> = new Set(["outcomeEvaluations", "safetyEvaluations"])
-
-/** Beyond this the projection stops being useful and starts being a number nobody should plan on. */
-const MAX_PROJECTED_DAYS = 30
-
-/**
- * How long the window needs to reach a count, at the rate it has been filling.
- *
- * The current count accrued over the window's own length, so that is the rate to carry forward.
- * Silent rather than wrong: no evaluations yet means no rate to project from.
- */
-const daysToRequirement = (requirement: ReadinessRequirement, windowDays: number): number | undefined => {
-  if (requirement.kind !== "threshold" || !TRAFFIC_FILLED_METRICS.has(requirement.metric)) return undefined
-  if (requirement.current <= 0 || windowDays <= 0) return undefined
-
-  const remaining = requirement.required - requirement.current
-  if (remaining <= 0) return undefined
-
-  const days = Math.ceil((remaining * windowDays) / requirement.current)
-  return days > MAX_PROJECTED_DAYS ? undefined : days
-}
-
 const requirementValue = (requirement: ReadinessRequirement): string => {
   if (requirement.kind === "availability") return requirement.met ? "Available" : "Missing"
   if (requirement.comparison === "atMost") {
@@ -170,17 +142,12 @@ const rowForDimension = (dimension: ScoreDimensionKey, explanation: Explanation)
     return { dimension, label: DIMENSION_LABELS[dimension], state: "collecting", status: "Waiting for evidence" }
   }
 
-  const days = daysToRequirement(requirement, explanation.window.stepDays)
-
   return {
     dimension,
     label: DIMENSION_LABELS[dimension],
     state: ACTION_NEEDED_METRICS.has(requirement.metric) ? "actionNeeded" : "collecting",
     status: requirementStatus(requirement),
-    value:
-      days === undefined
-        ? requirementValue(requirement)
-        : `${requirementValue(requirement)} · about ${days} ${days === 1 ? "day" : "days"} left`,
+    value: requirementValue(requirement),
   }
 }
 

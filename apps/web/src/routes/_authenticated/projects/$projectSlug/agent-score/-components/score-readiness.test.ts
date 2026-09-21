@@ -83,12 +83,13 @@ describe("agentScoreReadiness", () => {
     )
 
     expect(row).toMatchObject({ state: "collecting", status: "Collecting direct evaluations" })
-    expect(row?.value).toContain("37 / 50 evaluated")
+    expect(row?.value).toBe("37 / 50 evaluated")
     expect(row?.value).not.toContain("%")
   })
 
-  // 13 verdicts short, filling at 37 per 7 days, so roughly three more days of traffic.
-  it("projects how long the window still needs, from the rate it has been filling at", () => {
+  // The count is a rolling-window level, not a running total: a project steady at 37 verdicts per
+  // window stays at 37, so no arrival rate can be read off it and no completion date is offered.
+  it("offers no completion estimate, because the count does not accumulate", () => {
     const row = outcomeRow(
       explanation({
         outcomeEvaluations: { current: 37, required: 50 },
@@ -97,15 +98,7 @@ describe("agentScoreReadiness", () => {
       }),
     )
 
-    expect(row?.value).toBe("37 / 50 evaluated · about 3 days left")
-  })
-
-  it("offers no projection before any evaluation has landed, because there is no rate yet", () => {
-    const row = outcomeRow(
-      explanation({ outcomeEvaluations: { current: 0, required: 50 }, outcomeUnmeasuredReason: "examinedFloor" }),
-    )
-
-    expect(row?.value).toBe("0 / 50 evaluated")
+    expect(row?.value).toBe("37 / 50 evaluated")
   })
 
   /**
