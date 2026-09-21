@@ -189,6 +189,7 @@ export const adminRecalculateAgentScore = createServerFn({ method: "POST" })
                   organizationId: project.organization.id,
                   projectId: project.id,
                   date: taskDate,
+                  force: true,
                 }),
               },
             )
