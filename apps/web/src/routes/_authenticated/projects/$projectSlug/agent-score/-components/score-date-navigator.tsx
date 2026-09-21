@@ -1,4 +1,4 @@
-import { Button, Icon, Input, Text } from "@repo/ui"
+import { Button, Icon, Input } from "@repo/ui"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { agentScoreDateSchema } from "../../../../../../domains/agent-score/agent-score-date.ts"
 
@@ -20,7 +20,6 @@ export function ScoreDateNavigator({
   const today = new Date().toISOString().slice(0, 10)
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Text.H6 color="foregroundMuted">Score date (UTC)</Text.H6>
       <div className="flex items-center gap-1">
         <Button
           variant="outline"
