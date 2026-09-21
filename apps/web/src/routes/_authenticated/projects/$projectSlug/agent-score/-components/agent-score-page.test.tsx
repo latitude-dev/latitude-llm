@@ -10,6 +10,7 @@ import {
   getProjectAgentScoreComputation,
   getProjectAgentScoreExplanation,
   getProjectAgentScoreHistory,
+  refreshProjectAgentScore,
 } from "../../../../../../domains/agent-score/agent-score.functions.ts"
 import { AgentScorePage } from "./agent-score-page.tsx"
 
@@ -76,6 +77,7 @@ beforeEach(() => {
     status: "idle",
     marker: "none",
   })
+  vi.mocked(refreshProjectAgentScore).mockResolvedValue({ enqueued: false, date: snapshot.date })
 })
 
 afterEach(() => {
@@ -98,6 +100,20 @@ describe("AgentScorePage date selection", () => {
     expect(screen.getByText("This can take several minutes. You can leave this page and return later.")).toBeDefined()
     expect(screen.getByText("Score evolution")).toBeDefined()
     expect((screen.getByRole("button", { name: "Refresh" }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it("reloads displayed data when refresh does not enqueue a workflow", async () => {
+    renderPage()
+    await screen.findByText("Score evolution")
+    const scoreCalls = vi.mocked(getProjectAgentScore).mock.calls.length
+    const historyCalls = vi.mocked(getProjectAgentScoreHistory).mock.calls.length
+    const explanationCalls = vi.mocked(getProjectAgentScoreExplanation).mock.calls.length
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }))
+
+    await waitFor(() => expect(vi.mocked(getProjectAgentScore).mock.calls.length).toBeGreaterThan(scoreCalls))
+    expect(vi.mocked(getProjectAgentScoreHistory).mock.calls.length).toBeGreaterThan(historyCalls)
+    expect(vi.mocked(getProjectAgentScoreExplanation).mock.calls.length).toBeGreaterThan(explanationCalls)
   })
 
   it("shows the latest published date and its trend when today has no score", async () => {

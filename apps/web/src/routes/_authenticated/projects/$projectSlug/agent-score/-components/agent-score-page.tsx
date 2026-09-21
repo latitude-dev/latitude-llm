@@ -74,8 +74,12 @@ export function AgentScorePage({
     }
     setIsStartingRefresh(true)
     try {
-      await refreshProjectAgentScore({ data: { projectId: project.id, date } })
-      await computationQuery.refetch()
+      const { enqueued } = await refreshProjectAgentScore({ data: { projectId: project.id, date } })
+      if (enqueued) {
+        await computationQuery.refetch()
+      } else {
+        await Promise.all([scoreQuery.refetch(), historyQuery.refetch(), explanationQuery.refetch()])
+      }
     } catch (error) {
       toast({
         variant: "destructive",
