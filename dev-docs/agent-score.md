@@ -64,12 +64,15 @@ A forced calculation can refresh legacy cached evidence but cannot rewrite the p
 
 ## Evidence requirements
 
-`agent-score-v5-provisional` uses 50 eligible sessions for both the window target and publication
-minimum. Outcome requires 50 compatible verdicts, Reliability requires 50 readable sessions, Speed
-requires 50 complete critical paths, and Safety requires 50 compatible evaluations. Percentage
-coverage requirements are unchanged. Window selection still uses whole-week steps and hysteresis.
-Historical snapshots retain their original scoring versions; the trend marks a range that crosses
-versions.
+`agent-score-v6-provisional` uses 50 eligible sessions for both the window target and publication
+minimum. Outcome requires 50 compatible task-failure verdicts, Reliability requires 50 readable
+sessions at 80% of the eligible base, Speed requires 50 complete critical paths at 50% of the
+eligible base, and Safety requires 50 compatible suite examinations with at most 10% rate-limited
+hinted share. Outcome and Safety no longer gate on a share of eligible traffic — the sampler caps
+examined sessions to a fixed budget, so a traffic-share floor became unreachable above roughly five
+thousand eligible sessions for Outcome and thirty thousand for Safety, withholding the composite on
+large projects. Window selection still uses whole-week steps and hysteresis. Historical snapshots
+retain their original scoring versions; the trend marks a range that crosses versions.
 
 ## Frozen latency references
 

@@ -19,7 +19,7 @@ The public API exposes flaggers only on `PATCH project` (`flaggers: partialRecor
 
 ## The strategy registry
 
-`FLAGGER_STRATEGY_SLUGS` / `STRATEGY_REGISTRY` (`flagger-strategies/`): **14 strategies** — 10 LLM-capable, 4 deterministic-only, of which `trashing` is a hybrid. The slug `trashing` is a **frozen historical typo** (persisted in DB, ClickHouse, and the public API); the display name is "Thrashing" — never rename the slug.
+`FLAGGER_STRATEGY_SLUGS` / `STRATEGY_REGISTRY` (`flagger-strategies/`): **15 strategies** — 11 LLM-capable, 4 deterministic-only, of which `trashing` is a hybrid. The slug `trashing` is a **frozen historical typo** (persisted in DB, ClickHouse, and the public API); the display name is "Thrashing" — never rename the slug.
 
 | Slug | Display | Judges | Mode | Deterministic outcome | `hintKinds` | `suppressedBy` |
 |------|---------|--------|------|----------------------|-------------|----------------|
@@ -37,6 +37,7 @@ The public API exposes flaggers only on `PATCH project` (`flaggers: partialRecor
 | `output-schema-validation` | Output schema validation | assistant JSON text | Det | truncated/unparseable JSON → `matched` | — | — |
 | `empty-response` | Empty response | last assistant turn | Det | empty/degenerate → `matched` | — | — |
 | `low-cache-hit-rate` | Low cache hit rate | token aggregates | Det | hit-rate <30% on large multi-turn → `matched` | — | — |
+| `task-failure` | Task failure | whole session | LLM | — | — | — |
 
 ### Strategy shape
 
@@ -47,6 +48,8 @@ Strategy modules embed multi-KB system prompts, so they are **server-only**: the
 `FlaggerStrategy` (`flagger-strategies/types.ts`): `hasRequiredContext`, optional `detectDeterministically` (→ `matched | unmatched`), `buildSystemPrompt`/`buildPrompt`/`annotator` for LLM strategies, `details` for deterministic-only display, `classifiesAssistantResponseOnly` (default `true`; `false` for user/input-centric strategies — drives the targeting guidance in classifier and reviewer prompts), `suppressedBy`, `hintKinds`, optional `isHintedBy` override, and optional `validateMatch` — a code-level gate on LLM matches, enforced after classification and before the adversarial review. Independently of `validateMatch`, assistant-response-centric strategies also reject any match whose `messageIndex` points at a non-assistant transcript line (reflag classifiers otherwise latch onto nested evidence inside the classify user prompt).
 
 `incompletion` judges **closed task episodes** only: an assistant response with a *later user reaction* evidencing whether the task was delivered. Session-end is arbitrary (the session may keep growing after a screen), so the latest assistant response is structurally unflaggable — its `validateMatch` rejects any match not citing a closed episode's assistant index, which also blocks the index-less anchor fallback (the last assistant message). A later re-screen judges that turn once the user has reacted, and the content-anchor dedup keeps repeat convictions single.
+
+`task-failure` is the Agent Score Outcome reference judge: a holistic session verdict (`success`, `failure`, `indeterminate`, `notApplicable`) with no `hintKinds`, so every readable session shares one uniform sampling stratum. Unlike defect detectors it persists **passed** scores as well as failures, and successful verdicts feed Outcome without rendering as green annotation cards. See [`./agent-score.md`](./agent-score.md).
 
 **Suppression** (`suppressedBy`): declared on the suppressed strategy; each entry is a suppressor slug or `{ slug, whenHintedBy }`. A suppressor triggers when it is `matched`, or `hinted` (started or rate-limited) — for qualified entries only when one of the edge's `whenHintedBy` kinds fired, so a weak escalation lead does not mute the suppressed strategy. Validated by `assertFlaggerRegistryValid` (run from tests, not at module load): one level deep (suppressors run in phase 1, suppressed strategies in phase 2) and `whenHintedBy` ⊆ the suppressor's `hintKinds`. Edges: `refusal` ← `jailbreaking`/`nsfw` (any hint — their single pattern hint is direct evidence of the ask being adversarial); `laziness` ← `trashing` `whenHintedBy: [tool:loop]` (a stuck loop is a different failure than punting work, but a lone `tool:error` or a `moment:stalling` — also laziness's own hint — is not loop evidence).
 
@@ -81,7 +84,25 @@ trace-end (90s debounce) ─► session-end (5-min session debounce)
 | `unmatched` | yes | no | sample at `flagger.sampling` → rate limit (sampled bucket) → start classification |
 | `unmatched` | no | — | dropped |
 
+5. **Jev preclassifier** (optional): when globally and per-org enabled, `runJevPreclassifierUseCase` may upgrade `sampled-out` LLM strategies to `classify` with reason `jev-preclassifier` (see below). Hinted and deterministic paths are unchanged.
+
 The activity logs one summary line per pass (decision counts, fired hint kinds, started classifications) — the hinted-vs-sampled match-rate comparison is readable off plain logs; there is no dedicated analytics pipeline.
+
+### Jev preclassifier
+
+An optional session-level pre-classifier that routes **sampled-out** LLM flaggers into the classification pass when Jev's probability estimate meets the threshold. It runs after the baseline two-phase fan-out and before screening decisions are persisted. Jev never overrides a `matched` or `hinted` decision.
+
+**Enablement** requires all three gates: `LAT_JEV_FLAGGER_PRECLASSIFIER_ENABLED=true`, `LAT_JEV_API_KEY` set, and the per-organization `jevFlaggerPreclassifier` feature flag (`isJevFlaggerPreclassifierEnabledForOrganization` in `flagger-session-activities.ts`). Any gate failure disables the pass. Provider, audit, or feature-flag lookup failures are fail-closed — baseline screening continues with the pre-Jev decisions.
+
+`runJevPreclassifierUseCase` (`use-cases/run-jev-preclassifier.ts`) issues one batched `decideMany` call against the session conversation for every slug in `JEV_PRECLASSIFIER_STRATEGY_SLUGS` (the 11 defect detectors plus `task-failure`). Each question uses threshold `0.5` (`JEV_PRECLASSIFIER_THRESHOLD`). A sampled-out session whose probability clears the threshold is upgraded to `classify` with reason `jev-preclassifier` and inclusion probability `1`. Sessions already headed to classify via hint or ordinary sample get propensity correction only: when Jev would also have gated in, `inclusionProbability` is raised to `1` without enqueueing a duplicate classification.
+
+**Safety suite**: `jailbreaking` and `pii-leakage` share one rate-limit bucket (`safety-suite`) and admit together or not at all — gating only a subset would leave Safety's examined population incomplete.
+
+**Rate limiting** reuses the sampled buckets (`sampled` / `sampled-positive` depending on positive hints); `jev-preclassifier` is not a fourth hinted bucket.
+
+**Billing**: one `llm-call` per `decideMany` response, metered under `source: "jev-preclassifier"`. Classification charges are unchanged.
+
+**Observability**: every strategy evaluation appends a row to ClickHouse `flagger_jev_preclassifier_observations` (90-day retention) with probability, threshold decision (`gated-in` / `below-threshold` / `unknown`), provider metadata, and whether classify was added. Screening decisions record selection reason `jev-preclassifier` in the public coverage API.
 
 ### Screening decision history
 
