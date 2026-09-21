@@ -39,7 +39,7 @@ This keeps a sandbox free and fast, and means none of your development traffic t
 
 You instrument your code with the **same project names everywhere** — the API key decides where the traces land. Inside a sandbox you add the production projects you want to debug (which links them by stable id), or create sandbox-only projects for prototyping.
 
-The only thing you change when developing against a sandbox is the **API key**. Sandbox keys are created from inside the sandbox and are prefixed **`lat_sandbox_`**, so they're easy to spot in code, logs, and review:
+The only thing you change when developing against a sandbox is the **API key**. Each sandbox gets its own key, prefixed **`lat_sandbox_`** so it's easy to spot in code, logs, and review. Find it inside the sandbox, under **Sandbox configuration** (it's also shown on the traces empty state, next to the project slug) — the keys listed under **Settings → Keys** belong to your live organization, never to the sandbox.
 
 ```bash
 # Production
@@ -50,6 +50,27 @@ LATITUDE_API_KEY=lat_sandbox_...
 ```
 
 A sandbox key can only ever write to its sandbox, and a production key can only ever write to production — the key is the boundary. Sending a trace to a project the sandbox doesn't have is **rejected** (just as production rejects unknown projects), so there's never a silently created typo project.
+
+## Querying a sandbox from the CLI or an agent
+
+The same `lat_sandbox_` key also **reads** the sandbox over the [API](https://api.latitude.so/docs) and the [CLI](/getting-started/cli) — the key alone decides which environment you're talking to, on reads exactly as on writes. So an agent can pull a dev trace and investigate it, instead of you pasting screenshots:
+
+```bash
+# `LATITUDE_API_KEY` beats the keyring, so this points the shell at the sandbox
+export LATITUDE_API_KEY=lat_sandbox_...
+
+latitude traces list --project-slug my-app --format json
+latitude traces get --project-slug my-app --trace-id <traceId> --format json
+```
+
+Two things follow from the key being the boundary:
+
+- Your **live** key reads only live data. For a project the sandbox mirrors, the query that works in the sandbox comes back as an empty page under a live key; for a sandbox-only project, it's a `404`, because that slug doesn't exist in your live organization. Either way, if your development traces look invisible from the API, check the key prefix first.
+- A sandbox key is an ordinary organization-scoped key, not a trace-only one — the whole API surface is reachable with it. What a sandbox lacks is the data the [monitoring layer](#whats-available-in-a-sandbox) would have produced: no detected signals, no search index, no monitor or evaluation results. Those endpoints answer empty (or `404` on a point lookup) because nothing ran, not because they're blocked.
+
+<Warning>
+  The [MCP server](/getting-started/mcp) can't reach a sandbox. It authenticates with OAuth, and an OAuth token binds to an organization you're a member of — which is always your live org. For agents working against a sandbox, use the CLI (or the REST API with the sandbox key) instead.
+</Warning>
 
 ## Differences from production
 
