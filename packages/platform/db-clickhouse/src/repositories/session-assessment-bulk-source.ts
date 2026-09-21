@@ -14,6 +14,7 @@ import { MemoryRepository } from "@domain/memories"
 import { TraceId } from "@domain/shared"
 import { SessionRepository, SpanRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
+import { eligibleSessionPartitionFrom } from "./eligible-sessions.ts"
 
 const groupByKey = <Value>(
   items: readonly Value[],
@@ -61,7 +62,12 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
             ),
           )
           const scope = { organizationId: input.organizationId, projectId: input.projectId }
-          const traceScope = { ...scope, traceIds, startTimeTo: input.cutoff }
+          const traceScope = {
+            ...scope,
+            traceIds,
+            startTimeFrom: eligibleSessionPartitionFrom(input.cutoff),
+            startTimeTo: input.cutoff,
+          }
           const sessionScope = { ...scope, sessionIds: input.sessionIds, indexedAtTo: input.cutoff }
 
           const [spans, generations, toolCalls, memoryEvents, analyses, moments, labels, screeningDecisions] =

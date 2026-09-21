@@ -413,6 +413,7 @@ export interface SpanRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]
+    readonly startTimeFrom?: Date
     readonly startTimeTo?: Date
     readonly contentBudget: GenerationContentBudget
     /** Maps a trace to the session whose budget its payloads draw from. */
@@ -429,6 +430,7 @@ export interface SpanRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]
+    readonly startTimeFrom?: Date
     readonly startTimeTo?: Date
   }): Effect.Effect<readonly SessionToolCallFact[], RepositoryError, ChSqlClient>
 }
