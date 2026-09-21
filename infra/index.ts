@@ -31,6 +31,7 @@ const datadogSlackAlertHandle = config.get("datadogSlackAlertHandle") ?? "@slack
 const enableDatadogSynthetics = config.getBoolean("enableDatadogSynthetics") ?? false
 const enableMaintenanceRedirect = config.getBoolean("enableWebMaintenanceRedirect") ?? false
 const enableDnssecSigning = config.getBoolean("enableDnssecSigning") ?? false
+const enableJevFlaggerPreclassifier = config.getBoolean("enableJevFlaggerPreclassifier") ?? false
 
 const temporalCloudAddress = config.get("temporalCloudAddress") ?? `${envConfig.region}.aws.api.temporal.io:7233`
 const temporalCloudNamespace = config.get("temporalCloudNamespace") ?? ""
@@ -132,6 +133,7 @@ const ecs = createEcs(
     namespace: temporalCloudNamespace,
     taskQueue: temporalTaskQueue,
   },
+  enableJevFlaggerPreclassifier,
 )
 
 const datadogSynthetics = environment === "production" && enableDatadogSynthetics
