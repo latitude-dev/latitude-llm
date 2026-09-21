@@ -14,7 +14,6 @@ import { MemoryRepository } from "@domain/memories"
 import { TraceId } from "@domain/shared"
 import { SessionRepository, SpanRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
-import { eligibleSessionPartitionFrom } from "./eligible-sessions.ts"
 
 const groupByKey = <Value>(
   items: readonly Value[],
@@ -56,6 +55,10 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
             cutoff: input.cutoff,
           })
           const traceIds = [...new Set(sessions.flatMap((session) => session.traceIds.map(TraceId)))]
+          const traceStartTimeFrom = sessions.reduce(
+            (earliest, session) => (session.startTime < earliest ? session.startTime : earliest),
+            input.cutoff,
+          )
           const sessionByTraceId = new Map(
             sessions.flatMap((session) =>
               session.traceIds.map((traceId) => [String(traceId), String(session.sessionId)] as const),
@@ -65,7 +68,7 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
           const traceScope = {
             ...scope,
             traceIds,
-            startTimeFrom: eligibleSessionPartitionFrom(input.cutoff),
+            startTimeFrom: traceStartTimeFrom,
             startTimeTo: input.cutoff,
           }
           const sessionScope = { ...scope, sessionIds: input.sessionIds, indexedAtTo: input.cutoff }

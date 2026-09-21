@@ -33,13 +33,14 @@ const projectId = ProjectId("project-1")
 const sessionId = SessionId("session-1")
 const traceId = TraceId("trace-1")
 const cutoff = new Date("2026-01-02T00:00:00.000Z")
-const traceStartTimeFrom = new Date("2025-10-04T00:00:00.000Z")
+const traceStartTimeFrom = new Date("2025-01-01T00:00:00.000Z")
 const analysisHash = "a".repeat(64)
 const session = {
   organizationId,
   projectId,
   sessionId,
   traceIds: [traceId],
+  startTime: traceStartTimeFrom,
   outputMessages: [],
 } as unknown as SessionDetail
 
@@ -64,6 +65,7 @@ const otherSession = {
   projectId,
   sessionId: otherSessionId,
   traceIds: [otherTraceId],
+  startTime: new Date("2026-01-01T00:00:00.000Z"),
   outputMessages: [],
 } as unknown as SessionDetail
 
