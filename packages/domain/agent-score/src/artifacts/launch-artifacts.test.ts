@@ -108,7 +108,7 @@ describe("the launch Agent Score artifact", () => {
   })
 
   it("uses the provisional launch window and coverage floors", () => {
-    expect(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion).toBe("agent-score-v5-provisional")
+    expect(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion).toBe("agent-score-v6-provisional")
     expect(LAUNCH_AGENT_SCORE_ARTIFACT.window).toEqual({
       stepDays: [7, 14, 21, 28],
       sessionTarget: 50,
@@ -116,12 +116,30 @@ describe("the launch Agent Score artifact", () => {
       hysteresisMargin: 0.1,
     })
     expect(LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors).toEqual({
-      outcome: { examinedSessions: 50, examinedShareOfEligible: 0.05 },
+      outcome: { examinedSessions: 50 },
       reliability: { readableSessions: 50, readableShareOfEligible: 0.8 },
       cost: { publishableSessionShare: 0.8 },
       speed: { completeCriticalPathSessions: 50, completeCriticalPathShareOfEligible: 0.5 },
-      safety: { examinedSessions: 50, examinedShareOfEligible: 0.05, maxRateLimitedHintedShare: 0.1 },
+      safety: { examinedSessions: 50, maxRateLimitedHintedShare: 0.1 },
     })
+  })
+
+  /**
+   * A scoring-version bump must not invalidate the verdicts already stored.
+   *
+   * The whole v6 rollout is a recomputation over existing evidence, which only works because a
+   * verdict's `scoringArtifactVersion` names the judge that produced it and nothing else. If the
+   * scoring version ever leaked into that identity, a bump would move every stored verdict into
+   * `incompatibleJudgmentVersion` and silently empty the sample.
+   */
+  it("identifies supported judgments by judge alone, so a scoring-version bump keeps stored verdicts", () => {
+    const supported = LAUNCH_AGENT_SCORE_ARTIFACT.supportedJudgmentVersions
+
+    expect(supported.taskOutcome).toEqual([taskOutcomeJudgmentVersion(FLAGGER_DEFAULT_CLASSIFIER_MODEL)])
+    expect(supported.safety).toEqual([safetyJudgmentVersion(FLAGGER_DEFAULT_CLASSIFIER_MODEL)])
+    for (const version of [...supported.taskOutcome, ...supported.safety]) {
+      expect(version).not.toContain(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion)
+    }
   })
 
   it("carries a floor for every dimension, so none can publish unguarded", () => {

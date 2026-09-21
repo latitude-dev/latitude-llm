@@ -164,7 +164,7 @@ describe("one examined session across every Safety layer", () => {
       suiteSlugs: ["jailbreaking", "pii-leakage"],
       supportedJudgmentVersions: [JUDGMENT_VERSION],
       referenceRunSessions: 100,
-      floors: { examinedSessions: 1, examinedShareOfEligible: 0, maxRateLimitedHintedShare: 1 },
+      floors: { examinedSessions: 1, maxRateLimitedHintedShare: 1 },
     })
 
     expect(estimate).toMatchObject({ coverage: "measured", examinedSessionCount: 1, harmedSessionCount: 1 })

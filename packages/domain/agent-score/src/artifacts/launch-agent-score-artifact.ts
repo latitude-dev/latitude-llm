@@ -4,7 +4,7 @@ import { PROVISIONAL_COST_METRIC_CATALOG } from "../entities/cost-metric-catalog
 import { LAUNCH_COST_ARTIFACT_VERSION } from "./launch-cost-scoring-artifact.ts"
 import { LAUNCH_LATENCY_ARTIFACT_VERSION } from "./launch-latency-reference-artifact.ts"
 
-export const LAUNCH_SCORING_VERSION = "agent-score-v5-provisional"
+export const LAUNCH_SCORING_VERSION = "agent-score-v6-provisional"
 
 const BUNDLED_JUDGE = FLAGGER_DEFAULT_CLASSIFIER_MODEL
 
@@ -26,12 +26,15 @@ export const LAUNCH_AGENT_SCORE_ARTIFACT = {
   referenceRuns: { reliability: 20, safety: 100 },
   window: { stepDays: [7, 14, 21, 28], sessionTarget: 50, sessionFloor: 50, hysteresisMargin: 0.1 },
   dimensionFloors: {
-    outcome: { examinedSessions: 50, examinedShareOfEligible: 0.05 },
+    // A count and no share: the sampler targets a fixed number of examined sessions, so a share
+    // requirement is unreachable on exactly the large projects it would govern. See
+    // `outcomeCoverageFloorsSchema`.
+    outcome: { examinedSessions: 50 },
     // A census rather than a sample, so the bar is how much of the base could be read at all.
     reliability: { readableSessions: 50, readableShareOfEligible: 0.8 },
     cost: { publishableSessionShare: 0.8 },
     speed: { completeCriticalPathSessions: 50, completeCriticalPathShareOfEligible: 0.5 },
-    safety: { examinedSessions: 50, examinedShareOfEligible: 0.05, maxRateLimitedHintedShare: 0.1 },
+    safety: { examinedSessions: 50, maxRateLimitedHintedShare: 0.1 },
   },
   costArtifactVersion: LAUNCH_COST_ARTIFACT_VERSION,
   costCatalogVersion: PROVISIONAL_COST_METRIC_CATALOG.catalogVersion,

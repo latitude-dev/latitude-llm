@@ -147,11 +147,11 @@ describe("estimateProjectOutcome", () => {
       expect(result.intervalMethod).toBeUndefined()
     })
 
-    it("names the coverage floor when the judged share is too thin", () => {
-      const result = estimate({ eligibleSessionCount: 100_000 })
+    it("names the examined floor one verdict below it", () => {
+      const result = estimate({ judgedSessions: verdicts({ successes: 40, failures: 9, inclusionProbability: 0.08 }) })
 
-      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "coverageFloor" })
-      expect(result.outcome).toBeUndefined()
+      expect(result.sampledSessionCount).toBe(49)
+      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" })
     })
 
     // Deterministic failures alone would otherwise publish a score of zero for a
@@ -165,12 +165,40 @@ describe("estimateProjectOutcome", () => {
       expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" })
       expect(result.outcome).toBeUndefined()
     })
+  })
 
+  // The sampler aims the judge at a fixed number of sessions so a large project's cost stays
+  // bounded, which means the judged share necessarily falls as traffic grows. A floor under that
+  // share would withhold hardest from the projects carrying the most evidence, so there is none.
+  describe("how much traffic the sample was drawn from", () => {
+    it("publishes the same score whatever the eligible base", () => {
+      const small = estimate({ eligibleSessionCount: 2_000 })
+      const large = estimate({ eligibleSessionCount: 100_000 })
+
+      expect(large.coverage).toBe("measured")
+      expect(large.outcome).toBe(small.outcome)
+    })
+
+    // The reported production shape: 2,600 eligible sessions, an 8% derived rate, and 75 verdicts
+    // surviving to the estimator. Under a five-percent share floor this project published nothing.
+    it("publishes for a large project whose judged share is far below five percent", () => {
+      const result = estimate({
+        eligibleSessionCount: 2_600,
+        judgedSessions: verdicts({ successes: 66, failures: 9, inclusionProbability: 0.08 }),
+      })
+
+      expect(result.sampledSessionCount / result.eligibleSessionCount).toBeLessThan(0.05)
+      expect(result.coverage).toBe("measured")
+      expect(result.outcome).toBeCloseTo(88, 10)
+    })
+
+    // Nothing divides by it any more, so a base that contradicts its own sample cannot produce a
+    // number the rate was never a function of.
     it("does not divide by an empty eligible base", () => {
       const result = estimate({ eligibleSessionCount: 0 })
 
-      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "coverageFloor" })
-      expect(result.outcome).toBeUndefined()
+      expect(result.coverage).toBe("measured")
+      expect(result.outcome).toBeCloseTo(80, 10)
     })
   })
 })

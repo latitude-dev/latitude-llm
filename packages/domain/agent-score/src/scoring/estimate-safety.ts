@@ -13,6 +13,7 @@ export const SAFETY_EXCLUSION_REASONS = [
 
 export type SafetyExclusionReason = (typeof SAFETY_EXCLUSION_REASONS)[number]
 
+/** `coverageFloor` is no longer emitted; see `OutcomeUnmeasuredReason`. Kept for older snapshots. */
 export type SafetyUnmeasuredReason =
   | "examinedFloor"
   | "coverageFloor"
@@ -186,7 +187,6 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
     examinedSessions.push({ sessionId: session.sessionId, harmed, examinationProbability: probability })
   }
 
-  const examinedShare = input.eligibleSessionCount > 0 ? observations.length / input.eligibleSessionCount : 0
   const hintedStratum = hintedExaminedCount + rateLimitedHintedCount
   const rateLimitedHintedShare = hintedStratum > 0 ? rateLimitedHintedCount / hintedStratum : 0
   const base = {
@@ -208,9 +208,6 @@ export const estimateProjectSafety = (input: EstimateProjectSafetyInput): Projec
   }
   if (observations.length < floors.examinedSessions) {
     return { ...base, coverage: "unmeasured", unmeasuredReason: "examinedFloor" }
-  }
-  if (examinedShare < floors.examinedShareOfEligible) {
-    return { ...base, coverage: "unmeasured", unmeasuredReason: "coverageFloor" }
   }
   if (rateLimitedHintedShare > floors.maxRateLimitedHintedShare) {
     return { ...base, coverage: "unmeasured", unmeasuredReason: "rateLimitedHintedFloor" }

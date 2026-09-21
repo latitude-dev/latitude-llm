@@ -52,9 +52,63 @@ describe("buildDimensionEvidence", () => {
 
     expect(evidence.affected).toEqual([])
     expect(evidence.coverageGaps).toEqual([
-      expect.objectContaining({ label: "Sessions evaluated for outcome", value: "0%", progress: 1 }),
+      expect.objectContaining({ label: "Sessions directly evaluated for outcome", value: "0%", progress: 1 }),
     ])
     expect(evidence.coverageGaps[0]).not.toHaveProperty("description")
+  })
+
+  it("counts the judged sample rather than the census in the outcome coverage row", () => {
+    const evidence = buildDimensionEvidence({
+      dimension: "outcome",
+      snapshot: null,
+      explanation: {
+        ...explanation,
+        coverage: { ...explanation.coverage, outcomeExaminedSessions: 90, outcomeSampledSessions: 75 },
+      } as unknown as Explanation,
+    })
+
+    expect(evidence.coverageGaps[0]).toMatchObject({ value: "75%" })
+  })
+
+  // A snapshot written before v6 carries only the combined count, and must still render.
+  it("falls back to the examined count when a stored explanation predates the judged count", () => {
+    const evidence = buildDimensionEvidence({
+      dimension: "outcome",
+      snapshot: null,
+      explanation: {
+        ...explanation,
+        coverage: { ...explanation.coverage, outcomeExaminedSessions: 90 },
+      } as unknown as Explanation,
+    })
+
+    expect(evidence.coverageGaps[0]).toMatchObject({ value: "90%" })
+  })
+
+  /**
+   * Once Outcome publishes, its evaluated share is context rather than a gap — the judge reads a
+   * number of sessions, not a share of them, so a low share on a large project is the sampler
+   * working. The number is still shown, because a score with no visible evidence behind it gives a
+   * reader nothing to weigh it against.
+   */
+  it("reports the judged sample as context once outcome has published", () => {
+    const evidence = buildDimensionEvidence({
+      dimension: "outcome",
+      snapshot: { dimensions: { outcome: { score: 88 } } } as unknown as Snapshot,
+      explanation: {
+        ...explanation,
+        eligibleSessionCount: 2_600,
+        coverage: { ...explanation.coverage, outcomeExaminedSessions: 90, outcomeSampledSessions: 75 },
+      } as unknown as Explanation,
+    })
+
+    expect(evidence.coverageGaps).toEqual([])
+    expect(evidence.context).toContainEqual(
+      expect.objectContaining({
+        id: "outcome:direct-evaluations",
+        label: "Sessions directly evaluated for outcome",
+        value: "75 of 2,600",
+      }),
+    )
   })
 
   it("keeps family summaries out of causes and unreadable cost in coverage", () => {

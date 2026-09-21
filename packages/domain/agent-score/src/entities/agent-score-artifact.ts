@@ -38,11 +38,19 @@ export const scoreWindowSettingsSchema = z
   })
 export type ScoreWindowSettings = z.infer<typeof scoreWindowSettingsSchema>
 
+/**
+ * What a sampled dimension needs before its rate means anything.
+ *
+ * A count, never a share of eligible traffic. `deriveSamplingRates` aims the judge at a fixed
+ * number of examined sessions so a large project's cost stays bounded, which means the share it can
+ * reach falls as traffic grows: at 5,000 eligible sessions the derived rate is already 4%, and at
+ * 100,000 it is the 1% rate floor. A share requirement and a count-targeted sampler cannot both be
+ * satisfied, and the sampler is the one that bounds spend, so the floor is the one that gives way.
+ * `floor-reachability.test.ts` holds the artifact to it.
+ */
 export const outcomeCoverageFloorsSchema = z.object({
   /** Compatible sampled verdicts required before the rate means anything. */
   examinedSessions: z.number().int().nonnegative(),
-  /** Share of the eligible base the examined population must describe. */
-  examinedShareOfEligible: unitFractionSchema,
 })
 export type OutcomeCoverageFloors = z.infer<typeof outcomeCoverageFloorsSchema>
 
@@ -53,9 +61,9 @@ export const reliabilityCoverageFloorsSchema = z.object({
 })
 export type ReliabilityCoverageFloors = z.infer<typeof reliabilityCoverageFloorsSchema>
 
+/** A count rather than a share, for the reason `outcomeCoverageFloorsSchema` gives. */
 export const safetyCoverageFloorsSchema = z.object({
   examinedSessions: z.number().int().nonnegative(),
-  examinedShareOfEligible: unitFractionSchema,
   /**
    * How much of the hinted stratum may be lost to rate limiting before the missingness stops being
    * ignorable. Hinted Safety sessions are the ones most likely to contain harm, so dropping them

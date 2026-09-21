@@ -192,8 +192,10 @@ const endpointCoverage = (dimension: ScoreDimensionKey, explanation: Explanation
   if (dimension === "outcome") {
     return coverageRow({
       id: "outcome:endpoint-coverage",
-      label: "Sessions evaluated for outcome",
-      covered: explanation.coverage.outcomeExaminedSessions,
+      // The judged sample, not the judged sample plus the deterministic census: this row sits under
+      // a readiness bar that counts verdicts, and the two numbers have to be the same number.
+      label: "Sessions directly evaluated for outcome",
+      covered: explanation.coverage.outcomeSampledSessions ?? explanation.coverage.outcomeExaminedSessions,
       total: eligible,
     })
   }
@@ -349,13 +351,40 @@ const addCostFamilies = (evidence: MutableEvidence, dimension: ScoreDimensionKey
   }
 }
 
+/**
+ * How much of the window Outcome's judge actually read, once Outcome has published.
+ *
+ * Context, never a gap. The judge is aimed at a number of sessions rather than a share of them, so
+ * on a large project this reads low by design and nothing is missing. It is shown because the
+ * alternative is a score with no visible evidence behind it: a reader who cannot see that 75
+ * sessions produced the number has no way to judge how much to lean on it.
+ */
+const addPublishedOutcomeEvidence = (evidence: MutableEvidence, explanation: Explanation): void => {
+  const evaluated = explanation.coverage.outcomeSampledSessions ?? explanation.coverage.outcomeExaminedSessions
+  if (evaluated <= 0) return
+
+  const eligible = explanation.eligibleSessionCount
+  const share = eligible > 0 ? evaluated / eligible : 0
+  evidence.context.push({
+    id: "outcome:direct-evaluations",
+    label: "Sessions directly evaluated for outcome",
+    value: `${formatCount(evaluated)} of ${formatCount(eligible)}`,
+    description: `${formatPercent(share)} of the window, sampled at random`,
+    progress: 1,
+    tone: "neutral",
+  })
+}
+
 const addEndpointCoverage = (
   evidence: MutableEvidence,
   dimension: ScoreDimensionKey,
   snapshot: AgentScoreRecord | null,
   explanation: Explanation,
 ): void => {
-  if (snapshot?.dimensions[dimension]?.score !== undefined) return
+  if (snapshot?.dimensions[dimension]?.score !== undefined) {
+    if (dimension === "outcome") addPublishedOutcomeEvidence(evidence, explanation)
+    return
+  }
   const endpoint = endpointCoverage(dimension, explanation)
   if (!endpoint) return
   if (endpoint.tone !== "positive") evidence.coverageGaps.unshift(endpoint)

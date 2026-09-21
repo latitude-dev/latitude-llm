@@ -137,7 +137,15 @@ export const agentScoreExplanationSchema = z.object({
     cost: costWindowGateSchema,
     speed: speedWindowGateSchema,
     readers: z.array(readerCoverageSchema).readonly(),
+    /** Sampled verdicts plus the deterministic census: everything Outcome looked at. */
     outcomeExaminedSessions: z.number(),
+    /**
+     * Compatible sampled verdicts alone, which is what the readiness floor counts.
+     *
+     * Optional because snapshots written before v6 carry only the examined count; a reader that
+     * needs the judged population falls back to it rather than inventing one.
+     */
+    outcomeSampledSessions: z.number().optional(),
     safetyExaminedSessions: z.number(),
     reliabilityReadableSessions: z.number(),
     unmeasuredSignalEffects: z.number(),
@@ -194,6 +202,7 @@ export const toAgentScoreExplanation = ({
       speed: result.coverage.speed,
       readers: result.coverage.readers,
       outcomeExaminedSessions: result.coverage.outcome.examinedSessionCount,
+      outcomeSampledSessions: result.coverage.outcome.sampledSessionCount,
       safetyExaminedSessions: result.coverage.safety.examinedSessionCount,
       reliabilityReadableSessions: result.coverage.reliability.readableSessionCount,
       unmeasuredSignalEffects: result.coverage.unmeasuredSignalEffects,

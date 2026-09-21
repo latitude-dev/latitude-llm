@@ -62,17 +62,13 @@ export const buildAgentScoreReadiness = ({
       {
         scoreDimension: "outcome",
         requirements: [
+          // The only Outcome requirement. Its share of the window is coverage context, not a bar:
+          // the judge is aimed at a fixed number of sessions, so the share falls as a project grows.
           atLeast({
             metric: "outcomeEvaluations",
             current: coverage.outcome.sampledSessionCount,
             required: artifact.dimensionFloors.outcome.examinedSessions,
             unit: "sessions",
-          }),
-          atLeast({
-            metric: "outcomeCoverage",
-            current: share(coverage.outcome.examinedSessionCount, eligibleSessions),
-            required: artifact.dimensionFloors.outcome.examinedShareOfEligible,
-            unit: "fraction",
           }),
         ],
       },
@@ -147,12 +143,6 @@ export const buildAgentScoreReadiness = ({
             current: coverage.safety.examinedSessionCount,
             required: artifact.dimensionFloors.safety.examinedSessions,
             unit: "sessions",
-          }),
-          atLeast({
-            metric: "safetyCoverage",
-            current: share(coverage.safety.examinedSessionCount, eligibleSessions),
-            required: artifact.dimensionFloors.safety.examinedShareOfEligible,
-            unit: "fraction",
           }),
           atMost({
             metric: "safetyRateLimitedCoverage",
