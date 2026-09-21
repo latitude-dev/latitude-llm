@@ -227,6 +227,51 @@ describe("SpanRepository Cost and Speed source facts", () => {
       expect(facts[0]?.modelContextLimitTokens ?? 0).toBeGreaterThan(0)
     })
 
+    it("applies the start-time range to generation facts and selected content", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          spanRow({
+            span_id: "0000000000000001",
+            start_time: "2025-12-01 00:00:00.000000000",
+            end_time: "2025-12-01 00:00:01.000000000",
+          }),
+          spanRow({ span_id: "0000000000000002", input_messages: messages("inside") }),
+          spanRow({
+            span_id: "0000000000000003",
+            start_time: "2026-02-01 00:00:00.000000000",
+            end_time: "2026-02-01 00:00:01.000000000",
+          }),
+        ]),
+      )
+      const startTimeFrom = new Date("2025-12-31T00:00:00.000Z")
+      const startTimeTo = new Date("2026-01-15T00:00:00.000Z")
+      const queries: RecordedQuery[] = []
+      const facts = await Effect.runPromise(
+        repo
+          .listGenerationFactsByTraceIds({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceIds: [TRACE_A],
+            startTimeFrom,
+            startTimeTo,
+            contentBudget: UNLIMITED_BUDGET,
+            sessionKeyByTraceId: SESSION_KEYS,
+          })
+          .pipe(Effect.provide(ChSqlClientLive(recordingClient(queries), ORG_ID))),
+      )
+
+      expect(facts.map((fact) => fact.spanId)).toEqual([SpanId("0000000000000002")])
+      expect(facts[0]?.content?.inputMessages[0]?.parts[0]?.content).toBe("inside")
+      expect([...generationFactQueries(queries), ...generationContentQueries(queries)]).toHaveLength(2)
+      expect(
+        [...generationFactQueries(queries), ...generationContentQueries(queries)].every(
+          (query) =>
+            query.queryParams?.startTimeFrom === "2025-12-31T00:00:00.000" &&
+            query.queryParams?.startTimeTo === "2026-01-15T00:00:00.000",
+        ),
+      ).toBe(true)
+    })
+
     it("reports absent content without loading a payload", async () => {
       await runCh(insertJsonEachRow(ch.client, "spans", [spanRow({})]))
 
@@ -575,6 +620,45 @@ describe("SpanRepository Cost and Speed source facts", () => {
       expect(fact?.inputHash).toBe("")
       expect(fact?.inputBytes).toBe(0)
       expect(fact?.outputHash).toBe("")
+    })
+
+    it("applies the start-time range to tool-call facts", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          toolRow({
+            span_id: "0000000000000001",
+            tool_call_id: "before",
+            start_time: "2025-12-01 00:00:00.000000000",
+            end_time: "2025-12-01 00:00:01.000000000",
+          }),
+          toolRow({ span_id: "0000000000000002", tool_call_id: "inside" }),
+          toolRow({
+            span_id: "0000000000000003",
+            tool_call_id: "after",
+            start_time: "2026-02-01 00:00:00.000000000",
+            end_time: "2026-02-01 00:00:01.000000000",
+          }),
+        ]),
+      )
+      const queries: RecordedQuery[] = []
+      const facts = await Effect.runPromise(
+        repo
+          .listToolCallFactsByTraceIds({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceIds: [TRACE_A],
+            startTimeFrom: new Date("2025-12-31T00:00:00.000Z"),
+            startTimeTo: new Date("2026-01-15T00:00:00.000Z"),
+          })
+          .pipe(Effect.provide(ChSqlClientLive(recordingClient(queries), ORG_ID))),
+      )
+
+      expect(facts.map((fact) => fact.toolCallId)).toEqual(["inside"])
+      expect(toolCallQueries(queries)).toHaveLength(1)
+      expect(toolCallQueries(queries)[0]?.queryParams).toMatchObject({
+        startTimeFrom: "2025-12-31T00:00:00.000",
+        startTimeTo: "2026-01-15T00:00:00.000",
+      })
     })
 
     it("distinguishes different payloads and carries failure evidence", async () => {

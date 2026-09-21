@@ -55,13 +55,22 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
             cutoff: input.cutoff,
           })
           const traceIds = [...new Set(sessions.flatMap((session) => session.traceIds.map(TraceId)))]
+          const traceStartTimeFrom = sessions.reduce(
+            (earliest, session) => (session.startTime < earliest ? session.startTime : earliest),
+            input.cutoff,
+          )
           const sessionByTraceId = new Map(
             sessions.flatMap((session) =>
               session.traceIds.map((traceId) => [String(traceId), String(session.sessionId)] as const),
             ),
           )
           const scope = { organizationId: input.organizationId, projectId: input.projectId }
-          const traceScope = { ...scope, traceIds, startTimeTo: input.cutoff }
+          const traceScope = {
+            ...scope,
+            traceIds,
+            startTimeFrom: traceStartTimeFrom,
+            startTimeTo: input.cutoff,
+          }
           const sessionScope = { ...scope, sessionIds: input.sessionIds, indexedAtTo: input.cutoff }
 
           const [spans, generations, toolCalls, memoryEvents, analyses, moments, labels, screeningDecisions] =
