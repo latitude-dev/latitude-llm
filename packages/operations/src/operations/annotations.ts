@@ -1,4 +1,9 @@
-import { submitApiAnnotationUseCase } from "@domain/annotations"
+import {
+  deleteApiAnnotationUseCase,
+  getApiAnnotationUseCase,
+  submitApiAnnotationUseCase,
+  updateApiAnnotationUseCase,
+} from "@domain/annotations"
 import { ProjectRepository } from "@domain/projects"
 import { cuidSchema, UserId } from "@domain/shared"
 import { createRoute, z } from "@hono/zod-openapi"
@@ -18,6 +23,7 @@ import type { OperationModule } from "../core/mount.ts"
 import { AnnotationAnchorSchema, AnnotationSchema, toAnnotationResponse } from "../openapi/entities/annotation.ts"
 import {
   jsonBody,
+  openApiNoContentResponses,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   TraceRefSchema,
@@ -47,9 +53,26 @@ const RequestSchema = z
   })
   .openapi("CreateAnnotationBody")
 
+const UpdateAnnotationBodySchema = z
+  .object({
+    value: z.number().min(0).max(1).optional().describe("New normalized score value in [0, 1]."),
+    passed: z.boolean().optional().describe("New pass or fail verdict."),
+    feedback: z.string().min(1).optional().describe("New free-text feedback explaining the score."),
+  })
+  .refine((body) => Object.values(body).some((value) => value !== undefined), {
+    message: "At least one field must be provided",
+  })
+  .openapi("UpdateAnnotationBody")
+
 const annotationsPath = "/projects/:projectSlug/annotations"
 
 const annotationEndpoint = defineOperation<OrganizationScopedEnv>(annotationsPath)
+
+const AnnotationParamsSchema = ProjectParamsSchema.extend({
+  annotationId: cuidSchema.describe(
+    "Latitude-generated annotation identifier returned when the annotation was created.",
+  ),
+})
 
 const createAnnotation = annotationEndpoint({
   route: createRoute({
@@ -104,7 +127,114 @@ const createAnnotation = annotationEndpoint({
     ),
 })
 
+const getAnnotation = annotationEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/{annotationId}",
+    name: "getAnnotation",
+    tags: ["Annotations"],
+    group: "annotations",
+    sdkMethod: "get",
+    summary: "Get API annotation",
+    description: "Returns an API-created annotation by its Latitude-generated identifier.",
+    security: PROTECTED_SECURITY,
+    request: { params: AnnotationParamsSchema },
+    responses: typedResponses({ status: 200, schema: AnnotationSchema, description: "Annotation" }),
+  }),
+  access: "read-only",
+  rateLimitTier: "low",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const projectRepository = yield* ProjectRepository
+      const project = yield* projectRepository.findBySlug(input.params.projectSlug)
+      const score = yield* getApiAnnotationUseCase({
+        projectId: project.id,
+        annotationId: input.params.annotationId,
+      })
+      return { status: 200, body: toAnnotationResponse(score) } as const
+    }).pipe(
+      withPostgres(Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive), ctx.postgresClient, ctx.organization.id),
+      withTracing,
+    ),
+})
+
+const updateAnnotation = annotationEndpoint({
+  route: createRoute({
+    method: "patch",
+    path: "/{annotationId}",
+    name: "updateAnnotation",
+    tags: ["Annotations"],
+    group: "annotations",
+    sdkMethod: "update",
+    summary: "Update API annotation",
+    description:
+      "Updates an API-created annotation while retaining its Latitude-generated identifier. Omitted fields keep their current values.",
+    security: PROTECTED_SECURITY,
+    request: {
+      params: AnnotationParamsSchema,
+      body: jsonBody(UpdateAnnotationBodySchema),
+    },
+    responses: typedResponses({ status: 200, schema: AnnotationSchema, description: "Updated annotation" }),
+  }),
+  access: "destructive",
+  rateLimitTier: "low",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const projectRepository = yield* ProjectRepository
+      const project = yield* projectRepository.findBySlug(input.params.projectSlug)
+      const score = yield* updateApiAnnotationUseCase({
+        projectId: project.id,
+        annotationId: input.params.annotationId,
+        ...input.body,
+      })
+      return { status: 200, body: toAnnotationResponse(score) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withClickHouse(ScoreAnalyticsRepositoryLive, ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
+})
+
+const deleteAnnotation = annotationEndpoint({
+  route: createRoute({
+    method: "delete",
+    path: "/{annotationId}",
+    name: "deleteAnnotation",
+    tags: ["Annotations"],
+    group: "annotations",
+    sdkMethod: "delete",
+    summary: "Delete API annotation",
+    description: "Deletes an API-created annotation by its Latitude-generated identifier.",
+    security: PROTECTED_SECURITY,
+    request: { params: AnnotationParamsSchema },
+    responses: openApiNoContentResponses({ description: "Annotation deleted" }),
+  }),
+  access: "destructive",
+  rateLimitTier: "low",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const projectRepository = yield* ProjectRepository
+      const project = yield* projectRepository.findBySlug(input.params.projectSlug)
+      yield* deleteApiAnnotationUseCase({
+        projectId: project.id,
+        annotationId: input.params.annotationId,
+      })
+      return { status: 204 } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
+})
+
 export const annotationsModule: OperationModule = {
   path: annotationsPath,
-  operations: [createAnnotation],
+  operations: [createAnnotation, getAnnotation, updateAnnotation, deleteAnnotation],
 }

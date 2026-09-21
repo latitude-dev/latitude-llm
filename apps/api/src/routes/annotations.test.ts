@@ -434,4 +434,81 @@ describe("Annotations Routes Integration", () => {
 
     expect(response.status).toBe(404)
   })
+
+  it<ApiTestContext>("reads, updates, and deletes an API annotation by its generated id", async ({
+    app,
+    database,
+    clickhouse,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "dddddddddddddddddddddddd"
+    const traceId = "66666666666666666666666666666666"
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedAnnotationTrace({ clickhouse, organizationId: tenant.organizationId, projectId, traceId })
+    const collectionUrl = `http://localhost/v1/projects/${projectSlug}/annotations`
+    const headers = {
+      ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+      "Content-Type": "application/json",
+    }
+
+    const createdResponse = await app.fetch(
+      new Request(collectionUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          value: 1,
+          passed: true,
+          feedback: "Helpful response",
+          trace: { by: "id", id: traceId },
+        }),
+      }),
+    )
+    expect(createdResponse.status).toBe(201)
+    const created = (await createdResponse.json()) as { id: string; passed: boolean }
+    const annotationUrl = `${collectionUrl}/${created.id}`
+
+    const getResponse = await app.fetch(
+      new Request(annotationUrl, { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }),
+    )
+    expect(getResponse.status).toBe(200)
+    expect(((await getResponse.json()) as { id: string }).id).toBe(created.id)
+
+    const updateResponse = await app.fetch(
+      new Request(annotationUrl, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ value: 0, passed: false, feedback: "Incorrect response" }),
+      }),
+    )
+    expect(updateResponse.status).toBe(200)
+    const updated = (await updateResponse.json()) as {
+      id: string
+      value: number
+      passed: boolean
+      feedback: string
+    }
+    expect(updated).toMatchObject({
+      id: created.id,
+      value: 0,
+      passed: false,
+      feedback: "Incorrect response",
+    })
+
+    const persisted = await database.db
+      .select()
+      .from(scoresTable)
+      .where(eq(scoresTable.organizationId, tenant.organizationId))
+    expect(persisted).toHaveLength(1)
+    expect(persisted[0]).toMatchObject({ id: created.id, value: 0, passed: false, feedback: "Incorrect response" })
+
+    const deleteResponse = await app.fetch(
+      new Request(annotationUrl, { method: "DELETE", headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }),
+    )
+    expect(deleteResponse.status).toBe(204)
+
+    const missingResponse = await app.fetch(
+      new Request(annotationUrl, { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }),
+    )
+    expect(missingResponse.status).toBe(404)
+  })
 })

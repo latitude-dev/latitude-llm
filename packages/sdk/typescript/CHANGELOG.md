@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.14.0] - 2026-09-21
+
+### Added
+
+- `client.annotations.get`, `client.annotations.update`, and `client.annotations.delete` manage API-created annotations using their Latitude-generated IDs.
+
 ## [9.13.0] - 2026-09-13
 
 ### Added

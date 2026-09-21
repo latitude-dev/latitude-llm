@@ -113,18 +113,19 @@ Relationship fields:
 
 All score producers reuse one canonical Postgres-first write path:
 
-- public machine-facing score ingestion uses `POST /v1/organizations/:organizationId/projects/:projectId/scores`
+- public machine-facing score ingestion uses `POST /v1/projects/:projectSlug/scores`
 - default `/scores` uploads create `source = "custom"` rows and support arbitrary custom metadata
 - clients that upload locally executed Latitude evaluation results reuse the same `/scores` route with `_evaluation: true`, evaluation-score metadata, and the evaluation CUID as `source_id`
 - custom scores written through `/scores` always stay unowned at write time and use signal discovery when they are eligible
 - evaluation scores written through `/scores` always stay unowned at write time; later centralized signal handling may resolve an already linked evaluation signal before similarity search starts
 - internal live evaluation execution writes passed monitor results unowned, writes failed non-errored signal-linked monitor results with `signalId = evaluation.signalId` immediately, and writes errored monitor results as unowned immutable evaluation scores with `error != null`
 - non-draft evaluation scores with a `trace_id` are unique per `(organization_id, project_id, source_id, trace_id)` in Postgres, so canonical evaluation persistence stays idempotent even when concurrent workers race past an earlier duplicate precheck
-- annotation ingestion stays on `POST /v1/organizations/:organizationId/projects/:projectId/annotations` even though annotations still persist canonical score rows
+- annotation creation stays on `POST /v1/projects/:projectSlug/annotations` even though annotations still persist canonical score rows
+- API-created annotations use their generated score id for direct GET, PATCH, and DELETE operations; PATCH retains that id while refreshing analytics and downstream signal processing
 - internal evaluation and simulation writers reuse the same score-validation and persistence path rather than maintaining a second storage model
 - source-specific metadata is validated exactly before persistence, so evaluation, annotation, and custom writers cannot drift into incompatible payload shapes
 - instrumented and uninstrumented writes both use the same canonical row shape, with `session_id`, `trace_id`, and `span_id` remaining optional
-- draft updates rewrite the same canonical Postgres row in place while `draftedAt` is still set; once a score is published, later writes must fail instead of mutating the immutable row
+- draft updates rewrite the same canonical Postgres row in place while `draftedAt` is still set; published scores are immutable except for the explicit API-annotation update use case, which retains the score id and refreshes its derived state
 
 ## Metadata
 

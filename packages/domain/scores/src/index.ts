@@ -114,6 +114,10 @@ export {
   listTraceScoresUseCase,
 } from "./use-cases/list-trace-scores.ts"
 export {
+  type ReplaceScoreAnalyticsInput,
+  replaceScoreAnalyticsUseCase,
+} from "./use-cases/replace-score-analytics.ts"
+export {
   type SyncScoreAnalyticsInput,
   syncScoreAnalyticsUseCase,
 } from "./use-cases/save-score-analytics.ts"
