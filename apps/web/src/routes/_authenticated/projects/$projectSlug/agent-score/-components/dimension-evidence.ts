@@ -187,15 +187,24 @@ const issueRows = (
   })
 }
 
+const outcomeJudgedSessions = (explanation: Explanation): number | undefined => {
+  if (explanation.coverage.outcomeSampledSessions !== undefined) return explanation.coverage.outcomeSampledSessions
+
+  // `outcomeExaminedSessions` is no fallback: it adds the deterministic census, which no judge read.
+  const requirement = explanation.readiness.dimensions
+    .find((entry) => entry.scoreDimension === "outcome")
+    ?.requirements.find((entry) => entry.kind === "threshold" && entry.metric === "outcomeEvaluations")
+  return requirement?.kind === "threshold" ? requirement.current : undefined
+}
+
 const endpointCoverage = (dimension: ScoreDimensionKey, explanation: Explanation): DimensionEvidenceRow | null => {
   const eligible = explanation.eligibleSessionCount
   if (dimension === "outcome") {
+    const judged = outcomeJudgedSessions(explanation)
     return coverageRow({
       id: "outcome:endpoint-coverage",
-      // The judged sample, not the judged sample plus the deterministic census: this row sits under
-      // a readiness bar that counts verdicts, and the two numbers have to be the same number.
-      label: "Sessions directly evaluated for outcome",
-      covered: explanation.coverage.outcomeSampledSessions ?? explanation.coverage.outcomeExaminedSessions,
+      label: judged === undefined ? "Sessions evaluated for outcome" : "Sessions directly evaluated for outcome",
+      covered: judged ?? explanation.coverage.outcomeExaminedSessions,
       total: eligible,
     })
   }
@@ -351,24 +360,16 @@ const addCostFamilies = (evidence: MutableEvidence, dimension: ScoreDimensionKey
   }
 }
 
-/**
- * How much of the window Outcome's judge actually read, once Outcome has published.
- *
- * Context, never a gap. The judge is aimed at a number of sessions rather than a share of them, so
- * on a large project this reads low by design and nothing is missing. It is shown because the
- * alternative is a score with no visible evidence behind it: a reader who cannot see that 75
- * sessions produced the number has no way to judge how much to lean on it.
- */
 const addPublishedOutcomeEvidence = (evidence: MutableEvidence, explanation: Explanation): void => {
-  const evaluated = explanation.coverage.outcomeSampledSessions ?? explanation.coverage.outcomeExaminedSessions
-  if (evaluated <= 0) return
+  const judged = outcomeJudgedSessions(explanation)
+  if (judged === undefined || judged <= 0) return
 
   const eligible = explanation.eligibleSessionCount
-  const share = eligible > 0 ? evaluated / eligible : 0
+  const share = eligible > 0 ? judged / eligible : 0
   evidence.context.push({
     id: "outcome:direct-evaluations",
     label: "Sessions directly evaluated for outcome",
-    value: `${formatCount(evaluated)} of ${formatCount(eligible)}`,
+    value: `${formatCount(judged)} of ${formatCount(eligible)}`,
     description: `${formatPercent(share)} of the window, sampled at random`,
     progress: 1,
     tone: "neutral",

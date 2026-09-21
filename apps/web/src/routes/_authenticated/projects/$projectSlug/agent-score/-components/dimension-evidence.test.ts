@@ -44,7 +44,31 @@ const explanation = {
     },
     readers: [],
   },
+  readiness: {
+    sessionRequirement: {},
+    dimensions: [
+      {
+        scoreDimension: "outcome",
+        requirements: [{ kind: "threshold", metric: "outcomeEvaluations", current: 0, required: 50, met: false }],
+      },
+    ],
+  },
 } as unknown as Explanation
+
+const withOutcomeEvaluations = (current: number) => ({
+  readiness: {
+    sessionRequirement: {},
+    dimensions: [
+      {
+        scoreDimension: "outcome",
+        requirements: [{ kind: "threshold", metric: "outcomeEvaluations", current, required: 50, met: true }],
+      },
+    ],
+  },
+})
+
+/** An explanation stored before either the judged count or the readiness row existed. */
+const withoutJudgedCount = { readiness: { sessionRequirement: {}, dimensions: [] } }
 
 describe("buildDimensionEvidence", () => {
   it("keeps missing coverage separate from causes", () => {
@@ -70,18 +94,37 @@ describe("buildDimensionEvidence", () => {
     expect(evidence.coverageGaps[0]).toMatchObject({ value: "75%" })
   })
 
-  // A snapshot written before v6 carries only the combined count, and must still render.
-  it("falls back to the examined count when a stored explanation predates the judged count", () => {
+  // A stored explanation without the judged count still carries it on its readiness row, which is
+  // the one number the deterministic census never entered.
+  it("reads the judged sample off readiness when coverage does not report it", () => {
     const evidence = buildDimensionEvidence({
       dimension: "outcome",
       snapshot: null,
       explanation: {
         ...explanation,
         coverage: { ...explanation.coverage, outcomeExaminedSessions: 90 },
+        ...withOutcomeEvaluations(75),
       } as unknown as Explanation,
     })
 
-    expect(evidence.coverageGaps[0]).toMatchObject({ value: "90%" })
+    expect(evidence.coverageGaps[0]).toMatchObject({
+      label: "Sessions directly evaluated for outcome",
+      value: "75%",
+    })
+  })
+
+  it("stops claiming direct evaluation when no judged count can be recovered", () => {
+    const evidence = buildDimensionEvidence({
+      dimension: "outcome",
+      snapshot: null,
+      explanation: {
+        ...explanation,
+        coverage: { ...explanation.coverage, outcomeExaminedSessions: 90 },
+        ...withoutJudgedCount,
+      } as unknown as Explanation,
+    })
+
+    expect(evidence.coverageGaps[0]).toMatchObject({ label: "Sessions evaluated for outcome", value: "90%" })
   })
 
   /**
@@ -108,6 +151,30 @@ describe("buildDimensionEvidence", () => {
         label: "Sessions directly evaluated for outcome",
         value: "75 of 2,600",
       }),
+    )
+  })
+
+  // The census is not a sample, so counting it here would claim sessions were drawn at random that
+  // never were. Without a judged count the row says nothing rather than something untrue.
+  it("counts only the judged sample in the published context row, never the census", () => {
+    const published = (coverage: object, readiness: object) =>
+      buildDimensionEvidence({
+        dimension: "outcome",
+        snapshot: { dimensions: { outcome: { score: 88 } } } as unknown as Snapshot,
+        explanation: {
+          ...explanation,
+          eligibleSessionCount: 2_600,
+          coverage: { ...explanation.coverage, ...coverage },
+          ...readiness,
+        } as unknown as Explanation,
+      })
+
+    const recovered = published({ outcomeExaminedSessions: 90 }, withOutcomeEvaluations(75))
+    expect(recovered.context).toContainEqual(expect.objectContaining({ value: "75 of 2,600" }))
+
+    const unrecoverable = published({ outcomeExaminedSessions: 90 }, withoutJudgedCount)
+    expect(unrecoverable.context).not.toContainEqual(
+      expect.objectContaining({ id: "outcome:direct-evaluations" }),
     )
   })
 
