@@ -125,7 +125,14 @@ export const refreshProjectAgentScore = createServerFn({ method: "POST" })
         .start(
           "agentScoreSnapshotWorkflow",
           { organizationId: orgId, projectId, date: data.date, force: true },
-          { workflowId: agentScoreSnapshotWorkflowId({ organizationId: orgId, projectId, date: data.date }) },
+          {
+            workflowId: agentScoreSnapshotWorkflowId({
+              organizationId: orgId,
+              projectId,
+              date: data.date,
+              force: true,
+            }),
+          },
         )
         .pipe(
           Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.void),
