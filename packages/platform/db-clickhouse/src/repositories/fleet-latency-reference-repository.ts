@@ -45,18 +45,27 @@ const toSample = (row: SampleRow): FleetLatencyCohortSample => ({
   median: Number(row.median),
 })
 
-const windowParams = ({ since, until }: { readonly since: Date; readonly until: Date }) => ({
+const windowParams = ({
+  since,
+  until,
+  ingestedAtUntil,
+}: {
+  readonly since: Date
+  readonly until: Date
+  readonly ingestedAtUntil: Date
+}) => ({
   since: since.toISOString().replace("T", " ").replace("Z", ""),
   until: until.toISOString().replace("T", " ").replace("Z", ""),
+  ingestedAtUntil: ingestedAtUntil.toISOString().replace("T", " ").replace("Z", ""),
 })
 
 /**
  * Live layer for the fleet latency-reference port.
  *
- * ⚠️ SECURITY: cross-organisation by design — see the port doc. `start_time` is the partition key,
- * so a closed freeze window prunes partitions cheaply. Rows are not deduped by span id: a
- * re-ingested span shifts a fleet-wide median by nothing, and dedup over the whole cluster would
- * cost far more than it corrects.
+ * ⚠️ SECURITY: cross-organisation by design — see the port doc. This layer is for an admin-gated
+ * handler or trusted operator-only CLI. `start_time` is the partition key, so a closed freeze window
+ * prunes partitions cheaply. Rows are not deduped by span id: a re-ingested span shifts a fleet-wide
+ * median by nothing, and dedup over the whole cluster would cost far more than it corrects.
  */
 export const FleetLatencyReferenceRepositoryLive = Layer.effect(
   FleetLatencyReferenceRepository,
@@ -72,7 +81,7 @@ export const FleetLatencyReferenceRepositoryLive = Layer.effect(
       readonly metricExpression: string
       readonly guard: string
       readonly groupOutputBucket: boolean
-      readonly window: { readonly since: Date; readonly until: Date }
+      readonly window: { readonly since: Date; readonly until: Date; readonly ingestedAtUntil: Date }
     }) =>
       chSqlClient.query(async (client) => {
         const inputBucket = bucketExpression(LATENCY_INPUT_BUCKET_BOUNDS, INPUT_TOKENS)
@@ -89,6 +98,7 @@ export const FleetLatencyReferenceRepositoryLive = Layer.effect(
           FROM spans
           WHERE start_time >= {since:DateTime64(9, 'UTC')}
             AND start_time < {until:DateTime64(9, 'UTC')}
+            AND ingested_at < {ingestedAtUntil:DateTime64(3, 'UTC')}
             AND operation IN ${GENERATION_OPERATIONS}
             AND provider != '' AND model != ''
             AND ${guard}

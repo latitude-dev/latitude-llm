@@ -3,8 +3,10 @@ import { SCORE_DIMENSIONS } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { loadAgentScoreArtifact, resolveScoringVersion } from "../entities/agent-score-artifact.ts"
+import { lookupThroughputExpectationTps, lookupTtftExpectationNs } from "../entities/latency-reference-artifact.ts"
 import { LAUNCH_AGENT_SCORE_ARTIFACT } from "./launch-agent-score-artifact.ts"
 import { resolveLaunchArtifacts, validateLaunchArtifacts } from "./launch-artifacts.ts"
+import { LAUNCH_LATENCY_REFERENCE_FREEZE } from "./launch-latency-reference-artifact.ts"
 
 const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runSync(Effect.result(effect))
 
@@ -19,11 +21,12 @@ describe("validateLaunchArtifacts", () => {
     expect(result.success.latency.artifactVersion).toBe(result.success.agentScore.latencyArtifactVersion)
   })
 
-  it("ships every launch artifact marked provisional until the calibration run replaces it", () => {
+  it("ships the latency reference calibrated while the remaining launch artifacts stay provisional", () => {
     const result = run(validateLaunchArtifacts())
     if (result._tag !== "Success") throw new Error("artifacts did not load")
     expect(result.success.agentScore.calibration).toBe("provisional")
     expect(result.success.cost.calibration).toBe("provisional")
+    expect(result.success.latency.calibration).toBe("calibrated")
   })
 
   it("gives the Cost artifact a curve and a cap for every catalog metric", () => {
@@ -38,24 +41,53 @@ describe("validateLaunchArtifacts", () => {
     }
   })
 
-  it("answers both latency lookups for every model it carries a reference for", () => {
+  it("answers both latency lookups for calibrated active models", () => {
     const result = run(validateLaunchArtifacts())
     if (result._tag !== "Success") throw new Error("artifacts did not load")
     const { latency } = result.success
-    expect(latency.ttft.length).toBeGreaterThan(0)
-    expect(latency.throughput.map((cohort) => `${cohort.provider}/${cohort.model}`)).toEqual(
-      latency.ttft.map((cohort) => `${cohort.provider}/${cohort.model}`),
-    )
+    const activeModels = [
+      { provider: "openai", model: "gpt-5.6-sol" },
+      { provider: "anthropic", model: "claude-fable-5-1" },
+      { provider: "openai", model: "gpt-6-astra" },
+      { provider: "anthropic", model: "claude-sonnet-5" },
+      { provider: "anthropic", model: "claude-haiku-4-5-20251001" },
+      { provider: "anthropic", model: "claude-opus-5" },
+    ]
+
+    for (const pair of activeModels) {
+      expect(
+        lookupTtftExpectationNs({
+          artifact: latency,
+          ...pair,
+          inputTokens: 20_000,
+          isStreaming: true,
+        }).provenance,
+      ).not.toBe("unmeasured")
+      expect(
+        lookupThroughputExpectationTps({
+          artifact: latency,
+          ...pair,
+          inputTokens: 20_000,
+          outputTokens: 500,
+          isStreaming: true,
+        }).provenance,
+      ).not.toBe("unmeasured")
+    }
   })
 
-  it("keeps the provisional reference coarse, so no cohort claims a measured distribution", () => {
+  it("records the closed fleet window and privacy gates behind the calibrated artifact", () => {
     const result = run(validateLaunchArtifacts())
     if (result._tag !== "Success") throw new Error("artifacts did not load")
     const { latency } = result.success
-    expect(latency.calibration).toBe("provisional")
-    for (const cohort of [...latency.ttft, ...latency.throughput]) {
-      expect(cohort.granularity).toBe("providerModel")
-    }
+    expect(LAUNCH_LATENCY_REFERENCE_FREEZE).toEqual({
+      since: "2026-06-23T00:00:00.000Z",
+      until: "2026-09-21T00:00:00.000Z",
+      ingestedAtUntil: "2026-09-21T08:00:00.000Z",
+      minimumSampleCount: 200,
+      minimumOrganizationCount: 5,
+    })
+    expect(latency.ttft.some((cohort) => cohort.granularity === "cohort")).toBe(true)
+    expect(latency.throughput.some((cohort) => cohort.granularity === "cohort")).toBe(true)
   })
 })
 
@@ -76,7 +108,7 @@ describe("the launch Agent Score artifact", () => {
   })
 
   it("uses the provisional launch window and coverage floors", () => {
-    expect(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion).toBe("agent-score-v4-provisional")
+    expect(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion).toBe("agent-score-v5-provisional")
     expect(LAUNCH_AGENT_SCORE_ARTIFACT.window).toEqual({
       stepDays: [7, 14, 21, 28],
       sessionTarget: 50,
