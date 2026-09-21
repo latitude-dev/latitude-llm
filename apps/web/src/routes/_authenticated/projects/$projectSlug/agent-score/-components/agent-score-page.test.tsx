@@ -7,13 +7,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { AgentScoreRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
 import {
   getProjectAgentScore,
+  getProjectAgentScoreComputation,
   getProjectAgentScoreExplanation,
   getProjectAgentScoreHistory,
+  refreshProjectAgentScore,
 } from "../../../../../../domains/agent-score/agent-score.functions.ts"
 import { AgentScorePage } from "./agent-score-page.tsx"
 
 vi.mock("../../../../../../domains/agent-score/agent-score.functions.ts", () => ({
   getProjectAgentScore: vi.fn(),
+  getProjectAgentScoreComputation: vi.fn(),
   getProjectAgentScoreExplanation: vi.fn(),
   getProjectAgentScoreHistory: vi.fn(),
   refreshProjectAgentScore: vi.fn(),
@@ -69,6 +72,12 @@ beforeEach(() => {
   })
   vi.mocked(getProjectAgentScoreHistory).mockResolvedValue([snapshot])
   vi.mocked(getProjectAgentScoreExplanation).mockResolvedValue({ status: "notComputed", explanation: null })
+  vi.mocked(getProjectAgentScoreComputation).mockResolvedValue({
+    date: snapshot.date,
+    status: "idle",
+    marker: "none",
+  })
+  vi.mocked(refreshProjectAgentScore).mockResolvedValue({ enqueued: false, date: snapshot.date })
 })
 
 afterEach(() => {
@@ -78,6 +87,35 @@ afterEach(() => {
 })
 
 describe("AgentScorePage date selection", () => {
+  it("shows a durable computation status, keeps the score visible, and disables refresh", async () => {
+    vi.mocked(getProjectAgentScoreComputation).mockResolvedValue({
+      date: snapshot.date,
+      status: "computing",
+      marker: "run-1:running:open",
+    })
+
+    renderPage()
+
+    await screen.findByText("Computing Agent Score")
+    expect(screen.getByText("This can take several minutes. You can leave this page and return later.")).toBeDefined()
+    expect(screen.getByText("Score evolution")).toBeDefined()
+    expect((screen.getByRole("button", { name: "Refresh" }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it("reloads displayed data when refresh does not enqueue a workflow", async () => {
+    renderPage()
+    await screen.findByText("Score evolution")
+    const scoreCalls = vi.mocked(getProjectAgentScore).mock.calls.length
+    const historyCalls = vi.mocked(getProjectAgentScoreHistory).mock.calls.length
+    const explanationCalls = vi.mocked(getProjectAgentScoreExplanation).mock.calls.length
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }))
+
+    await waitFor(() => expect(vi.mocked(getProjectAgentScore).mock.calls.length).toBeGreaterThan(scoreCalls))
+    expect(vi.mocked(getProjectAgentScoreHistory).mock.calls.length).toBeGreaterThan(historyCalls)
+    expect(vi.mocked(getProjectAgentScoreExplanation).mock.calls.length).toBeGreaterThan(explanationCalls)
+  })
+
   it("shows the latest published date and its trend when today has no score", async () => {
     renderPage()
     await screen.findByText("Score evolution")
