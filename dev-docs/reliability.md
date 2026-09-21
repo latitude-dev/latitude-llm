@@ -192,8 +192,8 @@ For the initial reliability events, `TracesIngested` publishes directly through 
 ### Score ingestion
 
 - annotation, evaluation, and custom flows all write the same canonical score model
-- machine-facing score uploads use `POST /v1/organizations/:organizationId/projects/:projectId/scores`, defaulting to custom-score semantics unless `_evaluation: true` is set for a locally executed Latitude evaluation upload
-- annotation ingestion remains on `POST /v1/organizations/:organizationId/projects/:projectId/annotations` even though it still writes canonical `source = "annotation"` score rows
+- machine-facing score uploads use `POST /v1/projects/:projectSlug/scores`, defaulting to custom-score semantics unless `_evaluation: true` is set for a locally executed Latitude evaluation upload
+- annotation creation uses `POST /v1/projects/:projectSlug/annotations`; API clients read, update, and delete those annotations by their generated id, and every operation keeps the canonical `source = "annotation"` score lifecycle coherent
 - all score writes land in Postgres first
 - ClickHouse only receives immutable score analytics rows after the score lifecycle is ready for analytics save
 - every score write records `ScoreCreated` transactionally with the row; the `domain-events` dispatcher publishes a deduped `issues:discovery` task keyed by score id, and the `issues:discovery` worker runs centralized issue handling only when the loaded score is eligible (non-draft, failed, non-errored, not already linked to an issue)

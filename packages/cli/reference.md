@@ -114,6 +114,40 @@ Creates a published annotation score against a target trace. The trace is resolv
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
+#### `latitude annotations delete`
+
+Deletes an API-created annotation by its Latitude-generated identifier.
+
+`DELETE /v1/projects/{projectSlug}/annotations/{annotationId}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--annotation-id` | `string` | Yes | Latitude-generated annotation identifier returned when the annotation was created. |
+
+#### `latitude annotations get`
+
+Returns an API-created annotation by its Latitude-generated identifier.
+
+`GET /v1/projects/{projectSlug}/annotations/{annotationId}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--annotation-id` | `string` | Yes | Latitude-generated annotation identifier returned when the annotation was created. |
+
+#### `latitude annotations update`
+
+Updates an API-created annotation while retaining its Latitude-generated identifier. Omitted fields keep their current values.
+
+`PATCH /v1/projects/{projectSlug}/annotations/{annotationId}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--annotation-id` | `string` | Yes | Latitude-generated annotation identifier returned when the annotation was created. |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
 ---
 
 ### `latitude api-keys`

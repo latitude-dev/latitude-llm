@@ -1426,6 +1426,26 @@
         },
         "description": "Optional anchor pinning the annotation to a specific message / part / offset range inside the trace."
       },
+      "UpdateAnnotationBody": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "New normalized score value in [0, 1]."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "New pass or fail verdict."
+          },
+          "feedback": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New free-text feedback explaining the score."
+          }
+        }
+      },
       "PaginatedTraces": {
         "type": "object",
         "properties": {
@@ -17142,6 +17162,244 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/annotations/{annotationId}": {
+      "get": {
+        "tags": [
+          "Annotations"
+        ],
+        "x-fern-sdk-group-name": "annotations",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get API annotation",
+        "description": "Returns an API-created annotation by its Latitude-generated identifier.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getAnnotation",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 24,
+              "maxLength": 24,
+              "description": "Latitude-generated annotation identifier returned when the annotation was created."
+            },
+            "required": true,
+            "description": "Latitude-generated annotation identifier returned when the annotation was created.",
+            "name": "annotationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Annotation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Annotation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Annotations"
+        ],
+        "x-fern-sdk-group-name": "annotations",
+        "x-fern-sdk-method-name": "update",
+        "summary": "Update API annotation",
+        "description": "Updates an API-created annotation while retaining its Latitude-generated identifier. Omitted fields keep their current values.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "updateAnnotation",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 24,
+              "maxLength": 24,
+              "description": "Latitude-generated annotation identifier returned when the annotation was created."
+            },
+            "required": true,
+            "description": "Latitude-generated annotation identifier returned when the annotation was created.",
+            "name": "annotationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAnnotationBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated annotation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Annotation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Annotations"
+        ],
+        "x-fern-sdk-group-name": "annotations",
+        "x-fern-sdk-method-name": "delete",
+        "summary": "Delete API annotation",
+        "description": "Deletes an API-created annotation by its Latitude-generated identifier.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "deleteAnnotation",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 24,
+              "maxLength": 24,
+              "description": "Latitude-generated annotation identifier returned when the annotation was created."
+            },
+            "required": true,
+            "description": "Latitude-generated annotation identifier returned when the annotation was created.",
+            "name": "annotationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Annotation deleted"
           },
           "401": {
             "description": "Unauthorized",

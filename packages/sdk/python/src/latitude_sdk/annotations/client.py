@@ -106,6 +106,134 @@ class AnnotationsClient:
         )
         return _response.data
 
+    def get(
+        self, project_slug: str, annotation_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> Annotation:
+        """
+        Returns an API-created annotation by its Latitude-generated identifier.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        annotation_id : str
+            Latitude-generated annotation identifier returned when the annotation was created.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        Annotation
+            Annotation
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.annotations.get(
+            project_slug="projectSlug",
+            annotation_id="annotationId",
+        )
+        """
+        _response = self._raw_client.get(project_slug, annotation_id, request_options=request_options)
+        return _response.data
+
+    def delete(
+        self, project_slug: str, annotation_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> None:
+        """
+        Deletes an API-created annotation by its Latitude-generated identifier.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        annotation_id : str
+            Latitude-generated annotation identifier returned when the annotation was created.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.annotations.delete(
+            project_slug="projectSlug",
+            annotation_id="annotationId",
+        )
+        """
+        _response = self._raw_client.delete(project_slug, annotation_id, request_options=request_options)
+        return _response.data
+
+    def update(
+        self,
+        project_slug: str,
+        annotation_id: str,
+        *,
+        value: typing.Optional[float] = OMIT,
+        passed: typing.Optional[bool] = OMIT,
+        feedback: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> Annotation:
+        """
+        Updates an API-created annotation while retaining its Latitude-generated identifier. Omitted fields keep their current values.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        annotation_id : str
+            Latitude-generated annotation identifier returned when the annotation was created.
+
+        value : typing.Optional[float]
+            New normalized score value in [0, 1].
+
+        passed : typing.Optional[bool]
+            New pass or fail verdict.
+
+        feedback : typing.Optional[str]
+            New free-text feedback explaining the score.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        Annotation
+            Updated annotation
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.annotations.update(
+            project_slug="projectSlug",
+            annotation_id="annotationId",
+        )
+        """
+        _response = self._raw_client.update(
+            project_slug, annotation_id, value=value, passed=passed, feedback=feedback, request_options=request_options
+        )
+        return _response.data
+
 
 class AsyncAnnotationsClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
@@ -205,5 +333,157 @@ class AsyncAnnotationsClient:
             signal_id=signal_id,
             anchor=anchor,
             request_options=request_options,
+        )
+        return _response.data
+
+    async def get(
+        self, project_slug: str, annotation_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> Annotation:
+        """
+        Returns an API-created annotation by its Latitude-generated identifier.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        annotation_id : str
+            Latitude-generated annotation identifier returned when the annotation was created.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        Annotation
+            Annotation
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.annotations.get(
+                project_slug="projectSlug",
+                annotation_id="annotationId",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.get(project_slug, annotation_id, request_options=request_options)
+        return _response.data
+
+    async def delete(
+        self, project_slug: str, annotation_id: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> None:
+        """
+        Deletes an API-created annotation by its Latitude-generated identifier.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        annotation_id : str
+            Latitude-generated annotation identifier returned when the annotation was created.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.annotations.delete(
+                project_slug="projectSlug",
+                annotation_id="annotationId",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.delete(project_slug, annotation_id, request_options=request_options)
+        return _response.data
+
+    async def update(
+        self,
+        project_slug: str,
+        annotation_id: str,
+        *,
+        value: typing.Optional[float] = OMIT,
+        passed: typing.Optional[bool] = OMIT,
+        feedback: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> Annotation:
+        """
+        Updates an API-created annotation while retaining its Latitude-generated identifier. Omitted fields keep their current values.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        annotation_id : str
+            Latitude-generated annotation identifier returned when the annotation was created.
+
+        value : typing.Optional[float]
+            New normalized score value in [0, 1].
+
+        passed : typing.Optional[bool]
+            New pass or fail verdict.
+
+        feedback : typing.Optional[str]
+            New free-text feedback explaining the score.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        Annotation
+            Updated annotation
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.annotations.update(
+                project_slug="projectSlug",
+                annotation_id="annotationId",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.update(
+            project_slug, annotation_id, value=value, passed=passed, feedback=feedback, request_options=request_options
         )
         return _response.data

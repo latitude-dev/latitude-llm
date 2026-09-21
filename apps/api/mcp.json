@@ -1961,6 +1961,650 @@
       }
     },
     {
+      "name": "getAnnotation",
+      "title": "Get API annotation",
+      "description": "Returns an API-created annotation by its Latitude-generated identifier.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "annotationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Latitude-generated annotation identifier returned when the annotation was created."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "annotationId"
+        ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable annotation identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this annotation."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this annotation lives in."
+          },
+          "sessionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Session id lifted from the annotated trace. `null` when the trace has no session."
+          },
+          "traceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 32,
+                "maxLength": 32,
+                "description": "32-character trace identifier."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the annotated trace."
+          },
+          "spanId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 16,
+                "maxLength": 16,
+                "description": "16-character span identifier."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Span the annotation pins to. Defaults to the trace's last LLM-completion span."
+          },
+          "simulationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Simulation reference, if any."
+          },
+          "signalId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Signal this annotation contributes to, if any."
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score value in [0, 1]. Higher = better."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "Whether the annotation marks the output as passing."
+          },
+          "feedback": {
+            "type": "string",
+            "description": "Free-text feedback explaining the score."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Generation error text, when the annotation itself errored. `null` for successful annotations."
+          },
+          "errored": {
+            "type": "boolean",
+            "description": "`true` when the annotation could not be generated successfully."
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Generation duration in nanoseconds. `0` for human annotations."
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Total LLM tokens consumed generating the score. `0` for human annotations."
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Total LLM cost in microcents (100,000,000 per USD). `0` for human annotations."
+          },
+          "draftedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the annotation was drafted. `null` for published annotations."
+          },
+          "annotatorId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User who authored the annotation. `null` when not attributed to a user."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "description": "ISO-8601 timestamp at which the annotation was created."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "description": "ISO-8601 timestamp of the last metadata update."
+          },
+          "source": {
+            "type": "string",
+            "const": "annotation",
+            "description": "Always `\"annotation\"` for this shape."
+          },
+          "sourceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "UI",
+                  "API",
+                  "SYSTEM"
+                ]
+              },
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              }
+            ],
+            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or a CUID for authored rows."
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "rawFeedback": {
+                "type": "string",
+                "description": "Original feedback text as written by the annotator, before any server-side enrichment."
+              },
+              "messageIndex": {
+                "description": "0-based message index inside the conversation. Omit for conversation-level annotations.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "partIndex": {
+                "description": "0-based index into the target message's `parts[]`. Requires `messageIndex`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "startOffset": {
+                "description": "Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "endOffset": {
+                "description": "Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "textFormat": {
+                "description": "UI-side text transform applied before the offsets were captured (e.g. `\"pretty-json\"`). Resolvers must apply the same transform before slicing.",
+                "type": "string",
+                "enum": [
+                  "pretty-json"
+                ]
+              }
+            },
+            "required": [
+              "rawFeedback"
+            ],
+            "additionalProperties": false,
+            "description": "Annotation-specific metadata: `rawFeedback` plus a snapshot of the anchor at write time."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "sessionId",
+          "traceId",
+          "spanId",
+          "simulationId",
+          "signalId",
+          "value",
+          "passed",
+          "feedback",
+          "error",
+          "errored",
+          "duration",
+          "tokens",
+          "cost",
+          "draftedAt",
+          "annotatorId",
+          "createdAt",
+          "updatedAt",
+          "source",
+          "sourceId",
+          "metadata"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "updateAnnotation",
+      "title": "Update API annotation",
+      "description": "Updates an API-created annotation while retaining its Latitude-generated identifier. Omitted fields keep their current values.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "annotationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Latitude-generated annotation identifier returned when the annotation was created."
+          },
+          "value": {
+            "description": "New normalized score value in [0, 1].",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "passed": {
+            "description": "New pass or fail verdict.",
+            "type": "boolean"
+          },
+          "feedback": {
+            "description": "New free-text feedback explaining the score.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "projectSlug",
+          "annotationId"
+        ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable annotation identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this annotation."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this annotation lives in."
+          },
+          "sessionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Session id lifted from the annotated trace. `null` when the trace has no session."
+          },
+          "traceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 32,
+                "maxLength": 32,
+                "description": "32-character trace identifier."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the annotated trace."
+          },
+          "spanId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 16,
+                "maxLength": 16,
+                "description": "16-character span identifier."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Span the annotation pins to. Defaults to the trace's last LLM-completion span."
+          },
+          "simulationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Simulation reference, if any."
+          },
+          "signalId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Signal this annotation contributes to, if any."
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score value in [0, 1]. Higher = better."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "Whether the annotation marks the output as passing."
+          },
+          "feedback": {
+            "type": "string",
+            "description": "Free-text feedback explaining the score."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Generation error text, when the annotation itself errored. `null` for successful annotations."
+          },
+          "errored": {
+            "type": "boolean",
+            "description": "`true` when the annotation could not be generated successfully."
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Generation duration in nanoseconds. `0` for human annotations."
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Total LLM tokens consumed generating the score. `0` for human annotations."
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Total LLM cost in microcents (100,000,000 per USD). `0` for human annotations."
+          },
+          "draftedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the annotation was drafted. `null` for published annotations."
+          },
+          "annotatorId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User who authored the annotation. `null` when not attributed to a user."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "description": "ISO-8601 timestamp at which the annotation was created."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "description": "ISO-8601 timestamp of the last metadata update."
+          },
+          "source": {
+            "type": "string",
+            "const": "annotation",
+            "description": "Always `\"annotation\"` for this shape."
+          },
+          "sourceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "UI",
+                  "API",
+                  "SYSTEM"
+                ]
+              },
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              }
+            ],
+            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or a CUID for authored rows."
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "rawFeedback": {
+                "type": "string",
+                "description": "Original feedback text as written by the annotator, before any server-side enrichment."
+              },
+              "messageIndex": {
+                "description": "0-based message index inside the conversation. Omit for conversation-level annotations.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "partIndex": {
+                "description": "0-based index into the target message's `parts[]`. Requires `messageIndex`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "startOffset": {
+                "description": "Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "endOffset": {
+                "description": "Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "textFormat": {
+                "description": "UI-side text transform applied before the offsets were captured (e.g. `\"pretty-json\"`). Resolvers must apply the same transform before slicing.",
+                "type": "string",
+                "enum": [
+                  "pretty-json"
+                ]
+              }
+            },
+            "required": [
+              "rawFeedback"
+            ],
+            "additionalProperties": false,
+            "description": "Annotation-specific metadata: `rawFeedback` plus a snapshot of the anchor at write time."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "sessionId",
+          "traceId",
+          "spanId",
+          "simulationId",
+          "signalId",
+          "value",
+          "passed",
+          "feedback",
+          "error",
+          "errored",
+          "duration",
+          "tokens",
+          "cost",
+          "draftedAt",
+          "annotatorId",
+          "createdAt",
+          "updatedAt",
+          "source",
+          "sourceId",
+          "metadata"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      }
+    },
+    {
+      "name": "deleteAnnotation",
+      "title": "Delete API annotation",
+      "description": "Deletes an API-created annotation by its Latitude-generated identifier.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "annotationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Latitude-generated annotation identifier returned when the annotation was created."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "annotationId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      }
+    },
+    {
       "name": "listTraces",
       "title": "List project traces",
       "description": "Returns a cursor-paginated page of traces in the project. Combine `filters` with `query` (free-text semantic search) to narrow the result set. Trace list rows exclude per-message LLM content — use `getTrace` for the full conversation view.",
