@@ -56,7 +56,7 @@ A sandbox key can only ever write to its sandbox, and a production key can only 
 The same `lat_sandbox_` key also **reads** the sandbox over the [API](https://api.latitude.so/docs) and the [CLI](/getting-started/cli) — the key alone decides which environment you're talking to, on reads exactly as on writes. So an agent can pull a dev trace and investigate it, instead of you pasting screenshots:
 
 ```bash
-# `LATITUDE_API_KEY` beats the keyring, so this switches environment per command
+# `LATITUDE_API_KEY` beats the keyring, so this points the shell at the sandbox
 export LATITUDE_API_KEY=lat_sandbox_...
 
 latitude traces list --project-slug my-app --format json
@@ -65,8 +65,8 @@ latitude traces get --project-slug my-app --trace-id <traceId> --format json
 
 Two things follow from the key being the boundary:
 
-- Your **live** key reads only live data. Because a sandbox mirrors your project slugs, the same query that works in the sandbox returns an empty page under a live key — not an error. If your sandbox traces look invisible from the API, check the key prefix first.
-- Only the **trace-level** surface returns data (traces, sessions, and spans). The monitoring endpoints — searches, signals, monitors, evaluations, annotations — answer empty, because those features don't run on sandbox traces.
+- Your **live** key reads only live data. For a project the sandbox mirrors, the query that works in the sandbox comes back as an empty page under a live key; for a sandbox-only project, it's a `404`, because that slug doesn't exist in your live organization. Either way, if your development traces look invisible from the API, check the key prefix first.
+- A sandbox key is an ordinary organization-scoped key, not a trace-only one — the whole API surface is reachable with it. What a sandbox lacks is the data the [monitoring layer](#whats-available-in-a-sandbox) would have produced: no detected signals, no search index, no monitor or evaluation results. Those endpoints answer empty (or `404` on a point lookup) because nothing ran, not because they're blocked.
 
 <Warning>
   The [MCP server](/getting-started/mcp) can't reach a sandbox. It authenticates with OAuth, and an OAuth token binds to an organization you're a member of — which is always your live org. For agents working against a sandbox, use the CLI (or the REST API with the sandbox key) instead.

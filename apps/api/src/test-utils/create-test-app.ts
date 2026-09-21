@@ -222,13 +222,9 @@ interface SandboxTenantSetup {
 /**
  * A sandbox (Test Mode) org hanging off `parent`, shaped like what
  * `createSandboxUseCase` writes: a child `organizations` row, its `sandboxes`
- * attributes row, and the `lat_sandbox_`-prefixed default key.
- *
- * Deliberately inserts **no** `members` row: production sandboxes have none
- * either (sandbox access is authorized against *parent* membership — see
- * `resolveSandboxAccess`), and that absence is exactly why an OAuth token can
- * never bind to a sandbox. Any test that passes here must therefore be
- * authorizing off the key alone.
+ * attributes row, and the `lat_sandbox_`-prefixed default key — and no
+ * `members` row, since sandbox access is authorized against *parent*
+ * membership (see `resolveSandboxAccess`).
  */
 export const createSandboxTenantSetup = async (
   database: InMemoryPostgres,

@@ -13,19 +13,6 @@ import {
   setupTestApi,
 } from "../test-utils/create-test-app.ts"
 
-/**
- * A sandbox (Test Mode) org is reachable over the public REST API with its own
- * `lat_sandbox_` key, and *only* with that key. Nothing in the read path knows
- * what a sandbox is — `validateApiKey` resolves the org off the key and every
- * read is RLS-scoped to it — so these tests pin the behaviour users depend on
- * when they point the CLI or an agent at a sandbox to debug a dev trace.
- *
- * The inverse case matters just as much: a parent (live) key sees *nothing*
- * from the sandbox, and gets an empty page rather than an error — which is
- * what makes "sandbox traces don't show up in the API" a plausible conclusion
- * for anyone who grabbed their key from Settings → Keys.
- */
-
 const SANDBOX_TRACE_ID = "33333333333333333333333333333333" as const
 const SANDBOX_SPAN_ID = "3333333333333333" as const
 
@@ -86,12 +73,7 @@ const seedTrace = async ({
   )
 }
 
-/**
- * A parent org with a sandbox beneath it, each holding a project on the *same*
- * slug (sandboxes mirror the live project layout, so instrumentation keeps the
- * same project identifiers and only the key changes) and one trace in the
- * sandbox only.
- */
+/** Parent and sandbox orgs sharing one project slug, with the trace seeded in the sandbox only. */
 const setupParentAndSandbox = async ({ database, clickhouse }: Pick<ApiTestContext, "database" | "clickhouse">) => {
   const parent = await createTenantSetup(database)
   const sandbox = await createSandboxTenantSetup(database, parent)
@@ -173,7 +155,7 @@ describe("Sandbox API key access", () => {
     expect(body.items).toEqual([])
   })
 
-  it<ApiTestContext>("hides a live project from the sandbox key even on a shared slug", async ({
+  it<ApiTestContext>("returns 404 when the sandbox key asks for a project that only exists live", async ({
     app,
     database,
     clickhouse,
