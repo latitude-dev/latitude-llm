@@ -81,7 +81,7 @@ describe("updateApiAnnotationUseCase", () => {
       metadata: { rawFeedback: "Incorrect response", messageIndex: 2 },
     })
     expect(scores.get(score.id)).toEqual(updated)
-    expect(inserted).toEqual([score.id])
+    expect(inserted).toEqual([])
     expect(events).toEqual([
       expect.objectContaining({
         eventName: "AnnotationUpdated",

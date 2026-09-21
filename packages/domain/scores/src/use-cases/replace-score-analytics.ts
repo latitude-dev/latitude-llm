@@ -15,8 +15,8 @@ export const replaceScoreAnalyticsUseCase = Effect.fn("scores.replaceScoreAnalyt
   const analyticsRepository = yield* ScoreAnalyticsRepository
   const score = yield* scoreRepository.findById(ScoreId(input.scoreId))
 
+  yield* analyticsRepository.delete(score.id)
   if (!isImmutableScore(score)) return
 
-  yield* analyticsRepository.delete(score.id)
   yield* analyticsRepository.insert(score)
 })
