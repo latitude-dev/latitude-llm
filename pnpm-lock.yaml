@@ -1438,6 +1438,9 @@ importers:
       typescript:
         specifier: 6.0.3
         version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@26.4.1)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.16(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/domain/evaluations:
     dependencies:
@@ -1772,9 +1775,6 @@ importers:
 
   packages/domain/notifications:
     dependencies:
-      '@domain/agent-score':
-        specifier: workspace:*
-        version: link:../agent-score
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../evaluations

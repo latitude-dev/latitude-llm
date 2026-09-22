@@ -106,6 +106,7 @@ export type {
   RequestAgentScoreDigestNotificationsError,
   RequestAgentScoreDigestNotificationsInput,
   RequestAgentScoreDigestNotificationsResult,
+  WeeklyAgentScoreDigestInput,
 } from "./use-cases/request-agent-score-digest-notifications.ts"
 export { requestAgentScoreDigestNotificationsUseCase } from "./use-cases/request-agent-score-digest-notifications.ts"
 export type {

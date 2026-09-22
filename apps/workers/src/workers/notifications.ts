@@ -1,3 +1,4 @@
+import { runWeeklyAgentScoreDigest } from "@domain/agent-score"
 import { routeAdmitsPayload, SlackIntegrationRepository } from "@domain/integrations"
 import {
   createNotificationUseCase,
@@ -277,11 +278,24 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
       ),
 
     "request-agent-score-digest-notifications": (payload) =>
-      requestAgentScoreDigestNotificationsUseCase({
-        organizationId: OrganizationId(payload.organizationId),
-        projectId: ProjectId(payload.projectId),
-        windowStart: payload.windowStart,
-        windowEnd: payload.windowEnd,
+      Effect.gen(function* () {
+        // The fold lives here rather than in the producer: `@domain/integrations` depends on
+        // `@domain/notifications` for its Slack renderers, so a producer that reached for
+        // `@domain/agent-score` would close a package cycle.
+        const digested = yield* runWeeklyAgentScoreDigest({
+          organizationId: OrganizationId(payload.organizationId),
+          projectId: ProjectId(payload.projectId),
+          windowStart: payload.windowStart,
+          windowEnd: payload.windowEnd,
+        })
+        if (digested.status === "skipped") {
+          return { status: "skipped", reason: digested.reason } as const
+        }
+        return yield* requestAgentScoreDigestNotificationsUseCase({
+          organizationId: OrganizationId(payload.organizationId),
+          projectId: ProjectId(payload.projectId),
+          digest: digested.digest,
+        })
       }).pipe(
         Effect.flatMap((result) => {
           if (result.status === "skipped") {

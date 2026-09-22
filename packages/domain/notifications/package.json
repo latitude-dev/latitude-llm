@@ -16,7 +16,6 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@domain/agent-score": "workspace:*",
     "@domain/incidents": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/signals": "workspace:*",

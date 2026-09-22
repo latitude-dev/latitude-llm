@@ -4,6 +4,15 @@ export const SCORE_DIMENSIONS = ["outcome", "reliability", "cost", "speed", "saf
 export const scoreDimensionSchema = z.enum(SCORE_DIMENSIONS)
 export type ScoreDimension = z.infer<typeof scoreDimensionSchema>
 
+/** What a dimension is called wherever a reader sees one: the score page, the digest email, Slack. */
+export const SCORE_DIMENSION_LABELS: Record<ScoreDimension, string> = {
+  outcome: "Outcome quality",
+  reliability: "Reliability",
+  cost: "Cost",
+  speed: "Speed",
+  safety: "Safety",
+}
+
 const scoreDimensionDescription = "Agent Score dimension this evidence informs."
 const evidenceRoleDescription = "How this evidence informs the dimension."
 

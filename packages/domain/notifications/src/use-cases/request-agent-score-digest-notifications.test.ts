@@ -1,40 +1,46 @@
-import { type AgentScoreSnapshot, AgentScoreSnapshotRepository } from "@domain/agent-score"
 import { type Membership, MembershipRepository, type MemberWithUser } from "@domain/organizations"
-import { OrganizationId, ProjectId, SCORE_DIMENSIONS, SqlClient, UserId } from "@domain/shared"
+import { OrganizationId, ProjectId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { requestAgentScoreDigestNotificationsUseCase } from "./request-agent-score-digest-notifications.ts"
+import {
+  requestAgentScoreDigestNotificationsUseCase,
+  type WeeklyAgentScoreDigestInput,
+} from "./request-agent-score-digest-notifications.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
 
 const ORG = OrganizationId(cuid("o"))
 const PROJECT = ProjectId(cuid("p"))
-const WINDOW = { windowStart: "2026-09-16", windowEnd: "2026-09-22" }
 
-const dimensions = (score: number) =>
-  Object.fromEntries(
-    SCORE_DIMENSIONS.map((dimension) => [dimension, { score, interval: { lower: score - 2, upper: score + 2 } }]),
-  ) as AgentScoreSnapshot["dimensions"]
-
-const snapshot = (date: string, score: number): AgentScoreSnapshot => ({
-  organizationId: ORG,
-  projectId: PROJECT,
-  date,
+const digest = (overrides: Partial<WeeklyAgentScoreDigestInput> = {}): WeeklyAgentScoreDigestInput => ({
+  date: "2026-09-21",
+  windowStart: "2026-09-16",
+  windowEnd: "2026-09-22",
+  score: 70,
+  interval: { lower: 68, upper: 72 },
   scoringVersion: "agent-score-v5-provisional",
   windowDays: 7,
   eligibleSessionCount: 120,
-  score,
-  interval: { lower: score - 1, upper: score + 1 },
-  dimensions: dimensions(score),
-  createdAt: new Date(`${date}T04:00:00.000Z`),
+  publishedDayCount: 2,
+  dimensions: {
+    outcome: { score: 74, delta: 2 },
+    reliability: { score: 81, delta: 0 },
+    cost: { score: 66, delta: -1 },
+    speed: { score: 70, delta: 3 },
+    safety: { score: 92, delta: null },
+  },
+  comparison: {
+    status: "comparable",
+    baselineDate: "2026-09-17",
+    baselineScore: 60,
+    delta: 10,
+    significant: true,
+  },
+  ...overrides,
 })
 
-function setup(options: {
-  readonly snapshots?: readonly AgentScoreSnapshot[]
-  readonly memberUserIds?: readonly string[]
-}) {
-  const memberUserIds = options.memberUserIds ?? [cuid("ua"), cuid("ub")]
+function setup(memberUserIds: readonly string[] = [cuid("ua"), cuid("ub")]) {
   const members: MemberWithUser[] = memberUserIds.map((uid, i) => ({
     id: cuid(`m${i}`) as Membership["id"],
     organizationId: ORG,
@@ -73,35 +79,22 @@ function setup(options: {
     delete: () => Effect.die("not used"),
   })
 
-  const snapshots = AgentScoreSnapshotRepository.of({
-    insertIfAbsent: () => Effect.die("not used"),
-    findByDate: () => Effect.die("not used"),
-    findLatest: () => Effect.die("not used"),
-    listHistory: () => Effect.succeed(options.snapshots ?? []),
-  })
-
   return Layer.mergeAll(
     Layer.succeed(MembershipRepository, memberships),
-    Layer.succeed(AgentScoreSnapshotRepository, snapshots),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG })),
   )
 }
 
-const run = (layer: ReturnType<typeof setup>) =>
+const run = (layer: ReturnType<typeof setup>, input: WeeklyAgentScoreDigestInput = digest()) =>
   Effect.runPromise(
-    requestAgentScoreDigestNotificationsUseCase({ organizationId: ORG, projectId: PROJECT, ...WINDOW }).pipe(
+    requestAgentScoreDigestNotificationsUseCase({ organizationId: ORG, projectId: PROJECT, digest: input }).pipe(
       Effect.provide(layer),
     ),
   )
 
 describe("requestAgentScoreDigestNotificationsUseCase", () => {
   it("emits one request per org member, all sharing the week's idempotency key", async () => {
-    const result = await run(
-      setup({
-        snapshots: [snapshot("2026-09-17", 60), snapshot("2026-09-21", 70)],
-        memberUserIds: [cuid("ua"), cuid("ub"), cuid("uc")],
-      }),
-    )
+    const result = await run(setup([cuid("ua"), cuid("ub"), cuid("uc")]))
 
     expect(result.status).toBe("ok")
     if (result.status !== "ok") throw new Error("unreachable")
@@ -114,32 +107,37 @@ describe("requestAgentScoreDigestNotificationsUseCase", () => {
     expect(new Set(result.requests.map((request) => request.notificationId)).size).toBe(3)
   })
 
-  it("carries the fold of the window onto the payload", async () => {
-    const result = await run(setup({ snapshots: [snapshot("2026-09-17", 60), snapshot("2026-09-21", 70)] }))
+  it("anchors the digest to its project on the payload", async () => {
+    const result = await run(setup())
 
     expect(result.status).toBe("ok")
     if (result.status !== "ok") throw new Error("unreachable")
-    const payload = result.requests[0]?.payload
-    expect(payload).toMatchObject({
+    expect(result.requests[0]?.payload).toMatchObject({
       projectId: PROJECT,
       date: "2026-09-21",
       score: 70,
       publishedDayCount: 2,
-      windowStart: "2026-09-16",
-      windowEnd: "2026-09-22",
-      comparison: { status: "comparable", baselineDate: "2026-09-17", baselineScore: 60, delta: 10 },
+      comparison: { status: "comparable", delta: 10, significant: true },
     })
   })
 
-  it("skips a project whose window turned out to hold no score", async () => {
-    const result = await run(setup({ snapshots: [] }))
+  it("keys two projects digesting the same week apart", async () => {
+    const first = await run(setup())
+    const second = await Effect.runPromise(
+      requestAgentScoreDigestNotificationsUseCase({
+        organizationId: ORG,
+        projectId: ProjectId(cuid("p2")),
+        digest: digest(),
+      }).pipe(Effect.provide(setup())),
+    )
 
-    expect(result).toEqual({ status: "skipped", reason: "no-score" })
+    expect(first.status).toBe("ok")
+    expect(second.status).toBe("ok")
+    if (first.status !== "ok" || second.status !== "ok") throw new Error("unreachable")
+    expect(first.requests[0]?.idempotencyKey).not.toBe(second.requests[0]?.idempotencyKey)
   })
 
   it("skips when the organization has no members left to notify", async () => {
-    const result = await run(setup({ snapshots: [snapshot("2026-09-21", 70)], memberUserIds: [] }))
-
-    expect(result).toEqual({ status: "skipped", reason: "no-recipients" })
+    expect(await run(setup([]))).toEqual({ status: "skipped", reason: "no-recipients" })
   })
 })

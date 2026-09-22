@@ -8,7 +8,8 @@
     "dev": "email dev -d ./src/templates -p 3001",
     "check": "biome check .",
     "format": "biome format --write . && biome check --fix .",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsgo --noEmit",
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@domain/signals": "workspace:*",
@@ -28,6 +29,7 @@
     "@types/react": "catalog:",
     "@typescript/native-preview": "catalog:",
     "react-email": "5.2.9",
+    "vitest": "catalog:",
     "typescript": "6.0.3"
   }
 }
