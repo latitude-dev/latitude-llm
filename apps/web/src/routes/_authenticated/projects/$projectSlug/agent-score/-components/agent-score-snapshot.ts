@@ -137,7 +137,7 @@ export async function createScoreSnapshot(input: ScoreSnapshotInput): Promise<Sc
   if (!context) throw new Error("Image export is unavailable in this browser.")
   context.scale(IMAGE_SCALE, IMAGE_SCALE)
   context.drawImage(background, 0, 0, IMAGE_SIZE, IMAGE_SIZE)
-  context.drawImage(headline, 206.191, 139.5, 862.548, 102.922)
+  context.drawImage(headline, 149.977, 139.5, 970.047, 102.922)
   context.drawImage(wordmark, 1012.268, 620.56, 200.346, 30.04)
   context.drawImage(benchmark, 59.276, 621.04, 258.305, 36.72)
   context.save()
