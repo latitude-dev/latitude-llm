@@ -82,6 +82,7 @@ const session = (id: string, findings: readonly AssessmentFinding[]): Normalized
   ({
     sessionId: SessionId(id),
     hasReadableUserTask: true,
+    momentsAnalyzed: true,
     observedMicrocents: 0,
     observedDurationNs: 0,
     findings,

@@ -974,6 +974,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       ],
       screeningDecisions: input.screeningDecisions,
       scoringEligibleSignalIds: [...scoringEligibleSignalIds(input.signals)],
+      momentsAnalyzed: input.moments.analysisStatus === "analyzed",
       costEvidence: {
         readings: costEvidence.readings,
         workloadStratum: costEvidence.workloadStratum,

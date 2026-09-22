@@ -64,6 +64,7 @@ const session = ({
   ({
     sessionId: SessionId(sessionId),
     hasReadableUserTask: true,
+    momentsAnalyzed: true,
     observedMicrocents: 0,
     observedDurationNs: 0,
     findings,

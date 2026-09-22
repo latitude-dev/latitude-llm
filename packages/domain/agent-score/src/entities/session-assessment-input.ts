@@ -168,5 +168,12 @@ export interface NormalizedSessionAssessmentInput {
    * able to move a score's explanation by being invisible to it.
    */
   readonly scoringEligibleSignalIds: readonly string[]
+  /**
+   * Whether conversation analysis ran on this session, which is the basis moment evidence describes.
+   *
+   * Moment findings are only absent-because-clean on an analyzed session. On a skipped or failed one
+   * their absence says nothing, and treating the two alike is how a coverage gap reads as health.
+   */
+  readonly momentsAnalyzed: boolean
   readonly costEvidence?: NormalizedSessionCostEvidence
 }

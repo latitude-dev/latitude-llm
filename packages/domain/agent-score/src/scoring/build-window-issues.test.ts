@@ -1,6 +1,7 @@
 import { SessionId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import type { AssessmentFinding, NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
+import { buildIssueRows } from "./build-issue-rows.ts"
 import { buildWindowIssues, readSessionIssueEvidence } from "./build-window-issues.ts"
 import type { ProjectOutcomeEstimate } from "./estimate-outcome.ts"
 import type { ProjectSafetyEstimate } from "./estimate-safety.ts"
@@ -91,16 +92,19 @@ const session = ({
   eligibleSignalIds = [],
   slug = "task-failure",
   probability = 0.1,
+  momentsAnalyzed = true,
 }: {
   readonly sessionId: string
   readonly findings: readonly AssessmentFinding[]
   readonly eligibleSignalIds?: readonly string[]
   readonly slug?: string
   readonly probability?: number
+  readonly momentsAnalyzed?: boolean
 }): NormalizedSessionAssessmentInput =>
   ({
     sessionId: SessionId(sessionId),
     hasReadableUserTask: true,
+    momentsAnalyzed,
     observedMicrocents: 0,
     observedDurationNs: 0,
     findings,
@@ -161,6 +165,43 @@ describe("readSessionIssueEvidence", () => {
 
     expect(deterministic.outcome[0]?.observationProbability).toBe(1)
     expect(moment.outcome[0]?.observationProbability).toBe(1)
+  })
+
+  it("reads a moment against the analyzed sessions rather than the whole window", () => {
+    const moment = readSessionIssueEvidence(session({ sessionId: "stall", findings: [momentFinding()] }))
+    const deterministic = readSessionIssueEvidence(
+      session({ sessionId: "failure", findings: [finishFailureFinding()] }),
+    )
+
+    expect(moment.outcome[0]?.basis).toBe("analyzed")
+    // A deterministic reader saw every eligible session, so it keeps the wider denominator.
+    expect(deterministic.outcome[0]?.basis).toBeUndefined()
+  })
+
+  it("leaves a moment uncorrected when analysis never ran, rather than assuming it was certain", () => {
+    const unanalyzed = readSessionIssueEvidence(
+      session({ sessionId: "stall", findings: [momentFinding()], momentsAnalyzed: false }),
+    )
+
+    expect(unanalyzed.outcome[0]?.basis).toBe("analyzed")
+    expect(unanalyzed.outcome[0]?.observationProbability).toBeUndefined()
+
+    const rows = buildIssueRows({
+      sessions: [
+        {
+          sessionId: "stall",
+          adverse: true,
+          endpointInclusionProbability: 1,
+          observations: unanalyzed.outcome,
+        },
+      ],
+      basisSessionCounts: { eligible: 1, analyzed: 0 },
+    })
+
+    // Unrankable rather than ranked on a denominator nobody established: an absent analysis is a
+    // coverage gap, and a coverage gap must never read as a corrected estimate.
+    expect(rows[0]).toMatchObject({ ranked: false, basis: "analyzed", basisSessionCount: 0 })
+    expect(rows[0]?.estimatedReach).toBeUndefined()
   })
 
   it("routes confirmed harm to the harm table and not to exposure", () => {

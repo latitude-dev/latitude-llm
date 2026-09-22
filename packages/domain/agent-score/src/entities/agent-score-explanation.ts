@@ -54,6 +54,12 @@ const issueRowSchema = z.object({
   ranked: z.boolean(),
   /** Optional so a cached explanation written before the field existed still parses. */
   exampleSessionIds: z.array(z.string()).readonly().optional(),
+  /**
+   * The population this row's reader could see. Optional for the same reason, and defaulted to
+   * `eligible` on read so a legacy row keeps the denominator it was written against.
+   */
+  basis: z.enum(["eligible", "analyzed"]).default("eligible"),
+  basisSessionCount: z.number().optional(),
 })
 
 const windowIssuesSchema = z.object({

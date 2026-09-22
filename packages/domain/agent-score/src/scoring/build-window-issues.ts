@@ -15,6 +15,8 @@ export interface SessionIssueEvidence {
   readonly sessionId: string
   readonly outcome: readonly IssueObservation[]
   readonly safety: SafetyIssueObservations
+  /** Whether conversation analysis ran, which is the denominator moment-derived rows are read against. */
+  readonly momentsAnalyzed: boolean
 }
 
 const decisionProbability = (
@@ -47,10 +49,12 @@ export const readSessionIssueEvidence = (session: NormalizedSessionAssessmentInp
 
   return {
     sessionId: session.sessionId,
+    momentsAnalyzed: session.momentsAnalyzed,
     outcome: readOutcomeIssueObservations({
       items,
       eligibleSignalIds,
       verdictScoreIds,
+      momentsAnalyzed: session.momentsAnalyzed,
     }),
     safety: readSafetyIssueObservations({
       items: items.map(({ item }) => item),
@@ -114,9 +118,17 @@ export const buildWindowIssues = ({
     observations: byId.get(examined.sessionId)?.safety ?? { confirmedHarm: [], exposure: [] },
   }))
 
+  // Only the sessions the estimator used, and only the analyzed ones among them: a moment row that
+  // divided by every judged session would report a rate for a population its reader never saw.
+  const outcomeSessionIds = new Set(outcomeSessions.map((session) => session.sessionId))
+  const analyzedSessionCount = evidence.filter(
+    (session) => session.momentsAnalyzed && outcomeSessionIds.has(session.sessionId),
+  ).length
+
   return {
     outcome: buildIssueRows({
       sessions: outcomeSessions,
+      basisSessionCounts: { eligible: outcomeSessions.length, analyzed: analyzedSessionCount },
       ...(rowLimit !== undefined ? { rowLimit } : {}),
     }),
     safety: buildSafetyIssues({
