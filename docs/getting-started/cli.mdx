@@ -63,17 +63,18 @@ The CLI authenticates with an **organization-scoped API key**. Create one in the
 
 <Tabs>
   <Tab title="Keyring (recommended)">
-    Store the key once in your operating system's secret store (Keychain on MacOS, Secret Service on Linux, Credential Manager on Windows):
+    Store each key once in your operating system's secret store (Keychain on MacOS, Secret Service on Linux, Credential Manager on Windows):
 
     ```bash
-    latitude auth login
+    latitude auth login --env production
+    latitude auth login --env sandbox
     ```
 
-    You'll be prompted to paste your API key; it's saved to the keyring under `latitude:ApiKeyAuth` and reused on every subsequent command. Manage it with:
+    Each command prompts for the corresponding API key. The CLI checks the `lat_sandbox_` prefix before saving a sandbox key, so a live key cannot be stored in the sandbox slot by mistake. Manage either credential with:
 
     ```bash
-    latitude auth status    # show which credential sources are set, for each scheme
-    latitude auth logout    # remove the stored key from the keyring
+    latitude auth status --env sandbox
+    latitude auth logout --env sandbox
     ```
   </Tab>
   <Tab title="Environment variable">
@@ -84,15 +85,20 @@ The CLI authenticates with an **organization-scoped API key**. Create one in the
     latitude projects list
     ```
 
-    `LATITUDE_API_KEY` takes precedence over the keyring, so it's easy to override the stored credential per-session. `latitude auth status` shows every source the CLI can see and which one wins.
+    Without an environment selector, `LATITUDE_API_KEY` takes precedence over the legacy keyring entry. This keeps existing scripts and single-key setups working.
   </Tab>
 </Tabs>
 
-The key also decides **which environment** you're reading: a `lat_sandbox_` key from a [sandbox](/observability/features/sandbox) scopes every command to that sandbox's traces, and a live key to production. Because the environment variable beats the keyring, you can keep your live key in the keyring and switch per command:
+Set a project once, then switch environments with one variable. Explicit environment selection always uses the matching saved credential, even when `LATITUDE_API_KEY` is inherited from the shell or a `.env` file:
 
 ```bash
-LATITUDE_API_KEY=lat_sandbox_... latitude traces list --project-slug my-app
+export LATITUDE_PROJECT_SLUG=my-app
+
+LATITUDE_SANDBOX=false latitude traces list   # saved production key
+LATITUDE_SANDBOX=true latitude traces list    # saved sandbox key
 ```
+
+If the selected credential is missing, the command stops and prints the matching `auth login --env ...` command. It never falls back to the other environment. An explicit `--project-slug` overrides `LATITUDE_PROJECT_SLUG`.
 
 ## Usage
 
@@ -154,7 +160,9 @@ You can also set a default format for a session with the `LATITUDE_OUTPUT` envir
 
 | Variable | Purpose |
 | --- | --- |
-| `LATITUDE_API_KEY` | API key used to authenticate (alternative to the keyring). |
+| `LATITUDE_API_KEY` | API key used when `LATITUDE_SANDBOX` is not set (alternative to the legacy keyring entry). |
+| `LATITUDE_PROJECT_SLUG` | Default value for `--project-slug`. |
+| `LATITUDE_SANDBOX` | `true` selects the saved sandbox key; `false` selects the saved production key. |
 | `LATITUDE_OUTPUT` | Default output format when `--format` is omitted. |
 | `LATITUDE_BASE_URL` | Override the API base URL (e.g. self-hosted or a mock server). |
 | `LATITUDE_TIMEOUT_SECS` | Total request timeout, in seconds. |

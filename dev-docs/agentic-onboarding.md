@@ -49,7 +49,7 @@ The unauthenticated bootstrap surface is the crown-jewel risk. Mitigations:
 
 ## The CLI
 
-`latitude` is a single self-contained binary **generated from `apps/api/openapi.json` by Fern** (`fernapi/fern-cli-generator`); it lives in the fully generator-owned `packages/cli`. Commands map 1:1 to API resources and are discovered at runtime via `--help` / `--schema`. It authenticates with `LATITUDE_API_KEY` (also auto-loaded from `.env`) or the OS keyring (`auth login`), and auto-loads `.env` from the working directory. Cross-platform binaries ship on GitHub Releases tagged `cli-vX.Y.Z` (`publish-cli.yml`). See [`docs/getting-started/cli.mdx`](../docs/getting-started/cli.mdx).
+`latitude` is a single self-contained binary generated from `apps/api/openapi.json` by Fern (`fernapi/fern-cli-generator`). Commands map 1:1 to API resources and are discovered at runtime via `--help` / `--schema`. Fern owns the generated crate under `packages/cli`; `.fernignore` preserves the small Latitude entry point that adds project defaults and production/sandbox credential selection. `LATITUDE_PROJECT_SLUG` supplies the default project. `LATITUDE_SANDBOX=true|false` selects a separately saved key and takes priority over `LATITUDE_API_KEY`, while commands without a selector retain the legacy environment-variable/keyring precedence. The CLI auto-loads `.env` from the working directory or its parents. Cross-platform binaries ship on GitHub Releases tagged `cli-vX.Y.Z` (`publish-cli.yml`). See [`docs/getting-started/cli.mdx`](../docs/getting-started/cli.mdx).
 
 ## The skills
 

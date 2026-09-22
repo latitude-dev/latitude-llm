@@ -1,3 +1,5 @@
 CHANGELOG.md
 # cargo-dist scaffolding; we release via .github/workflows/publish-cli.yml
 dist-workspace.toml
+cli/latitude/main.rs
+cli/latitude/latitude.rs

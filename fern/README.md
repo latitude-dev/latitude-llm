@@ -32,16 +32,17 @@ level up is hand-written:
   `CHANGELOG.md`, `tests/`, `examples/`, and the `py.typed` marker
   (injected into the wheel at build time, since Fern wipes `src/`).
 
-The CLI is different — Fern owns the **entire** `packages/cli` directory
-(its `.fernignore` is empty), so there is no hand-written shell to protect:
+The CLI is mostly generator-owned. Fern writes the crate under `packages/cli`,
+while `.fernignore` preserves a small Latitude-specific entry point:
 
 - **CLI** — generated sources land in `packages/cli/` as a self-contained
-  Rust crate: the `latitude` binary (`cli/latitude/main.rs`), the CLI
-  framework (`src/`), `Cargo.toml`/`Cargo.lock`, and the bundled OpenAPI
-  spec (`cli/latitude/openapi0.json`) the binary reads at runtime to build
-  its command surface. Don't hand-edit anything under `packages/cli` — it is
-  overwritten on every regen. It is not a pnpm package (Turbo/pnpm ignore
-  it); build and check it with `cargo` (e.g. `cargo check --manifest-path
+  Rust crate: the CLI framework (`src/`), `Cargo.toml`/`Cargo.lock`, and the
+  bundled OpenAPI spec (`cli/latitude/openapi0.json`) the binary reads at
+  runtime to build its command surface. The preserved `cli/latitude/main.rs`
+  and `cli/latitude/latitude.rs` add Latitude's project default and credential
+  selection. Do not hand-edit other files under `packages/cli`; regeneration
+  overwrites them. The crate is not a pnpm package (Turbo/pnpm ignore it);
+  build and check it with `cargo` (e.g. `cargo check --manifest-path
   packages/cli/Cargo.toml`).
 
 Each language lives in its own generator group (`local-typescript`,
@@ -65,8 +66,10 @@ generation). Two things about its `generators.yml` block are load-bearing:
   single-crate CLI. With the default (`true`), the generator also vendors
   `latitude-sdk`/`latitude-types` crates and a `custom.rs` extension point
   (plus a `.agents`/`.claude` skill scaffold) for hand-written commands — we
-  don't use those. `config.binaryName: latitude` names the binary explicitly
-  rather than deriving it from the OpenAPI title.
+  don't use those. Latitude-specific behavior wraps the generated public
+  interfaces from the preserved binary entry point instead. The
+  `config.binaryName: latitude` setting names the binary explicitly rather
+  than deriving it from the OpenAPI title.
 
 ## How `--local` works
 
@@ -148,10 +151,11 @@ group, CLI included) and then `./fern/invoke.sh generate --group local-cli
 (e.g. `pnpm cli:run projects list`).
 
 Fern writes generated SDK sources into `packages/sdk/typescript/src/` and
-`packages/sdk/python/src/latitude_sdk/`, and the whole CLI crate into
+`packages/sdk/python/src/latitude_sdk/`, and the generated CLI crate into
 `packages/cli/`. The SDK package shells are hand-written one level up (see
-Layout above); the CLI has no shell. Fern owns all of these outputs and
-overwrites them on every regen; don't edit them directly.
+Layout above). The CLI's two preserved entry-point files are listed in
+`packages/cli/.fernignore`; Fern owns every other CLI file and overwrites it on
+regeneration.
 
 ### What `fern/invoke.sh` does
 

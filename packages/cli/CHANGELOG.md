@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.15.0] - 2026-09-22
+
+### Added
+
+- `latitude auth login --env production|sandbox` stores separate production and sandbox API keys, and `LATITUDE_SANDBOX=true|false` selects the matching key without falling back to the other environment.
+- `LATITUDE_PROJECT_SLUG` supplies the default for `--project-slug`; an explicit flag still takes precedence.
+
 ## [7.14.0] - 2026-09-21
 
 ### Added

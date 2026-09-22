@@ -53,15 +53,19 @@ A sandbox key can only ever write to its sandbox, and a production key can only 
 
 ## Querying a sandbox from the CLI or an agent
 
-The same `lat_sandbox_` key also **reads** the sandbox over the [API](https://api.latitude.so/docs) and the [CLI](/getting-started/cli) — the key alone decides which environment you're talking to, on reads exactly as on writes. So an agent can pull a dev trace and investigate it, instead of you pasting screenshots:
+The same `lat_sandbox_` key also **reads** the sandbox over the [API](https://api.latitude.so/docs) and the [CLI](/getting-started/cli). Save the production and sandbox keys once, then select the sandbox for each command:
 
 ```bash
-# `LATITUDE_API_KEY` beats the keyring, so this points the shell at the sandbox
-export LATITUDE_API_KEY=lat_sandbox_...
+latitude auth login --env production
+latitude auth login --env sandbox
 
-latitude traces list --project-slug my-app --format json
-latitude traces get --project-slug my-app --trace-id <traceId> --format json
+export LATITUDE_PROJECT_SLUG=my-app
+
+LATITUDE_SANDBOX=true latitude traces list --format json
+LATITUDE_SANDBOX=true latitude traces get --trace-id <traceId> --format json
 ```
+
+`LATITUDE_SANDBOX=true` ignores an inherited `LATITUDE_API_KEY` and uses only the saved sandbox credential. If that credential is missing, the command fails before making a request. Use `LATITUDE_SANDBOX=false` for production. An explicit `--project-slug` overrides `LATITUDE_PROJECT_SLUG` when a command needs a different project.
 
 Two things follow from the key being the boundary:
 
