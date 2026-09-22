@@ -108,7 +108,7 @@ describe("the launch Agent Score artifact", () => {
   })
 
   it("uses the provisional launch window and coverage floors", () => {
-    expect(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion).toBe("agent-score-v6-provisional")
+    expect(LAUNCH_AGENT_SCORE_ARTIFACT.scoringVersion).toBe("agent-score-v7-provisional")
     expect(LAUNCH_AGENT_SCORE_ARTIFACT.window).toEqual({
       stepDays: [7, 14, 21, 28],
       sessionTarget: 50,
@@ -208,5 +208,73 @@ describe("resolveScoringVersion", () => {
       judge: { provider: "openai", model: "gpt-5" },
     })
     expect(first.scoringVersion).not.toBe(second.scoringVersion)
+  })
+
+  it("answers a pair the calibration window did not cover with a published provisional figure", () => {
+    const result = run(validateLaunchArtifacts())
+    if (result._tag !== "Success") throw new Error("launch artifacts did not load")
+    const { latency } = result.success
+    // Dropped by the 2026-09-21 freeze: too few tenants ran them. Every project on one of these
+    // models lost its Agent Score the day the calibrated artifact shipped.
+    for (const [provider, model] of [
+      ["openai", "gpt-5-mini"],
+      ["anthropic", "claude-sonnet-4-5"],
+      ["google", "gemini-2.5-flash"],
+    ] as const) {
+      const ttft = lookupTtftExpectationNs({
+        artifact: latency,
+        provider,
+        model,
+        inputTokens: 2_000,
+        isStreaming: true,
+      })
+      const throughput = lookupThroughputExpectationTps({
+        artifact: latency,
+        provider,
+        model,
+        inputTokens: 2_000,
+        outputTokens: 200,
+        isStreaming: true,
+      })
+      expect(ttft.provenance).toBe("provisional")
+      expect(throughput.provenance).toBe("provisional")
+    }
+  })
+
+  it("keeps the calibrated answer for a pair the freeze did measure", () => {
+    const result = run(validateLaunchArtifacts())
+    if (result._tag !== "Success") throw new Error("launch artifacts did not load")
+    const { latency } = result.success
+    const measured = latency.throughput.find((cohort) => cohort.granularity === "providerModel")
+    if (!measured) throw new Error("no calibrated provider/model cohort to test against")
+    const expectation = lookupThroughputExpectationTps({
+      artifact: latency,
+      provider: measured.provider,
+      model: measured.model,
+      inputTokens: 2_000,
+      outputTokens: 200,
+      isStreaming: true,
+    })
+    expect(expectation.provenance).not.toBe("provisional")
+    expect(expectation.provenance).not.toBe("unmeasured")
+    // and the fallback list never duplicates it
+    expect(
+      latency.provisionalFallback?.throughput.some(
+        (pair) => pair.provider === measured.provider && pair.model === measured.model,
+      ),
+    ).toBe(false)
+  })
+
+  it("covers haiku's time to first token, which the freeze measured only under the dated model name", () => {
+    const result = run(validateLaunchArtifacts())
+    if (result._tag !== "Success") throw new Error("launch artifacts did not load")
+    const ttft = lookupTtftExpectationNs({
+      artifact: result.success.latency,
+      provider: "anthropic",
+      model: "claude-haiku-4-5",
+      inputTokens: 1_500,
+      isStreaming: true,
+    })
+    expect(ttft.provenance).toBe("provisional")
   })
 })

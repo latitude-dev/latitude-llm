@@ -93,6 +93,32 @@ export const throughputReferenceCohortSchema = z
   })
 export type ThroughputReferenceCohort = z.infer<typeof throughputReferenceCohortSchema>
 
+/**
+ * A provider/model pair with a published vendor figure and no measurement behind it.
+ *
+ * Consulted only after the calibrated chain has missed at every granularity. A calibrated artifact
+ * is built from tenants that cleared the sample and spread gates, so any model those tenants did not
+ * run enough of is simply absent — and an absent pair used to withhold the whole Agent Score, since
+ * one unreferenced generation fails the Speed coverage gate. That is the wrong failure mode: a
+ * vendor's published number is a weaker expectation than a measured median, but it is a far better
+ * answer than "no score", and it is what the provisional artifact ran on before calibration.
+ *
+ * Deliberately carries no `sampleCount` or `organizationCount`: it is not a cohort, it is not gated
+ * like one, and the lookup reports it as `provenance: "provisional"` so nothing downstream mistakes
+ * it for a measurement.
+ */
+const provisionalPairFields = { provider: z.string().min(1), model: z.string().min(1) } as const
+const provisionalTtftReferenceSchema = z.object({
+  ...provisionalPairFields,
+  medianTtftNs: z.number().positive(),
+})
+const provisionalThroughputReferenceSchema = z.object({
+  ...provisionalPairFields,
+  medianTokensPerSecond: z.number().positive(),
+})
+export type ProvisionalTtftReference = z.infer<typeof provisionalTtftReferenceSchema>
+export type ProvisionalThroughputReference = z.infer<typeof provisionalThroughputReferenceSchema>
+
 export const latencyReferenceArtifactSchema = z
   .object({
     artifactVersion: z.string().min(1),
@@ -101,8 +127,45 @@ export const latencyReferenceArtifactSchema = z
     minimumOrganizationCount: z.number().int().positive(),
     ttft: z.array(ttftReferenceCohortSchema),
     throughput: z.array(throughputReferenceCohortSchema),
+    provisionalFallback: z
+      .object({
+        ttft: z.array(provisionalTtftReferenceSchema),
+        throughput: z.array(provisionalThroughputReferenceSchema),
+      })
+      .optional(),
   })
   .superRefine((artifact, ctx) => {
+    // A fallback pair the calibrated set already answers is dead weight at best and, at worst, a
+    // second opinion that a future edit could accidentally promote. Refuse the overlap.
+    for (const [metric, fallbacks, cohorts] of [
+      ["ttft", artifact.provisionalFallback?.ttft ?? [], artifact.ttft],
+      ["throughput", artifact.provisionalFallback?.throughput ?? [], artifact.throughput],
+    ] as const) {
+      const measured = new Set(
+        cohorts
+          .filter((cohort) => cohort.granularity === "providerModel")
+          .map((cohort) => providerModelCohortId(cohort)),
+      )
+      const seen = new Set<string>()
+      for (const [index, pair] of fallbacks.entries()) {
+        const id = providerModelCohortId(pair)
+        if (measured.has(id)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["provisionalFallback", metric, index],
+            message: "pair already has a calibrated reference",
+          })
+        }
+        if (seen.has(id)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["provisionalFallback", metric, index],
+            message: "fallback pairs must be unique",
+          })
+        }
+        seen.add(id)
+      }
+    }
     const ttftIds = artifact.ttft.map((cohort) => referenceCohortId(cohort))
     if (new Set(ttftIds).size !== ttftIds.length) {
       ctx.addIssue({ code: "custom", path: ["ttft"], message: "cohort keys must be unique" })
@@ -147,7 +210,15 @@ export type LatencyExpectation =
       readonly value: number
       readonly sampleCount: number
     }
+  /** A published vendor figure, not a measurement. Reported apart so nothing treats it as one. */
+  | { readonly provenance: "provisional"; readonly value: number }
   | { readonly provenance: "unmeasured"; readonly reason: LatencyExpectationGap }
+
+const provisionalPair = <Pair extends { readonly provider: string; readonly model: string }>(
+  pairs: readonly Pair[] | undefined,
+  provider: string,
+  model: string,
+): Pair | undefined => pairs?.find((pair) => providerModelCohortId(pair) === providerModelCohortId({ provider, model }))
 
 interface ProviderModelKeyed {
   readonly granularity: LatencyReferenceGranularity
@@ -169,8 +240,8 @@ const providerModelFallback = <Cohort extends ProviderModelKeyed>(
 /**
  * The frozen expected time to first token for one call.
  *
- * Falls back provider+model+bucket+streaming, then provider+model, then unmeasured — never to a
- * single fleet-wide distribution. An unmeasured call stays visible as raw latency and contributes
+ * Falls back provider+model+bucket+streaming, then provider+model, then a published provisional
+ * figure for the pair, then unmeasured — never to a single fleet-wide distribution. An unmeasured call stays visible as raw latency and contributes
  * no avoidable time.
  */
 export const lookupTtftExpectationNs = ({
@@ -193,6 +264,8 @@ export const lookupTtftExpectationNs = ({
   if (exact) return { provenance: "cohort", value: exact.medianTtftNs, sampleCount: exact.sampleCount }
   const fallback = providerModelFallback(artifact.ttft, provider, model)
   if (fallback) return { provenance: "providerModel", value: fallback.medianTtftNs, sampleCount: fallback.sampleCount }
+  const provisional = provisionalPair(artifact.provisionalFallback?.ttft, provider, model)
+  if (provisional) return { provenance: "provisional", value: provisional.medianTtftNs }
   return { provenance: "unmeasured", reason: "noReference" }
 }
 
@@ -228,6 +301,8 @@ export const lookupThroughputExpectationTps = ({
   if (fallback) {
     return { provenance: "providerModel", value: fallback.medianTokensPerSecond, sampleCount: fallback.sampleCount }
   }
+  const provisional = provisionalPair(artifact.provisionalFallback?.throughput, provider, model)
+  if (provisional) return { provenance: "provisional", value: provisional.medianTokensPerSecond }
   return { provenance: "unmeasured", reason: "noReference" }
 }
 

@@ -1,10 +1,13 @@
+import { providerModelCohortId } from "@domain/spans"
 import type {
   LatencyReferenceArtifact,
+  ProvisionalThroughputReference,
+  ProvisionalTtftReference,
   ThroughputReferenceCohort,
   TtftReferenceCohort,
 } from "../entities/latency-reference-artifact.ts"
 
-export const LAUNCH_LATENCY_ARTIFACT_VERSION = "latency-reference-v2-calibrated-20260921"
+export const LAUNCH_LATENCY_ARTIFACT_VERSION = "latency-reference-v2-calibrated-20260921-fallback1"
 
 export const LAUNCH_LATENCY_REFERENCE_FREEZE = {
   since: "2026-06-23T00:00:00.000Z",
@@ -3108,6 +3111,63 @@ const throughputCohorts = [
   },
 ] satisfies readonly ThroughputReferenceCohort[]
 
+/**
+ * Published vendor figures for pairs the calibration window did not cover.
+ *
+ * These are the fourteen pairs the provisional artifact shipped with. The calibrated freeze above
+ * is drawn only from tenants that cleared the sample and spread gates, so a model that fleet did not
+ * run enough of — `gpt-5-mini`, `claude-sonnet-4-5`, the whole Gemini 2.5 line — simply fell out
+ * of it, and every project on one of those models stopped publishing an Agent Score the day this
+ * artifact shipped. A published number is a weaker expectation than a measured median; it is still
+ * a far better answer than none.
+ *
+ * Only pairs the calibrated arrays lack are kept, per metric, so a pair the freeze does measure is
+ * never shadowed and the schema's overlap refusal holds as the calibrated set grows. Note the freeze
+ * measured `claude-haiku-4-5` throughput but only `claude-haiku-4-5-20251001` TTFT: the two readers
+ * normalise the dated model name differently, which is why haiku lost its Speed coverage too.
+ */
+const PROVISIONAL_PUBLISHED_FIGURES: readonly {
+  readonly provider: string
+  readonly model: string
+  readonly ttftMs: number
+  readonly tokensPerSecond: number
+}[] = [
+  { provider: "openai", model: "gpt-4.1", ttftMs: 450, tokensPerSecond: 95 },
+  { provider: "openai", model: "gpt-4.1-mini", ttftMs: 330, tokensPerSecond: 130 },
+  { provider: "openai", model: "gpt-4o", ttftMs: 480, tokensPerSecond: 90 },
+  { provider: "openai", model: "gpt-4o-mini", ttftMs: 350, tokensPerSecond: 120 },
+  { provider: "openai", model: "gpt-5", ttftMs: 700, tokensPerSecond: 75 },
+  { provider: "openai", model: "gpt-5-mini", ttftMs: 520, tokensPerSecond: 110 },
+  { provider: "openai", model: "gpt-5-nano", ttftMs: 380, tokensPerSecond: 150 },
+  { provider: "openai", model: "gpt-5-pro", ttftMs: 1_200, tokensPerSecond: 45 },
+  { provider: "anthropic", model: "claude-opus-4-5", ttftMs: 900, tokensPerSecond: 60 },
+  { provider: "anthropic", model: "claude-sonnet-4-5", ttftMs: 600, tokensPerSecond: 85 },
+  { provider: "anthropic", model: "claude-haiku-4-5", ttftMs: 380, tokensPerSecond: 140 },
+  { provider: "google", model: "gemini-2.5-pro", ttftMs: 800, tokensPerSecond: 70 },
+  { provider: "google", model: "gemini-2.5-flash", ttftMs: 420, tokensPerSecond: 130 },
+  { provider: "google", model: "gemini-2.5-flash-lite", ttftMs: 300, tokensPerSecond: 180 },
+]
+
+const MILLISECOND_NS = 1_000_000
+
+const measuredPairs = (
+  cohorts: readonly { readonly granularity: string; readonly provider: string; readonly model: string }[],
+) =>
+  new Set(
+    cohorts.filter((cohort) => cohort.granularity === "providerModel").map((cohort) => providerModelCohortId(cohort)),
+  )
+
+const measuredTtft = measuredPairs(ttftCohorts)
+const measuredThroughput = measuredPairs(throughputCohorts)
+
+const provisionalTtft: ProvisionalTtftReference[] = PROVISIONAL_PUBLISHED_FIGURES.filter(
+  (pair) => !measuredTtft.has(providerModelCohortId(pair)),
+).map((pair) => ({ provider: pair.provider, model: pair.model, medianTtftNs: pair.ttftMs * MILLISECOND_NS }))
+
+const provisionalThroughput: ProvisionalThroughputReference[] = PROVISIONAL_PUBLISHED_FIGURES.filter(
+  (pair) => !measuredThroughput.has(providerModelCohortId(pair)),
+).map((pair) => ({ provider: pair.provider, model: pair.model, medianTokensPerSecond: pair.tokensPerSecond }))
+
 export const LAUNCH_LATENCY_REFERENCE_ARTIFACT = {
   artifactVersion: LAUNCH_LATENCY_ARTIFACT_VERSION,
   calibration: "calibrated",
@@ -3115,4 +3175,5 @@ export const LAUNCH_LATENCY_REFERENCE_ARTIFACT = {
   minimumOrganizationCount: LAUNCH_LATENCY_REFERENCE_FREEZE.minimumOrganizationCount,
   ttft: ttftCohorts,
   throughput: throughputCohorts,
+  provisionalFallback: { ttft: provisionalTtft, throughput: provisionalThroughput },
 } satisfies LatencyReferenceArtifact
