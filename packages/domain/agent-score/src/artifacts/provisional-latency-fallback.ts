@@ -35,7 +35,9 @@ const PROVISIONAL_PUBLISHED_FIGURES: readonly PublishedLatencyFigure[] = [
 const MILLISECOND_NS = 1_000_000
 
 const measuredPairs = (cohorts: readonly (TtftReferenceCohort | ThroughputReferenceCohort)[]): ReadonlySet<string> =>
-  new Set(cohorts.filter((cohort) => cohort.granularity === "providerModel").map((cohort) => providerModelCohortId(cohort)))
+  new Set(
+    cohorts.filter((cohort) => cohort.granularity === "providerModel").map((cohort) => providerModelCohortId(cohort)),
+  )
 
 /** The published figures for every pair the calibrated cohorts do not measure, per metric. */
 export const provisionalFallbackFor = ({
