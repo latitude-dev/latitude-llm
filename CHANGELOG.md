@@ -2,9 +2,22 @@
 
 ## Unreleased
 
+## v0.3.115 - 2026-09-22
+
 ### Agent Score
 
 - Conversation moments now degrade Outcome quality. A session where the user got what they came for after showing frustration, abandoning the conversation, being handed to a human, looping on clarification, or correcting the agent three or more times is scored as degraded rather than as a full success, at `0.75` of a clean session. The degraded share is measured only over sessions conversation analysis actually read, since it skips empty, too-short and non-conversation sessions on a rule that is deterministic on content and cannot be projected onto the rest. Below fifty analyzed sessions the component contributes nothing and Outcome is unchanged, so an analysis gap can never withhold the score. Each degrading kind appears under the dimension's "Affected by" list with the points it cost. Scoring version moves to `agent-score-v7-provisional` (ref: #4713).
+
+### Backoffice
+
+- The project page's Agent Score card now shows the vitality ring and the trend of published scores that the customer-facing page uses, replacing the headline number, per-dimension tiles and written-out cause list that repeated the same information in a slower form. The trend anchors on today rather than on the snapshot date, so a project that stopped publishing shows the trailing gap; unscored days stay absent rather than zero-filled, the chart says so when a range crosses scoring versions or window lengths, and a policy cap is called out on its own line (ref: #4711).
+- Staff can now seed Agent Score history for demo projects from a 30-day strip of sliders, so a freshly seeded demo has a trend instead of a single point. Nothing is recomputed: one composite is expanded into a full synthetic snapshot whose dimensions are renormalised to the requested score exactly, seeded rows carry no evidence rather than invented causes, days that already have a published score are locked and skipped by the unique index, and every date is bounded to the 30-day window ending today so a fabricated future row can never silently block a real run (ref: #4711).
+
+### CLI and SDKs
+
+- Project-scoped CLI commands now resolve the project slug from `LATITUDE_PROJECT_SLUG` instead of requiring `--project-slug` on every invocation. Resolution order is `--project-slug`, then `--global-project-slug`, then the environment variable; the twenty operations that are not project-scoped are unaffected. SDK method signatures do not change — only the CLI reads the variable (ref: #4714).
+- Bumped the Fern toolchain and regenerated the API clients, shipping CLI 7.15.0 and SDKs 9.15.0. The TypeScript SDK now redacts URLs in errors, and the Python SDK gains SSE reconnect handling and alias coercion. Linux CLI binaries vendor OpenSSL statically, so they keep depending only on glibc after the generator moved its TLS backend selection into per-target dependencies (ref: #4714).
+
 
 ## v0.3.114 - 2026-09-21
 
