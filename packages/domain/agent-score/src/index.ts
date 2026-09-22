@@ -261,6 +261,12 @@ export {
   type SessionAssessmentPageCursor,
 } from "./pagination/session-assessment-cursor.ts"
 export {
+  type AgentScoreDigestCandidate,
+  type AgentScoreDigestScope,
+  AgentScoreDigestSource,
+  type AgentScoreDigestSourceShape,
+} from "./ports/agent-score-digest-source.ts"
+export {
   type AgentScoreSnapshotHistoryScope,
   type AgentScoreSnapshotLatestScope,
   AgentScoreSnapshotRepository,
