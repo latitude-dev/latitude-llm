@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Regenerated on `fern-cli-generator` `0.21.0` → `0.41.2` and Fern CLI `5.58.0` → `5.122.0`. The TLS backend is now selected per target by the generated `Cargo.toml` (musl → rustls, everything else → native-tls) instead of by a crate-level default feature.
+- The Linux release binaries now use native-tls with OpenSSL vendored into the binary, rather than rustls. They keep the same runtime profile as before — glibc only, no `libssl`/`libcrypto` — and the same Secret Service keyring support, at the cost of roughly 6 MB of binary size. macOS and Windows are unchanged.
 
 ## [7.14.0] - 2026-09-21
 
