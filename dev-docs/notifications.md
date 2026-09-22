@@ -2,21 +2,17 @@
 
 Multi-channel notification system. Producers fan out to channel-specific workers; each channel keeps its own renderer registry keyed on `NotificationKind`.
 
-> Two independent feature flags gate this system:
-> - **`"notifications"`** — frontend bell + in-app feed visibility. The backend writes rows regardless, so flipping the flag doesn't lose notification history.
-> - **`"email-notifications"`** — org-level kill switch for the email channel. Checked in the notifications worker's creator step (`apps/workers/src/workers/notifications.ts`) before publishing `notification-email:send`. Also gates the user-prefs settings UI (the "Email notifications" section is hidden when off). When off, in-app rows still land in the bell; only email is suppressed.
-
 ## Concepts
 
 | Concept | Where | What it is |
 | --- | --- | --- |
-| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, `billing.limit-reached`, ...). Each kind declares its routing (see **Group**) and its payload Zod schema. Incidents fan out across three delivery kinds: `incident.event` for point incidents (`endedAt = startedAt`), `incident.opened` for sustained incident entry, and `incident.closed` for sustained incident recovery. `issue.assigned` is the first **personal** (single-recipient) kind — it targets the new assignee only, not the org fan-out. `signal.regressed` (group `signals`) fires when a new occurrence reopens a resolved signal: assignee-first recipients, muted signals skipped, idempotency keyed per regression cycle on `signalId` + `triggerScoreId`. `signal.reprioritized` (group `signals`, opt-in topic) fires when a triage edit moves a signal *up* the priority scale: org-member fan-out minus the actor, muted signals skipped, idempotency keyed per edit on `signalId` + `reprioritizedAt`. Downgrades and clears never produce a `SignalReprioritized` event at all, so there is no outbox row, no queue hop, and no producer run to filter — an unset priority ranks below `low`, which makes setting a first priority an increase and clearing one a decrease. `billing.limit-reached` (group `billing`) fires once per billing period and limit kind when a threshold is first crossed — free included credits exhausted, Pro entering overage (with or without a spend cap), or a configured Pro spend cap — and targets owners/admins only. |
+| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, `billing.limit-reached`, ...). Each kind declares its routing (see **Group**) and its payload Zod schema. Incidents fan out across three delivery kinds: `incident.event` for point incidents (`endedAt = startedAt`), `incident.opened` for sustained incident entry, and `incident.closed` for sustained incident recovery. `issue.assigned` is the first **personal** (single-recipient) kind — it targets the new assignee only, not the org fan-out. `signal.regressed` (group `signals`) fires when a new occurrence reopens a resolved signal: assignee-first recipients, muted signals skipped, idempotency keyed per regression cycle on `signalId` + `triggerScoreId`. `signal.reprioritized` (group `signals`, opt-in topic) fires when a triage edit moves a signal *up* the priority scale: org-member fan-out minus the actor, muted signals skipped, idempotency keyed per edit on `signalId` + `reprioritizedAt`. Downgrades and clears never produce a `SignalReprioritized` event at all, so there is no outbox row, no queue hop, and no producer run to filter — an unset priority ranks below `low`, which makes setting a first priority an increase and clearing one a decrease. `billing.limit-reached` (group `billing`) fires once per billing period and limit kind when a threshold is first crossed — free included credits exhausted, Pro entering overage (with or without a spend cap), or a configured Pro spend cap — and targets owners/admins only. `agent-score.weekly-digest` (group `agent_score`) fires once a week per scored project — see § Weekly Agent Score digest. |
 | **Severity** | `ALERT_SEVERITIES` in `@domain/shared` | One ascending scale — `low`, `medium`, `high`, `urgent` — shared by monitors, incidents, and signals: one vocabulary, so a Slack route's threshold and a user's `emailMinSeverity` mean the same thing wherever they are applied. A signal stores its level in `signals.priority` (same values; the field name is public API and predates the unification) and the producers copy it onto the `signal.discovered` / `signal.regressed` / `signal.reprioritized` payloads as `severity`, which is what `routeAdmitsPayload` and `shouldSendEmail` filter on. A reprioritization filters on the priority it moved *to*, which is always set because only increases notify. **Nothing assigns a signal's level automatically** — it is null until somebody triages it, and a payload with no severity is admitted by every threshold, so the severity control never suppresses an untriaged signal. The promotion gate is what does: an unpromoted signal emits no `SignalPromoted`, so it never reaches severity filtering at all (`dev-docs/signals.md` § Denoising: promotion). |
-| **Group** | `NOTIFICATION_GROUPS` + `NOTIFICATION_GROUP_META` in `@domain/shared` | User-visible category (`signals`, `monitors`, `wrapped_reports`, `custom_messages`, `personal`, `destinations`, `billing`). The preferences UI surfaces one toggle per group; adding a kind to an existing group inherits the user's setting automatically. Most kinds name their group statically, but the three `incident.*` kinds fire for both signal escalations and monitors, so they route on the payload's `incidentKind` — `routeOf(kind, payload)` in `@domain/notifications` is the one resolver, and `GROUP_FOR_INCIDENT_NOTIFICATION_KEY` the one mapping. Groups also declare `slackRoutable` (non-routable groups — `personal`, `billing` — are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out), `severityFiltered` (whether the minimum-severity control is offered), and their `topics`. |
+| **Group** | `NOTIFICATION_GROUPS` + `NOTIFICATION_GROUP_META` in `@domain/shared` | User-visible category (`signals`, `monitors`, `wrapped_reports`, `agent_score`, `custom_messages`, `personal`, `destinations`, `billing`). The preferences UI surfaces one toggle per group; adding a kind to an existing group inherits the user's setting automatically. Most kinds name their group statically, but the three `incident.*` kinds fire for both signal escalations and monitors, so they route on the payload's `incidentKind` — `routeOf(kind, payload)` in `@domain/notifications` is the one resolver, and `GROUP_FOR_INCIDENT_NOTIFICATION_KEY` the one mapping. Groups also declare `slackRoutable` (non-routable groups — `personal`, `billing` — are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out), `severityFiltered` (whether the minimum-severity control is offered), and their `topics`. |
 | **Topic** | `NOTIFICATION_TOPICS` + `NOTIFICATION_GROUP_META[group].topics` in `@domain/shared` | Sub-toggle inside a group, for groups whose kinds are distinct enough that one switch is too coarse. Only `signals` has any today: `signal.discovered`, `signal.escalating`, `signal.regressed`, `signal.reprioritized`. A group with no topics is a single switch. Topics are filtered per channel — `emailTopics` on the user's group preferences, `topics` on a Slack route — and an untouched topic falls back to its own `NOTIFICATION_TOPIC_META[topic].defaultEnabled`, so most topics deliver by default while opt-in ones (`signal.reprioritized`) stay off until somebody ticks them. |
 | **Channel** | `apps/workers/src/workers/notification-*.ts` + per-channel registries | Delivery surface (in-app, email; Slack and others later). Each channel is one queue topic + one worker + one renderer registry keyed on `NotificationKind`. |
 | **Idempotency key** | `idempotency_key` column on `notifications` | Producer-computed (`buildIdempotencyKey` in `@domain/notifications`). The unique index `(organization_id, user_id, idempotency_key)` absorbs at-least-once redelivery from the outbox + queue layers. |
-| **Project anchor** | `project_id` column on `notifications` (nullable) | Cascade anchor for kinds tied to a project (`incident.*`, `wrapped.report`). On `ProjectDeleted` the domain-events worker fires `notifications:delete-by-project`, which removes every row anchored to the deleted project. Per the platform's no-FK rule, referential integrity is application-layer. |
+| **Project anchor** | `project_id` column on `notifications` (nullable) | Cascade anchor for kinds tied to a project (`incident.*`, `wrapped.report`, `agent-score.weekly-digest`). On `ProjectDeleted` the domain-events worker fires `notifications:delete-by-project`, which removes every row anchored to the deleted project. Per the platform's no-FK rule, referential integrity is application-layer. |
 | **User preferences** | `users.notification_preferences` (jsonb) | Per-user, per-group, per-channel switch (today only `email`), plus the group's `emailMinSeverity` threshold and its per-topic `emailTopics` switches. A missing group entry defaults to on; a missing topic entry defaults to that topic's `defaultEnabled`. |
 | **Project-level gate** | `projects.settings.notifications.<group>` (jsonb) | Project-level "should this notification be requested at all" decision. For incidents the leaf is per incident source key: `monitor.match`, `monitor.threshold`, `monitor.escalating`, and `signal.escalating`. Other groups get whatever shape is useful at the project level. |
 
@@ -134,6 +130,68 @@ If `notificationId` ever leaks to less-trusted surfaces, or chart payloads start
 ### Testing emails locally
 
 `pnpm --filter @app/workers test-emails:incidents` publishes a `notification-email:send` task for every seeded incident notification (event / opened / closed) in the Acme org. Prereqs: docker compose up, the `notification-emailer` worker running (`pnpm --filter @app/workers dev`), and the `email-notifications` flag on. Emails land in Mailpit at [localhost:8025](http://localhost:8025) within a second. Pass `--force` to clear `emailed_at` first so the same rows re-fire on a second run, or `--organization-id <id>` to target a non-Acme org.
+
+## Weekly Agent Score digest
+
+`agent-score.weekly-digest` (group `agent_score`) is the one kind with no source event. A repeatable
+schedule fires it, so its producer is reached from a cron rather than from the domain-events router:
+
+```text
+cron agent-score-digest:weekly (Mon 08:00 UTC)
+  → agent-score-digest:triggerWeeklyRun
+     fanOutAgentScoreDigest (admin connection, cross-organisation)
+       – AdminFeatureFlagRepository.findEligibilityForFlag("agentScore")
+       – AgentScoreDigestSource.listProjectsWithPublishedScores({ from, to, organizationIds })
+  → notifications:request-agent-score-digest-notifications (one per scored project)
+     – runWeeklyAgentScoreDigest folds the window (in the worker, not the producer)
+     – requestAgentScoreDigestNotificationsUseCase resolves recipients
+  → notifications:create-notification … (unchanged from here on)
+```
+
+Eligibility is two gates, both in the fan-out so an ineligible project costs nothing downstream: the
+organisation has the `agentScore` flag, and the project published at least one score in the window.
+The second cannot be answered by the daily sweep's ClickHouse source — a project can clear the
+session floor every day and still publish nothing, because a dimension that misses its coverage
+floor withholds the composite and writes no row. Only `agent_score_snapshots` answers it, and that
+table is RLS-scoped, so the read runs on the admin connection and excludes soft-deleted, sample and
+showcase projects along with sandbox organisations.
+
+The window is resolved once by the cron and carried on every payload, the same way the daily scoring
+sweep carries its date: a fan-out draining across midnight would otherwise digest half the fleet for
+one week and half for the next. It is also the idempotency anchor —
+`agent-score.weekly-digest:${projectId}:${windowEnd}` — so a retry that sees a newer snapshot still
+lands on the same key. The project id is in the key because it is not in the
+`(organization_id, user_id, idempotency_key)` unique index, and two scored projects in one
+organisation would otherwise collide.
+
+**The fold lives in the worker, not the producer.** `@domain/integrations` depends on
+`@domain/notifications` for its Slack renderers, so a producer importing `@domain/agent-score` closes
+a package cycle through `flaggers → ai → cache-redis → integrations`. The producer takes the digest
+as input; the worker, which is the composition root, performs the fold.
+
+### What the digest compares
+
+`buildWeeklyAgentScoreDigest` folds the window's snapshots into one payload. The baseline is the
+**oldest snapshot still inside the window**, not the one seven days back: withheld days write no row,
+so most projects have gaps and a fixed offset would usually find nothing.
+
+Two snapshots are only subtracted when they measured the same thing. A scoring version bump changes
+the scale and an adaptive window step change (7/14/21/28 days, chosen with hysteresis) changes how
+much evidence each number covers, so either produces `comparison.status: "incomparable"` naming the
+reason. When they are comparable but the confidence intervals overlap, `significant` is false and
+the renderers report a move the evidence does not separate from noise — and leave it out of the
+email subject, so a subject that claims a change is one worth opening.
+
+Per-dimension deltas are computed only when the composite comparison holds, because the reasons a
+composite cannot be compared apply to every dimension under it.
+
+### Testing it
+
+A weekly cron is otherwise observable once a week. **Project actions → Send weekly Agent Score
+digest** in the backoffice publishes the same producer task over the window the cron would resolve
+today. It re-checks the feature flag (the gate normally lives in the fan-out) so a manual send cannot
+notify an organisation about a feature its members cannot open; whether the project has a score is
+left to the producer.
 
 ## Files
 
