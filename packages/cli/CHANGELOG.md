@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.15.0] - 2026-09-22
+
 ### Added
 
 - `LATITUDE_PROJECT_SLUG`, or the global `--global-project-slug` flag, supplies the project for project-scoped commands so `--project-slug` can be dropped from each one. `--project-slug` still wins where it is passed, and commands that aren't project-scoped are untouched.

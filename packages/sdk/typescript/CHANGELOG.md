@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.15.0] - 2026-09-22
+
 ### Changed
 
+- The `projectSlug` parameter docs now mention `LATITUDE_PROJECT_SLUG`. That variable is read by the Latitude CLI only — it has no effect here, where the project slug is still passed on every call.
 - Regenerated on Fern CLI `5.58.0` → `5.122.0` and `fern-typescript-node-sdk` `3.73.4` → `3.96.0`. No change to the HTTP API surface or to any method signature: every endpoint keeps the arguments it had. The runtime gains URL redaction in error messages, a shared request-body helper, and `LatitudeError` / `LatitudeTimeoutError` entries in the generated `@throws` docs.
 
 ## [9.14.0] - 2026-09-21
