@@ -1,7 +1,7 @@
 import type { OrganizationId, ProjectId, SessionId } from "@domain/shared"
 import { Effect } from "effect"
 import type { AgentScoreResult } from "../entities/agent-score.ts"
-import type { AgentScoreArtifact, ScoringJudge } from "../entities/agent-score-artifact.ts"
+import type { AgentScoreArtifact, MomentDegradationRule, ScoringJudge } from "../entities/agent-score-artifact.ts"
 import { resolveScoringVersion } from "../entities/agent-score-artifact.ts"
 import type { CostMetricCatalog } from "../entities/cost-metric-catalog.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
@@ -30,6 +30,7 @@ import {
 } from "../scoring/build-window-signal-effects.ts"
 import { composeAgentScore } from "../scoring/compose-agent-score.ts"
 import { estimateProjectReliability } from "../scoring/estimate-reliability.ts"
+import { evaluateMomentDegradation } from "../scoring/evaluate-moment-degradation.ts"
 import { EMPTY_WINDOW_FOLD, foldWindowBatch, type WindowFold } from "../scoring/fold-window-contributions.ts"
 import { observeDimensionCauses } from "../scoring/observe-dimension-causes.ts"
 import { selectDeterministicOutcomeFailures } from "../scoring/select-outcome-endpoints.ts"
@@ -81,6 +82,8 @@ interface WindowPass {
   readonly fold: WindowFold
   readonly reliabilityEndpoints: readonly ReliabilitySessionEndpoint[]
   readonly deterministicOutcomeFailures: readonly string[]
+  /** Sessions conversation analysis read, and the degrading kinds it found on each. */
+  readonly momentDegradation: ReadonlyMap<string, readonly string[]>
   readonly readers: ReadonlyMap<string, WindowReaderCoverage>
   readonly signalEvidence: readonly SessionSignalEvidence[]
   readonly issueEvidence: readonly SessionIssueEvidence[]
@@ -102,11 +105,13 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
   readonly latencyArtifact: LatencyReferenceArtifact
   readonly costArtifact: CostScoringArtifact
   readonly catalog: CostMetricCatalog
+  readonly degradationRules: readonly MomentDegradationRule[]
   readonly batchSize: number
 }) {
   let fold: WindowFold = EMPTY_WINDOW_FOLD
   const reliabilityEndpoints: ReliabilitySessionEndpoint[] = []
   const deterministicOutcomeFailures: string[] = []
+  const momentDegradation = new Map<string, readonly string[]>()
   let readers: ReadonlyMap<string, WindowReaderCoverage> = new Map()
   const signalEvidence: SessionSignalEvidence[] = []
   const issueEvidence: SessionIssueEvidence[] = []
@@ -130,6 +135,15 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
     })
     reliabilityEndpoints.push(...selectReliabilityEndpoints(sessions))
     deterministicOutcomeFailures.push(...selectDeterministicOutcomeFailures(sessions))
+    for (const session of sessions) {
+      // Only analyzed sessions are recorded at all. An absent entry means analysis could not read
+      // the session, which is not the same as reading it and finding nothing.
+      if (!session.momentsAnalyzed) continue
+      momentDegradation.set(
+        session.sessionId,
+        evaluateMomentDegradation({ session, rules: input.degradationRules }).kinds,
+      )
+    }
     readers = tallyWindowReaderCoverage(sessions, readers)
     signalEvidence.push(...sessions.map(readSessionSignalEvidence))
     issueEvidence.push(...sessions.map(readSessionIssueEvidence))
@@ -139,6 +153,7 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
     fold,
     reliabilityEndpoints,
     deterministicOutcomeFailures,
+    momentDegradation,
     readers,
     signalEvidence,
     issueEvidence,
@@ -192,6 +207,7 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     latencyArtifact: input.latencyArtifact,
     costArtifact: input.costArtifact,
     catalog: input.catalog,
+    degradationRules: input.artifact.outcomeDegradation.rules,
     batchSize: input.batchSize ?? AGENT_SCORE_BATCH_SIZE,
   })
 
@@ -203,6 +219,11 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     supportedJudgmentVersions: version.supportedJudgmentVersions.taskOutcome,
     deterministicFailureSessionIds: pass.deterministicOutcomeFailures,
     floors: input.artifact.dimensionFloors.outcome,
+    degradation: {
+      degradedKindsBySession: pass.momentDegradation,
+      degradedWeight: input.artifact.outcomeDegradation.degradedWeight,
+      minAnalyzedSessions: input.artifact.outcomeDegradation.minAnalyzedSessions,
+    },
   })
   const safety = yield* estimateProjectSafetyWindow({
     organizationId: input.organizationId,

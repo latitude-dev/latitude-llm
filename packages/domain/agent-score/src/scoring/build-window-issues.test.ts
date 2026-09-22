@@ -74,6 +74,7 @@ const momentFinding = (evidenceKey = "moment:stall-1"): AssessmentFinding =>
     scoreIds: [],
     kind: "moment",
     momentKinds: ["stalling"],
+    momentLabels: ["stalling"].map((kind: string) => ({ kind, confidence: 1 })),
   }) as AssessmentFinding
 
 const harmFinding = (): AssessmentFinding =>

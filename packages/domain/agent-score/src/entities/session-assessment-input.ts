@@ -91,6 +91,14 @@ export type AssessmentFinding = AssessmentFindingReference &
     | {
         readonly kind: "moment"
         readonly momentKinds: readonly string[]
+        /**
+         * Per-label confidence, which the degradation predicate reads.
+         *
+         * Kept beside `momentKinds` rather than replacing it: grouping and the association effects
+         * only care which kinds occurred, while scoring also has to know how sure the classifier
+         * was. One entry per label, so a moment carrying two labels contributes two.
+         */
+        readonly momentLabels: readonly { readonly kind: string; readonly confidence: number }[]
       }
   )
 

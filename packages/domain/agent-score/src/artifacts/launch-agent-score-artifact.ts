@@ -33,6 +33,21 @@ export const LAUNCH_AGENT_SCORE_ARTIFACT = {
     speed: { completeCriticalPathSessions: 50, completeCriticalPathShareOfEligible: 0.5 },
     safety: { examinedSessions: 50, maxRateLimitedHintedShare: 0.1 },
   },
+  outcomeDegradation: {
+    degradedWeight: 0.75,
+    minAnalyzedSessions: 50,
+    // `hesitation` and `stalling` are not quality deficits. `policy_refusal` is the agent working
+    // correctly. The positive kinds never enter: requiring good news to call a session clean would
+    // make a detector that failed to fire lower the score, which is coverage penalising rather than
+    // flattering, and just as wrong.
+    rules: [
+      { kind: "user_frustration", minConfidence: 0.85, minOccurrences: 1 },
+      { kind: "abandonment", minConfidence: 0.85, minOccurrences: 1 },
+      { kind: "escalation", minConfidence: 0.85, minOccurrences: 1 },
+      { kind: "clarification_loop", minConfidence: 0.8, minOccurrences: 1 },
+      { kind: "user_correction", minConfidence: 0.8, minOccurrences: 3 },
+    ],
+  },
   costArtifactVersion: LAUNCH_COST_ARTIFACT_VERSION,
   costCatalogVersion: PROVISIONAL_COST_METRIC_CATALOG.catalogVersion,
   latencyArtifactVersion: LAUNCH_LATENCY_ARTIFACT_VERSION,

@@ -110,6 +110,7 @@ const momentFinding: AssessmentFinding = {
   independentHumanEvidence: false,
   kind: "moment",
   momentKinds: ["user_correction"],
+  momentLabels: ["user_correction"].map((kind: string) => ({ kind, confidence: 1 })),
 }
 
 const assessmentInput: NormalizedSessionAssessmentInput = {
