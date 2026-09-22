@@ -245,6 +245,10 @@ export type {
   NormalizedSessionCostEvidence,
 } from "./entities/session-assessment-input.ts"
 export {
+  type SyntheticAgentScoreSnapshotInput,
+  syntheticAgentScoreSnapshot,
+} from "./entities/synthetic-agent-score-snapshot.ts"
+export {
   InvalidAgentScoreArtifactError,
   InvalidCostMetricCatalogError,
   InvalidCostScoringArtifactError,

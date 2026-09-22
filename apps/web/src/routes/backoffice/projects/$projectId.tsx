@@ -1,7 +1,7 @@
 import { ClaudeCodeIcon, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
-import { ArrowRightIcon, BrainCircuitIcon, CheckIcon, GaugeIcon, MinusIcon } from "lucide-react"
+import { ArrowRightIcon, BrainCircuitIcon, CheckIcon, GaugeIcon, MinusIcon, SlidersHorizontalIcon } from "lucide-react"
 import { adminGetAgentScore } from "../../../domains/admin/agent-score.functions.ts"
 import { adminGetProject } from "../../../domains/admin/projects.functions.ts"
 import { adminGetProjectTaxonomy } from "../../../domains/admin/taxonomy.functions.ts"
@@ -16,6 +16,7 @@ import {
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 import { AgentScoreRecalculateButton } from "./-components/agent-score-recalculate-button.tsx"
 import { AgentScoreSection } from "./-components/agent-score-section.tsx"
+import { AgentScoreSeedHistoryButton } from "./-components/agent-score-seed-history-button.tsx"
 import { MetricsSection } from "./-components/metrics-section.tsx"
 import { SessionIntelligenceBackfillButton } from "./-components/session-intelligence-backfill-button.tsx"
 import { TaxonomySection } from "./-components/taxonomy-section.tsx"
@@ -150,6 +151,19 @@ function BackofficeProjectDetailPage() {
           title="Recalculate Agent Score"
           description="Recompute today's score and refresh the evidence for the latest displayed score. Published scores are not changed."
           action={<AgentScoreRecalculateButton projectId={project.id} projectName={project.name} />}
+        />
+        <ActionRow
+          icon={SlidersHorizontalIcon}
+          title="Seed Agent Score history"
+          description="Fill the last 30 days with invented scores so a demo project has a trend. Nothing is recomputed, and days that already have a published score are left alone."
+          action={
+            <AgentScoreSeedHistoryButton
+              projectId={project.id}
+              projectName={project.name}
+              currentDate={agentScore.currentDate}
+              history={agentScore.history}
+            />
+          }
         />
         <ActionRow
           icon={BrainCircuitIcon}

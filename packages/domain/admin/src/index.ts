@@ -2,6 +2,7 @@
 // feature (entities + ports + use-cases). Add a new folder per feature and
 // re-export its public surface below.
 
+export * from "./agent-score/index.ts"
 export * from "./billing/index.ts"
 export * from "./feature-flags/index.ts"
 export * from "./latency-references/index.ts"
