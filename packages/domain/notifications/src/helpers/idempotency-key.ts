@@ -1,5 +1,6 @@
 import { generateId } from "@domain/shared"
 import type {
+  AgentScoreWeeklyDigestPayload,
   BillingLimitReachedPayload,
   CustomMessagePayload,
   DestinationQuarantinedPayload,
@@ -35,6 +36,10 @@ export type BuildIdempotencyKeyInput =
       readonly payload: IncidentClosedPayload
     }
   | { readonly kind: "wrapped.report"; readonly payload: WrappedReportPayload }
+  | {
+      readonly kind: "agent-score.weekly-digest"
+      readonly payload: AgentScoreWeeklyDigestPayload
+    }
   | { readonly kind: "custom.message"; readonly payload: CustomMessagePayload }
   | { readonly kind: "issue.assigned"; readonly payload: SignalAssignedPayload }
   | { readonly kind: "signal.discovered"; readonly payload: SignalDiscoveredPayload }
@@ -57,6 +62,12 @@ export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => 
       return `${input.kind}:${input.payload.alertIncidentId}`
     case "wrapped.report":
       return `${input.kind}:${input.payload.wrappedReportId}`
+    case "agent-score.weekly-digest":
+      // Per project per week. The project is not part of the unique index, so two scored projects
+      // in one org would collide on the week alone; the window end rather than the snapshot date
+      // because a retry a day later can see a newer snapshot and would mint a second key for the
+      // same digest.
+      return `${input.kind}:${input.payload.projectId}:${input.payload.windowEnd}`
     case "custom.message":
       return `${input.kind}:${generateId()}`
     case "issue.assigned":

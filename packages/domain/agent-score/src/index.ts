@@ -584,6 +584,15 @@ export {
   type SpeedWindowGate,
 } from "./scoring/window-gates.ts"
 export {
+  AGENT_SCORE_DIGEST_WINDOW_DAYS,
+  type AgentScoreDigestComparison,
+  agentScoreDigestWindow,
+  type BuildWeeklyAgentScoreDigestResult,
+  buildWeeklyAgentScoreDigest,
+  runWeeklyAgentScoreDigest,
+  type WeeklyAgentScoreDigest,
+} from "./use-cases/build-weekly-digest.ts"
+export {
   AGENT_SCORE_BATCH_SIZE,
   type ComputeAgentScoreInput,
   computeAgentScore,

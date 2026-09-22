@@ -10,6 +10,7 @@ import {
   notificationIdSchema,
   organizationIdSchema,
   ProjectId,
+  scoreDimensionSchema,
   userIdSchema,
 } from "@domain/shared"
 import { signalPrioritySchema } from "@domain/signals"
@@ -219,6 +220,57 @@ export const wrappedReportPayloadSchema = z.object({
 })
 export type WrappedReportPayload = z.infer<typeof wrappedReportPayloadSchema>
 
+/**
+ * How the week's newest score compares to the oldest one published in the same window.
+ *
+ * `incomparable` exists because the two snapshots can disagree about what they measured: a scoring
+ * version bump changes the scale, and an adaptive window step change (7/14/21/28 days, with
+ * hysteresis) changes how much evidence each number covers. Subtracting across either produces a
+ * delta that is an artifact rather than movement.
+ */
+const agentScoreDigestComparisonSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("none") }),
+  z.object({
+    status: z.literal("incomparable"),
+    reason: z.enum(["scoringVersion", "windowDays"]),
+    baselineDate: z.iso.date(),
+    baselineScore: z.number(),
+  }),
+  z.object({
+    status: z.literal("comparable"),
+    baselineDate: z.iso.date(),
+    baselineScore: z.number(),
+    delta: z.number(),
+    /** False when the two intervals overlap, which makes the delta noise rather than movement. */
+    significant: z.boolean(),
+  }),
+])
+
+/**
+ * A week of Agent Score, snapshotted at digest time. The scores and deltas are derived
+ * point-in-time facts, so they ride on the payload; the project's name and slug are not, and stay
+ * resolved live from the row's `projectId`. `projectId` itself is carried because the idempotency
+ * key needs it — `(organization_id, user_id, idempotency_key)` has no project column, so two scored
+ * projects digesting the same week would collide without it.
+ */
+export const agentScoreWeeklyDigestPayloadSchema = z.object({
+  projectId: cuidSchema,
+  /** Newest published snapshot in the window, which is the number the email leads with. */
+  date: z.iso.date(),
+  windowStart: z.iso.date(),
+  windowEnd: z.iso.date(),
+  score: z.number().min(0).max(100),
+  interval: z.object({ lower: z.number(), upper: z.number() }),
+  scoringVersion: z.string().min(1),
+  windowDays: z.number().int().positive(),
+  eligibleSessionCount: z.number().int().nonnegative(),
+  /** Days in the window that published a score; the rest are gaps rather than zeros. */
+  publishedDayCount: z.number().int().positive(),
+  dimensions: z.record(scoreDimensionSchema, z.object({ score: z.number(), delta: z.number().nullable() })),
+  comparison: agentScoreDigestComparisonSchema,
+})
+export type AgentScoreWeeklyDigestPayload = z.infer<typeof agentScoreWeeklyDigestPayloadSchema>
+
 export const customMessagePayloadSchema = z.object({
   title: z.string(),
   content: z.string().optional(),
@@ -354,6 +406,10 @@ export const NOTIFICATION_KIND_META = {
   "wrapped.report": {
     routing: { group: "wrapped_reports", topic: null },
     payload: wrappedReportPayloadSchema,
+  },
+  "agent-score.weekly-digest": {
+    routing: { group: "agent_score", topic: null },
+    payload: agentScoreWeeklyDigestPayloadSchema,
   },
   "custom.message": {
     routing: { group: "custom_messages", topic: null },

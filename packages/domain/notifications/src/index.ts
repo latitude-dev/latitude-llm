@@ -1,6 +1,7 @@
 // Entities
 
 export type {
+  AgentScoreWeeklyDigestPayload,
   BillingLimitReachedPayload,
   CustomMessagePayload,
   DestinationQuarantinedPayload,
@@ -22,6 +23,7 @@ export type {
   WrappedReportPayload,
 } from "./entities/notification.ts"
 export {
+  agentScoreWeeklyDigestPayloadSchema,
   billingLimitReachedPayloadSchema,
   customMessagePayloadSchema,
   destinationQuarantinedPayloadSchema,
