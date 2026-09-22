@@ -95,6 +95,7 @@ const renderModule = ({
   ThroughputReferenceCohort,
   TtftReferenceCohort,
 } from "../entities/latency-reference-artifact.ts"
+import { provisionalFallbackFor } from "./provisional-latency-fallback.ts"
 
 export const LAUNCH_LATENCY_ARTIFACT_VERSION = ${JSON.stringify(artifact.artifactVersion)}
 
@@ -124,6 +125,7 @@ export const LAUNCH_LATENCY_REFERENCE_ARTIFACT = {
   minimumOrganizationCount: LAUNCH_LATENCY_REFERENCE_FREEZE.minimumOrganizationCount,
   ttft: ttftCohorts,
   throughput: throughputCohorts,
+  provisionalFallback: provisionalFallbackFor({ ttft: ttftCohorts, throughput: throughputCohorts }),
 } satisfies LatencyReferenceArtifact
 `
 

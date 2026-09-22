@@ -93,20 +93,7 @@ export const throughputReferenceCohortSchema = z
   })
 export type ThroughputReferenceCohort = z.infer<typeof throughputReferenceCohortSchema>
 
-/**
- * A provider/model pair with a published vendor figure and no measurement behind it.
- *
- * Consulted only after the calibrated chain has missed at every granularity. A calibrated artifact
- * is built from tenants that cleared the sample and spread gates, so any model those tenants did not
- * run enough of is simply absent — and an absent pair used to withhold the whole Agent Score, since
- * one unreferenced generation fails the Speed coverage gate. That is the wrong failure mode: a
- * vendor's published number is a weaker expectation than a measured median, but it is a far better
- * answer than "no score", and it is what the provisional artifact ran on before calibration.
- *
- * Deliberately carries no `sampleCount` or `organizationCount`: it is not a cohort, it is not gated
- * like one, and the lookup reports it as `provenance: "provisional"` so nothing downstream mistakes
- * it for a measurement.
- */
+// Published vendor figures for pairs the freeze did not measure; gate-exempt because they measure nothing.
 const provisionalPairFields = { provider: z.string().min(1), model: z.string().min(1) } as const
 const provisionalTtftReferenceSchema = z.object({
   ...provisionalPairFields,
@@ -135,8 +122,7 @@ export const latencyReferenceArtifactSchema = z
       .optional(),
   })
   .superRefine((artifact, ctx) => {
-    // A fallback pair the calibrated set already answers is dead weight at best and, at worst, a
-    // second opinion that a future edit could accidentally promote. Refuse the overlap.
+    // A fallback for a pair the calibrated set already measures would be a second, weaker answer to the same lookup.
     for (const [metric, fallbacks, cohorts] of [
       ["ttft", artifact.provisionalFallback?.ttft ?? [], artifact.ttft],
       ["throughput", artifact.provisionalFallback?.throughput ?? [], artifact.throughput],
@@ -210,7 +196,7 @@ export type LatencyExpectation =
       readonly value: number
       readonly sampleCount: number
     }
-  /** A published vendor figure, not a measurement. Reported apart so nothing treats it as one. */
+  /** A published vendor figure, not a measurement. */
   | { readonly provenance: "provisional"; readonly value: number }
   | { readonly provenance: "unmeasured"; readonly reason: LatencyExpectationGap }
 

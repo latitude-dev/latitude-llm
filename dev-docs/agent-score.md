@@ -73,18 +73,24 @@ versions.
 
 ## Frozen latency references
 
-Speed loads the calibrated `latency-reference-v2-calibrated-20260921` artifact. It was built from
-the closed fleet window from 2026-06-23 through 2026-09-21 and the exclusive ingestion snapshot at
-2026-09-21 08:00 UTC, with a minimum of 200 observations and 5 organizations for every published
-cohort. The artifact contains detailed input/output token and streaming cohorts plus provider/model
-roll-ups. A detailed miss can use its exact provider/model roll-up. It never uses another model or a
-fleet-wide fallback.
+Speed loads the calibrated `latency-reference-v2-calibrated-20260921-fallback1` artifact. Its
+cohorts were built from the closed fleet window from 2026-06-23 through 2026-09-21 and the
+exclusive ingestion snapshot at 2026-09-21 08:00 UTC, with a minimum of 200 observations and 5
+organizations for every published cohort. The artifact contains detailed input/output token and
+streaming cohorts plus provider/model roll-ups. A detailed miss can use its exact provider/model
+roll-up. It never uses another model or a fleet-wide distribution.
 
-An exact provider/model pair that is absent from the artifact is unmeasured. If an applicable
-critical-path generation uses that pair, Speed does not publish. This includes a model introduced
-after the freeze and a model that has not reached the sample or organization gate. The fail-closed
-result preserves score comparability and prevents a thin tenant-specific cohort from becoming a
-shared reference.
+A provider/model pair that no calibrated cohort measures falls back, last, to a published vendor
+figure from `provisional-latency-fallback.ts`. Those figures carry no sample or organization
+counts, are exempt from the tenant gates because they measure nothing, and are reported as
+`provenance: "provisional"`. Only pairs the calibrated cohorts do not measure are kept, per metric,
+and the schema rejects a fallback that overlaps a measured pair, so a calibrated reading is never
+shadowed. A pair absent from both the cohorts and the published figures is still unmeasured and
+still prevents Speed from publishing; add it to `PROVISIONAL_PUBLISHED_FIGURES` or wait for it to
+reach the gates in a later freeze.
+
+`provisional-latency-fallback.ts` is hand-maintained. The calibration script imports it rather than
+regenerating it, so a later freeze keeps the fallback.
 
 Create a later freeze with `pnpm --filter @app/workers agent-score:calibrate-latency`. The command
 requires an inclusive `--since`, an exclusive `--until`, an exclusive `--ingested-until` snapshot,
@@ -100,7 +106,7 @@ pnpm --filter @app/workers agent-score:calibrate-latency -- \
   --since 2026-06-23T00:00:00.000Z \
   --until 2026-09-21T00:00:00.000Z \
   --ingested-until 2026-09-21T08:00:00.000Z \
-  --artifact-version latency-reference-v2-calibrated-20260921 \
+  --artifact-version latency-reference-v2-calibrated-<date> \
   > packages/domain/agent-score/src/artifacts/launch-latency-reference-artifact.ts
 ```
 
