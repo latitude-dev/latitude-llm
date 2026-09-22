@@ -1,15 +1,8 @@
 import { type OrganizationId, type ProjectId, SCORE_DIMENSIONS, type ScoreDimension } from "@domain/shared"
 import type { AgentScoreSnapshot, DimensionSnapshot } from "./agent-score-snapshot.ts"
 
-/**
- * How far a dimension may sit from the composite, in score points.
- *
- * Wide enough that the ring reads as five distinct arcs rather than a flat wheel, narrow enough
- * that a demo does not look like it is scoring five unrelated things.
- */
 const MAX_DIMENSION_SPREAD = 9
 
-/** Half-width of every published interval, in score points. */
 const INTERVAL_HALF_WIDTH = 4
 
 /** FNV-1a, so the same project and date always produce the same shape without importing a PRNG. */
@@ -30,17 +23,7 @@ const intervalAround = (value: number): DimensionSnapshot["interval"] => {
   return { lower: clamp(value - halfWidth), upper: clamp(value + halfWidth) }
 }
 
-/**
- * Dimension scores that scatter around the composite and still average back to it.
- *
- * The offsets are centred against the composite weights and then scaled, so the weighted mean of
- * the result is the requested composite exactly rather than approximately. That matters more than
- * it looks: the ring shows the composite in the middle and the five dimensions around it, and a
- * demo whose middle number disagrees with its own arcs is worse than one with five equal arcs.
- *
- * The scale also shrinks as the composite approaches either end, which is what keeps every
- * dimension inside [0, 100] without a clamp — a clamp would silently break the mean it just fixed.
- */
+/** Weight-centred offsets, scaled to stay inside [0, 100] — a clamp here would break the mean. */
 const scatterDimensions = ({
   score,
   weights,
@@ -71,7 +54,6 @@ export interface SyntheticAgentScoreSnapshotInput {
   readonly projectId: ProjectId
   /** UTC date, `YYYY-MM-DD`. */
   readonly date: string
-  /** The composite to publish for that date, 0–100. */
   readonly score: number
   readonly scoringVersion: string
   readonly windowDays: number
@@ -80,20 +62,7 @@ export interface SyntheticAgentScoreSnapshotInput {
   readonly createdAt: Date
 }
 
-/**
- * A snapshot built from a composite score instead of measured evidence.
- *
- * Exists for demo projects, which can have every other kind of seeded data and still have no score
- * history, because history only accrues one real day at a time. Staff pick the shape of the curve
- * and this fills in the sixteen other numbers a stored snapshot needs.
- *
- * It carries no explanation. The evidence is the one part that cannot be faked into something a
- * reader could inspect, so the page says "evidence is not available for this date" on these days
- * rather than showing invented causes — the score is a prop, the reasoning would be a lie.
- *
- * Deterministic in the project and date, so re-seeding the same range twice produces the same
- * dimensions rather than a second, differently-shaped history.
- */
+/** Carries no explanation: readers must see "no evidence" rather than invented causes. */
 export const syntheticAgentScoreSnapshot = (input: SyntheticAgentScoreSnapshotInput): AgentScoreSnapshot => {
   const score = clamp(input.score)
   const dimensionScores = scatterDimensions({

@@ -28,7 +28,10 @@ const isCalendarDate = (date: string): boolean =>
 // (organization, project, date), so a future row makes the real run no-op when that date arrives.
 export const seedableDateRange = (now: Date): { readonly from: string; readonly to: string } => {
   const to = utcDate(now)
-  return { from: utcDate(new Date(new Date(`${to}T00:00:00.000Z`).getTime() - (SEED_AGENT_SCORE_HISTORY_DAYS - 1) * DAY_MS)), to }
+  return {
+    from: utcDate(new Date(new Date(`${to}T00:00:00.000Z`).getTime() - (SEED_AGENT_SCORE_HISTORY_DAYS - 1) * DAY_MS)),
+    to,
+  }
 }
 
 export interface SeedAgentScoreHistoryDay {

@@ -45,14 +45,6 @@ export interface AdminAgentScoreSnapshotDto {
   readonly createdAt: string
 }
 
-/**
- * One published day on the trend line.
- *
- * Deliberately thinner than the snapshot DTO: the backoffice trend draws a score per day and
- * captions the range, so shipping every dimension and interval for ninety days would multiply the
- * payload for pixels nobody reads. `scoringVersion` and `windowDays` stay because a line that
- * crosses either is not a continuous measurement and has to say so.
- */
 export interface AdminAgentScoreHistoryPointDto {
   readonly date: string
   readonly score: number
@@ -68,7 +60,6 @@ export interface AdminAgentScoreDto {
   readonly explanation: AgentScoreExplanation | null
   /** Published scores through today, oldest first. Unscored days are absent, not zero-filled. */
   readonly history: readonly AdminAgentScoreHistoryPointDto[]
-  /** Composite weights, so the staff ring sizes each dimension arc exactly as the customer ring does. */
   readonly dimensionWeights: Readonly<Record<ScoreDimension, number>>
 }
 
@@ -98,8 +89,6 @@ const agentScoreAdminLayers = Layer.mergeAll(
   AgentScoreSnapshotRepositoryLive,
 )
 
-// The seeder reads the project's latest score for the window and session count it should imitate,
-// then writes through the org-crossing adapter — see its header for why that is a separate port.
 const agentScoreSeedLayers = Layer.mergeAll(
   AdminProjectRepositoryLive,
   AgentScoreSnapshotRepositoryLive,
@@ -263,8 +252,8 @@ export const adminSeedAgentScoreHistoryInputSchema = z.object({
     )
     .min(1)
     .max(AGENT_SCORE_SEED_HISTORY_DAYS)
-    // A repeated date would be half-written by `onConflictDoNothing` and the reported count would
-    // then describe neither what the caller asked for nor what landed.
+    // A repeated date would be half-written by `onConflictDoNothing`, leaving the reported count
+    // describing neither the request nor the result.
     .refine((days) => new Set(days.map((day) => day.date)).size === days.length, {
       message: "dates must be unique",
     }),
@@ -275,19 +264,7 @@ interface AdminSeedAgentScoreHistoryResultDto {
   readonly skipped: number
 }
 
-/**
- * Fills a project's Agent Score history with scores staff chose, for demos.
- *
- * Nothing is recomputed. A project seeded this morning has the traffic a demo needs and a trend
- * chart with one point in it, because history only accrues a real day at a time; this writes the
- * missing days so the chart has a shape. The scores are fabricated and the stored rows say so only
- * by omission — they carry no explanation, so the page reports no evidence for those dates.
- *
- * Dates that already carry a published score are skipped by the unique index rather than by trust
- * in the caller, so the worst a malformed request can do is write fewer days than it asked for.
- * The organization comes from the project lookup, never from the request, because this is the one
- * writer that files a score under an organization the connection did not scope.
- */
+/** The organization comes from the project lookup, never the request — see the adapter's header. */
 export const adminSeedAgentScoreHistory = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
   .inputValidator(adminSeedAgentScoreHistoryInputSchema)

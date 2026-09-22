@@ -16,11 +16,7 @@ const pg = setupTestPostgres()
 
 const layers = Layer.mergeAll(AdminAgentScoreHistoryRepositoryLive, AgentScoreSnapshotRepositoryLive)
 
-/**
- * Drives the adapter exactly as the backoffice wires it: the admin pool, and the `"system"` scope
- * that bypasses RLS. That scope is the whole reason this adapter exists, so a test that passed a
- * real organization here would be testing a wiring production never uses.
- */
+/** The admin pool and `"system"` scope the backoffice uses; a real org here would test nothing. */
 const runAsAdmin = <A, E>(
   effect: Effect.Effect<A, E, AdminAgentScoreHistoryRepository | AgentScoreSnapshotRepository | SqlClient>,
 ) => Effect.runPromise(effect.pipe(withPostgres(layers, pg.adminPostgresClient)))
@@ -78,8 +74,7 @@ describe("AdminAgentScoreHistoryRepositoryLive", () => {
 
     expect(written).toBe(2)
     const rows = await pg.db.select().from(agentScoreSnapshots)
-    // The bug this guards: the tenant-facing writer overrides `organization_id` with the connection
-    // scope, which is `"system"` here — those rows would be invisible to the project that asked.
+    // The tenant-facing writer would put `"system"` here, invisible to the project that asked.
     expect(rows.map((row) => row.organizationId)).toEqual([ORG, ORG])
     expect(rows.every((row) => row.projectId === PROJECT)).toBe(true)
   })

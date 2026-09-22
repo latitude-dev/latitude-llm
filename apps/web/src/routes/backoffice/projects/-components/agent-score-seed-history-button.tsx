@@ -22,14 +22,7 @@ const clampScore = (value: number): number => Math.max(0, Math.min(100, value))
 
 const roundToTenth = (value: number): number => Math.round(value * 10) / 10
 
-/**
- * A plausible-looking score curve from start to end.
- *
- * The noise is a damped random walk rather than independent jitter per day, because a real score
- * moves over a multi-day window and therefore drifts — a line of independent draws reads as
- * measurement error, which is the one thing a demo should not be showing. `random` is a parameter
- * so the shape is testable; the button re-rolls it on every press.
- */
+/** `0.7` damps the walk so neighbouring days stay related instead of reading as measurement error. */
 export const generateScoreCurve = ({
   dayCount,
   start,
@@ -53,7 +46,7 @@ export const generateScoreCurve = ({
 
 const plural = (count: number, noun: string): string => `${count} ${noun}${count === 1 ? "" : "s"}`
 
-/** Exported for tests: the one line that says what pressing the button will actually do. */
+/** Exported for tests. */
 export const writeSummary = (writable: number, total: number): string =>
   writable === total
     ? `Will write ${plural(writable, "day")}.`
@@ -108,8 +101,7 @@ function DayColumn({
   readonly published: boolean
   readonly onChange: (value: number) => void
 }) {
-  // The strip usually spans a month boundary, and a run of bare day numbers that resets to 01
-  // halfway along reads as a glitch. The first column and every 1st of a month name their month.
+  // A run of bare day numbers that resets to 01 mid-strip reads as a glitch, so month starts say so.
   const day = date.slice(8)
   const dayLabel = day === "01" || date === firstDate ? `${MONTHS[Number(date.slice(5, 7)) - 1]} ${Number(day)}` : day
   const label = `${formatFullDate(date)}: ${value.toFixed(1)}`
@@ -144,16 +136,6 @@ function DayColumn({
   )
 }
 
-/**
- * Fills the project's Agent Score history with scores staff draw by hand.
- *
- * Demo projects are the reason: they can be seeded with everything except a past, because history
- * only accrues one real day at a time. The strip is thirty days ending today, one slider each, and
- * the days that already carry a published score are locked — real history is never overwritten,
- * and showing it beside the editable days is what makes that obvious before submitting rather than
- * after. The generator exists because dragging thirty sliders into a natural-looking curve by hand
- * is work nobody wants to repeat per demo; the sliders are then the edit, not the only way in.
- */
 export function AgentScoreSeedHistoryButton({
   projectId,
   projectName,

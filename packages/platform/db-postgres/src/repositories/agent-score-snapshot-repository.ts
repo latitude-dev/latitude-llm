@@ -34,12 +34,8 @@ const toDomain = (row: Row): AgentScoreSnapshot => ({
 })
 
 /**
- * Column-for-column mapping of a snapshot, including its own `organizationId`.
- *
- * The tenant-facing write below deliberately overrides that column with the connection's scope, so
- * a miswired job cannot file a score under the wrong tenant. `AdminAgentScoreHistoryRepositoryLive`
- * is the one caller that keeps the snapshot's value, because a backoffice connection has no tenant
- * scope to override it with. Exported for that adapter only — not re-exported from the package.
+ * Includes the snapshot's own `organizationId`; the write below overrides it with the connection
+ * scope. `AdminAgentScoreHistoryRepositoryLive` is the one caller that keeps it — see its header.
  */
 export const toAgentScoreSnapshotInsertRow = (snapshot: AgentScoreSnapshot) => ({
   organizationId: snapshot.organizationId,

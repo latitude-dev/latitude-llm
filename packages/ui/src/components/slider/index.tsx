@@ -4,13 +4,7 @@ import { cn } from "../../utils/cn.ts"
 
 export type SliderProps = ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
 
-/**
- * Horizontal by default; pass `orientation="vertical"` for a column.
- *
- * Every size class is keyed off Radix's own `data-orientation`, which it sets on the root, track,
- * range and thumb alike. A vertical slider fills the height its container gives it, so the caller
- * sets that height — a bare vertical slider with no height collapses to nothing.
- */
+/** A vertical slider fills its container's height; with no height set it collapses to nothing. */
 export function Slider({
   className = "",
   ref,

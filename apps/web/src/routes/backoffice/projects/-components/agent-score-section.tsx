@@ -7,15 +7,6 @@ import { AgentScoreTrend } from "./agent-score-trend.tsx"
 
 const formatScore = (score: number): string => score.toFixed(0)
 
-/**
- * Agent Score at a glance, for staff.
- *
- * Two panels and nothing else: the vitality ring the customer sees, and the trend of published
- * scores beside it. The ring already carries the composite score, every dimension arc and — on
- * hover — the evidence behind each one, so a row of per-dimension tiles and a written-out cause
- * list underneath were repeating it in a slower form. What staff need that customers do not is the
- * customer-access badge in the header and the recalculation controls further down the page.
- */
 export function AgentScoreSection({ agentScore }: { readonly agentScore: AdminAgentScoreDto }) {
   const snapshot = agentScore.snapshot
 
@@ -46,11 +37,6 @@ export function AgentScoreSection({ agentScore }: { readonly agentScore: AdminAg
             <AgentScoreTrend endDate={agentScore.currentDate} history={agentScore.history} />
           </div>
 
-          {/*
-            Only ever rendered when a cap actually fired. A capped score is a clamped score, which is
-            exactly the kind of exception a staff page must not swallow — but in the ordinary case it
-            costs no row.
-          */}
           {snapshot.policyCap !== null ? (
             <Text.H7 color="warningMutedForeground">Policy cap applied at {formatScore(snapshot.policyCap)}.</Text.H7>
           ) : null}

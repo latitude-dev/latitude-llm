@@ -3,7 +3,11 @@ import { OrganizationId, ProjectId, SCORE_DIMENSIONS, SqlClient, type SqlClientS
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { AdminAgentScoreHistoryRepository } from "./agent-score-history-repository.ts"
-import { SEED_AGENT_SCORE_HISTORY_DAYS, seedAgentScoreHistoryUseCase, seedableDateRange } from "./seed-agent-score-history.ts"
+import {
+  SEED_AGENT_SCORE_HISTORY_DAYS,
+  seedAgentScoreHistoryUseCase,
+  seedableDateRange,
+} from "./seed-agent-score-history.ts"
 
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))

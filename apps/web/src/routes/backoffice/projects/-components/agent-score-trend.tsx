@@ -26,18 +26,6 @@ const chartLabel = (date: string, range: TrendRange): string => {
     : value.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })
 }
 
-/**
- * The project's published Agent Scores over time, in the staff dashboard.
- *
- * Same series the customer-facing Score evolution chart draws — one point per published day on a
- * fixed 0–100 axis, unscored days left as gaps rather than zeroes — read from the history the page
- * loader already fetched, so it costs no extra request. It sits beside the vitality ring because
- * the ring alone cannot say whether a project is recovering or sliding, which is the first thing
- * staff ask when a customer complains.
- *
- * Unlike the customer chart this one never falls back to a readiness explainer: the section only
- * renders it once a score exists, and staff have the recalculation controls further down the page.
- */
 export function AgentScoreTrend({
   endDate,
   history,
@@ -78,8 +66,6 @@ export function AgentScoreTrend({
   ]
 
   return (
-    // `rounded-xl bg-secondary`, matching the vitality ring beside it: the pair is one row, laid out
-    // exactly as the customer-facing Agent Score page lays out the same two panels.
     <div className="flex min-h-[296px] min-w-0 flex-1 flex-col gap-2 rounded-xl bg-secondary p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Text.H6 color="foregroundMuted">Score evolution</Text.H6>
