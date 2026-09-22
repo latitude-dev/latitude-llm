@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Regenerated on Fern CLI `5.58.0` → `5.122.0` and `fern-python-sdk` `5.15.0` → `5.31.0`. No change to the HTTP API surface or to any method signature: every endpoint keeps the arguments it had. The runtime gains SSE reconnect handling, TCP keepalive options, and alias coercion in model parsing.
+- Passing a custom `httpx_client` without an explicit `timeout` now leaves the timeout to that client instead of copying its `timeout.read` onto each request. Behavior is unchanged when `timeout` is set or when the SDK builds its own client (60s).
+
 ## [9.14.0] - 2026-09-21
 
 ### Added

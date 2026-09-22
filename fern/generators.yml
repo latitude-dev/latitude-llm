@@ -11,7 +11,7 @@ groups:
   local-typescript:
     generators:
       - name: fernapi/fern-typescript-node-sdk
-        version: 3.73.4
+        version: 3.96.0
         output:
           location: local-file-system
           path: ../packages/sdk/typescript/src
@@ -23,7 +23,7 @@ groups:
   local-python:
     generators:
       - name: fernapi/fern-python-sdk
-        version: 5.15.0
+        version: 5.31.0
         output:
           location: local-file-system
           path: ../packages/sdk/python/src/latitude_sdk
@@ -38,7 +38,7 @@ groups:
   local-cli:
     generators:
       - name: fernapi/fern-cli-generator
-        version: 0.21.0
+        version: 0.41.2
         ir-version: v67
         output:
           location: local-file-system

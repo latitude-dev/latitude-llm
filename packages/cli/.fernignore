@@ -1,3 +1,5 @@
 CHANGELOG.md
+# Packaged into the release tarballs by publish-cli.yml; 0.41 stopped emitting it.
+LICENSE
 # cargo-dist scaffolding; we release via .github/workflows/publish-cli.yml
 dist-workspace.toml

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `LATITUDE_PROJECT_SLUG`, or the global `--global-project-slug` flag, supplies the project for project-scoped commands so `--project-slug` can be dropped from each one. `--project-slug` still wins where it is passed, and commands that aren't project-scoped are untouched.
+- New global flags from the generator upgrade: `--human` (force table output when piped), `--user-agent-suffix`, `--no-extract`, `--no-retry`, `--spec` / `--spec-raw` (print the effective / embedded OpenAPI spec). Paginated operations also gain `--page-delay` and `--no-pager`; streaming operations gain `--no-stream`.
+
+### Changed
+
+- Regenerated on `fern-cli-generator` `0.21.0` → `0.41.2` and Fern CLI `5.58.0` → `5.122.0`. The TLS backend is now selected per target by the generated `Cargo.toml` (musl → rustls, everything else → native-tls) instead of by a crate-level default feature.
+
 ## [7.14.0] - 2026-09-21
 
 ### Added

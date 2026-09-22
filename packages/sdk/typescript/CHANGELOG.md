@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Regenerated on Fern CLI `5.58.0` → `5.122.0` and `fern-typescript-node-sdk` `3.73.4` → `3.96.0`. No change to the HTTP API surface or to any method signature: every endpoint keeps the arguments it had. The runtime gains URL redaction in error messages, a shared request-body helper, and `LatitudeError` / `LatitudeTimeoutError` entries in the generated `@throws` docs.
+
 ## [9.14.0] - 2026-09-21
 
 ### Added

@@ -189,8 +189,8 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20260705.1
       fern-api:
-        specifier: 5.50.4
-        version: 5.50.4
+        specifier: 5.122.0
+        version: 5.122.0
       knip:
         specifier: 6.6.2
         version: 6.6.2(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
@@ -10993,8 +10993,8 @@ packages:
       picomatch:
         optional: true
 
-  fern-api@5.50.4:
-    resolution: {integrity: sha512-j/ZQcvn526IrnAS0Un2pyy5phkb9Ym4p+hz0pjmylY9FqeMKAcLklw+WnPD7QU4MP3FANKb7tIdzyrA2yX/t9Q==}
+  fern-api@5.122.0:
+    resolution: {integrity: sha512-rjLLXz2QJb/X049MBm8T4km0MTgngjhhFPv39g4Dc5V0KqRATa9RaUhQfEvnve5mTIRKHCFC8zkpkw5nhZDiWA==}
     hasBin: true
 
   fetch-blob@3.2.0:
@@ -23083,7 +23083,7 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.4
 
-  fern-api@5.50.4:
+  fern-api@5.122.0:
     optionalDependencies:
       '@boundaryml/baml': 0.219.0
 
