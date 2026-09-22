@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Agent Score
+
+- Conversation moments now degrade Outcome quality. A session where the user got what they came for after showing frustration, abandoning the conversation, being handed to a human, looping on clarification, or correcting the agent three or more times is scored as degraded rather than as a full success, at `0.75` of a clean session. The degraded share is measured only over sessions conversation analysis actually read, since it skips empty, too-short and non-conversation sessions on a rule that is deterministic on content and cannot be projected onto the rest. Below fifty analyzed sessions the component contributes nothing and Outcome is unchanged, so an analysis gap can never withhold the score. Each degrading kind appears under the dimension's "Affected by" list with the points it cost. Scoring version moves to `agent-score-v7-provisional` (ref: #4713).
+
 ## v0.3.114 - 2026-09-21
 
 ### Documentation
