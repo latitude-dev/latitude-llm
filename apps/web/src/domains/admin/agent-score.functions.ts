@@ -1,4 +1,4 @@
-import { AdminFeatureFlagRepository, getProjectDetailsUseCase } from "@domain/admin"
+import { AdminFeatureFlagRepository, getProjectDetailsUseCase, seedAgentScoreHistoryUseCase } from "@domain/admin"
 import {
   type AgentScoreExplanation,
   type AgentScoreSnapshot,
@@ -12,6 +12,7 @@ import {
 import { OrganizationId, ProjectId, type ScoreDimension } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
+  AdminAgentScoreHistoryRepositoryLive,
   AdminFeatureFlagRepositoryLive,
   AdminProjectRepositoryLive,
   AgentScoreSnapshotRepositoryLive,
@@ -95,6 +96,14 @@ const agentScoreAdminLayers = Layer.mergeAll(
   AdminFeatureFlagRepositoryLive,
   AdminProjectRepositoryLive,
   AgentScoreSnapshotRepositoryLive,
+)
+
+// The seeder reads the project's latest score for the window and session count it should imitate,
+// then writes through the org-crossing adapter — see its header for why that is a separate port.
+const agentScoreSeedLayers = Layer.mergeAll(
+  AdminProjectRepositoryLive,
+  AgentScoreSnapshotRepositoryLive,
+  AdminAgentScoreHistoryRepositoryLive,
 )
 
 /** Latest stored Agent Score for staff, independent of customer feature access. */
@@ -234,4 +243,64 @@ export const adminRecalculateAgentScore = createServerFn({ method: "POST" })
     )
 
     return { enqueued: true, date }
+  })
+
+/** How many calendar days back the seeder offers, inclusive of today. */
+export const AGENT_SCORE_SEED_HISTORY_DAYS = 30
+
+export const SEED_AGENT_SCORE_HISTORY_CONFIRMATION = "seed score history"
+
+/** Exported for input-schema tests. */
+export const adminSeedAgentScoreHistoryInputSchema = z.object({
+  projectId: z.string().min(1).max(256),
+  confirmation: z.literal(SEED_AGENT_SCORE_HISTORY_CONFIRMATION),
+  days: z
+    .array(
+      z.object({
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        score: z.number().min(0).max(100),
+      }),
+    )
+    .min(1)
+    .max(AGENT_SCORE_SEED_HISTORY_DAYS)
+    // A repeated date would be half-written by `onConflictDoNothing` and the reported count would
+    // then describe neither what the caller asked for nor what landed.
+    .refine((days) => new Set(days.map((day) => day.date)).size === days.length, {
+      message: "dates must be unique",
+    }),
+})
+
+interface AdminSeedAgentScoreHistoryResultDto {
+  readonly written: number
+  readonly skipped: number
+}
+
+/**
+ * Fills a project's Agent Score history with scores staff chose, for demos.
+ *
+ * Nothing is recomputed. A project seeded this morning has the traffic a demo needs and a trend
+ * chart with one point in it, because history only accrues a real day at a time; this writes the
+ * missing days so the chart has a shape. The scores are fabricated and the stored rows say so only
+ * by omission — they carry no explanation, so the page reports no evidence for those dates.
+ *
+ * Dates that already carry a published score are skipped by the unique index rather than by trust
+ * in the caller, so the worst a malformed request can do is write fewer days than it asked for.
+ * The organization comes from the project lookup, never from the request, because this is the one
+ * writer that files a score under an organization the connection did not scope.
+ */
+export const adminSeedAgentScoreHistory = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminSeedAgentScoreHistoryInputSchema)
+  .handler(async ({ data }): Promise<AdminSeedAgentScoreHistoryResultDto> => {
+    return await Effect.runPromise(
+      Effect.gen(function* () {
+        const project = yield* getProjectDetailsUseCase({ projectId: ProjectId(data.projectId) })
+        const { written, skipped } = yield* seedAgentScoreHistoryUseCase({
+          organizationId: OrganizationId(project.organization.id),
+          projectId: ProjectId(project.id),
+          days: data.days,
+        })
+        return { written, skipped }
+      }).pipe(withPostgres(agentScoreSeedLayers, getAdminPostgresClient()), withTracing),
+    )
   })

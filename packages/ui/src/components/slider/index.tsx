@@ -4,6 +4,13 @@ import { cn } from "../../utils/cn.ts"
 
 export type SliderProps = ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
 
+/**
+ * Horizontal by default; pass `orientation="vertical"` for a column.
+ *
+ * Every size class is keyed off Radix's own `data-orientation`, which it sets on the root, track,
+ * range and thumb alike. A vertical slider fills the height its container gives it, so the caller
+ * sets that height — a bare vertical slider with no height collapses to nothing.
+ */
 export function Slider({
   className = "",
   ref,
@@ -13,14 +20,28 @@ export function Slider({
     <SliderPrimitive.Root
       ref={ref}
       className={cn(
-        "relative flex w-full touch-none select-none items-center",
+        "relative flex touch-none select-none items-center",
+        "data-[orientation=horizontal]:w-full",
+        "data-[orientation=vertical]:h-full data-[orientation=vertical]:flex-col data-[orientation=vertical]:justify-center",
         "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
         className,
       )}
       {...props}
     >
-      <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-muted">
-        <SliderPrimitive.Range className="absolute h-full bg-primary data-[disabled]:bg-muted-foreground" />
+      <SliderPrimitive.Track
+        className={cn(
+          "relative grow overflow-hidden rounded-full bg-muted",
+          "data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full",
+          "data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5",
+        )}
+      >
+        <SliderPrimitive.Range
+          className={cn(
+            "absolute bg-primary data-[disabled]:bg-muted-foreground",
+            "data-[orientation=horizontal]:h-full",
+            "data-[orientation=vertical]:w-full",
+          )}
+        />
       </SliderPrimitive.Track>
       {(props.value ?? props.defaultValue ?? [0]).map((_, i) => (
         <SliderPrimitive.Thumb

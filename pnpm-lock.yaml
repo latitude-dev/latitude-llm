@@ -1086,6 +1086,9 @@ importers:
 
   packages/domain/admin:
     dependencies:
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../agent-score
       '@domain/billing':
         specifier: workspace:*
         version: link:../billing

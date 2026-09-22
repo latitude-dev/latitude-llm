@@ -33,7 +33,15 @@ const toDomain = (row: Row): AgentScoreSnapshot => ({
   createdAt: row.createdAt,
 })
 
-const toInsertRow = (snapshot: AgentScoreSnapshot) => ({
+/**
+ * Column-for-column mapping of a snapshot, including its own `organizationId`.
+ *
+ * The tenant-facing write below deliberately overrides that column with the connection's scope, so
+ * a miswired job cannot file a score under the wrong tenant. `AdminAgentScoreHistoryRepositoryLive`
+ * is the one caller that keeps the snapshot's value, because a backoffice connection has no tenant
+ * scope to override it with. Exported for that adapter only — not re-exported from the package.
+ */
+export const toAgentScoreSnapshotInsertRow = (snapshot: AgentScoreSnapshot) => ({
   organizationId: snapshot.organizationId,
   projectId: snapshot.projectId,
   date: snapshot.date,
@@ -72,7 +80,7 @@ export const AgentScoreSnapshotRepositoryLive = Layer.succeed(AgentScoreSnapshot
       const inserted = yield* sqlClient.query((db, organizationId) =>
         db
           .insert(agentScoreSnapshots)
-          .values({ ...toInsertRow(snapshot), organizationId })
+          .values({ ...toAgentScoreSnapshotInsertRow(snapshot), organizationId })
           .onConflictDoNothing({
             target: [agentScoreSnapshots.organizationId, agentScoreSnapshots.projectId, agentScoreSnapshots.date],
           })
