@@ -12,6 +12,7 @@ describe("foldWindowBatch", () => {
     const session: NormalizedSessionAssessmentInput = {
       sessionId: SessionId("session-1"),
       hasReadableUserTask: true,
+      momentsAnalyzed: true,
       observedMicrocents: 0,
       observedDurationNs: 1_000,
       findings: [],
@@ -65,6 +66,7 @@ describe("foldWindowBatch cost causes", () => {
   const healthySession = (sessionId: string): NormalizedSessionAssessmentInput => ({
     sessionId: SessionId(sessionId),
     hasReadableUserTask: true,
+    momentsAnalyzed: true,
     observedMicrocents: 0,
     observedDurationNs: 1_000,
     findings: [],

@@ -3,7 +3,11 @@ import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import type { OutcomeCoverageFloors } from "../entities/agent-score-artifact.ts"
 import { type OutcomeWindowDecision, OutcomeWindowDecisionSource } from "../ports/outcome-window-source.ts"
-import { estimateProjectOutcome, type OutcomeSessionVerdict } from "../scoring/estimate-outcome.ts"
+import {
+  type EstimateProjectOutcomeInput,
+  estimateProjectOutcome,
+  type OutcomeSessionVerdict,
+} from "../scoring/estimate-outcome.ts"
 
 /** How many sessions one verdict read covers. Bounded so a 28-day window is many small queries, not one unbounded `IN`. */
 export const OUTCOME_VERDICT_BATCH_SIZE = 500
@@ -23,6 +27,8 @@ export interface EstimateProjectOutcomeWindowInput {
   readonly floors: OutcomeCoverageFloors
   readonly confidenceLevel?: number
   readonly batchSize?: number
+  /** Degrading moment kinds per analyzed session, from the window pass. */
+  readonly degradation?: EstimateProjectOutcomeInput["degradation"]
 }
 
 interface VerdictMetadata {
@@ -125,5 +131,6 @@ export const estimateProjectOutcomeWindow = Effect.fn("agentScore.estimateProjec
     supportedJudgmentVersions: input.supportedJudgmentVersions,
     floors: input.floors,
     ...(input.confidenceLevel !== undefined ? { confidenceLevel: input.confidenceLevel } : {}),
+    ...(input.degradation ? { degradation: input.degradation } : {}),
   })
 })

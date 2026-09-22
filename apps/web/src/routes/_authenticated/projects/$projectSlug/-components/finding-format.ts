@@ -31,6 +31,11 @@ const FINDING_LABELS: Readonly<Record<string, string>> = {
   providerError: "Provider error",
   "pii leakage": "Personal information exposed",
   jailbreaking: "Safety rules bypassed",
+  user_frustration: "Users showed frustration",
+  abandonment: "Users abandoned the conversation",
+  escalation: "Handed off to a human",
+  clarification_loop: "Repeated clarification requests",
+  user_correction: "Users repeatedly corrected the agent",
 }
 
 const FINDING_DESCRIPTIONS: Readonly<Record<string, string>> = {
@@ -80,6 +85,14 @@ const FINDING_DESCRIPTIONS: Readonly<Record<string, string>> = {
   "pii leakage":
     "The agent exposed personal data in its output that the user did not provide or was not meant to receive.",
   jailbreaking: "Content attempted to make the agent bypass its system or safety rules.",
+  "moment:user_frustration":
+    "The user expressed frustration during the session. The task may still have been completed, but not cleanly.",
+  "moment:abandonment": "The user left before the conversation reached a resolution.",
+  "moment:escalation": "The session was handed to a human, so the agent did not complete the task itself.",
+  "moment:clarification_loop":
+    "The agent asked for information it had already been given, making the user repeat themselves.",
+  "moment:user_correction":
+    "The user had to correct the agent several times before it acted on what they actually asked for.",
 }
 
 export const findingLabel = (value: string): string => {

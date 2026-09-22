@@ -322,8 +322,27 @@ const addObservedCauses = (evidence: MutableEvidence, dimension: ScoreDimensionK
   }
 }
 
+/**
+ * Moment-derived issue rows, which attribution now covers with a measured effect.
+ *
+ * The key is `findingGroupKey`'s moment prefix. Keeping both would list the same conversation
+ * evidence twice — once grouped by the kind set a moment carried, once per kind with its points.
+ */
+const isMomentIssue = (issueKey: string): boolean => issueKey.startsWith("issue:moment:")
+
 const addIssues = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
-  if (dimension === "outcome") evidence.affected.push(...issueRows("outcome", explanation.issues.outcome))
+  if (dimension === "outcome") {
+    // Rows, not the entry: `computeAgentScore` attributes Outcome on every publishable window and
+    // stores an empty result when nothing degraded or the component never applied. Testing for the
+    // entry alone would drop moment evidence in exactly the windows that have nothing to replace it.
+    const hasOutcomeAttribution = explanation.attribution.some(
+      (entry) => entry.scoreDimension === "outcome" && entry.rows.length > 0,
+    )
+    const issues = hasOutcomeAttribution
+      ? explanation.issues.outcome.filter((issue) => !isMomentIssue(issue.issueKey))
+      : explanation.issues.outcome
+    evidence.affected.push(...issueRows("outcome", issues))
+  }
   if (dimension === "safety") {
     evidence.affected.push(...issueRows("safety:harm", explanation.issues.safety.confirmedHarm))
     evidence.context.push(

@@ -389,6 +389,121 @@ describe("buildDimensionEvidence", () => {
     ])
   })
 
+  describe("moment degradation", () => {
+    const momentAttribution = {
+      scoreDimension: "outcome",
+      rows: [
+        {
+          causeId: "moment:user_frustration",
+          label: "user_frustration",
+          evidence: "associated",
+          nativeEffect: { value: 320, unit: "sessions" },
+          observationCount: 320,
+          attributedDeficit: 4.2,
+          fixGain: 3.1,
+        },
+      ],
+      residual: 0,
+      totalDeficit: 4.2,
+      explainedDeficit: 4.2,
+      method: "exact",
+    }
+
+    const momentIssue = {
+      issueKey: "issue:moment:user_frustration",
+      label: "Users showed frustration",
+      signalIds: [],
+      examinedSessions: 320,
+      examinedAdverseSessions: 40,
+      ranked: true,
+      basis: "analyzed",
+      basisSessionCount: 400,
+    }
+
+    it("shows a degrading kind with its measured effect on the score", () => {
+      const withMoments = {
+        ...explanation,
+        attribution: [momentAttribution],
+        issues: { ...explanation.issues, outcome: [momentIssue] },
+      } as unknown as Explanation
+
+      const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withMoments })
+
+      expect(evidence.affected).toEqual([
+        expect.objectContaining({
+          label: "Users showed frustration",
+          value: "320 sessions",
+          details: expect.arrayContaining([
+            // Association, never measurement: the rule firing is observed, but that those sessions
+            // would otherwise have been clean is the model's claim.
+            { label: "Associated impact on Outcome score", value: "−4.2 points" },
+          ]),
+        }),
+      ])
+    })
+
+    it("does not list the same conversation evidence twice", () => {
+      const withMoments = {
+        ...explanation,
+        attribution: [momentAttribution],
+        issues: { ...explanation.issues, outcome: [momentIssue] },
+      } as unknown as Explanation
+
+      const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withMoments })
+
+      expect(evidence.affected).toHaveLength(1)
+    })
+
+    it("keeps moment rows when attribution ran but found nothing to attribute", () => {
+      // The shape production actually produces: `computeAgentScore` attributes Outcome on every
+      // publishable window, so an entry is always present and is empty whenever nothing degraded.
+      const emptyAttribution = {
+        ...explanation,
+        attribution: [{ ...momentAttribution, rows: [], residual: 0, totalDeficit: 0, explainedDeficit: 0 }],
+        issues: { ...explanation.issues, outcome: [momentIssue] },
+      } as unknown as Explanation
+
+      const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: emptyAttribution })
+
+      expect(evidence.affected).toHaveLength(1)
+      expect(evidence.affected[0]?.label).toBe("Users showed frustration")
+    })
+
+    it("keeps moment rows when no outcome attribution was computed", () => {
+      // Below the analyzed floor there is no attribution, and the rows are still worth showing as
+      // the uncounted evidence they have always been.
+      const withoutAttribution = {
+        ...explanation,
+        issues: { ...explanation.issues, outcome: [momentIssue] },
+      } as unknown as Explanation
+
+      const evidence = buildDimensionEvidence({
+        dimension: "outcome",
+        snapshot: null,
+        explanation: withoutAttribution,
+      })
+
+      expect(evidence.affected).toHaveLength(1)
+      expect(evidence.affected[0]?.details).toBeUndefined()
+    })
+
+    it("leaves other outcome issues alone", () => {
+      const withBoth = {
+        ...explanation,
+        attribution: [momentAttribution],
+        issues: {
+          ...explanation.issues,
+          outcome: [momentIssue, { ...momentIssue, issueKey: "issue:no-output:blank", label: "sessions.no_output" }],
+        },
+      } as unknown as Explanation
+
+      const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withBoth })
+
+      expect(evidence.affected).toEqual(expect.arrayContaining([expect.objectContaining({ label: "No output" })]))
+      expect(evidence.affected).toHaveLength(2)
+    })
+  })
+
   it("turns internal metric identifiers and units into readable findings", () => {
     const withAttribution = {
       ...explanation,

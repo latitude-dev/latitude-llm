@@ -1,4 +1,4 @@
-import type { SessionMomentLabel, SessionSemanticMoment } from "@domain/conversation-intelligence"
+import type { AnalysisStatus, SessionMomentLabel, SessionSemanticMoment } from "@domain/conversation-intelligence"
 import type { FlaggerScreeningDecision } from "@domain/flaggers"
 import type { MemoryEvent } from "@domain/memories"
 import type { Score } from "@domain/scores"
@@ -30,6 +30,17 @@ export interface SessionAssessmentTraceScope extends SessionAssessmentSourceScop
 export interface SessionMomentFacts {
   readonly moments: readonly SessionSemanticMoment[]
   readonly labels: readonly SessionMomentLabel[]
+  /**
+   * Whether conversation analysis actually ran on this session, and how it ended.
+   *
+   * Moments are not a census of eligible traffic: `analyze-session` skips empty, too-short and
+   * non-conversation sessions and records a `failed` generation when the classifier errors. That
+   * selection is deterministic on content rather than random, so there is no inclusion probability
+   * to invert — the only honest correction is to report moment evidence against the sessions
+   * analysis could have seen. Absent when no analysis row survives retention, which is unknown
+   * rather than unanalyzed.
+   */
+  readonly analysisStatus?: AnalysisStatus
 }
 
 export interface SessionAssessmentBulkScope {

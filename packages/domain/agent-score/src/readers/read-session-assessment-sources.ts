@@ -707,6 +707,7 @@ const readMomentFindings = (facts: SessionMomentFacts): AssessmentFinding[] => {
         independentHumanEvidence: false,
         kind: "moment",
         momentKinds: [...new Set(labels.map((label) => label.kind))],
+        momentLabels: labels.map((label) => ({ kind: label.kind, confidence: label.confidence })),
       },
     ]
   })
@@ -974,6 +975,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       ],
       screeningDecisions: input.screeningDecisions,
       scoringEligibleSignalIds: [...scoringEligibleSignalIds(input.signals)],
+      momentsAnalyzed: input.moments.analysisStatus === "analyzed",
       costEvidence: {
         readings: costEvidence.readings,
         workloadStratum: costEvidence.workloadStratum,

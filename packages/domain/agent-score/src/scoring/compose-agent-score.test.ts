@@ -24,6 +24,13 @@ const outcome = (overrides: Partial<ProjectOutcomeEstimate> = {}): ProjectOutcom
     censusWeight: 0,
     excluded: { incompatibleJudgmentVersion: 0, unknownInclusionProbability: 0, deterministicEndpoint: 0 },
     coverage: "measured" as const,
+    degradation: {
+      applied: false,
+      analyzedSessionCount: 0,
+      degradedSessionCount: 0,
+      degradedShare: 0,
+      degradedWeight: 1,
+    },
     ...overrides,
   }
   const inclusionProbability =
@@ -75,6 +82,13 @@ const safety = (overrides: Partial<ProjectSafetyEstimate> = {}): ProjectSafetyEs
     rateLimitedHintedCount: 0,
     rateLimitedHintedShare: 0,
     coverage: "measured" as const,
+    degradation: {
+      applied: false,
+      analyzedSessionCount: 0,
+      degradedSessionCount: 0,
+      degradedShare: 0,
+      degradedWeight: 1,
+    },
     ...overrides,
   }
   return {
