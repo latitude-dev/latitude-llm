@@ -6,6 +6,8 @@ import {
   getAgentScoreExplanation,
   getLatestAgentScore,
   getLatestAgentScoreExplanation,
+  LAUNCH_AGENT_SCORE_ARTIFACT,
+  listAgentScoreHistory,
 } from "@domain/agent-score"
 import { OrganizationId, ProjectId, type ScoreDimension } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
@@ -42,12 +44,40 @@ export interface AdminAgentScoreSnapshotDto {
   readonly createdAt: string
 }
 
+/**
+ * One published day on the trend line.
+ *
+ * Deliberately thinner than the snapshot DTO: the backoffice trend draws a score per day and
+ * captions the range, so shipping every dimension and interval for ninety days would multiply the
+ * payload for pixels nobody reads. `scoringVersion` and `windowDays` stay because a line that
+ * crosses either is not a continuous measurement and has to say so.
+ */
+export interface AdminAgentScoreHistoryPointDto {
+  readonly date: string
+  readonly score: number
+  readonly scoringVersion: string
+  readonly windowDays: number
+  readonly eligibleSessionCount: number
+}
+
 export interface AdminAgentScoreDto {
   readonly customerAccessEnabled: boolean
   readonly currentDate: string
   readonly snapshot: AdminAgentScoreSnapshotDto | null
   readonly explanation: AgentScoreExplanation | null
+  /** Published scores through today, oldest first. Unscored days are absent, not zero-filled. */
+  readonly history: readonly AdminAgentScoreHistoryPointDto[]
+  /** Composite weights, so the staff ring sizes each dimension arc exactly as the customer ring does. */
+  readonly dimensionWeights: Readonly<Record<ScoreDimension, number>>
 }
+
+const toHistoryPointDto = (snapshot: AgentScoreSnapshot): AdminAgentScoreHistoryPointDto => ({
+  date: snapshot.date,
+  score: snapshot.score,
+  scoringVersion: snapshot.scoringVersion,
+  windowDays: snapshot.windowDays,
+  eligibleSessionCount: snapshot.eligibleSessionCount,
+})
 
 const toSnapshotDto = (snapshot: AgentScoreSnapshot): AdminAgentScoreSnapshotDto => ({
   date: snapshot.date,
@@ -77,14 +107,17 @@ export const adminGetAgentScore = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const project = yield* getProjectDetailsUseCase({ projectId: ProjectId(data.projectId) })
         const organizationId = OrganizationId(project.organization.id)
-        const [current, eligibility] = yield* Effect.all([
-          getLatestAgentScore({ organizationId, projectId: ProjectId(project.id) }),
+        const projectId = ProjectId(project.id)
+        const [current, eligibility, history] = yield* Effect.all([
+          getLatestAgentScore({ organizationId, projectId }),
           Effect.gen(function* () {
             const featureFlags = yield* AdminFeatureFlagRepository
             return yield* featureFlags.findEligibilityForFlag("agentScore")
           }),
+          // Same read the customer trend uses, anchored on today rather than on the snapshot date:
+          // staff want the gap where a day failed to publish, not a line that quietly ends early.
+          listAgentScoreHistory({ organizationId, projectId }),
         ])
-        const projectId = ProjectId(project.id)
         const latestExplanation = yield* getLatestAgentScoreExplanation({ organizationId, projectId }).pipe(
           Effect.provide(cacheLayer),
         )
@@ -114,6 +147,8 @@ export const adminGetAgentScore = createServerFn({ method: "GET" })
           currentDate: current.date,
           snapshot: current.available ? toSnapshotDto(current.snapshot) : null,
           explanation,
+          history: history.map(toHistoryPointDto),
+          dimensionWeights: LAUNCH_AGENT_SCORE_ARTIFACT.compositeWeights,
         }
       }).pipe(withPostgres(agentScoreAdminLayers, getAdminPostgresClient()), withTracing),
     )

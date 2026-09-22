@@ -15,10 +15,19 @@ import {
 import { type VitalityRingSection, VitalityScoreRing } from "./score-ring.tsx"
 import { VitalityHoverContent } from "./vitality-hover-content.tsx"
 
+/**
+ * The slice of a history entry the ring actually reads.
+ *
+ * Declared rather than taking whole `AgentScoreRecord`s so callers that only carry a trend line —
+ * the backoffice project page ships a score per day, not ninety full snapshots — can pass what they
+ * have without inventing dimensions and intervals nobody reads.
+ */
+export type VitalityHistoryEntry = Pick<AgentScoreRecord, "date" | "score" | "scoringVersion">
+
 const previousScore = (
   snapshot: AgentScoreRecord | null,
-  history: readonly AgentScoreRecord[] | undefined,
-): AgentScoreRecord | null => {
+  history: readonly VitalityHistoryEntry[] | undefined,
+): VitalityHistoryEntry | null => {
   if (!snapshot || !history) return null
   const previous = [...history].reverse().find((entry) => entry.date < snapshot.date)
   return previous?.scoringVersion === snapshot.scoringVersion ? previous : null
@@ -104,7 +113,7 @@ export function AgentVitality({
   isLoading,
 }: {
   readonly snapshot: AgentScoreRecord | null
-  readonly history: readonly AgentScoreRecord[] | undefined
+  readonly history: readonly VitalityHistoryEntry[] | undefined
   readonly dimensionWeights: Readonly<Record<ScoreDimensionKey, number>> | undefined
   readonly isLoading: boolean
   readonly explanation: AgentScoreExplanationRecord["explanation"]
