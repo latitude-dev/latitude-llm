@@ -79,9 +79,11 @@ describe("AgentScoreSection", () => {
 
     expect(screen.getByText("Customer access disabled")).toBeDefined()
     expect(screen.getByLabelText("Agent vitality and dimension scores")).toBeDefined()
-    expect(screen.getByText("74.4")).toBeDefined()
-    expect(screen.getByText("14-day window ending Sep 17, 2026")).toBeDefined()
-    expect(screen.getByText("1,234 sessions")).toBeDefined()
+    expect(screen.getByText("74")).toBeDefined()
+    expect(screen.getByText("14 days")).toBeDefined()
+    expect(screen.getByText("1,234")).toBeDefined()
+    expect(screen.getAllByText("Sep 17, 2026")).toHaveLength(2)
+    expect(screen.getByText("3.6% up")).toBeDefined()
   })
 
   it("leaves the per-dimension breakdown and cause list to the ring", () => {

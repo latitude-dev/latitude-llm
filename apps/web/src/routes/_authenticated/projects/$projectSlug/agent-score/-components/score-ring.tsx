@@ -1,19 +1,15 @@
 import { Text } from "@repo/ui"
-import { formatScore, type ScoreDimensionKey } from "./agent-score-format.ts"
+import { formatScore, formatTotalScore, type ScoreDimensionKey } from "./agent-score-format.ts"
 import { DIMENSION_META } from "./dimension-meta.ts"
+import { scoreColors } from "./score-colors.ts"
 
 const circumference = (radius: number) => 2 * Math.PI * radius
 const OUTER_RADIUS = 45
 const INNER_RADIUS = 36
-const OUTER_STROKE_WIDTH = 5
-const OUTER_ACTIVE_STROKE_WIDTH = 7
+const VITALITY_STROKE_WIDTH = 4
 const OUTER_HIT_STROKE_WIDTH = 14
-const INNER_STROKE_WIDTH = 5
-const INNER_ACTIVE_STROKE_WIDTH = 7
-const OUTER_IDLE_OPACITY = 0.5
+const OUTER_IDLE_OPACITY = 0.6
 const DIMMED_OPACITY = 0.2
-const OUTER_TRACK_OPACITY = 0.22
-const INNER_TRACK_OPACITY = 0.16
 export const DIMENSION_SEGMENT_GAP_RATIO = 0.04
 
 interface RingDimension<Id extends string = string> {
@@ -57,17 +53,12 @@ export const buildWeightedRingSegments = <Id extends string>(
 
 const clampScore = (score: number): number => Math.max(0, Math.min(100, score))
 
-const scoreColor = (score: number | null): string => {
-  if (score === null) return "text-muted-foreground"
-  if (score < 60) return "text-[hsl(var(--viz-red))]"
-  if (score < 80) return "text-[hsl(var(--viz-gold-soft))]"
-  return "text-[hsl(var(--viz-green))]"
-}
+const scoreColor = (score: number | null): string => scoreColors(score).className
 
 function ProgressCircle({
   score,
   radius,
-  strokeWidth = INNER_STROKE_WIDTH,
+  strokeWidth = VITALITY_STROKE_WIDTH,
 }: {
   readonly score: number | null
   readonly radius: number
@@ -88,7 +79,7 @@ function ProgressCircle({
       strokeLinecap="round"
       strokeDasharray={`${(progress / 100) * length} ${length}`}
       transform="rotate(-90 50 50)"
-      className="transition-[stroke-width] duration-200 ease-out"
+      className={`transition-[stroke-width] duration-200 ease-out ${scoreColor(score)}`}
     />
   )
 }
@@ -97,13 +88,13 @@ export function DimensionScoreRing({ score }: { readonly score: number | null })
   return (
     <div className={`relative h-14 w-14 shrink-0 ${scoreColor(score)}`}>
       <svg viewBox="0 0 100 100" aria-hidden="true" className="h-full w-full">
-        <circle cx="50" cy="50" r="39" fill="none" stroke="currentColor" strokeOpacity="0.16" strokeWidth="5" />
-        <ProgressCircle score={score} radius={39} />
+        {score !== null ? <circle cx="50" cy="50" r="36" fill="currentColor" fillOpacity={0.1} /> : null}
+        <ProgressCircle score={score} radius={39} strokeWidth={6} />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <Text.H6B className="tabular-nums" color="inherit">
+        <Text.H5 weight="bold" className="tabular-nums" color="inherit">
           {score === null ? "—" : formatScore(score)}
-        </Text.H6B>
+        </Text.H5>
       </div>
     </div>
   )
@@ -128,7 +119,7 @@ export function VitalityScoreRing({
   const innerOpacity = activeDimension ? DIMMED_OPACITY : 1
 
   return (
-    <div className="relative h-40 w-40 shrink-0">
+    <div className="relative h-44 w-44 shrink-0">
       {/* biome-ignore lint/a11y/useSemanticElements: SVG groups cannot contain an HTML fieldset. */}
       <svg
         viewBox="0 0 100 100"
@@ -137,11 +128,20 @@ export function VitalityScoreRing({
         className="h-full w-full"
         onPointerLeave={() => onActiveSectionChange(null)}
       >
+        {score !== null ? (
+          <circle
+            cx="50"
+            cy="50"
+            r={INNER_RADIUS - VITALITY_STROKE_WIDTH / 2}
+            fill="currentColor"
+            fillOpacity={0.1}
+            className={scoreColor(score)}
+            pointerEvents="none"
+          />
+        ) : null}
         {segments.map((segment) => {
           const active = activeDimension === segment.id
           const opacity = activeDimension ? (active ? 1 : DIMMED_OPACITY) : OUTER_IDLE_OPACITY
-          const strokeWidth = active ? OUTER_ACTIVE_STROKE_WIDTH : OUTER_STROKE_WIDTH
-          const progressLength = segment.score === null ? 0 : segment.length * (clampScore(segment.score) / 100)
           return (
             <g
               key={segment.id}
@@ -150,30 +150,16 @@ export function VitalityScoreRing({
               className="transition-opacity duration-200 ease-out"
               data-ring-segment={segment.id}
             >
-              <circle
-                cx="50"
-                cy="50"
-                r={OUTER_RADIUS}
-                fill="none"
-                stroke="currentColor"
-                strokeOpacity={OUTER_TRACK_OPACITY}
-                strokeWidth={strokeWidth}
-                strokeLinecap="round"
-                strokeDasharray={`${segment.length} ${outerLength - segment.length}`}
-                strokeDashoffset={-segment.start}
-                transform="rotate(-90 50 50)"
-                className="text-muted-foreground transition-[stroke-width] duration-200 ease-out"
-              />
-              {segment.score !== null && progressLength > 0 ? (
+              {segment.score !== null && segment.length > 0 ? (
                 <circle
                   cx="50"
                   cy="50"
                   r={OUTER_RADIUS}
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth={strokeWidth}
+                  strokeWidth={VITALITY_STROKE_WIDTH}
                   strokeLinecap="round"
-                  strokeDasharray={`${progressLength} ${outerLength - progressLength}`}
+                  strokeDasharray={`${segment.length} ${outerLength - segment.length}`}
                   strokeDashoffset={-segment.start}
                   transform="rotate(-90 50 50)"
                   className={`transition-[stroke-width] duration-200 ease-out ${scoreColor(segment.score)}`}
@@ -188,24 +174,8 @@ export function VitalityScoreRing({
           className="transition-opacity duration-200 ease-out"
           data-ring-segment="vitality"
         >
-          <circle
-            cx="50"
-            cy="50"
-            r={INNER_RADIUS}
-            fill="none"
-            stroke="currentColor"
-            strokeOpacity={INNER_TRACK_OPACITY}
-            strokeWidth={activeSection === "vitality" ? INNER_ACTIVE_STROKE_WIDTH : INNER_STROKE_WIDTH}
-            className="text-muted-foreground transition-[stroke-width] duration-200 ease-out"
-          />
           {score === null ? null : (
-            <g className={scoreColor(score)}>
-              <ProgressCircle
-                score={score}
-                radius={INNER_RADIUS}
-                strokeWidth={activeSection === "vitality" ? INNER_ACTIVE_STROKE_WIDTH : INNER_STROKE_WIDTH}
-              />
-            </g>
+            <ProgressCircle score={score} radius={INNER_RADIUS} strokeWidth={VITALITY_STROKE_WIDTH} />
           )}
         </g>
         {hitSegments.map((segment) => (
@@ -235,24 +205,23 @@ export function VitalityScoreRing({
         <circle
           cx="50"
           cy="50"
-          r={INNER_RADIUS + INNER_STROKE_WIDTH / 2}
+          r={INNER_RADIUS + VITALITY_STROKE_WIDTH / 2}
           fill="transparent"
           pointerEvents="fill"
           data-ring-hit-area="vitality"
           tabIndex={0}
           role="button"
-          aria-label={`Agent vitality: ${score === null ? "not ready" : score.toFixed(1)}`}
+          aria-label={`Agent vitality: ${score === null ? "not ready" : formatTotalScore(score)}`}
           onFocus={() => onActiveSectionChange("vitality")}
           onBlur={() => onActiveSectionChange(null)}
           onPointerEnter={() => onActiveSectionChange("vitality")}
         />
       </svg>
-      <div
-        className={`pointer-events-none absolute inset-0 flex items-center justify-center transition-colors duration-200 ease-out ${scoreColor(displayedScore)}`}
-      >
-        <Text.H3M className="tabular-nums" color="inherit">
-          {displayedScore === null ? "—" : displayedScore.toFixed(1)}
-        </Text.H3M>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1">
+        <Text.H2 weight="bold" className="tabular-nums" color="foreground">
+          {displayedScore === null ? "—" : formatTotalScore(displayedScore)}
+        </Text.H2>
+        <Text.H6 color="foregroundMuted">Agent vitality</Text.H6>
       </div>
     </div>
   )

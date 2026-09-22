@@ -1,19 +1,17 @@
-import { Chart, type ChartSeries, Icon, Skeleton, Tabs, Text, useChartCssTheme } from "@repo/ui"
+import { Chart, type ChartSeries, Icon, Skeleton, Text } from "@repo/ui"
 import { CircleCheckIcon, CircleDashedIcon, TriangleAlertIcon } from "lucide-react"
-import { useState } from "react"
 import type {
   AgentScoreExplanationRecord,
   AgentScoreRecord,
 } from "../../../../../../domains/agent-score/agent-score.functions.ts"
-import { ChartHeader } from "../../-components/chart-header.tsx"
-import { formatCount, formatDate, formatFullDate } from "./agent-score-format.ts"
+import { formatCount, formatDate, formatFullDate, formatTotalScore } from "./agent-score-format.ts"
 import { type AgentScoreReadinessView, agentScoreReadiness, type DimensionReadinessRow } from "./score-readiness.ts"
 
 const DAY_MS = 86_400_000
 
-type TrendRange = "7d" | "30d"
+export type TrendRange = "7d" | "30d"
 
-const RANGE_OPTIONS = [
+export const TREND_RANGE_OPTIONS = [
   { id: "7d", label: "7d" },
   { id: "30d", label: "30d" },
 ] as const
@@ -152,20 +150,20 @@ function ScoreReadiness({
 }
 
 export function ScoreTrend({
+  range,
   endDate,
   isCurrentSnapshot,
   history,
   explanation,
   isLoading,
 }: {
+  readonly range: TrendRange
   readonly endDate: string
   readonly isCurrentSnapshot: boolean
   readonly history: readonly AgentScoreRecord[] | undefined
   readonly explanation: AgentScoreExplanationRecord["explanation"]
   readonly isLoading: boolean
 }) {
-  const { primary } = useChartCssTheme()
-  const [range, setRange] = useState<TrendRange>("7d")
   const dayCount = range === "7d" ? 7 : 30
   const dates = calendarEndingOn(endDate, dayCount)
   const byDate = new Map(history?.map((entry) => [entry.date, entry]))
@@ -176,13 +174,12 @@ export function ScoreTrend({
     return entry ? [entry] : []
   })
   const versions = new Set(selectedHistory.map((entry) => entry.scoringVersion))
-  const windows = new Set(selectedHistory.map((entry) => entry.windowDays))
   const series: readonly ChartSeries[] = [
     {
       kind: "line",
       name: "Agent vitality",
       values,
-      color: primary,
+      color: "#2b7fff",
       area: true,
       areaOpacity: 0.12,
       showPoints: true,
@@ -193,35 +190,24 @@ export function ScoreTrend({
   return (
     <div className="flex min-w-0 flex-1 flex-col rounded-xl bg-secondary">
       {isLoading ? (
-        <div className="flex flex-1 p-4">
-          <Skeleton className="min-h-[200px] w-full flex-1 rounded-lg" />
+        <div className="flex flex-1 px-4 py-1">
+          <Skeleton className="h-28 w-full flex-1 rounded-lg" />
         </div>
       ) : isCurrentSnapshot && hasScores ? (
         <>
-          <ChartHeader
-            title="Score evolution"
-            titleColor="foregroundMuted"
-            fromIso={dates[0] ?? endDate}
-            toIso={endDate}
-            isAllTime={false}
-            showWindow={false}
-            actions={<Tabs options={RANGE_OPTIONS} active={range} onSelect={setRange} variant="bordered" size="sm" />}
-          />
-          {versions.size > 1 || windows.size > 1 ? (
+          {versions.size > 1 ? (
             <Text.H7 color="foregroundMuted" className="px-4 pt-1">
-              {versions.size > 1
-                ? "This range crosses scoring versions, so the line is not a continuous measurement."
-                : "This range includes scores calculated over different window lengths."}
+              This range crosses scoring versions, so the line is not a continuous measurement.
             </Text.H7>
           ) : null}
-          <div className="flex min-h-0 flex-1 flex-col justify-end gap-2 px-4 py-3">
+          <div className="flex min-h-0 flex-1 flex-col justify-end px-4 py-1">
             <Chart
               categories={dates.map((date) => chartLabel(date, range))}
               series={series}
-              height={160}
+              height={112}
               ariaLabel={`Agent vitality over the last ${dayCount} days`}
               hideLegend
-              primaryAxis={{ show: false, min: 0, max: 100, formatValue: (value) => value.toFixed(1) }}
+              primaryAxis={{ show: false, min: 0, max: 100, formatValue: formatTotalScore }}
               tooltipTitle={(_, index) => formatDate(dates[index] ?? endDate)}
             />
           </div>

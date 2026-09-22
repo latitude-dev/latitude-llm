@@ -1,6 +1,8 @@
-import { Button, Icon, Input } from "@repo/ui"
+import { Button, DateRangePicker, Icon } from "@repo/ui"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { agentScoreDateSchema } from "../../../../../../domains/agent-score/agent-score-date.ts"
+
+const calendarDate = (date: string): Date => new Date(`${date}T00:00:00`)
 
 const adjacentDate = (date: string, days: number): string => {
   const value = new Date(`${date}T00:00:00.000Z`)
@@ -17,35 +19,38 @@ export function ScoreDateNavigator({
   readonly onDateChange: (date: string) => void
   readonly disabled?: boolean
 }) {
+  const selectedDate = date ? calendarDate(date) : undefined
   const today = new Date().toISOString().slice(0, 10)
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
           aria-label="Previous day"
           disabled={disabled || !date}
           onClick={() => date && onDateChange(adjacentDate(date, -1))}
         >
           <Icon icon={ChevronLeftIcon} size="sm" />
         </Button>
-        <Input
-          type="date"
-          aria-label="Score date (UTC)"
-          value={date ?? ""}
-          max={today}
+        <DateRangePicker
+          mode="single"
+          ariaLabel="Score date (UTC)"
+          selectedPresetId={undefined}
+          value={selectedDate ? { from: selectedDate, to: selectedDate } : undefined}
+          maxDate={calendarDate(today)}
           disabled={disabled || !date}
-          size="sm"
-          className="w-auto"
-          onChange={(event) => {
-            const parsed = agentScoreDateSchema.safeParse(event.target.value)
+          onChange={({ range }) => {
+            const selected = range?.from
+            if (!selected) return
+            const value = `${selected.getFullYear()}-${String(selected.getMonth() + 1).padStart(2, "0")}-${String(selected.getDate()).padStart(2, "0")}`
+            const parsed = agentScoreDateSchema.safeParse(value)
             if (parsed.success) onDateChange(parsed.data)
           }}
         />
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
           aria-label="Next day"
           disabled={disabled || !date || date >= today}
           onClick={() => date && onDateChange(adjacentDate(date, 1))}

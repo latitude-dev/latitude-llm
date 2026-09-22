@@ -1,4 +1,4 @@
-import { Alert, Button, Icon, Status, Text, useToast } from "@repo/ui"
+import { Alert, Button, Icon, Status, Tabs, Text, useToast } from "@repo/ui"
 import { Loader2Icon, RotateCwIcon } from "lucide-react"
 import { useState } from "react"
 import {
@@ -23,9 +23,11 @@ import { buildDimensionEvidence, type DimensionEvidence } from "./dimension-evid
 import { DIMENSION_META } from "./dimension-meta.ts"
 import { DimensionSection, DimensionSectionSkeleton } from "./dimension-section.tsx"
 import { ScoreDateNavigator } from "./score-date-navigator.tsx"
-import { ScoreTrend } from "./score-trend.tsx"
+import { ScoreSnapshotButton } from "./score-snapshot-button.tsx"
+import { ScoreSummary } from "./score-summary.tsx"
+import { ScoreTrend, TREND_RANGE_OPTIONS, type TrendRange } from "./score-trend.tsx"
 
-type RouteProject = Pick<ReturnType<typeof useRouteProject>, "id" | "slug">
+type RouteProject = Pick<ReturnType<typeof useRouteProject>, "id" | "slug" | "name">
 
 const EMPTY_EVIDENCE: DimensionEvidence = { affected: [], coverageGaps: [], healthy: [], context: [] }
 
@@ -49,6 +51,7 @@ export function AgentScorePage({
   readonly onDateChange: (date: string) => void
 }) {
   const { toast } = useToast()
+  const [trendRange, setTrendRange] = useState<TrendRange>("7d")
   const [isStartingRefresh, setIsStartingRefresh] = useState(false)
   const computationQuery = useProjectAgentScoreComputation(project.id, selectedDate)
   const computationMarker = computationQuery.data?.marker ?? "none"
@@ -107,7 +110,7 @@ export function AgentScorePage({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="default"
                 disabled={computationQuery.isLoading || scoreQuery.isLoading || isComputing}
                 isLoading={isStartingRefresh}
                 onClick={() => void refresh()}
@@ -138,25 +141,44 @@ export function AgentScorePage({
           ) ? (
             <Text.H6 color="destructive">Some score data could not be loaded. Refresh to try again.</Text.H6>
           ) : null}
-          <div className="flex flex-row gap-3 @max-[64rem]:flex-col">
+          <div className="flex flex-row rounded-xl bg-secondary p-4 @max-[48rem]:flex-col">
             <AgentVitality
+              actions={
+                <ScoreSnapshotButton snapshot={snapshot} projectName={project.name} projectSlug={project.slug} />
+              }
               snapshot={snapshot}
-              history={historyQuery.data}
               dimensionWeights={scoreData?.dimensionWeights}
               explanation={explanation}
               isLoading={agentVitalityIsLoading(snapshot, scoreQuery.isLoading || explanationQuery.isLoading)}
             />
-            <ScoreTrend
-              endDate={displayDate}
-              isCurrentSnapshot={isCurrentSnapshot}
-              history={historyQuery.data}
-              explanation={explanation}
-              isLoading={scoreTrendIsLoading({
-                isHistoryLoading: scoreQuery.isLoading || historyQuery.isLoading,
-                isExplanationLoading: explanationQuery.isLoading,
-                isCurrentSnapshot,
-              })}
-            />
+            <div className="flex min-w-0 flex-1 flex-col border-l border-border pl-4 @max-[48rem]:border-l-0 @max-[48rem]:border-t @max-[48rem]:pl-0">
+              <ScoreSummary
+                snapshot={snapshot}
+                history={historyQuery.data}
+                isLoading={scoreQuery.isLoading}
+                actions={
+                  <Tabs
+                    options={TREND_RANGE_OPTIONS}
+                    active={trendRange}
+                    onSelect={setTrendRange}
+                    variant="bordered"
+                    size="sm"
+                  />
+                }
+              />
+              <ScoreTrend
+                range={trendRange}
+                endDate={displayDate}
+                isCurrentSnapshot={isCurrentSnapshot}
+                history={historyQuery.data}
+                explanation={explanation}
+                isLoading={scoreTrendIsLoading({
+                  isHistoryLoading: scoreQuery.isLoading || historyQuery.isLoading,
+                  isExplanationLoading: explanationQuery.isLoading,
+                  isCurrentSnapshot,
+                })}
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-3">

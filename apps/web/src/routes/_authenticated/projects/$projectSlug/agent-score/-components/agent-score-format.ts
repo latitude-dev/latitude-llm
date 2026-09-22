@@ -3,6 +3,8 @@ export type ScoreDimensionKey = (typeof SCORE_DIMENSION_ORDER)[number]
 
 export const formatScore = (value: number): string => value.toFixed(0)
 
+export const formatTotalScore = (value: number): string => Math.floor(value).toString()
+
 export const formatCount = (value: number): string => value.toLocaleString()
 
 export const formatPercent = (value: number, digits = 1): string => `${(value * 100).toFixed(digits)}%`
