@@ -21,11 +21,19 @@ class Monitor(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this monitor."),
     ]
+    """
+    Organization that owns this monitor.
+    """
+
     project_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectId"),
         pydantic.Field(alias="projectId", description="Project this monitor belongs to."),
     ]
+    """
+    Project this monitor belongs to.
+    """
+
     slug: str = pydantic.Field()
     """
     URL-safe slug derived from `name`. Unique within the project.
@@ -57,6 +65,10 @@ class Monitor(UniversalBaseModel):
             description="ISO-8601 timestamp at which the monitor was muted, or `null` when active.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the monitor was muted, or `null` when active.
+    """
+
     deleted_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="deletedAt"),
@@ -66,15 +78,26 @@ class Monitor(UniversalBaseModel):
             description="ISO-8601 timestamp at which the monitor was deleted, or `null`.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the monitor was deleted, or `null`.
+    """
+
     created_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
     ]
+    """
+    ISO-8601 timestamp of creation.
+    """
+
     updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="updatedAt"),
         pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last update."),
     ]
+    """
+    ISO-8601 timestamp of the last update.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

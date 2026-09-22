@@ -14,6 +14,10 @@ class UserBehaviour(UniversalBaseModel):
         FieldMetadata(alias="clusterId"),
         pydantic.Field(alias="clusterId", description="Stable identifier of the behaviour cluster."),
     ]
+    """
+    Stable identifier of the behaviour cluster.
+    """
+
     name: str = pydantic.Field()
     """
     Human-readable behaviour name.
@@ -29,6 +33,10 @@ class UserBehaviour(UniversalBaseModel):
         FieldMetadata(alias="observationCount"),
         pydantic.Field(alias="observationCount", description="Observations of this behaviour on the user's sessions."),
     ]
+    """
+    Observations of this behaviour on the user's sessions.
+    """
+
     first_observed_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="firstObservedAt"),
@@ -36,6 +44,10 @@ class UserBehaviour(UniversalBaseModel):
             alias="firstObservedAt", description="ISO-8601 timestamp the behaviour was first observed for the user."
         ),
     ]
+    """
+    ISO-8601 timestamp the behaviour was first observed for the user.
+    """
+
     last_observed_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="lastObservedAt"),
@@ -43,5 +55,8 @@ class UserBehaviour(UniversalBaseModel):
             alias="lastObservedAt", description="ISO-8601 timestamp the behaviour was last observed for the user."
         ),
     ]
+    """
+    ISO-8601 timestamp the behaviour was last observed for the user.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

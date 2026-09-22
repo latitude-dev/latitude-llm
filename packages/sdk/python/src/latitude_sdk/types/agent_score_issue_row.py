@@ -14,6 +14,10 @@ class AgentScoreIssueRow(UniversalBaseModel):
         FieldMetadata(alias="issueKey"),
         pydantic.Field(alias="issueKey", description="Stable identifier for the issue."),
     ]
+    """
+    Stable identifier for the issue.
+    """
+
     label: str = pydantic.Field()
     """
     Human-readable name for the issue.
@@ -24,6 +28,10 @@ class AgentScoreIssueRow(UniversalBaseModel):
         FieldMetadata(alias="signalIds"),
         pydantic.Field(alias="signalIds", description="Signals this issue was observed through, if any."),
     ]
+    """
+    Signals this issue was observed through, if any.
+    """
+
     estimated_reach: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="estimatedReach"),
@@ -33,6 +41,10 @@ class AgentScoreIssueRow(UniversalBaseModel):
             description="Sessions the issue touched, corrected for how often it could be observed. `null` when the correction is unknown.",
         ),
     ]
+    """
+    Sessions the issue touched, corrected for how often it could be observed. `null` when the correction is unknown.
+    """
+
     estimated_adverse_reach: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="estimatedAdverseReach"),
@@ -42,6 +54,10 @@ class AgentScoreIssueRow(UniversalBaseModel):
             description="Sessions it touched that went badly, corrected the same way. `null` when unknown.",
         ),
     ]
+    """
+    Sessions it touched that went badly, corrected the same way. `null` when unknown.
+    """
+
     examined_sessions: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="examinedSessions"),
@@ -49,11 +65,19 @@ class AgentScoreIssueRow(UniversalBaseModel):
             alias="examinedSessions", description="Raw sessions examined. Coverage context, never a ranking key."
         ),
     ]
+    """
+    Raw sessions examined. Coverage context, never a ranking key.
+    """
+
     examined_adverse_sessions: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="examinedAdverseSessions"),
         pydantic.Field(alias="examinedAdverseSessions", description="Raw examined sessions that went badly."),
     ]
+    """
+    Raw examined sessions that went badly.
+    """
+
     ranked: bool = pydantic.Field()
     """
     `false` when a required joint observation probability was unknown, so the row explains without claiming a position.

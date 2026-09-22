@@ -26,6 +26,10 @@ class InvitedMember(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization the invitation grants access to."),
     ]
+    """
+    Organization the invitation grants access to.
+    """
+
     user_id: typing_extensions.Annotated[
         typing.Optional[typing.Any],
         FieldMetadata(alias="userId"),
@@ -35,6 +39,10 @@ class InvitedMember(UniversalBaseModel):
             description="Always `null` — no user record exists until the invitation is accepted.",
         ),
     ]
+    """
+    Always `null` — no user record exists until the invitation is accepted.
+    """
+
     role: typing.Optional[InvitedMemberRole] = pydantic.Field(default=None)
     """
     Role the invitee will get once they accept. `null` means the default (`member`).
@@ -60,15 +68,26 @@ class InvitedMember(UniversalBaseModel):
         FieldMetadata(alias="invitedAt"),
         pydantic.Field(alias="invitedAt", description="ISO-8601 timestamp at which the invitation was created."),
     ]
+    """
+    ISO-8601 timestamp at which the invitation was created.
+    """
+
     expires_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="expiresAt"),
         pydantic.Field(alias="expiresAt", description="ISO-8601 timestamp at which the invitation expires."),
     ]
+    """
+    ISO-8601 timestamp at which the invitation expires.
+    """
+
     inviter_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="inviterId"),
         pydantic.Field(alias="inviterId", description="User id of the member who issued the invitation."),
     ]
+    """
+    User id of the member who issued the invitation.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

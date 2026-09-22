@@ -29,11 +29,19 @@ class SessionAssessmentCostEvaluation(UniversalBaseModel):
             alias="rawValue", default=None, description="The metric's raw reading in `rawUnit`, when measured."
         ),
     ]
+    """
+    The metric's raw reading in `rawUnit`, when measured.
+    """
+
     raw_unit: typing_extensions.Annotated[
         typing.Optional[SessionAssessmentCostEvaluationRawUnit],
         FieldMetadata(alias="rawUnit"),
         pydantic.Field(alias="rawUnit", default=None, description="Native unit of `rawValue`."),
     ]
+    """
+    Native unit of `rawValue`.
+    """
+
     measurement_state: typing_extensions.Annotated[
         SessionAssessmentCostEvaluationMeasurementState,
         FieldMetadata(alias="measurementState"),
@@ -42,6 +50,10 @@ class SessionAssessmentCostEvaluation(UniversalBaseModel):
             description="Whether this evidence was measured, could not be measured, or did not apply. This is not a health label.",
         ),
     ]
+    """
+    Whether this evidence was measured, could not be measured, or did not apply. This is not a health label.
+    """
+
     native_impact: typing_extensions.Annotated[
         typing.Optional[SessionAssessmentEstimateRange],
         FieldMetadata(alias="nativeImpact"),

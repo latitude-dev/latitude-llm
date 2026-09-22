@@ -14,10 +14,17 @@ class SessionAssessmentEvidenceAnchorSpan(UniversalBaseModel):
         FieldMetadata(alias="traceId"),
         pydantic.Field(alias="traceId", description="Trace containing the referenced span."),
     ]
+    """
+    Trace containing the referenced span.
+    """
+
     span_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="spanId"),
         pydantic.Field(alias="spanId", description="Identifier of the referenced span."),
     ]
+    """
+    Identifier of the referenced span.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

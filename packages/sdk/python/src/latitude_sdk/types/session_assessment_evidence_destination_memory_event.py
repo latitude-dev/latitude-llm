@@ -14,5 +14,8 @@ class SessionAssessmentEvidenceDestinationMemoryEvent(UniversalBaseModel):
         FieldMetadata(alias="memoryEventId"),
         pydantic.Field(alias="memoryEventId", description="Identifier of the destination memory event."),
     ]
+    """
+    Identifier of the destination memory event.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

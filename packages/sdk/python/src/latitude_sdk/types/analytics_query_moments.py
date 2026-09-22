@@ -32,6 +32,10 @@ class AnalyticsQueryMoments(UniversalBaseModel):
             alias="timeBucket", default=None, description="Bucket the metric over time. Omit for a single aggregate."
         ),
     ]
+    """
+    Bucket the metric over time. Omit for a single aggregate.
+    """
+
     range: AnalyticsQueryMomentsRange = pydantic.Field()
     """
     The time window.
@@ -44,6 +48,10 @@ class AnalyticsQueryMoments(UniversalBaseModel):
             alias="orderBy", default=None, description="Sort for breakdown results. Defaults to value-desc."
         ),
     ]
+    """
+    Sort for breakdown results. Defaults to value-desc.
+    """
+
     limit: typing.Optional[int] = pydantic.Field(default=None)
     """
     Maximum rows returned. Defaults to 50; max 500.

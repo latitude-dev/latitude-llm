@@ -1,1 +1,1 @@
-export { RUNTIME } from "./runtime.js";
+export { getUserAgent, RUNTIME } from "./runtime.js";

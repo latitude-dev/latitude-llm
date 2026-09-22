@@ -22,11 +22,19 @@ class MonitorIncident(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this incident."),
     ]
+    """
+    Organization that owns this incident.
+    """
+
     project_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectId"),
         pydantic.Field(alias="projectId", description="Project this incident belongs to."),
     ]
+    """
+    Project this incident belongs to.
+    """
+
     source_type: typing_extensions.Annotated[
         MonitorIncidentSourceType,
         FieldMetadata(alias="sourceType"),
@@ -34,6 +42,10 @@ class MonitorIncident(UniversalBaseModel):
             alias="sourceType", description="Kind of entity that triggered the incident: `signal` or `monitor`."
         ),
     ]
+    """
+    Kind of entity that triggered the incident: `signal` or `monitor`.
+    """
+
     source_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="sourceId"),
@@ -41,6 +53,10 @@ class MonitorIncident(UniversalBaseModel):
             alias="sourceId", description="Id of the entity that triggered the incident (matches `sourceType`)."
         ),
     ]
+    """
+    Id of the entity that triggered the incident (matches `sourceType`).
+    """
+
     severity: MonitorIncidentSeverity = pydantic.Field()
     """
     Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`.
@@ -51,6 +67,10 @@ class MonitorIncident(UniversalBaseModel):
         FieldMetadata(alias="startedAt"),
         pydantic.Field(alias="startedAt", description="ISO-8601 timestamp at which the incident opened."),
     ]
+    """
+    ISO-8601 timestamp at which the incident opened.
+    """
+
     ended_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="endedAt"),
@@ -60,11 +80,19 @@ class MonitorIncident(UniversalBaseModel):
             description="ISO-8601 timestamp at which the incident closed, or `null` if still open.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the incident closed, or `null` if still open.
+    """
+
     created_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp at which the incident row was created."),
     ]
+    """
+    ISO-8601 timestamp at which the incident row was created.
+    """
+
     condition: typing.Optional[MonitorIncidentCondition] = pydantic.Field(default=None)
     """
     The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors.

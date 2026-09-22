@@ -14,6 +14,10 @@ class SessionAssessmentEvidenceImpactDuration(UniversalBaseModel):
         FieldMetadata(alias="observedNs"),
         pydantic.Field(alias="observedNs", description="Observed duration in nanoseconds."),
     ]
+    """
+    Observed duration in nanoseconds.
+    """
+
     avoidable_ns: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="avoidableNs"),
@@ -21,5 +25,8 @@ class SessionAssessmentEvidenceImpactDuration(UniversalBaseModel):
             alias="avoidableNs", default=None, description="Duration attributed as avoidable when measured."
         ),
     ]
+    """
+    Duration attributed as avoidable when measured.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

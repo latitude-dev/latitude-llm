@@ -20,6 +20,10 @@ class MemoryRecordDetail(UniversalBaseModel):
         FieldMetadata(alias="tokenCount"),
         pydantic.Field(alias="tokenCount", description="Tokens in the current body."),
     ]
+    """
+    Tokens in the current body.
+    """
+
     versions: typing.List[MemoryRecordVersion] = pydantic.Field()
     """
     The record's mutating version chain, newest first.

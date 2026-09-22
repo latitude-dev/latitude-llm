@@ -16,6 +16,10 @@ class DeleteDatasetRowsResponse(UniversalBaseModel):
             alias="versionId", default=None, description="New dataset version id, or `null` when nothing was deleted."
         ),
     ]
+    """
+    New dataset version id, or `null` when nothing was deleted.
+    """
+
     version: int = pydantic.Field()
     """
     New dataset version number.
@@ -26,5 +30,8 @@ class DeleteDatasetRowsResponse(UniversalBaseModel):
         FieldMetadata(alias="deletedCount"),
         pydantic.Field(alias="deletedCount", default=None, description="Number of rows removed."),
     ]
+    """
+    Number of rows removed.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

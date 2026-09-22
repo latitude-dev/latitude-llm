@@ -14,7 +14,9 @@ class RequestOptions(typing.TypedDict, total=False):
     This is used primarily as an optional final parameter for service functions.
 
     Attributes:
-        - timeout_in_seconds: int. The number of seconds to await an API call before timing out.
+        - timeout: float. The number of seconds to await an API call before timing out.
+
+        - timeout_in_seconds: int. Deprecated alias for `timeout`; both are in seconds. Prefer `timeout`.
 
         - max_retries: int. The max number of retries to attempt if the API call fails.
 
@@ -27,6 +29,7 @@ class RequestOptions(typing.TypedDict, total=False):
         - chunk_size: int. The size, in bytes, to process each chunk of data being streamed back within the response. This equates to leveraging `chunk_size` within `requests` or `httpx`, and is only leveraged for file downloads.
     """
 
+    timeout: NotRequired[float]
     timeout_in_seconds: NotRequired[int]
     max_retries: NotRequired[int]
     additional_headers: NotRequired[typing.Dict[str, typing.Any]]

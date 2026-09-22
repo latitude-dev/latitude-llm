@@ -9,7 +9,8 @@ import type * as Latitude from "../../../../index.js";
  *             trigger: "match",
  *             name: "name",
  *             target: {
- *                 type: "savedSearch"
+ *                 type: "savedSearch",
+ *                 id: null
  *             },
  *             severity: "low"
  *         }

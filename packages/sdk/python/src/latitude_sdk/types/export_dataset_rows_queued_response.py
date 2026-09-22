@@ -25,5 +25,8 @@ class ExportDatasetRowsQueuedResponse(UniversalBaseModel):
         FieldMetadata(alias="rowCount"),
         pydantic.Field(alias="rowCount", description="Number of rows the export will produce."),
     ]
+    """
+    Number of rows the export will produce.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

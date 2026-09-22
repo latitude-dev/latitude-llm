@@ -176,6 +176,7 @@ fn is_less_compatible(program: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
     fn test_default_pager_program() {
@@ -199,6 +200,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_pager_with_arguments_is_split() {
         // Verify the config stores the full string including args
         let saved = std::env::var("PAGER").ok();
@@ -244,6 +246,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_pager_config_from_env_defaults() {
         // Clear env vars to test defaults
         let key = "TEST_PAGER_CLI_PAGER";
@@ -262,6 +265,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_pager_config_from_env_pager_var() {
         let saved = std::env::var("PAGER").ok();
         std::env::set_var("PAGER", "bat");
@@ -279,6 +283,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_pager_config_from_env_binary_var_takes_precedence() {
         let saved_pager = std::env::var("PAGER").ok();
         let saved_bin = std::env::var("MY_CLI_PAGER").ok();
@@ -300,6 +305,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_pager_config_empty_env_falls_through() {
         let saved_pager = std::env::var("PAGER").ok();
         let saved_bin = std::env::var("EMPTY_CLI_PAGER").ok();

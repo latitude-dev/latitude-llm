@@ -25,13 +25,15 @@ export class ToolsClient {
     /**
      * Returns every tool in the project over the range — the union of defined and called tools — with per-tool usage metrics, offered counts, a call trend, and project-wide totals. The range defaults to the trailing 7 days.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.ListToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.tools.list("projectSlug")
@@ -116,13 +118,15 @@ export class ToolsClient {
     /**
      * Returns per-bucket call counts over the range. Omit `toolName` to aggregate across every tool in the project; pass it to scope the histogram to a single tool.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.HistogramToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.tools.histogram("projectSlug")
@@ -209,7 +213,7 @@ export class ToolsClient {
     /**
      * Returns the most common top-level input keys and their most common values for the tool, computed over a sample of the most recent calls in the range.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
      * @param {Latitude.ParametersToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -217,6 +221,8 @@ export class ToolsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.tools.parameters("projectSlug", "toolName")
@@ -305,7 +311,7 @@ export class ToolsClient {
     /**
      * Returns where the tool is used, broken down by a dimension: `model` and `provider` attribute the tool's traces via their chat spans; `tag` reads tags on the tool-call spans themselves.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
      * @param {Latitude.ContextToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -313,6 +319,8 @@ export class ToolsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.tools.context("projectSlug", "toolName", {
@@ -405,7 +413,7 @@ export class ToolsClient {
     /**
      * Returns other tools called in the same traces as this one, ranked by shared trace count.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
      * @param {Latitude.CoOccurrenceToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -413,6 +421,8 @@ export class ToolsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.tools.coOccurrence("projectSlug", "toolName")
@@ -502,7 +512,7 @@ export class ToolsClient {
     /**
      * Returns the most common error outputs of the tool's failed calls, grouped into clusters by a normalized form so variable fragments don't split one error into many buckets.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
      * @param {Latitude.ErrorsToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -510,6 +520,8 @@ export class ToolsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.tools.errors("projectSlug", "toolName")
@@ -596,7 +608,7 @@ export class ToolsClient {
     /**
      * Returns a cursor-paginated page of the tool's most recent calls, newest first, with payloads truncated to a bounded preview. Use a span point-lookup for full payloads.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
      * @param {Latitude.ListCallsToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -604,6 +616,8 @@ export class ToolsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.tools.listCalls("projectSlug", "toolName")
@@ -692,7 +706,7 @@ export class ToolsClient {
     /**
      * Returns the latest definition seen for the tool plus its global usage metrics. Pass `errorsOnly=true` to also include failed-calls-only metrics for failure analysis.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
      * @param {Latitude.GetToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -700,6 +714,8 @@ export class ToolsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.tools.get("projectSlug", "toolName")

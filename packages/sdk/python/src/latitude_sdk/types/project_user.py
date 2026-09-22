@@ -16,6 +16,10 @@ class ProjectUser(UniversalBaseModel):
             alias="userId", description="The end-user's identifier, as reported on their traces' `user_id`."
         ),
     ]
+    """
+    The end-user's identifier, as reported on their traces' `user_id`.
+    """
+
     user_email: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="userEmail"),
@@ -24,11 +28,19 @@ class ProjectUser(UniversalBaseModel):
             description="Latest non-empty email seen on the user's traces. Empty when never reported.",
         ),
     ]
+    """
+    Latest non-empty email seen on the user's traces. Empty when never reported.
+    """
+
     first_seen_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="firstSeenAt"),
         pydantic.Field(alias="firstSeenAt", description="ISO-8601 timestamp of the user's first trace in the range."),
     ]
+    """
+    ISO-8601 timestamp of the user's first trace in the range.
+    """
+
     last_seen_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="lastSeenAt"),
@@ -36,11 +48,19 @@ class ProjectUser(UniversalBaseModel):
             alias="lastSeenAt", description="ISO-8601 timestamp of the user's most recent trace in the range."
         ),
     ]
+    """
+    ISO-8601 timestamp of the user's most recent trace in the range.
+    """
+
     trace_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="traceCount"),
         pydantic.Field(alias="traceCount", description="Traces attributed to the user in the range."),
     ]
+    """
+    Traces attributed to the user in the range.
+    """
+
     session_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="sessionCount"),
@@ -48,6 +68,10 @@ class ProjectUser(UniversalBaseModel):
             alias="sessionCount", description="Distinct sessions in which the user produced at least one trace."
         ),
     ]
+    """
+    Distinct sessions in which the user produced at least one trace.
+    """
+
     error_session_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="errorSessionCount"),
@@ -55,16 +79,28 @@ class ProjectUser(UniversalBaseModel):
             alias="errorSessionCount", description="Of `sessionCount`, sessions with at least one errored trace."
         ),
     ]
+    """
+    Of `sessionCount`, sessions with at least one errored trace.
+    """
+
     tokens_total: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensTotal"),
         pydantic.Field(alias="tokensTotal", description="Total tokens across the user's traces."),
     ]
+    """
+    Total tokens across the user's traces.
+    """
+
     cost_total_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costTotalMicrocents"),
         pydantic.Field(alias="costTotalMicrocents", description="Total cost across the user's traces, in microcents."),
     ]
+    """
+    Total cost across the user's traces, in microcents.
+    """
+
     cost_avg_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costAvgMicrocents"),
@@ -72,6 +108,10 @@ class ProjectUser(UniversalBaseModel):
             alias="costAvgMicrocents", description="Mean per-trace cost across the user's traces, in microcents."
         ),
     ]
+    """
+    Mean per-trace cost across the user's traces, in microcents.
+    """
+
     cost_median_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costMedianMicrocents"),
@@ -80,5 +120,8 @@ class ProjectUser(UniversalBaseModel):
             description="Median (p50) per-trace cost across the user's traces, in microcents.",
         ),
     ]
+    """
+    Median (p50) per-trace cost across the user's traces, in microcents.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

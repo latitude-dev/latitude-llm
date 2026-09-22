@@ -5,6 +5,8 @@ import * as errors from "../../errors/index.js";
 import type * as Latitude from "../index.js";
 
 export class ContentTooLargeError extends errors.LatitudeError {
+    public declare readonly body: Latitude.ExportDatasetRowsTooLargeResponse;
+
     constructor(body: Latitude.ExportDatasetRowsTooLargeResponse, rawResponse?: core.RawResponse) {
         super({
             message: "ContentTooLargeError",

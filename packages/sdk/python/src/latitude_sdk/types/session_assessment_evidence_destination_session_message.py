@@ -14,15 +14,26 @@ class SessionAssessmentEvidenceDestinationSessionMessage(UniversalBaseModel):
         FieldMetadata(alias="traceId"),
         pydantic.Field(alias="traceId", description="Trace containing the destination message."),
     ]
+    """
+    Trace containing the destination message.
+    """
+
     message_index: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="messageIndex"),
         pydantic.Field(alias="messageIndex", description="Zero-based message position to open."),
     ]
+    """
+    Zero-based message position to open.
+    """
+
     part_index: typing_extensions.Annotated[
         typing.Optional[int],
         FieldMetadata(alias="partIndex"),
         pydantic.Field(alias="partIndex", default=None, description="Zero-based content-part position to open."),
     ]
+    """
+    Zero-based content-part position to open.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

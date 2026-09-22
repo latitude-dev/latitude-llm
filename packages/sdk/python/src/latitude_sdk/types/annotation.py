@@ -23,11 +23,19 @@ class Annotation(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this annotation."),
     ]
+    """
+    Organization that owns this annotation.
+    """
+
     project_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectId"),
         pydantic.Field(alias="projectId", description="Project this annotation lives in."),
     ]
+    """
+    Project this annotation lives in.
+    """
+
     session_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="sessionId"),
@@ -37,11 +45,19 @@ class Annotation(UniversalBaseModel):
             description="Session id lifted from the annotated trace. `null` when the trace has no session.",
         ),
     ]
+    """
+    Session id lifted from the annotated trace. `null` when the trace has no session.
+    """
+
     trace_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="traceId"),
         pydantic.Field(alias="traceId", default=None, description="Identifier of the annotated trace."),
     ]
+    """
+    Identifier of the annotated trace.
+    """
+
     span_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="spanId"),
@@ -51,16 +67,28 @@ class Annotation(UniversalBaseModel):
             description="Span the annotation pins to. Defaults to the trace's last LLM-completion span.",
         ),
     ]
+    """
+    Span the annotation pins to. Defaults to the trace's last LLM-completion span.
+    """
+
     simulation_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="simulationId"),
         pydantic.Field(alias="simulationId", default=None, description="Simulation reference, if any."),
     ]
+    """
+    Simulation reference, if any.
+    """
+
     signal_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="signalId"),
         pydantic.Field(alias="signalId", default=None, description="Signal this annotation contributes to, if any."),
     ]
+    """
+    Signal this annotation contributes to, if any.
+    """
+
     value: float = pydantic.Field()
     """
     Normalized score value in [0, 1]. Higher = better.
@@ -110,6 +138,10 @@ class Annotation(UniversalBaseModel):
             description="ISO-8601 timestamp at which the annotation was drafted. `null` for published annotations.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the annotation was drafted. `null` for published annotations.
+    """
+
     annotator_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="annotatorId"),
@@ -119,16 +151,28 @@ class Annotation(UniversalBaseModel):
             description="User who authored the annotation. `null` when not attributed to a user.",
         ),
     ]
+    """
+    User who authored the annotation. `null` when not attributed to a user.
+    """
+
     created_at: typing_extensions.Annotated[
         dt.datetime,
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp at which the annotation was created."),
     ]
+    """
+    ISO-8601 timestamp at which the annotation was created.
+    """
+
     updated_at: typing_extensions.Annotated[
         dt.datetime,
         FieldMetadata(alias="updatedAt"),
         pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last metadata update."),
     ]
+    """
+    ISO-8601 timestamp of the last metadata update.
+    """
+
     source: AnnotationSource = pydantic.Field()
     """
     Always `"annotation"` for this shape.
@@ -142,6 +186,10 @@ class Annotation(UniversalBaseModel):
             description='Origin marker. Sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or a CUID for authored rows.',
         ),
     ]
+    """
+    Origin marker. Sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or a CUID for authored rows.
+    """
+
     metadata: AnnotationMetadata
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

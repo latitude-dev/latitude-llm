@@ -11,6 +11,17 @@
       "description": "Production"
     }
   ],
+  "x-fern-global-parameters": [
+    {
+      "name": "projectSlug",
+      "in": "path",
+      "target": "projectSlug",
+      "env": "LATITUDE_PROJECT_SLUG",
+      "apply": "explicit",
+      "docs": "Optional project slug used globally by project-scoped commands when `--project-slug` is omitted.",
+      "parameter-name": "globalProjectSlug"
+    }
+  ],
   "components": {
     "securitySchemes": {
       "ApiKeyAuth": {
@@ -16844,7 +16855,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -16890,7 +16901,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "patch": {
         "tags": [
@@ -16913,7 +16927,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -16969,7 +16983,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "delete": {
         "tags": [
@@ -16992,7 +17009,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -17021,7 +17038,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/scores": {
@@ -17046,7 +17066,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -17102,7 +17122,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/annotations": {
@@ -17127,7 +17150,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -17183,7 +17206,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/annotations/{annotationId}": {
@@ -17208,7 +17234,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -17266,7 +17292,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "patch": {
         "tags": [
@@ -17289,7 +17318,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -17357,7 +17386,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "delete": {
         "tags": [
@@ -17380,7 +17412,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -17421,7 +17453,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/traces/list": {
@@ -17446,7 +17481,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -17502,7 +17537,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/traces/analytics": {
@@ -17527,7 +17565,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -17595,7 +17633,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/traces/{traceId}": {
@@ -17620,7 +17661,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -17678,7 +17719,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/traces/{traceId}/spans": {
@@ -17703,7 +17747,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -17761,7 +17805,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/traces/{traceId}/spans/{spanId}": {
@@ -17786,7 +17833,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -17856,7 +17903,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/traces/{traceId}/annotations": {
@@ -17881,7 +17931,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -17962,7 +18012,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/traces/{traceId}/annotations/{annotationId}": {
@@ -17987,7 +18040,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -18057,7 +18110,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/traces/{traceId}/memory": {
@@ -18082,7 +18138,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -18140,7 +18196,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/traces/{traceId}/memory/changes": {
@@ -18165,7 +18224,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -18223,7 +18282,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/traces/export": {
@@ -18248,7 +18310,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -18314,7 +18376,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/tools": {
@@ -18339,7 +18404,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -18419,7 +18484,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/tools/histogram": {
@@ -18444,7 +18512,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -18550,7 +18618,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/tools/{toolName}/parameters": {
@@ -18575,7 +18646,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -18693,7 +18764,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/tools/{toolName}/context": {
@@ -18718,7 +18792,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -18827,7 +18901,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/tools/{toolName}/co-occurrence": {
@@ -18852,7 +18929,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -18958,7 +19035,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/tools/{toolName}/errors": {
@@ -18983,7 +19063,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -19075,7 +19155,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/tools/{toolName}/calls": {
@@ -19100,7 +19183,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -19217,7 +19300,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/tools/{toolName}": {
@@ -19242,7 +19328,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -19336,7 +19422,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/users": {
@@ -19361,7 +19450,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -19501,7 +19590,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/users/overview": {
@@ -19526,7 +19618,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -19594,7 +19686,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/users/{userId}/activity": {
@@ -19619,7 +19714,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -19713,7 +19808,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/users/{userId}/usage": {
@@ -19738,7 +19836,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -19837,7 +19935,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/users/{userId}/signals": {
@@ -19862,7 +19963,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -19932,7 +20033,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/users/{userId}/behaviours": {
@@ -19957,7 +20061,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -20027,7 +20131,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/users/{userId}/memory": {
@@ -20052,7 +20159,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -20110,7 +20217,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/users/{userId}": {
@@ -20135,7 +20245,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -20207,7 +20317,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/searches": {
@@ -20232,7 +20345,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -20278,7 +20391,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "post": {
         "tags": [
@@ -20301,7 +20417,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -20357,7 +20473,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/searches/{searchSlug}": {
@@ -20382,7 +20501,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -20438,7 +20557,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "patch": {
         "tags": [
@@ -20461,7 +20583,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -20527,7 +20649,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "delete": {
         "tags": [
@@ -20550,7 +20675,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -20589,7 +20714,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/searches/{searchSlug}/traces": {
@@ -20614,7 +20742,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -20727,7 +20855,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals": {
@@ -20752,7 +20883,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -20900,7 +21031,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "post": {
         "tags": [
@@ -20923,7 +21057,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -20979,7 +21113,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/{signalSlug}": {
@@ -21004,7 +21141,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -21070,7 +21207,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "delete": {
         "tags": [
@@ -21093,7 +21233,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -21112,7 +21252,10 @@
           "204": {
             "description": "Signal deleted"
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "get": {
         "tags": [
@@ -21135,7 +21278,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -21191,7 +21334,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/analytics": {
@@ -21216,7 +21362,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -21284,7 +21430,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/{signalSlug}/trend": {
@@ -21309,7 +21458,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -21387,7 +21536,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/{signalSlug}/traces": {
@@ -21412,7 +21564,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -21491,7 +21643,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/resolve": {
@@ -21516,7 +21671,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -21572,7 +21727,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/unresolve": {
@@ -21597,7 +21755,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -21653,7 +21811,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/ignore": {
@@ -21678,7 +21839,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -21734,7 +21895,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/unignore": {
@@ -21759,7 +21923,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -21815,7 +21979,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/mute": {
@@ -21840,7 +22007,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -21896,7 +22063,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/unmute": {
@@ -21921,7 +22091,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -21977,7 +22147,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/{signalSlug}/monitor": {
@@ -22002,7 +22175,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -22058,7 +22231,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/{signalSlug}/unmonitor": {
@@ -22083,7 +22259,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -22102,7 +22278,10 @@
           "204": {
             "description": "Signal unmonitored"
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/{signalSlug}/feedback": {
@@ -22127,7 +22306,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -22193,7 +22372,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/signals/export": {
@@ -22218,7 +22400,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -22284,7 +22466,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/incidents": {
@@ -22309,7 +22494,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -22422,7 +22607,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/incidents/{incidentId}": {
@@ -22447,7 +22635,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -22505,7 +22693,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/datasets": {
@@ -22530,7 +22721,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -22629,7 +22820,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "post": {
         "tags": [
@@ -22652,7 +22846,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -22708,7 +22902,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/datasets/{datasetSlug}": {
@@ -22733,7 +22930,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -22789,7 +22986,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "patch": {
         "tags": [
@@ -22812,7 +23012,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -22878,7 +23078,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "delete": {
         "tags": [
@@ -22901,7 +23104,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -22940,7 +23143,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/datasets/{datasetSlug}/rows": {
@@ -22965,7 +23171,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -23071,7 +23277,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "post": {
         "tags": [
@@ -23094,7 +23303,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -23160,7 +23369,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "delete": {
         "tags": [
@@ -23183,7 +23395,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -23249,7 +23461,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/datasets/{datasetSlug}/rows/{rowId}": {
@@ -23274,7 +23489,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -23351,7 +23566,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/datasets/{datasetSlug}/rows/import/traces": {
@@ -23376,7 +23594,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -23442,7 +23660,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/datasets/{datasetSlug}/rows/export": {
@@ -23467,7 +23688,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -23563,7 +23784,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/datasets/{datasetSlug}/columns": {
@@ -23588,7 +23812,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -23658,7 +23882,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "post": {
         "tags": [
@@ -23681,7 +23908,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -23747,7 +23974,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/datasets/{datasetSlug}/columns/{identifier}": {
@@ -23772,7 +24002,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -23849,7 +24079,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "delete": {
         "tags": [
@@ -23872,7 +24105,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -23922,7 +24155,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/datasets/{datasetSlug}/columns/reorder": {
@@ -23947,7 +24183,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -24013,7 +24249,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/datasets/{datasetSlug}/columns/{identifier}/restore": {
@@ -24038,7 +24277,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -24105,7 +24344,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/api-keys": {
@@ -24985,7 +25227,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -25064,7 +25306,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "post": {
         "tags": [
@@ -25087,7 +25332,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -25143,7 +25388,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/monitors/for-target": {
@@ -25168,7 +25416,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -25224,7 +25472,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/monitors/{monitorSlug}": {
@@ -25249,7 +25500,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -25305,7 +25556,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "patch": {
         "tags": [
@@ -25328,7 +25582,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -25404,7 +25658,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "delete": {
         "tags": [
@@ -25427,7 +25684,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -25466,7 +25723,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/monitors/{monitorSlug}/incidents": {
@@ -25491,7 +25751,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -25570,7 +25830,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/monitors/{monitorSlug}/mute": {
@@ -25595,7 +25858,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -25651,7 +25914,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/monitors/{monitorSlug}/unmute": {
@@ -25676,7 +25942,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -25732,7 +25998,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/analytics/query": {
@@ -25757,7 +26026,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -25813,7 +26082,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/spans/query": {
@@ -25838,7 +26110,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -25894,7 +26166,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/experiments": {
@@ -25919,7 +26194,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -25998,7 +26273,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "post": {
         "tags": [
@@ -26021,7 +26299,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -26077,7 +26355,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/experiments/{experimentSlug}": {
@@ -26102,7 +26383,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -26158,7 +26439,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "put": {
         "tags": [
@@ -26181,7 +26465,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -26247,7 +26531,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "delete": {
         "tags": [
@@ -26270,7 +26557,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -26309,7 +26596,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/sessions/list": {
@@ -26334,7 +26624,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -26390,7 +26680,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/sessions/analytics": {
@@ -26415,7 +26708,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -26483,7 +26776,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/sessions/{sessionId}": {
@@ -26508,7 +26804,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -26565,7 +26861,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/sessions/{sessionId}/assessment": {
@@ -26590,7 +26889,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -26657,7 +26956,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/sessions/{sessionId}/traces": {
@@ -26682,7 +26984,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -26795,7 +27097,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/sessions/{sessionId}/signals": {
@@ -26820,7 +27125,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -26877,7 +27182,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/sessions/{sessionId}/signals/{signalSlug}": {
@@ -26902,7 +27210,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -26969,7 +27277,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/sessions/{sessionId}/memory": {
@@ -26994,7 +27305,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -27063,7 +27374,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/sessions/{sessionId}/memory/changes": {
@@ -27088,7 +27402,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -27157,7 +27471,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/memory/stores": {
@@ -27182,7 +27499,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -27285,7 +27602,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/memory/store": {
@@ -27310,7 +27630,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -27377,7 +27697,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/memory/store/diff": {
@@ -27402,7 +27725,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -27480,7 +27803,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/memory/store/users": {
@@ -27505,7 +27831,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -27561,7 +27887,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/memory/record": {
@@ -27586,7 +27915,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -27652,7 +27981,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/memory/record/change": {
@@ -27677,7 +28009,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -27755,7 +28087,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/memory/record/reads": {
@@ -27780,7 +28115,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -27858,7 +28193,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/memory/record/users": {
@@ -27883,7 +28221,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -27949,7 +28287,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/imports": {
@@ -27974,7 +28315,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -28020,7 +28361,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       },
       "post": {
         "tags": [
@@ -28043,7 +28387,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -28099,7 +28443,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/imports/{importId}": {
@@ -28124,7 +28471,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -28180,7 +28527,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/imports/{importId}/cancel": {
@@ -28205,7 +28555,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -28261,7 +28611,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/imports/{importId}/retry": {
@@ -28286,7 +28639,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -28352,7 +28705,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/usage": {
@@ -28436,7 +28792,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -28482,7 +28838,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/agent-score/history": {
@@ -28507,7 +28866,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           },
@@ -28575,7 +28934,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/agent-score/causes": {
@@ -28600,7 +28962,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -28646,7 +29008,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     },
     "/v1/projects/{projectSlug}/agent-score": {
@@ -28671,7 +29036,7 @@
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
-            "description": "Project slug (human-readable identifier)",
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
             "name": "projectSlug",
             "in": "path"
           }
@@ -28717,7 +29082,10 @@
               }
             }
           }
-        }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
       }
     }
   },

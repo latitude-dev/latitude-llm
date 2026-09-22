@@ -28,6 +28,10 @@ class SignalMonitoringStateFailed(UniversalBaseModel):
             description="Id of the evaluation whose realignment failed. Absent when the failure was during `generate`.",
         ),
     ]
+    """
+    Id of the evaluation whose realignment failed. Absent when the failure was during `generate`.
+    """
+
     reason: typing.Optional[str] = pydantic.Field(default=None)
     """
     Resolved failure message, or `null` once Temporal has dropped the failed run.

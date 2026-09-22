@@ -24,5 +24,8 @@ class SessionAssessmentEvidenceImpactIncident(UniversalBaseModel):
             description="Whether the same operation or tool later succeeded.",
         ),
     ]
+    """
+    Whether the same operation or tool later succeeded.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

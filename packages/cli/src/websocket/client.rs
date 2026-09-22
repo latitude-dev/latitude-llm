@@ -195,28 +195,9 @@ impl WebSocketClient {
         let mut headers: Vec<(String, String)> = Vec::new();
         config.auth.apply_to_url_and_headers(&mut url, &mut headers)?;
 
-        // Build the handshake request. Using IntoClientRequest on a parsed
-        // URI gets us all the required WS handshake headers
-        // (Sec-WebSocket-Key/Version/Upgrade); we then layer our custom
-        // headers on top.
-        let uri: tokio_tungstenite::tungstenite::http::Uri = url.parse().map_err(|e| {
-            CliError::Validation(format!("invalid WebSocket URL `{url}`: {e}"))
-        })?;
-        let mut request = uri
-            .into_client_request()
-            .map_err(map_handshake_error)?;
-        for (name, value) in &headers {
-            let header_value = HeaderValue::from_str(value).map_err(|e| {
-                CliError::Validation(format!(
-                    "WebSocket header `{name}` contains invalid characters: {e}"
-                ))
-            })?;
-            let header_name: tokio_tungstenite::tungstenite::http::HeaderName =
-                name.parse().map_err(|e| {
-                    CliError::Validation(format!("invalid WebSocket header name `{name}`: {e}"))
-                })?;
-            request.headers_mut().insert(header_name, header_value);
-        }
+        // Build the handshake request (WS control headers + User-Agent +
+        // auth headers). See `build_handshake_request`.
+        let request = build_handshake_request(&url, &headers, &http_config.user_agent())?;
 
         // Sync the URL on the WsConfig with what we actually connected to,
         // so anything downstream that reads it (logging, error messages)
@@ -682,9 +663,91 @@ fn truncate(s: &str, max: usize) -> String {
     }
 }
 
+/// Build the WebSocket handshake request: the mandatory WS control headers
+/// (`Sec-WebSocket-Key`/`Version`/`Upgrade`, from `IntoClientRequest`), then
+/// the CLI's `User-Agent`, then any auth headers layered on top.
+///
+/// The `User-Agent` is set here so realtime traffic is attributable the same
+/// way HTTP traffic is (see [`HttpConfig::user_agent`]) — `into_client_request`
+/// does not set one, so without this WebSocket CLIs would be invisible to
+/// backend analytics. It is applied before the auth headers so an explicit
+/// auth-supplied `User-Agent` (unusual) can still override it. A `user_agent`
+/// that is not valid header content is skipped rather than failing the
+/// handshake.
+fn build_handshake_request(
+    url: &str,
+    headers: &[(String, String)],
+    user_agent: &str,
+) -> Result<tokio_tungstenite::tungstenite::handshake::client::Request, CliError> {
+    let uri: tokio_tungstenite::tungstenite::http::Uri = url
+        .parse()
+        .map_err(|e| CliError::Validation(format!("invalid WebSocket URL `{url}`: {e}")))?;
+    let mut request = uri.into_client_request().map_err(map_handshake_error)?;
+
+    if let Ok(value) = HeaderValue::from_str(user_agent) {
+        request.headers_mut().insert(
+            tokio_tungstenite::tungstenite::http::header::USER_AGENT,
+            value,
+        );
+    }
+
+    for (name, value) in headers {
+        let header_value = HeaderValue::from_str(value).map_err(|e| {
+            CliError::Validation(format!(
+                "WebSocket header `{name}` contains invalid characters: {e}"
+            ))
+        })?;
+        let header_name: tokio_tungstenite::tungstenite::http::HeaderName =
+            name.parse().map_err(|e| {
+                CliError::Validation(format!("invalid WebSocket header name `{name}`: {e}"))
+            })?;
+        request.headers_mut().insert(header_name, header_value);
+    }
+
+    Ok(request)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio_tungstenite::tungstenite::http::header::USER_AGENT;
+
+    #[test]
+    fn handshake_request_sets_user_agent() {
+        let request =
+            build_handshake_request("wss://example.com/socket", &[], "elevenlabs-cli/1.4.0")
+                .expect("request builds");
+        assert_eq!(
+            request.headers().get(USER_AGENT).map(|v| v.to_str().unwrap()),
+            Some("elevenlabs-cli/1.4.0"),
+        );
+    }
+
+    #[test]
+    fn handshake_request_auth_header_can_override_user_agent() {
+        // An explicit auth-supplied User-Agent wins over the default, since
+        // auth headers are layered after the CLI identity.
+        let headers = vec![("user-agent".to_string(), "custom/9.9".to_string())];
+        let request =
+            build_handshake_request("wss://example.com/socket", &headers, "elevenlabs-cli/1.4.0")
+                .expect("request builds");
+        assert_eq!(
+            request.headers().get(USER_AGENT).map(|v| v.to_str().unwrap()),
+            Some("custom/9.9"),
+        );
+    }
+
+    #[test]
+    fn handshake_request_skips_invalid_user_agent() {
+        // A malformed User-Agent is dropped rather than failing the handshake;
+        // the other required WS headers are still present.
+        let request = build_handshake_request("wss://example.com/socket", &[], "bad\nvalue")
+            .expect("request builds");
+        assert!(request.headers().get(USER_AGENT).is_none());
+        assert!(request
+            .headers()
+            .contains_key(tokio_tungstenite::tungstenite::http::header::SEC_WEBSOCKET_KEY));
+    }
 
     #[test]
     fn strip_keys_removes_top_level_and_nested() {

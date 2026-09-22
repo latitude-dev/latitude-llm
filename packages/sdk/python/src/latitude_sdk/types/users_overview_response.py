@@ -17,21 +17,37 @@ class UsersOverviewResponse(UniversalBaseModel):
             alias="uniqueUsers", description="Distinct identified users with at least one trace in the range."
         ),
     ]
+    """
+    Distinct identified users with at least one trace in the range.
+    """
+
     new_users: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="newUsers"),
         pydantic.Field(alias="newUsers", description="Users whose first trace ever falls inside the range."),
     ]
+    """
+    Users whose first trace ever falls inside the range.
+    """
+
     identified_traces: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="identifiedTraces"),
         pydantic.Field(alias="identifiedTraces", description="Traces in the range carrying a non-empty `user_id`."),
     ]
+    """
+    Traces in the range carrying a non-empty `user_id`.
+    """
+
     total_traces: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="totalTraces"),
         pydantic.Field(alias="totalTraces", description="All traces in the range, identified or not."),
     ]
+    """
+    All traces in the range, identified or not.
+    """
+
     identified_sessions: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="identifiedSessions"),
@@ -39,11 +55,19 @@ class UsersOverviewResponse(UniversalBaseModel):
             alias="identifiedSessions", description="Distinct sessions in the range carrying a non-empty `user_id`."
         ),
     ]
+    """
+    Distinct sessions in the range carrying a non-empty `user_id`.
+    """
+
     total_sessions: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="totalSessions"),
         pydantic.Field(alias="totalSessions", description="All distinct sessions in the range, identified or not."),
     ]
+    """
+    All distinct sessions in the range, identified or not.
+    """
+
     histogram: typing.List[UsersOverviewBucket] = pydantic.Field()
     """
     Per-bucket activity across the range, oldest first.
@@ -54,15 +78,26 @@ class UsersOverviewResponse(UniversalBaseModel):
         FieldMetadata(alias="bucketSeconds"),
         pydantic.Field(alias="bucketSeconds", description="Bucket width the histogram was computed with, in seconds."),
     ]
+    """
+    Bucket width the histogram was computed with, in seconds.
+    """
+
     from_iso: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="fromIso"),
         pydantic.Field(alias="fromIso", description="ISO-8601 lower bound of the resolved range."),
     ]
+    """
+    ISO-8601 lower bound of the resolved range.
+    """
+
     to_iso: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="toIso"),
         pydantic.Field(alias="toIso", description="ISO-8601 upper bound of the resolved range."),
     ]
+    """
+    ISO-8601 upper bound of the resolved range.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

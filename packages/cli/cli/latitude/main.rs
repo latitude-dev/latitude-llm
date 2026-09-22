@@ -4,10 +4,22 @@
 use fern_cli_sdk::app::CliApp;
 use fern_cli_sdk::openapi::OpenApiBinding;
 use fern_cli_sdk::auth::{BearerAuth};
+use fern_cli_sdk::openapi::discovery::{GlobalParameter, GlobalParameterApplyMode, GlobalParameterLocation};
 
 fn main() {
     let app = CliApp::new("latitude")
         .auth(BearerAuth::new("ApiKeyAuth").env("LATITUDE_API_KEY"))
+        .global_parameter(GlobalParameter {
+            name: "projectSlug".into(),
+            location: GlobalParameterLocation::Path,
+            target: "projectSlug".into(),
+            env: Some("LATITUDE_PROJECT_SLUG".into()),
+            default: None,
+            optional: false,
+            apply: GlobalParameterApplyMode::Explicit,
+            parameter_name: Some("globalProjectSlug".into()),
+            docs: Some("Optional project slug used globally by project-scoped commands when `--project-slug` is omitted.".into()),
+        })
         .binding(
             OpenApiBinding::new()
                 .spec(include_str!("openapi0.json"))

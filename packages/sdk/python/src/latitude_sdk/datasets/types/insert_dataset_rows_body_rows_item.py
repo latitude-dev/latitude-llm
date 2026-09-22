@@ -38,6 +38,10 @@ class InsertDatasetRowsBodyRowsItem(UniversalBaseModel):
             description="Correct answer for this row. Filled in by curators; usually distinct from `output`.",
         ),
     ]
+    """
+    Correct answer for this row. Filled in by curators; usually distinct from `output`.
+    """
+
     metadata: typing.Optional[InsertDatasetRowsBodyRowsItemMetadata] = pydantic.Field(default=None)
     """
     Row metadata cell.

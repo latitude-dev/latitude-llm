@@ -14,14 +14,26 @@ class BootstrapAccountResponse(UniversalBaseModel):
         FieldMetadata(alias="organizationSlug"),
         pydantic.Field(alias="organizationSlug", description="Slug of the temporary organization."),
     ]
+    """
+    Slug of the temporary organization.
+    """
+
     project_slug: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectSlug"),
         pydantic.Field(alias="projectSlug", description="Slug of the created project."),
     ]
+    """
+    Slug of the created project.
+    """
+
     api_key: typing_extensions.Annotated[
         str, FieldMetadata(alias="apiKey"), pydantic.Field(alias="apiKey", description="Organization-scoped API key.")
     ]
+    """
+    Organization-scoped API key.
+    """
+
     claim_url: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="claimUrl"),
@@ -29,6 +41,10 @@ class BootstrapAccountResponse(UniversalBaseModel):
             alias="claimUrl", description="URL to open in a browser to claim ownership of the organization."
         ),
     ]
+    """
+    URL to open in a browser to claim ownership of the organization.
+    """
+
     claim_email: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="claimEmail"),
@@ -38,6 +54,10 @@ class BootstrapAccountResponse(UniversalBaseModel):
             description="Email address the claim link will be sent to, or `null` if none was provided.",
         ),
     ]
+    """
+    Email address the claim link will be sent to, or `null` if none was provided.
+    """
+
     claim_expires_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="claimExpiresAt"),
@@ -46,5 +66,8 @@ class BootstrapAccountResponse(UniversalBaseModel):
             description="ISO-8601 timestamp when the claim link expires. The organization is deleted if not claimed by then.",
         ),
     ]
+    """
+    ISO-8601 timestamp when the claim link expires. The organization is deleted if not claimed by then.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

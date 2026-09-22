@@ -23,21 +23,37 @@ class AgentScoreExplanation(UniversalBaseModel):
             description="When this evidence was computed, as an ISO-8601 timestamp. Retained explanations keep the original score computation time.",
         ),
     ]
+    """
+    When this evidence was computed, as an ISO-8601 timestamp. Retained explanations keep the original score computation time.
+    """
+
     scoring_version: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="scoringVersion"),
         pydantic.Field(alias="scoringVersion", description="Scoring version the evidence was read under."),
     ]
+    """
+    Scoring version the evidence was read under.
+    """
+
     window_days: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="windowDays"),
         pydantic.Field(alias="windowDays", description="Length in days of the window the evidence covers."),
     ]
+    """
+    Length in days of the window the evidence covers.
+    """
+
     eligible_session_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="eligibleSessionCount"),
         pydantic.Field(alias="eligibleSessionCount", description="Production sessions in that window."),
     ]
+    """
+    Production sessions in that window.
+    """
+
     attribution: typing.List[AgentScoreDimensionAttribution] = pydantic.Field()
     """
     Per-dimension cause rows for the dimensions that support a counterfactual.
@@ -51,11 +67,19 @@ class AgentScoreExplanation(UniversalBaseModel):
             description="Where task failures concentrate. Reach only; these rows carry no share of the score.",
         ),
     ]
+    """
+    Where task failures concentrate. Reach only; these rows carry no share of the score.
+    """
+
     safety_confirmed_harm: typing_extensions.Annotated[
         typing.List[AgentScoreIssueRow],
         FieldMetadata(alias="safetyConfirmedHarm"),
         pydantic.Field(alias="safetyConfirmedHarm", description="Issues where the agent caused confirmed harm."),
     ]
+    """
+    Issues where the agent caused confirmed harm.
+    """
+
     safety_exposure: typing_extensions.Annotated[
         typing.List[AgentScoreIssueRow],
         FieldMetadata(alias="safetyExposure"),
@@ -64,5 +88,8 @@ class AgentScoreExplanation(UniversalBaseModel):
             description="Hostile or sensitive content the agent received. Exposure is context and never lowers Safety.",
         ),
     ]
+    """
+    Hostile or sensitive content the agent received. Exposure is context and never lowers Safety.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

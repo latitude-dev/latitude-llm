@@ -14,21 +14,37 @@ class MemoryRecordRead(UniversalBaseModel):
         FieldMetadata(alias="spanId"),
         pydantic.Field(alias="spanId", description="Span that performed the read (`search_memory`)."),
     ]
+    """
+    Span that performed the read (`search_memory`).
+    """
+
     trace_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="traceId"),
         pydantic.Field(alias="traceId", description="Trace the read span belongs to."),
     ]
+    """
+    Trace the read span belongs to.
+    """
+
     session_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="sessionId"),
         pydantic.Field(alias="sessionId", description="Session the read trace belongs to."),
     ]
+    """
+    Session the read trace belongs to.
+    """
+
     user_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="userId"),
         pydantic.Field(alias="userId", description="End-user attributed to the read. Empty when none."),
     ]
+    """
+    End-user attributed to the read. Empty when none.
+    """
+
     query_text: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="queryText"),
@@ -36,15 +52,26 @@ class MemoryRecordRead(UniversalBaseModel):
             alias="queryText", description="The search query text, when captured (opt-in). Empty otherwise."
         ),
     ]
+    """
+    The search query text, when captured (opt-in). Empty otherwise.
+    """
+
     token_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokenCount"),
         pydantic.Field(alias="tokenCount", description="Tokens in the record returned by the read."),
     ]
+    """
+    Tokens in the record returned by the read.
+    """
+
     end_time: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="endTime"),
         pydantic.Field(alias="endTime", description="ISO-8601 timestamp of the read span's end."),
     ]
+    """
+    ISO-8601 timestamp of the read span's end.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -304,6 +304,10 @@ impl Binding for GraphqlBinding {
                 crate::cli_args::resolve_base_url_override(root_matches, &self.inner.name)?;
             let base_url_override = base_url_override_owned.as_deref();
 
+            let http_config = prepared.http_config.clone().with_user_agent_suffix_override(
+                crate::cli_args::resolve_user_agent_suffix_override(root_matches),
+            );
+
             // When --page-all is active on a TTY without --no-pager,
             // let the executor write directly to the pager (capture_output
             // = false). The executor spawns the pager and returns None,
@@ -332,7 +336,7 @@ impl Binding for GraphqlBinding {
                 &pipeline,
                 capture_output,
                 base_url_override,
-                &prepared.http_config,
+                &http_config,
                 &retry_policy,
                 no_retry,
                 debug,
@@ -358,10 +362,13 @@ impl Binding for GraphqlBinding {
             .copied()
             .unwrap_or(false);
         let debug = matches.get_flag("debug");
+        let http_config = entry.http_config.with_user_agent_suffix_override(
+            crate::cli_args::resolve_user_agent_suffix_override(matches),
+        );
         let ctx = super::AppContext::new(
             entry.doc,
             entry.auth_provider,
-            entry.http_config,
+            http_config,
         ).with_quiet(quiet).with_debug(debug);
         Ok(Some(Box::new(ctx)))
     }
@@ -379,6 +386,12 @@ impl Binding for GraphqlBinding {
             .copied()
             .unwrap_or(false);
         let debug = matches.get_flag("debug");
+        let entry = super::app::BindingEntry {
+            http_config: entry.http_config.with_user_agent_suffix_override(
+                crate::cli_args::resolve_user_agent_suffix_override(matches),
+            ),
+            ..entry
+        };
         match existing {
             Some(ctx_box) => match ctx_box.downcast::<super::AppContext>() {
                 Ok(mut ctx) => {

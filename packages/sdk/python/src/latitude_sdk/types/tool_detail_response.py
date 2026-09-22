@@ -27,5 +27,8 @@ class ToolDetailResponse(UniversalBaseModel):
             description="Failed-calls-only usage metrics. Non-null only when `errorsOnly=true` is requested.",
         ),
     ]
+    """
+    Failed-calls-only usage metrics. Non-null only when `errorsOnly=true` is requested.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

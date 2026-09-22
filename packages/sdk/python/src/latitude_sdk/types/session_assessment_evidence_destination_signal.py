@@ -14,5 +14,8 @@ class SessionAssessmentEvidenceDestinationSignal(UniversalBaseModel):
         FieldMetadata(alias="signalId"),
         pydantic.Field(alias="signalId", description="Identifier of the destination signal."),
     ]
+    """
+    Identifier of the destination signal.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

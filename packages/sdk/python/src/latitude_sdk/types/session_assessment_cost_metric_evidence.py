@@ -23,6 +23,10 @@ class SessionAssessmentCostMetricEvidence(UniversalBaseModel):
         FieldMetadata(alias="metricId"),
         pydantic.Field(alias="metricId", description="Stable identifier of the Cost metric."),
     ]
+    """
+    Stable identifier of the Cost metric.
+    """
+
     family: SessionAssessmentCostMetricEvidenceFamily = pydantic.Field()
     """
     Cost family this evidence belongs to: spend, context, tools, memory, or recovery.
@@ -41,16 +45,28 @@ class SessionAssessmentCostMetricEvidence(UniversalBaseModel):
             description="Whether the metric produced a raw session reading. This is not a health label.",
         ),
     ]
+    """
+    Whether the metric produced a raw session reading. This is not a health label.
+    """
+
     raw_unit: typing_extensions.Annotated[
         SessionAssessmentCostMetricEvidenceRawUnit,
         FieldMetadata(alias="rawUnit"),
         pydantic.Field(alias="rawUnit", description="Native unit used by the Cost metric."),
     ]
+    """
+    Native unit used by the Cost metric.
+    """
+
     raw_value: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="rawValue"),
         pydantic.Field(alias="rawValue", default=None, description="Aggregate raw metric value when measured."),
     ]
+    """
+    Aggregate raw metric value when measured.
+    """
+
     eligible_units: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="eligibleUnits"),
@@ -58,6 +74,10 @@ class SessionAssessmentCostMetricEvidence(UniversalBaseModel):
             alias="eligibleUnits", default=None, description="Total session units eligible for this metric."
         ),
     ]
+    """
+    Total session units eligible for this metric.
+    """
+
     adverse_units: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="adverseUnits"),
@@ -67,6 +87,10 @@ class SessionAssessmentCostMetricEvidence(UniversalBaseModel):
             description="Observed adverse units within `eligibleUnits`; never a calibrated penalty.",
         ),
     ]
+    """
+    Observed adverse units within `eligibleUnits`; never a calibrated penalty.
+    """
+
     evidence: typing.Optional[SessionAssessmentCostMetricEvidenceEvidence] = pydantic.Field(default=None)
     """
     Whether the reported native impact is directly confirmed or modeled.
@@ -79,6 +103,10 @@ class SessionAssessmentCostMetricEvidence(UniversalBaseModel):
             alias="nativeImpact", default=None, description="Impact in the metric's native unit, when available."
         ),
     ]
+    """
+    Impact in the metric's native unit, when available.
+    """
+
     limitations: typing.List[SessionAssessmentCostMetricEvidenceLimitationsItem] = pydantic.Field()
     """
     Known limits on how completely the metric could examine the session.

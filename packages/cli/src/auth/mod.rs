@@ -40,6 +40,7 @@ pub mod error;
 pub mod keyring_store;
 pub mod login;
 pub mod oauth2;
+pub mod oauth2_contract;
 pub mod oauth_common;
 pub mod oauth_login;
 pub mod provider;
@@ -54,21 +55,24 @@ pub use builder::{
     collect_binding_cli_args, finalize_bindings, render_auth_help_section, render_auth_layers_help,
     AuthStrategy, SchemeBinding,
 };
-pub use error::handle_error_response;
 pub use compose::{AllAuthProvider, AnyAuthProvider, LayeredAuthProvider, RoutingAuthProvider};
-pub use credential::AuthCredentialSource;
+pub use credential::{AuthCredentialSource, CredentialSlots};
+pub use error::handle_error_response;
 pub use keyring_store::{
     active_store, auto_store, set_active_store, FileKeyringStore, KeyringStore, MockKeyringStore,
-    OsKeyringStore,
 };
+#[cfg(not(target_env = "musl"))]
+pub use keyring_store::OsKeyringStore;
 pub use login::{
     build_auth_command, dispatch_auth, inject_keyring_sources, inject_oauth2_caches,
-    run_token_paste, DynLoginFlow, LoginContext, LoginFlow, TokenPasteLoginFlow,
+    run_token_paste, shadowing_env_vars, DynLoginFlow, LoginContext, LoginFlow,
+    TokenPasteLoginFlow,
 };
+pub use oauth2::{OAuth2Grant, OAuth2TokenProvider, TokenCache};
+pub use oauth2_contract::{OAuth2Endpoint, OAuth2RequestProperty, OAuth2RequestValue};
 pub use oauth_login::{DeviceCodeLoginFlow, OAuth2KeyringProvider, PkceLoginFlow, TokenBundle};
 pub use provider::{
     no_auth_provider, AuthProvider, DynAuthProvider, EndpointAuthMetadata, NoAuthProvider,
 };
-pub use oauth2::{OAuth2Grant, OAuth2TokenProvider, TokenCache};
 pub use root_builder::{ApiKeyAuth, AuthSchemeBuilder, BasicAuth, BearerAuth, OAuth2Auth};
 pub use schemes::{BasicAuthProvider, BearerAuthProvider, HeaderAuthProvider};

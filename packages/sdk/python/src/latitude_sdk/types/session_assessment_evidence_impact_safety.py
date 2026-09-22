@@ -23,5 +23,8 @@ class SessionAssessmentEvidenceImpactSafety(UniversalBaseModel):
             description="Machine-readable safety finding category. A structured detector result is one of injectionAttempt, injectionDefense, injectionCompliance, piiExposure, or piiDisclosure; an item derived from a signal's assigned role instead names that signal's detector.",
         ),
     ]
+    """
+    Machine-readable safety finding category. A structured detector result is one of injectionAttempt, injectionDefense, injectionCompliance, piiExposure, or piiDisclosure; an item derived from a signal's assigned role instead names that signal's detector.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

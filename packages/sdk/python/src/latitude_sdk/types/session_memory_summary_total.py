@@ -18,16 +18,28 @@ class SessionMemorySummaryTotal(UniversalBaseModel):
         FieldMetadata(alias="readTokens"),
         pydantic.Field(alias="readTokens", description="Total tokens read across the session."),
     ]
+    """
+    Total tokens read across the session.
+    """
+
     tokens_added: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensAdded"),
         pydantic.Field(alias="tokensAdded", description="Total tokens added across the session."),
     ]
+    """
+    Total tokens added across the session.
+    """
+
     tokens_removed: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensRemoved"),
         pydantic.Field(alias="tokensRemoved", description="Total tokens removed across the session."),
     ]
+    """
+    Total tokens removed across the session.
+    """
+
     write_records: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="writeRecords"),
@@ -35,5 +47,8 @@ class SessionMemorySummaryTotal(UniversalBaseModel):
             alias="writeRecords", description="Number of records the session wrote, including zero-delta writes."
         ),
     ]
+    """
+    Number of records the session wrote, including zero-delta writes.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
