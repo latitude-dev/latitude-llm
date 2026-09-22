@@ -454,6 +454,21 @@ describe("buildDimensionEvidence", () => {
       expect(evidence.affected).toHaveLength(1)
     })
 
+    it("keeps moment rows when attribution ran but found nothing to attribute", () => {
+      // The shape production actually produces: `computeAgentScore` attributes Outcome on every
+      // publishable window, so an entry is always present and is empty whenever nothing degraded.
+      const emptyAttribution = {
+        ...explanation,
+        attribution: [{ ...momentAttribution, rows: [], residual: 0, totalDeficit: 0, explainedDeficit: 0 }],
+        issues: { ...explanation.issues, outcome: [momentIssue] },
+      } as unknown as Explanation
+
+      const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: emptyAttribution })
+
+      expect(evidence.affected).toHaveLength(1)
+      expect(evidence.affected[0]?.label).toBe("Users showed frustration")
+    })
+
     it("keeps moment rows when no outcome attribution was computed", () => {
       // Below the analyzed floor there is no attribution, and the rows are still worth showing as
       // the uncounted evidence they have always been.

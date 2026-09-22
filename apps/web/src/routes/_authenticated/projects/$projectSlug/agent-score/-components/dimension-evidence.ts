@@ -332,7 +332,12 @@ const isMomentIssue = (issueKey: string): boolean => issueKey.startsWith("issue:
 
 const addIssues = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
   if (dimension === "outcome") {
-    const hasOutcomeAttribution = explanation.attribution.some((entry) => entry.scoreDimension === "outcome")
+    // Rows, not the entry: `computeAgentScore` attributes Outcome on every publishable window and
+    // stores an empty result when nothing degraded or the component never applied. Testing for the
+    // entry alone would drop moment evidence in exactly the windows that have nothing to replace it.
+    const hasOutcomeAttribution = explanation.attribution.some(
+      (entry) => entry.scoreDimension === "outcome" && entry.rows.length > 0,
+    )
     const issues = hasOutcomeAttribution
       ? explanation.issues.outcome.filter((issue) => !isMomentIssue(issue.issueKey))
       : explanation.issues.outcome
