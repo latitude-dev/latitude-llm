@@ -1,3 +1,4 @@
+import { SEED_AGENT_SCORE_HISTORY_DAYS } from "@domain/admin"
 import { describe, expect, it } from "vitest"
 import {
   AGENT_SCORE_SEED_HISTORY_DAYS,
@@ -118,6 +119,13 @@ describe("adminSeedAgentScoreHistoryInputSchema", () => {
       score: 70,
     }))
     expect(adminSeedAgentScoreHistoryInputSchema.safeParse({ ...valid, days: tooMany }).success).toBe(false)
+  })
+
+  it("offers the same window the use case will actually accept", () => {
+    // The literal stays here so the modal can import it without pulling `@domain/admin` into the
+    // browser bundle; the rule itself lives in the use case, and drift between them would mean the
+    // modal offering days the server rejects.
+    expect(AGENT_SCORE_SEED_HISTORY_DAYS).toBe(SEED_AGENT_SCORE_HISTORY_DAYS)
   })
 
   it("takes no organization from the caller", () => {

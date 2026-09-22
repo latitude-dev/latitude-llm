@@ -4,23 +4,32 @@ import {
   LAUNCH_SCORING_VERSION,
   syntheticAgentScoreSnapshot,
 } from "@domain/agent-score"
-import type { OrganizationId, ProjectId } from "@domain/shared"
+import { type OrganizationId, type ProjectId, ValidationError } from "@domain/shared"
 import { Effect } from "effect"
 import { AdminAgentScoreHistoryRepository } from "./agent-score-history-repository.ts"
 
-/**
- * The window a seeded day claims when the project has never published a score.
- *
- * The shortest step on purpose. Tomorrow's real run reads the previous day's window as its
- * hysteresis anchor, and a short anchor is the one that gets ignored: hysteresis only holds a
- * previous window that still clears the session floor, which a 7-day window on a quiet project
- * will not. Seeding the longest step instead would let a fabricated row pin the real scoring
- * window for as long as the project keeps publishing.
- */
+// Shortest step on purpose: tomorrow's run reads this as its hysteresis anchor, and a short anchor
+// that misses the session floor is the one hysteresis ignores instead of pinning the real window.
 const FALLBACK_WINDOW_DAYS = Math.min(...LAUNCH_AGENT_SCORE_ARTIFACT.window.stepDays)
 
-/** The session count a seeded day claims when there is no real snapshot to copy one from. */
 const FALLBACK_ELIGIBLE_SESSIONS = LAUNCH_AGENT_SCORE_ARTIFACT.window.sessionTarget
+
+/** How far back a seeded range may reach, inclusive of today. */
+export const SEED_AGENT_SCORE_HISTORY_DAYS = 30
+
+const DAY_MS = 86_400_000
+
+const utcDate = (at: Date): string => at.toISOString().slice(0, 10)
+
+const isCalendarDate = (date: string): boolean =>
+  /^\d{4}-\d{2}-\d{2}$/.test(date) && utcDate(new Date(`${date}T00:00:00.000Z`)) === date
+
+// The forward bound is load-bearing: seeding and the daily job share insert-if-absent on
+// (organization, project, date), so a future row makes the real run no-op when that date arrives.
+export const seedableDateRange = (now: Date): { readonly from: string; readonly to: string } => {
+  const to = utcDate(now)
+  return { from: utcDate(new Date(new Date(`${to}T00:00:00.000Z`).getTime() - (SEED_AGENT_SCORE_HISTORY_DAYS - 1) * DAY_MS)), to }
+}
 
 export interface SeedAgentScoreHistoryDay {
   /** UTC date, `YYYY-MM-DD`. */
@@ -36,24 +45,7 @@ export interface SeedAgentScoreHistoryResult {
   readonly skipped: number
 }
 
-/**
- * Gives a project a score history it never earned.
- *
- * Demo projects are seeded with traces, sessions and signals, and can even be scored for today, but
- * history accrues one real day at a time — so a project built this morning has a trend chart with
- * nothing in it and no way to fill it except waiting a month. This writes the missing days
- * directly from scores staff choose, rather than recomputing anything: there is no evidence behind
- * these dates to recompute from, and pretending otherwise would take minutes per day and still
- * produce nothing.
- *
- * Days that already have a score are skipped rather than overwritten, by the same insert-if-absent
- * contract the daily job uses. Real history always wins, and re-running with the same range is
- * therefore free.
- *
- * The scoring version and dimension weights are the live ones. A seeded range that claimed a
- * different version would read as a broken measurement on the chart, which is the opposite of what
- * a demo wants, and would make the page reject any real explanation that landed on those dates.
- */
+/** Publishes under the live scoring version; the page rejects explanations whose version differs. */
 export const seedAgentScoreHistoryUseCase = Effect.fn("admin.seedAgentScoreHistory")(function* (input: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
@@ -65,8 +57,19 @@ export const seedAgentScoreHistoryUseCase = Effect.fn("admin.seedAgentScoreHisto
     return { requested: 0, written: 0, skipped: 0 } satisfies SeedAgentScoreHistoryResult
   }
 
-  // Copied from the project's own latest score when it has one, so a seeded day is indistinguishable
-  // from its neighbours in window and session count rather than announcing itself with odd numbers.
+  const { from, to } = seedableDateRange(input.now ?? new Date())
+  const outOfRange = input.days.filter((day) => !isCalendarDate(day.date) || day.date < from || day.date > to)
+  if (outOfRange.length > 0) {
+    return yield* Effect.fail(
+      new ValidationError({
+        field: "days",
+        message: `Seeded dates must be real calendar days between ${from} and ${to}: ${outOfRange
+          .map((day) => day.date)
+          .join(", ")}`,
+      }),
+    )
+  }
+
   const latest = yield* getLatestAgentScore({
     organizationId: input.organizationId,
     projectId: input.projectId,

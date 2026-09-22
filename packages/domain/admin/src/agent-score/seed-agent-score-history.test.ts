@@ -3,7 +3,7 @@ import { OrganizationId, ProjectId, SCORE_DIMENSIONS, SqlClient, type SqlClientS
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { AdminAgentScoreHistoryRepository } from "./agent-score-history-repository.ts"
-import { seedAgentScoreHistoryUseCase } from "./seed-agent-score-history.ts"
+import { SEED_AGENT_SCORE_HISTORY_DAYS, seedAgentScoreHistoryUseCase, seedableDateRange } from "./seed-agent-score-history.ts"
 
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
@@ -24,7 +24,6 @@ const publishedSnapshot: AgentScoreSnapshot = {
   createdAt: new Date("2026-09-17T04:05:00.000Z"),
 }
 
-/** Captures what the use case would write, and reports a caller-chosen number of dates as taken. */
 const historyPort = (takenDates: readonly string[] = []) => {
   const written: AgentScoreSnapshot[] = []
   const layer = Layer.succeed(AdminAgentScoreHistoryRepository, {
@@ -68,6 +67,21 @@ const seed = ({
     ),
   ).then((result) => ({ result, written: history.written }))
 }
+
+const seedError = (days: readonly { readonly date: string; readonly score: number }[]) =>
+  Effect.runPromise(
+    Effect.flip(
+      seedAgentScoreHistoryUseCase({
+        organizationId: ORGANIZATION_ID,
+        projectId: PROJECT_ID,
+        days,
+        now: NOW,
+      }).pipe(
+        Effect.provide(Layer.mergeAll(historyPort().layer, snapshotPort(null))),
+        Effect.provideService(SqlClient, {} as SqlClientShape),
+      ),
+    ),
+  )
 
 describe("seedAgentScoreHistoryUseCase", () => {
   it("writes one snapshot per requested day under the target organization", async () => {
@@ -124,5 +138,58 @@ describe("seedAgentScoreHistoryUseCase", () => {
 
     expect(result).toEqual({ requested: 0, written: 0, skipped: 0 })
     expect(written).toEqual([])
+  })
+})
+
+describe("seedableDateRange", () => {
+  it("is the advertised window, inclusive of today", () => {
+    expect(seedableDateRange(NOW)).toEqual({ from: "2026-08-20", to: "2026-09-18" })
+    expect(SEED_AGENT_SCORE_HISTORY_DAYS).toBe(30)
+  })
+})
+
+describe("seedAgentScoreHistoryUseCase date bounds", () => {
+  it("refuses a future date, which would block the real job from ever scoring that day", async () => {
+    // Seeding and the daily job share insert-if-absent on (org, project, date): a row placed ahead
+    // of today makes the real run a silent no-op when the date arrives.
+    const error = await seedError([{ date: "2026-09-19", score: 70 }])
+
+    expect(error._tag).toBe("ValidationError")
+    expect(error.message).toContain("2026-09-19")
+  })
+
+  it("refuses a date older than the window the action advertises", async () => {
+    const error = await seedError([{ date: "2026-08-19", score: 70 }])
+
+    expect(error._tag).toBe("ValidationError")
+    expect(error.message).toContain("2026-08-19")
+  })
+
+  it("refuses a date that is well formed but not a real day", async () => {
+    const error = await seedError([{ date: "2026-02-30", score: 70 }])
+
+    expect(error._tag).toBe("ValidationError")
+  })
+
+  it("refuses the whole batch rather than silently dropping the bad days", async () => {
+    const { written } = historyPort()
+    const error = await seedError([
+      { date: "2026-09-17", score: 70 },
+      { date: "2026-12-01", score: 70 },
+    ])
+
+    expect(error._tag).toBe("ValidationError")
+    expect(written).toEqual([])
+  })
+
+  it("accepts both ends of the window", async () => {
+    const { result } = await seed({
+      days: [
+        { date: "2026-08-20", score: 61 },
+        { date: "2026-09-18", score: 80 },
+      ],
+    })
+
+    expect(result).toEqual({ requested: 2, written: 2, skipped: 0 })
   })
 })
