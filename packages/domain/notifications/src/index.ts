@@ -102,6 +102,13 @@ export type {
 } from "./use-cases/mark-notification-seen.ts"
 export { markNotificationSeenUseCase } from "./use-cases/mark-notification-seen.ts"
 export type {
+  AgentScoreDigestNotificationRequest,
+  RequestAgentScoreDigestNotificationsError,
+  RequestAgentScoreDigestNotificationsInput,
+  RequestAgentScoreDigestNotificationsResult,
+} from "./use-cases/request-agent-score-digest-notifications.ts"
+export { requestAgentScoreDigestNotificationsUseCase } from "./use-cases/request-agent-score-digest-notifications.ts"
+export type {
   BillingLimitNotificationRequest,
   RequestBillingLimitNotificationsError,
   RequestBillingLimitNotificationsInput,

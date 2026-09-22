@@ -4,6 +4,7 @@ import {
   deleteNotificationsByProjectUseCase,
   NOTIFICATION_KIND_META,
   type NotificationKind,
+  requestAgentScoreDigestNotificationsUseCase,
   requestBillingLimitNotificationsUseCase,
   requestDestinationQuarantinedNotificationsUseCase,
   requestIncidentNotificationsUseCase,
@@ -27,6 +28,7 @@ import {
 import { signalPrioritySchema } from "@domain/signals"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
+  AgentScoreSnapshotRepositoryLive,
   EvaluationRepositoryLive,
   IncidentMonitorReaderLive,
   IncidentRepositoryLive,
@@ -52,6 +54,7 @@ interface NotificationsDeps {
 }
 
 const requestLayer = Layer.mergeAll(
+  AgentScoreSnapshotRepositoryLive,
   IncidentRepositoryLive,
   EvaluationRepositoryLive,
   IncidentMonitorReaderLive,
@@ -266,6 +269,56 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         Effect.tapError((error) =>
           Effect.sync(() =>
             logger.error(`notifications.request-wrapped failed wrappedReportId=${payload.wrappedReportId}`, error),
+          ),
+        ),
+        withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      ),
+
+    "request-agent-score-digest-notifications": (payload) =>
+      requestAgentScoreDigestNotificationsUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        projectId: ProjectId(payload.projectId),
+        windowStart: payload.windowStart,
+        windowEnd: payload.windowEnd,
+      }).pipe(
+        Effect.flatMap((result) => {
+          if (result.status === "skipped") {
+            logger.info(
+              `notifications.request-agent-score-digest skipped projectId=${payload.projectId} reason=${result.reason}`,
+            )
+            return Effect.void
+          }
+          return Effect.all(
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+              fanOutSlackRoutes(result.requests, publisher),
+            ],
+            { concurrency: "unbounded" },
+          ).pipe(Effect.asVoid)
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`notifications.request-agent-score-digest failed projectId=${payload.projectId}`, error),
           ),
         ),
         withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),

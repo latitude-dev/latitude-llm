@@ -155,6 +155,20 @@ const _registry = {
       readonly link: string
     }
     /**
+     * Producer step for the weekly Agent Score digest. Fired once per
+     * scored project by the digest fan-out. The consumer folds the
+     * window's snapshots into the digest, skips a project whose window
+     * turns out to hold no score, resolves recipients, and emits N
+     * `create-notification` tasks.
+     */
+    "request-agent-score-digest-notifications": {
+      readonly organizationId: string
+      readonly projectId: string
+      /** Inclusive UTC date bounds, `YYYY-MM-DD`, resolved once by the cron. */
+      readonly windowStart: string
+      readonly windowEnd: string
+    }
+    /**
      * Producer step for issue assignments. Fired by the domain-events
      * router on `SignalAssigneeChanged` (cleared assignments and
      * self-assignments are filtered before publish). The consumer
@@ -903,6 +917,15 @@ const _registry = {
        */
       readonly force?: boolean
     }
+  }>(),
+
+  // Weekly Agent Score digest. `triggerWeeklyRun` is fired by a repeatable schedule; it resolves
+  // the window once, drops organisations without the flag and projects that published no score in
+  // it, and publishes one `request-agent-score-digest-notifications` per surviving project. Its own
+  // topic rather than a task on `agent-score`, because a queue's handlers are registered per topic
+  // and a second subscribe would replace the scoring worker's.
+  "agent-score-digest": payloads<{
+    triggerWeeklyRun: Record<string, never>
   }>(),
 
   sandboxes: payloads<{

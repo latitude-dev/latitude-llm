@@ -1772,6 +1772,9 @@ importers:
 
   packages/domain/notifications:
     dependencies:
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../agent-score
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../evaluations
