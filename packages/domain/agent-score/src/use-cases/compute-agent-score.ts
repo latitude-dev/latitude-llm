@@ -16,6 +16,7 @@ import {
   attributeSpeedWindow,
   type DimensionAttribution,
 } from "../scoring/attribute-dimensions.ts"
+import { attributeOutcomeWindow } from "../scoring/attribute-outcome.ts"
 import { aggregateWindowSpeed } from "../scoring/bootstrap-window.ts"
 import { buildAgentScoreReadiness } from "../scoring/build-score-readiness.ts"
 import {
@@ -286,6 +287,17 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
   const publishable = !belowSessionFloor && composition.composite !== undefined
   const attribution: DimensionAttribution[] = publishable
     ? [
+        attributeOutcomeWindow({
+          // Only the sessions the estimator scored: a row built over sessions it excluded would
+          // describe a different denominator than the number above it.
+          degradedKindsBySession: new Map(
+            outcome.judgedSessions
+              .filter((verdict) => verdict.succeeded && pass.momentDegradation.has(verdict.sessionId))
+              .map((verdict) => [verdict.sessionId, pass.momentDegradation.get(verdict.sessionId) ?? []]),
+          ),
+          degradation: outcome.degradation,
+          observedScore: scoreOf("outcome") ?? 100,
+        }),
         attributeReliabilityWindow({
           endpoints: pass.reliabilityEndpoints,
           referenceRunSessions: input.artifact.referenceRuns.reliability,
