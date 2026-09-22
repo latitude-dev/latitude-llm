@@ -18,10 +18,17 @@ class CreateExperimentBodyVariantsItemTimeRangeFromIso(UniversalBaseModel):
         FieldMetadata(alias="fromIso"),
         pydantic.Field(alias="fromIso", description="ISO-8601 start of the window (inclusive)."),
     ]
+    """
+    ISO-8601 start of the window (inclusive).
+    """
+
     to_iso: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="toIso"),
         pydantic.Field(alias="toIso", description="ISO-8601 end of the window (inclusive)."),
     ]
+    """
+    ISO-8601 end of the window (inclusive).
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -13,8 +13,6 @@
 //!
 //! [hcf]: crate::auth::AuthProvider::has_credentials_for
 
-use serde_json::Value;
-
 use crate::auth::provider::{AuthProvider, EndpointAuthMetadata};
 use crate::error::CliError;
 
@@ -55,31 +53,102 @@ pub fn handle_error_response<T>(
         // Surface which source supplied the credential so the user can
         // diagnose shadowing (e.g. stale env var winning over a fresh
         // `auth login`). ADR-0008 § 8e.
-        let hints = dedup_preserve_order(provider.credential_hints());
-        if !hints.is_empty() {
+        // Only the sources that actually supplied something. Listing every
+        // declared source named places the user had never configured.
+        let supplied = dedup_preserve_order(provider.populated_credential_hints());
+        if !supplied.is_empty() {
             let base = parse_api_error(status, error_body);
-            return Err(decorate_with_source_hint(base, &hints));
+            return Err(decorate_with_source_hint(base, &supplied));
         }
+        return Err(parse_api_error(status, error_body));
+    }
+
+    // Any other failure, sent without credentials. The condition the friendly
+    // message above describes — "this request carried no auth" — has nothing to
+    // do with the status code, but the message was gated on 401/403, so an API
+    // that expresses "not authenticated" some other way said nothing useful.
+    //
+    // ElevenLabs answers 404 for a workspace scoped to the anonymous principal
+    // (a deliberate pattern: a 401 would confirm the resource exists), so a
+    // logged-out user saw `Workspace 1anonymous1 not found` with no hint that
+    // the fix was `auth login`.
+    //
+    // This only *annotates* — the error keeps its class and exit code, because
+    // the server, not the spec, is the authority on whether this endpoint
+    // needed auth at all. Public endpoints must keep working.
+    if !provider.has_credentials_for(endpoint) {
+        let base = parse_api_error(status, error_body);
+        if let Some(note) = missing_credentials_note(provider) {
+            return Err(decorate_with_help(base, note));
+        }
+        return Err(base);
     }
     Err(parse_api_error(status, error_body))
 }
 
-/// Append a "Credentials were supplied via: …" line to an existing
-/// `CliError::Api` message, preserving the structured fields. For
-/// non-`Api` variants (defensive — shouldn't happen here), pass through.
-fn decorate_with_source_hint(err: CliError, hints: &[String]) -> CliError {
-    let joined = hints.join(", ");
+/// Advice for a request that went out with no credentials at all, or `None`
+/// when the CLI declares no auth sources to point at.
+fn missing_credentials_note(provider: &dyn AuthProvider) -> Option<String> {
+    let hints = dedup_preserve_order(provider.credential_hints());
+    if hints.is_empty() {
+        return None;
+    }
+    Some(format!(
+        "No credentials were sent with this request. Set {}.",
+        hints.join(", ")
+    ))
+}
+
+/// Attach `note` as the error's `help`, leaving every other field alone.
+fn decorate_with_help(err: CliError, note: String) -> CliError {
     match err {
-        CliError::Api { code, message, reason } => CliError::Api {
+        CliError::Api {
             code,
-            message: format!(
-                "{message}\nCredentials were supplied via: {joined}. \
-                 Run `auth status` to see all visible sources and check for shadowing."
-            ),
+            message,
             reason,
+            details,
+            ..
+        } => CliError::Api {
+            code,
+            message,
+            reason,
+            details,
+            help: Some(note),
         },
         other => other,
     }
+}
+
+/// Attach a "Credentials were supplied via: …" note to an existing
+/// `CliError::Api`. The note goes in `help` rather than `message` — it is
+/// advice about the failure, not part of what the server reported.
+///
+/// Naming the source that was used is worth saying whenever credentials were
+/// sent. The follow-up — "check for shadowing" — is not: shadowing means one
+/// source silently outranking another, which cannot happen when there is only
+/// one. On a single-source CLI it sent the reader to `auth status` to compare a
+/// list of one against itself, which is busywork at best and, on a scope
+/// failure like `OAuth token does not have required permissions`, actively
+/// points away from the real fix.
+/// Note for a request that carried credentials the server rejected.
+///
+/// `hints` must be the *populated* sources, not every declared one. The
+/// shadowing advice is gated on more than one source actually holding a value,
+/// because that is the only situation in which shadowing is possible — gating
+/// it on the declared count meant any CLI with two auth schemes always told
+/// the user to go looking for a conflict that could not exist.
+fn decorate_with_source_hint(err: CliError, hints: &[String]) -> CliError {
+    let joined = hints.join(", ");
+    let note = if hints.len() > 1 {
+        format!(
+            "Credentials were supplied via: {joined}. More than one source has a \
+             value, so one may be shadowing another — run `auth status` to see \
+             which was used."
+        )
+    } else {
+        format!("Credentials were supplied via: {joined}.")
+    };
+    decorate_with_help(err, note)
 }
 
 /// Deduplicate strings while preserving first-seen order.
@@ -94,38 +163,7 @@ fn dedup_preserve_order(items: Vec<String>) -> Vec<String> {
 /// Shared parsing for the auth-aware error handler. Returns a structured
 /// [`CliError::Api`] whether or not the body was JSON.
 fn parse_api_error(status: reqwest::StatusCode, error_body: &str) -> CliError {
-    if let Ok(error_json) = serde_json::from_str::<Value>(error_body) {
-        if let Some(err_obj) = error_json.get("error") {
-            let code = err_obj
-                .get("code")
-                .and_then(|c| c.as_u64())
-                .unwrap_or(status.as_u16() as u64) as u16;
-            let message = err_obj
-                .get("message")
-                .and_then(|m| m.as_str())
-                .unwrap_or("Unknown error")
-                .to_string();
-            let reason = err_obj
-                .get("errors")
-                .and_then(|e| e.as_array())
-                .and_then(|arr| arr.first())
-                .and_then(|e| e.get("reason"))
-                .and_then(|r| r.as_str())
-                .or_else(|| err_obj.get("reason").and_then(|r| r.as_str()))
-                .unwrap_or("unknown")
-                .to_string();
-            return CliError::Api {
-                code,
-                message,
-                reason,
-            };
-        }
-    }
-    CliError::Api {
-        code: status.as_u16(),
-        message: error_body.to_string(),
-        reason: "httpError".to_string(),
-    }
+    crate::error::api_error_from_body(status.as_u16(), error_body)
 }
 
 #[cfg(test)]
@@ -183,7 +221,12 @@ mod tests {
         )
         .unwrap_err();
         match err {
-            CliError::Api { code, message, reason } => {
+            CliError::Api {
+                code,
+                message,
+                reason,
+                ..
+            } => {
                 assert_eq!(code, 401);
                 assert!(message.contains("invalid authentication credentials"));
                 assert_eq!(reason, "authError");
@@ -223,10 +266,15 @@ mod tests {
         )
         .unwrap_err();
         match err {
-            CliError::Api { code, message, reason } => {
+            CliError::Api {
+                code,
+                message,
+                reason,
+                ..
+            } => {
                 assert_eq!(code, 500);
                 assert_eq!(message, "Internal Server Error Text");
-                assert_eq!(reason, "httpError");
+                assert_eq!(reason, "internalServerError");
             }
             _ => panic!("Expected Api"),
         }
@@ -426,13 +474,94 @@ mod tests {
         )
         .unwrap_err();
         match err {
-            CliError::Api { message, .. } => {
-                assert!(message.contains("__FERN_TEST_SHADOW_TOKEN"));
-                assert!(message.contains("auth status"));
+            CliError::Api { message, help, .. } => {
+                // The hint is advice, so it lives in `help` — `message` stays
+                // exactly what the server said.
+                assert_eq!(message, "bad token");
+                let help = help.expect("credential source hint");
+                assert!(help.contains("__FERN_TEST_SHADOW_TOKEN"));
+                // One source, so nothing can be shadowing anything: the
+                // `auth status` follow-up would send the reader to compare a
+                // list of one against itself.
+                assert!(!help.contains("auth status"), "got: {help}");
             }
             other => panic!("expected Api with source-hint suffix, got: {other:?}"),
         }
         std::env::remove_var("__FERN_TEST_SHADOW_TOKEN");
+    }
+
+    #[test]
+    fn names_only_the_sources_that_actually_hold_a_value() {
+        // A declared-but-empty source must not be named. Listing every source
+        // the provider *could* read told users their credential came from a
+        // keyring entry they had never populated, and — because the shadowing
+        // advice was gated on the declared count — sent them hunting for a
+        // conflict that could not exist.
+        std::env::set_var("__FERN_TEST_CHAIN_A", "stale");
+        let p = BearerAuthProvider::new(
+            "bearer",
+            AuthCredentialSource::any([
+                AuthCredentialSource::from_env("__FERN_TEST_CHAIN_A"),
+                AuthCredentialSource::from_env("__FERN_TEST_CHAIN_UNSET"),
+            ]),
+        );
+        let err = handle_error_response::<()>(
+            reqwest::StatusCode::UNAUTHORIZED,
+            r#"{"error":{"code":401,"message":"bad token"}}"#,
+            &p,
+            &EndpointAuthMetadata::unspecified(),
+        )
+        .unwrap_err();
+        match err {
+            CliError::Api { help, .. } => {
+                let help = help.expect("credential source hint");
+                assert!(help.contains("__FERN_TEST_CHAIN_A"), "got: {help}");
+                assert!(
+                    !help.contains("__FERN_TEST_CHAIN_UNSET"),
+                    "an unset source must not be named: {help}",
+                );
+                assert!(
+                    !help.contains("shadowing"),
+                    "one populated source cannot be shadowed: {help}",
+                );
+            }
+            other => panic!("expected Api, got: {other:?}"),
+        }
+        std::env::remove_var("__FERN_TEST_CHAIN_A");
+    }
+
+    #[test]
+    fn shadowing_advice_appears_only_with_more_than_one_source() {
+        // Two *populated* sources is the situation the advice was written for:
+        // a stale env var can outrank a fresh one, and which won is not
+        // observable from the error alone.
+        std::env::set_var("__FERN_TEST_SHADOW_A", "stale");
+        std::env::set_var("__FERN_TEST_SHADOW_B", "fresh");
+        let p = BearerAuthProvider::new(
+            "bearer",
+            AuthCredentialSource::any([
+                AuthCredentialSource::from_env("__FERN_TEST_SHADOW_A"),
+                AuthCredentialSource::from_env("__FERN_TEST_SHADOW_B"),
+            ]),
+        );
+        let err = handle_error_response::<()>(
+            reqwest::StatusCode::UNAUTHORIZED,
+            r#"{"error":{"code":401,"message":"bad token"}}"#,
+            &p,
+            &EndpointAuthMetadata::unspecified(),
+        )
+        .unwrap_err();
+        match err {
+            CliError::Api { help, .. } => {
+                let help = help.expect("credential source hint");
+                assert!(help.contains("__FERN_TEST_SHADOW_A"), "got: {help}");
+                assert!(help.contains("__FERN_TEST_SHADOW_B"), "got: {help}");
+                assert!(help.contains("shadowing"), "got: {help}");
+            }
+            other => panic!("expected Api, got: {other:?}"),
+        }
+        std::env::remove_var("__FERN_TEST_SHADOW_A");
+        std::env::remove_var("__FERN_TEST_SHADOW_B");
     }
 
     #[test]
@@ -450,8 +579,10 @@ mod tests {
         )
         .unwrap_err();
         match err {
-            CliError::Api { message, .. } => {
-                assert!(message.contains("__FERN_TEST_FORBIDDEN_TOKEN"));
+            CliError::Api { help, .. } => {
+                assert!(help
+                    .expect("credential source hint")
+                    .contains("__FERN_TEST_FORBIDDEN_TOKEN"));
             }
             other => panic!("expected Api with source-hint suffix, got: {other:?}"),
         }
@@ -473,12 +604,79 @@ mod tests {
         )
         .unwrap_err();
         match err {
-            CliError::Api { message, .. } => {
+            CliError::Api { message, help, .. } => {
                 assert!(!message.contains("__FERN_TEST_NONAUTH_TOKEN"));
+                assert!(help.is_none());
             }
             _ => panic!("expected Api"),
         }
         std::env::remove_var("__FERN_TEST_NONAUTH_TOKEN");
+    }
+
+    #[test]
+    fn a_credentialless_request_is_annotated_whatever_the_status() {
+        // ElevenLabs answers 404 for a workspace scoped to the anonymous
+        // principal, so a logged-out user used to read `Workspace 1anonymous1
+        // not found` with nothing pointing at `auth login`. The hint was gated
+        // on 401/403; the condition it describes is status-independent.
+        std::env::remove_var("__FERN_TEST_ABSENT_TOKEN");
+        let p = BearerAuthProvider::new(
+            "bearer",
+            AuthCredentialSource::from_env("__FERN_TEST_ABSENT_TOKEN"),
+        );
+        let err = handle_error_response::<()>(
+            reqwest::StatusCode::NOT_FOUND,
+            r#"{"detail":{"message":"Workspace 1anonymous1 not found.","code":"workspace_not_found"}}"#,
+            &p,
+            &EndpointAuthMetadata::unspecified(),
+        )
+        .unwrap_err();
+        match err {
+            CliError::Api {
+                code,
+                message,
+                reason,
+                help,
+                ..
+            } => {
+                // Class and exit code are untouched: the server, not the spec,
+                // decides whether this endpoint needed auth.
+                assert_eq!(code, 404);
+                assert_eq!(reason, "workspace_not_found");
+                assert_eq!(message, "Workspace 1anonymous1 not found.");
+                let help = help.expect("missing-credentials note");
+                assert!(help.contains("No credentials were sent"), "got: {help}");
+                assert!(help.contains("__FERN_TEST_ABSENT_TOKEN"), "got: {help}");
+            }
+            other => panic!("expected Api, got: {other:?}"),
+        }
+        assert_eq!(
+            CliError::api(404, "x", "y").exit_code(),
+            CliError::EXIT_CODE_API
+        );
+    }
+
+    #[test]
+    fn a_credentialled_request_gets_no_missing_credentials_note() {
+        // The note must not fire just because a call failed — only when the
+        // request actually went out with nothing.
+        std::env::set_var("__FERN_TEST_PRESENT_TOKEN", "x");
+        let p = BearerAuthProvider::new(
+            "bearer",
+            AuthCredentialSource::from_env("__FERN_TEST_PRESENT_TOKEN"),
+        );
+        let err = handle_error_response::<()>(
+            reqwest::StatusCode::NOT_FOUND,
+            r#"{"detail":"Nope"}"#,
+            &p,
+            &EndpointAuthMetadata::unspecified(),
+        )
+        .unwrap_err();
+        match err {
+            CliError::Api { help, .. } => assert!(help.is_none(), "got: {help:?}"),
+            other => panic!("expected Api, got: {other:?}"),
+        }
+        std::env::remove_var("__FERN_TEST_PRESENT_TOKEN");
     }
 
     #[test]

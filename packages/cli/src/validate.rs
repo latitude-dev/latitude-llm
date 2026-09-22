@@ -11,26 +11,24 @@ use std::path::{Path, PathBuf};
 
 use crate::output::reject_dangerous_chars as reject_control_chars;
 
-/// Validates that `dir` is a safe output directory.
+/// Validates and resolves an output directory path.
 ///
-/// The path is resolved relative to CWD. The function rejects paths that
-/// would escape above CWD (e.g. `../../.ssh`) or contain null bytes /
-/// control characters.
+/// The only hard checks are null-byte / control-character rejection. The
+/// path may be relative (resolved against CWD) or absolute, and may point
+/// anywhere on the filesystem — the CLI does not sandbox where the user
+/// asks it to write. If a caller needs to restrict writes, that is the
+/// responsibility of the surrounding environment (agent/file-system
+/// permissions), not this generated CLI.
 ///
-/// Returns the canonicalized path on success.
+/// Returns the resolved path (canonicalized where the target or its
+/// existing prefix exists) on success.
 pub fn validate_safe_output_dir(dir: &str) -> Result<PathBuf, CliError> {
     reject_control_chars(dir, "--output-dir")?;
 
     let path = Path::new(dir);
 
-    // Reject absolute paths — force everything relative to CWD
-    if path.is_absolute() {
-        return Err(CliError::Validation(format!(
-            "--output-dir must be a relative path, got absolute path '{dir}'"
-        )));
-    }
-
-    // Canonicalize CWD and resolve the target under it
+    // Resolve relative paths against CWD; absolute paths are used as-is
+    // (`join` on an absolute path returns the absolute path unchanged).
     let cwd = std::env::current_dir()
         .map_err(|e| CliError::Validation(format!("Failed to determine current directory: {e}")))?;
     let resolved = cwd.join(path);
@@ -44,17 +42,6 @@ pub fn validate_safe_output_dir(dir: &str) -> Result<PathBuf, CliError> {
     } else {
         normalize_non_existing(&resolved)?
     };
-
-    let canonical_cwd = cwd.canonicalize().map_err(|e| {
-        CliError::Validation(format!("Failed to canonicalize current directory: {e}"))
-    })?;
-
-    if !canonical.starts_with(&canonical_cwd) {
-        return Err(CliError::Validation(format!(
-            "--output-dir '{dir}' resolves to '{}' which is outside the current directory",
-            canonical.display()
-        )));
-    }
 
     Ok(canonical)
 }
@@ -106,10 +93,12 @@ pub fn validate_safe_dir_path(dir: &str) -> Result<PathBuf, CliError> {
 
 /// Validates a `--output` (or otherwise write-side) file path.
 ///
-/// Rejects paths that escape above CWD via `..` traversal, contain
-/// control characters, name a parent directory that doesn't exist, or
-/// follow intermediate symlinks to locations outside CWD. Absolute
-/// paths are allowed, but the resolved target must still live under CWD.
+/// The path may be relative (resolved against CWD) or absolute and may
+/// point anywhere on the filesystem — the CLI does not sandbox where the
+/// user asks it to write. It rejects control characters, empty / dot-only
+/// filenames, and paths whose parent directory does not exist (create it
+/// first). The final component is left un-resolved so callers can open it
+/// with `O_NOFOLLOW` and refuse to clobber a symlink target.
 ///
 /// # Returns a path with an *un-canonicalized basename*
 ///
@@ -128,12 +117,12 @@ pub fn validate_safe_dir_path(dir: &str) -> Result<PathBuf, CliError> {
 ///
 /// # TOCTOU caveat
 ///
-/// Best-effort defence-in-depth. A local attacker with write access to a
-/// parent directory could replace a path component between validation
-/// and the subsequent I/O. Race-free protection requires
-/// `openat2(RESOLVE_NO_SYMLINKS|RESOLVE_BENEATH)` on Linux or a
-/// per-component `openat(O_NOFOLLOW|O_DIRECTORY)` chain from a CWD
-/// dir-fd elsewhere — tracked as a follow-up.
+/// Best-effort defence-in-depth against clobbering a symlink at the final
+/// component. A local attacker with write access to a parent directory
+/// could replace a path component between validation and the subsequent
+/// I/O; race-free protection requires `openat2(RESOLVE_NO_SYMLINKS)` on
+/// Linux or a per-component `openat(O_NOFOLLOW|O_DIRECTORY)` chain
+/// elsewhere — tracked as a follow-up.
 pub fn validate_safe_file_path(path_str: &str, flag_name: &str) -> Result<PathBuf, CliError> {
     reject_control_chars(path_str, flag_name)?;
 
@@ -148,10 +137,9 @@ pub fn validate_safe_file_path(path_str: &str, flag_name: &str) -> Result<PathBu
     };
 
     // Reject empty / dot-only inputs explicitly so the user sees a clear
-    // diagnostic instead of the misleading "resolves to <cwd> which is
-    // outside the current directory" message that would otherwise fire
-    // (because `cwd.join("")` and `cwd.join(".")` both have file_name() ==
-    // `<cwd_basename>` and parent() == `<parent-of-cwd>`).
+    // "requires a filename" diagnostic rather than a confusing parent-lookup
+    // error (`cwd.join("")` / `cwd.join(".")` name the CWD itself, which has
+    // no meaningful basename to write to).
     let trimmed = path_str.trim();
     if trimmed.is_empty() || trimmed == "." || trimmed == ".." {
         return Err(CliError::Validation(format!(
@@ -160,19 +148,17 @@ pub fn validate_safe_file_path(path_str: &str, flag_name: &str) -> Result<PathBu
     }
 
     // Separate the basename from the parent directory: we canonicalize the
-    // *parent* (resolves intermediate symlinks for traversal detection) but
-    // leave the basename un-resolved. Callers that open the returned path
-    // with `O_NOFOLLOW` (see openapi::executor::create_file_no_follow) then
-    // rely on the kernel to refuse a final-component symlink atomically.
-    // A full `canonicalize()` of the whole path would silently resolve the
-    // basename symlink, opening a writeback primitive against its target.
+    // *parent* but leave the basename un-resolved. Callers that open the
+    // returned path with `O_NOFOLLOW` (see
+    // openapi::executor::create_file_no_follow) then rely on the kernel to
+    // refuse a final-component symlink atomically. A full `canonicalize()`
+    // of the whole path would silently resolve the basename symlink, opening
+    // a writeback primitive against its target.
     //
-    // We REQUIRE the parent to already exist. Lexically projecting a path
-    // whose parent doesn't exist (the old `normalize_non_existing` branch)
-    // was a vector for the intermediate-symlink bypass: an attacker could
-    // plant the missing parent as a symlink to outside CWD between validate
-    // and open, and `O_NOFOLLOW` only catches the FINAL component. Users
-    // must `mkdir -p <parent>` first.
+    // We REQUIRE the parent to already exist so it can be canonicalized
+    // (which is what produces the returned path). Callers must
+    // `mkdir -p <parent>` first — the CLI does not create intermediate
+    // directories on the user's behalf.
     let basename = resolved.file_name().ok_or_else(|| {
         CliError::Validation(format!(
             "{flag_name} '{path_str}' has no filename component"
@@ -194,18 +180,6 @@ pub fn validate_safe_file_path(path_str: &str, flag_name: &str) -> Result<PathBu
     let canonical_parent = parent.canonicalize().map_err(|e| {
         CliError::Validation(format!("Failed to resolve {flag_name} '{path_str}': {e}"))
     })?;
-
-    let canonical_cwd = cwd.canonicalize().map_err(|e| {
-        CliError::Validation(format!("Failed to canonicalize current directory: {e}"))
-    })?;
-
-    if !canonical_parent.starts_with(&canonical_cwd) {
-        return Err(CliError::Validation(format!(
-            "{flag_name} '{}' resolves to '{}' which is outside the current directory",
-            path_str,
-            canonical_parent.join(basename).display()
-        )));
-    }
 
     Ok(canonical_parent.join(basename))
 }
@@ -406,54 +380,54 @@ mod tests {
         assert!(result.is_ok(), "expected Ok, got: {result:?}");
     }
 
+    #[cfg(unix)]
     #[test]
     #[serial]
-    fn test_output_dir_rejects_symlink_traversal() {
+    fn test_output_dir_allows_symlink_target() {
+        // The CWD sandbox was removed: a symlink whose target lives outside
+        // CWD now resolves to that target instead of being rejected.
         let dir = tempdir().unwrap();
         let canonical_dir = dir.path().canonicalize().unwrap();
 
-        // Create a directory inside the tempdir
-        let allowed_dir = canonical_dir.join("allowed");
-        fs::create_dir(&allowed_dir).unwrap();
+        let target_dir = tempdir().unwrap();
+        let target_canonical = target_dir.path().canonicalize().unwrap();
 
-        // Create a symlink pointing OUTSIDE the tempdir (e.g. to /tmp)
-        let symlink_path = canonical_dir.join("sneaky_link");
-        #[cfg(unix)]
-        std::os::unix::fs::symlink("/tmp", &symlink_path).unwrap();
-        #[cfg(windows)]
-        return; // Skip on Windows due to privilege requirements for symlinks
+        let symlink_path = canonical_dir.join("link");
+        std::os::unix::fs::symlink(&target_canonical, &symlink_path).unwrap();
 
         let saved_cwd = std::env::current_dir().unwrap();
         std::env::set_current_dir(&canonical_dir).unwrap();
 
-        // Try to validate the symlink resolving outside CWD
-        let result = validate_safe_output_dir("sneaky_link");
+        let result = validate_safe_output_dir("link");
         std::env::set_current_dir(&saved_cwd).unwrap();
 
-        assert!(result.is_err());
-        let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("outside the current directory"), "got: {msg}");
+        assert!(result.is_ok(), "got: {result:?}");
+        assert_eq!(result.unwrap(), target_canonical);
     }
 
     #[test]
     #[serial]
-    fn test_output_dir_rejects_traversal() {
+    fn test_output_dir_allows_traversal_target() {
+        // `../sibling` escapes CWD but is now accepted — writing where the
+        // user asks is their responsibility.
         let dir = tempdir().unwrap();
         let canonical_dir = dir.path().canonicalize().unwrap();
         let saved_cwd = std::env::current_dir().unwrap();
         std::env::set_current_dir(&canonical_dir).unwrap();
 
-        let result = validate_safe_output_dir("../../.ssh");
+        let result = validate_safe_output_dir("../sibling-out");
         std::env::set_current_dir(&saved_cwd).unwrap();
 
-        assert!(result.is_err());
-        let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("outside the current directory"), "got: {msg}");
+        assert!(result.is_ok(), "got: {result:?}");
     }
 
     #[test]
-    fn test_output_dir_rejects_absolute() {
-        assert!(validate_safe_output_dir("/tmp/evil").is_err());
+    fn test_output_dir_allows_absolute() {
+        // Absolute paths are no longer rejected.
+        let dir = tempdir().unwrap();
+        let target = dir.path().canonicalize().unwrap().join("nested");
+        let result = validate_safe_output_dir(target.to_str().unwrap());
+        assert!(result.is_ok(), "got: {result:?}");
     }
 
     #[test]
@@ -889,26 +863,42 @@ mod tests {
 
     #[test]
     #[serial]
-    fn test_file_path_rejects_traversal() {
+    fn test_file_path_allows_outside_cwd() {
+        // The CWD sandbox was removed: an --output whose parent exists but
+        // lives outside CWD is now accepted (the caller writes where asked).
+        let cwd_dir = tempdir().unwrap();
+        let out_dir = tempdir().unwrap();
+        let out_canonical = out_dir.path().canonicalize().unwrap();
+
+        let saved_cwd = std::env::current_dir().unwrap();
+        std::env::set_current_dir(cwd_dir.path().canonicalize().unwrap()).unwrap();
+
+        let target = out_canonical.join("out.txt");
+        let result = validate_safe_file_path(target.to_str().unwrap(), "--output");
+        std::env::set_current_dir(&saved_cwd).unwrap();
+
+        assert!(result.is_ok(), "expected Ok, got: {result:?}");
+        assert_eq!(result.unwrap(), out_canonical.join("out.txt"));
+    }
+
+    #[test]
+    #[serial]
+    fn test_file_path_rejects_nonexistent_parent() {
+        // The parent directory must exist so it can be canonicalized.
         let dir = tempdir().unwrap();
         let canonical_dir = dir.path().canonicalize().unwrap();
 
         let saved_cwd = std::env::current_dir().unwrap();
         std::env::set_current_dir(&canonical_dir).unwrap();
 
-        let result = validate_safe_file_path("../../etc/passwd", "--upload");
+        let result = validate_safe_file_path("does_not_exist/out.txt", "--output");
         std::env::set_current_dir(&saved_cwd).unwrap();
 
-        assert!(result.is_err(), "path traversal should be rejected");
+        assert!(result.is_err(), "non-existent parent should be rejected");
         let err = result.unwrap_err().to_string();
-        // The traversal is rejected either by the "outside CWD" check (if the
-        // computed parent exists and canonicalizes outside CWD) or by the
-        // "parent does not exist" check (if the computed parent doesn't exist
-        // on this runner). Both are valid refusal paths — the security
-        // property is "not accepted", not the message wording.
         assert!(
-            err.contains("outside") || err.contains("does not exist"),
-            "error should indicate traversal/non-existent parent rejection; got: {err}"
+            err.contains("does not exist"),
+            "error should mention the missing parent; got: {err}"
         );
     }
 
@@ -920,15 +910,19 @@ mod tests {
 
     #[test]
     #[serial]
-    fn test_file_path_rejects_symlink_escape() {
-        let dir = tempdir().unwrap();
-        let canonical_dir = dir.path().canonicalize().unwrap();
-
-        // Create a symlink that points outside the directory
+    fn test_file_path_allows_symlink_parent() {
+        // Intermediate (parent) symlinks that point outside CWD are now
+        // followed — the returned path lands under the symlink target.
+        // O_NOFOLLOW at open time still guards a FINAL-component symlink.
         #[cfg(unix)]
         {
+            let dir = tempdir().unwrap();
+            let canonical_dir = dir.path().canonicalize().unwrap();
+            let target_dir = tempdir().unwrap();
+            let target_canonical = target_dir.path().canonicalize().unwrap();
+
             let link_path = canonical_dir.join("escape");
-            std::os::unix::fs::symlink("/tmp", &link_path).unwrap();
+            std::os::unix::fs::symlink(&target_canonical, &link_path).unwrap();
 
             let saved_cwd = std::env::current_dir().unwrap();
             std::env::set_current_dir(&canonical_dir).unwrap();
@@ -936,7 +930,8 @@ mod tests {
             let result = validate_safe_file_path("escape/secret.txt", "--output");
             std::env::set_current_dir(&saved_cwd).unwrap();
 
-            assert!(result.is_err(), "symlink escape should be rejected");
+            assert!(result.is_ok(), "symlinked parent should be allowed: {result:?}");
+            assert_eq!(result.unwrap(), target_canonical.join("secret.txt"));
         }
     }
 
@@ -984,9 +979,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_file_path_rejects_traversal_via_nonexistent_prefix() {
-        // Regression: non_existent/../../etc/passwd could bypass starts_with
-        // because normalize_non_existing preserves ".." in the non-existent
-        // suffix. The normalize_dotdot fix resolves this.
+        // `doesnt_exist/../../etc/passwd` is rejected because its parent
+        // directory (`doesnt_exist/../../etc`) cannot be reached — the
+        // leading `doesnt_exist` component does not exist, so the
+        // parent-must-exist check fires before any canonicalization.
         let dir = tempdir().unwrap();
         let canonical_dir = dir.path().canonicalize().unwrap();
 

@@ -15,9 +15,17 @@ class SessionMemoryChange(UniversalBaseModel):
         FieldMetadata(alias="storeId"),
         pydantic.Field(alias="storeId", description="Store the changed record belongs to."),
     ]
+    """
+    Store the changed record belongs to.
+    """
+
     record_id: typing_extensions.Annotated[
         str, FieldMetadata(alias="recordId"), pydantic.Field(alias="recordId", description="Record that changed.")
     ]
+    """
+    Record that changed.
+    """
+
     kind: SessionMemoryChangeKind = pydantic.Field()
     """
     How the session changed the record.
@@ -32,6 +40,10 @@ class SessionMemoryChange(UniversalBaseModel):
             description="The record's body before the session's writes. `null` when added or when the prior body was not captured.",
         ),
     ]
+    """
+    The record's body before the session's writes. `null` when added or when the prior body was not captured.
+    """
+
     after_body: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="afterBody"),
@@ -41,16 +53,28 @@ class SessionMemoryChange(UniversalBaseModel):
             description="The record's body after the session's writes. `null` when removed or when the body was not captured.",
         ),
     ]
+    """
+    The record's body after the session's writes. `null` when removed or when the body was not captured.
+    """
+
     tokens_added: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensAdded"),
         pydantic.Field(alias="tokensAdded", description="Tokens added by the session's writes."),
     ]
+    """
+    Tokens added by the session's writes.
+    """
+
     tokens_removed: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensRemoved"),
         pydantic.Field(alias="tokensRemoved", description="Tokens removed by the session's writes."),
     ]
+    """
+    Tokens removed by the session's writes.
+    """
+
     degraded: bool = pydantic.Field()
     """
     `true` when a side's body was unavailable, so the diff is incomplete.
@@ -65,5 +89,8 @@ class SessionMemoryChange(UniversalBaseModel):
             description="Span of the session's last write to this record. `null` when unknown.",
         ),
     ]
+    """
+    Span of the session's last write to this record. `null` when unknown.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

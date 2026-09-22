@@ -14,20 +14,35 @@ class MemoryRecordUser(UniversalBaseModel):
         FieldMetadata(alias="userId"),
         pydantic.Field(alias="userId", description="End-user identifier that accessed the record."),
     ]
+    """
+    End-user identifier that accessed the record.
+    """
+
     read_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="readCount"),
         pydantic.Field(alias="readCount", description="Number of reads the user made on the record."),
     ]
+    """
+    Number of reads the user made on the record.
+    """
+
     write_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="writeCount"),
         pydantic.Field(alias="writeCount", description="Number of writes the user made to the record."),
     ]
+    """
+    Number of writes the user made to the record.
+    """
+
     last_accessed_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="lastAccessedAt"),
         pydantic.Field(alias="lastAccessedAt", description="ISO-8601 timestamp of the user's most recent access."),
     ]
+    """
+    ISO-8601 timestamp of the user's most recent access.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

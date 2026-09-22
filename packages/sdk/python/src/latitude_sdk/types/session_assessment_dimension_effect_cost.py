@@ -35,6 +35,10 @@ class SessionAssessmentDimensionEffectCost(UniversalBaseModel):
         FieldMetadata(alias="benchmarkUse"),
         pydantic.Field(alias="benchmarkUse", description="How this evidence may be used in benchmark calculations."),
     ]
+    """
+    How this evidence may be used in benchmark calculations.
+    """
+
     impact: typing.Optional[SessionAssessmentEvidenceImpact] = None
     cost_evaluation: typing_extensions.Annotated[
         typing.Optional[SessionAssessmentCostEvaluation],

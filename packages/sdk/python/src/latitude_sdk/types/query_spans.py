@@ -24,10 +24,17 @@ class QuerySpans(UniversalBaseModel):
             description="Cursor for the next page, or `null` when there are no more spans.",
         ),
     ]
+    """
+    Cursor for the next page, or `null` when there are no more spans.
+    """
+
     has_more: typing_extensions.Annotated[
         bool,
         FieldMetadata(alias="hasMore"),
         pydantic.Field(alias="hasMore", description="Whether more spans match beyond this page."),
     ]
+    """
+    Whether more spans match beyond this page.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

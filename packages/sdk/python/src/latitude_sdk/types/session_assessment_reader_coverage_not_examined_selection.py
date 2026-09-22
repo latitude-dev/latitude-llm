@@ -26,5 +26,8 @@ class SessionAssessmentReaderCoverageNotExaminedSelection(UniversalBaseModel):
         FieldMetadata(alias="inclusionProbability"),
         pydantic.Field(alias="inclusionProbability", description="Probability that this session was selected."),
     ]
+    """
+    Probability that this session was selected.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

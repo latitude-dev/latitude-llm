@@ -14,6 +14,10 @@ class SessionAssessmentEvidenceImpactSpend(UniversalBaseModel):
         FieldMetadata(alias="observedMicrocents"),
         pydantic.Field(alias="observedMicrocents", description="Observed spend in microcents."),
     ]
+    """
+    Observed spend in microcents.
+    """
+
     avoidable_microcents: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="avoidableMicrocents"),
@@ -21,5 +25,8 @@ class SessionAssessmentEvidenceImpactSpend(UniversalBaseModel):
             alias="avoidableMicrocents", default=None, description="Spend attributed as avoidable when measured."
         ),
     ]
+    """
+    Spend attributed as avoidable when measured.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

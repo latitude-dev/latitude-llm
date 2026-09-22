@@ -16,21 +16,37 @@ class Span(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this span."),
     ]
+    """
+    Organization that owns this span.
+    """
+
     project_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectId"),
         pydantic.Field(alias="projectId", description="Project this span belongs to."),
     ]
+    """
+    Project this span belongs to.
+    """
+
     trace_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="traceId"),
         pydantic.Field(alias="traceId", description="Identifier of the trace this span belongs to."),
     ]
+    """
+    Identifier of the trace this span belongs to.
+    """
+
     span_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="spanId"),
         pydantic.Field(alias="spanId", description="Stable span identifier within the trace."),
     ]
+    """
+    Stable span identifier within the trace.
+    """
+
     parent_span_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="parentSpanId"),
@@ -38,6 +54,10 @@ class Span(UniversalBaseModel):
             alias="parentSpanId", default=None, description="Identifier of the parent span. `null` for root spans."
         ),
     ]
+    """
+    Identifier of the parent span. `null` for root spans.
+    """
+
     session_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="sessionId"),
@@ -47,6 +67,10 @@ class Span(UniversalBaseModel):
             description="Conversation/session identifier set by the SDK. `null` when absent.",
         ),
     ]
+    """
+    Conversation/session identifier set by the SDK. `null` when absent.
+    """
+
     user_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="userId"),
@@ -54,6 +78,10 @@ class Span(UniversalBaseModel):
             alias="userId", default=None, description="End-user identifier set by the SDK. `null` when absent."
         ),
     ]
+    """
+    End-user identifier set by the SDK. `null` when absent.
+    """
+
     simulation_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="simulationId"),
@@ -63,6 +91,10 @@ class Span(UniversalBaseModel):
             description="CUID of the simulation that produced this span. `null` when not a simulation.",
         ),
     ]
+    """
+    CUID of the simulation that produced this span. `null` when not a simulation.
+    """
+
     api_key_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="apiKeyId"),
@@ -72,16 +104,28 @@ class Span(UniversalBaseModel):
             description="Latitude API key used to ingest the span. `null` when ingested without an API key.",
         ),
     ]
+    """
+    Latitude API key used to ingest the span. `null` when ingested without an API key.
+    """
+
     start_time: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="startTime"),
         pydantic.Field(alias="startTime", description="ISO-8601 timestamp at which the span started."),
     ]
+    """
+    ISO-8601 timestamp at which the span started.
+    """
+
     end_time: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="endTime"),
         pydantic.Field(alias="endTime", description="ISO-8601 timestamp at which the span ended."),
     ]
+    """
+    ISO-8601 timestamp at which the span ended.
+    """
+
     name: str = pydantic.Field()
     """
     Span name (e.g. the entry-point function or route).
@@ -92,6 +136,10 @@ class Span(UniversalBaseModel):
         FieldMetadata(alias="serviceName"),
         pydantic.Field(alias="serviceName", description="OpenTelemetry `service.name` of the emitting service."),
     ]
+    """
+    OpenTelemetry `service.name` of the emitting service.
+    """
+
     kind: SpanKind = pydantic.Field()
     """
     OpenTelemetry span kind.
@@ -102,16 +150,28 @@ class Span(UniversalBaseModel):
         FieldMetadata(alias="statusCode"),
         pydantic.Field(alias="statusCode", description="OpenTelemetry span status code."),
     ]
+    """
+    OpenTelemetry span status code.
+    """
+
     status_message: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="statusMessage"),
         pydantic.Field(alias="statusMessage", description="OpenTelemetry status message. Empty when not set."),
     ]
+    """
+    OpenTelemetry status message. Empty when not set.
+    """
+
     trace_flags: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="traceFlags"),
         pydantic.Field(alias="traceFlags", description="OpenTelemetry trace flags bitfield."),
     ]
+    """
+    OpenTelemetry trace flags bitfield.
+    """
+
     trace_state: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="traceState"),
@@ -120,6 +180,10 @@ class Span(UniversalBaseModel):
             description="OpenTelemetry trace state (vendor-specific propagation). Empty when not set.",
         ),
     ]
+    """
+    OpenTelemetry trace state (vendor-specific propagation). Empty when not set.
+    """
+
     error_type: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="errorType"),
@@ -129,6 +193,10 @@ class Span(UniversalBaseModel):
             description="Error class/type label when the span errored. `null` for successful spans.",
         ),
     ]
+    """
+    Error class/type label when the span errored. `null` for successful spans.
+    """
+
     tags: typing.List[str] = pydantic.Field()
     """
     Free-form tags attached at ingest time.
@@ -158,31 +226,55 @@ class Span(UniversalBaseModel):
             description="Model id reported by the provider's response. `null` for non-LLM spans.",
         ),
     ]
+    """
+    Model id reported by the provider's response. `null` for non-LLM spans.
+    """
+
     tokens_input: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="tokensInput"),
         pydantic.Field(alias="tokensInput", description="Input tokens consumed by this span."),
     ]
+    """
+    Input tokens consumed by this span.
+    """
+
     tokens_output: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="tokensOutput"),
         pydantic.Field(alias="tokensOutput", description="Output tokens produced by this span."),
     ]
+    """
+    Output tokens produced by this span.
+    """
+
     tokens_cache_read: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="tokensCacheRead"),
         pydantic.Field(alias="tokensCacheRead", description="Tokens served from the provider's prompt cache."),
     ]
+    """
+    Tokens served from the provider's prompt cache.
+    """
+
     tokens_cache_create: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="tokensCacheCreate"),
         pydantic.Field(alias="tokensCacheCreate", description="Tokens written to the provider's prompt cache."),
     ]
+    """
+    Tokens written to the provider's prompt cache.
+    """
+
     tokens_reasoning: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="tokensReasoning"),
         pydantic.Field(alias="tokensReasoning", description="Reasoning tokens reported by the model."),
     ]
+    """
+    Reasoning tokens reported by the model.
+    """
+
     cost_input_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costInputMicrocents"),
@@ -190,6 +282,10 @@ class Span(UniversalBaseModel):
             alias="costInputMicrocents", description="Cost of input tokens in microcents (100,000,000 per USD)."
         ),
     ]
+    """
+    Cost of input tokens in microcents (100,000,000 per USD).
+    """
+
     cost_output_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costOutputMicrocents"),
@@ -197,11 +293,19 @@ class Span(UniversalBaseModel):
             alias="costOutputMicrocents", description="Cost of output tokens in microcents (100,000,000 per USD)."
         ),
     ]
+    """
+    Cost of output tokens in microcents (100,000,000 per USD).
+    """
+
     cost_total_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costTotalMicrocents"),
         pydantic.Field(alias="costTotalMicrocents", description="Total cost in microcents (100,000,000 per USD)."),
     ]
+    """
+    Total cost in microcents (100,000,000 per USD).
+    """
+
     cost_is_estimated: typing_extensions.Annotated[
         bool,
         FieldMetadata(alias="costIsEstimated"),
@@ -210,6 +314,10 @@ class Span(UniversalBaseModel):
             description="`true` when the cost was derived from public pricing tables instead of the provider's bill.",
         ),
     ]
+    """
+    `true` when the cost was derived from public pricing tables instead of the provider's bill.
+    """
+
     time_to_first_token_ns: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="timeToFirstTokenNs"),
@@ -218,11 +326,19 @@ class Span(UniversalBaseModel):
             description="Nanoseconds from the start of the span to its first emitted token. `0` if not measured.",
         ),
     ]
+    """
+    Nanoseconds from the start of the span to its first emitted token. `0` if not measured.
+    """
+
     is_streaming: typing_extensions.Annotated[
         bool,
         FieldMetadata(alias="isStreaming"),
         pydantic.Field(alias="isStreaming", description="`true` when the span was produced by a streaming LLM call."),
     ]
+    """
+    `true` when the span was produced by a streaming LLM call.
+    """
+
     response_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="responseId"),
@@ -232,16 +348,28 @@ class Span(UniversalBaseModel):
             description="Response identifier returned by the LLM. `null` when the provider didn't return one.",
         ),
     ]
+    """
+    Response identifier returned by the LLM. `null` when the provider didn't return one.
+    """
+
     finish_reasons: typing_extensions.Annotated[
         typing.List[str],
         FieldMetadata(alias="finishReasons"),
         pydantic.Field(alias="finishReasons", description="Per-choice finish reasons reported by the LLM provider."),
     ]
+    """
+    Per-choice finish reasons reported by the LLM provider.
+    """
+
     scope_name: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="scopeName"),
         pydantic.Field(alias="scopeName", description="OpenTelemetry instrumentation scope name. Empty when not set."),
     ]
+    """
+    OpenTelemetry instrumentation scope name. Empty when not set.
+    """
+
     scope_version: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="scopeVersion"),
@@ -249,6 +377,10 @@ class Span(UniversalBaseModel):
             alias="scopeVersion", description="OpenTelemetry instrumentation scope version. Empty when not set."
         ),
     ]
+    """
+    OpenTelemetry instrumentation scope version. Empty when not set.
+    """
+
     retention_days: typing_extensions.Annotated[
         typing.Optional[int],
         FieldMetadata(alias="retentionDays"),
@@ -258,10 +390,17 @@ class Span(UniversalBaseModel):
             description="Per-span retention override in days. Omitted when the project default applies.",
         ),
     ]
+    """
+    Per-span retention override in days. Omitted when the project default applies.
+    """
+
     ingested_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="ingestedAt"),
         pydantic.Field(alias="ingestedAt", description="ISO-8601 timestamp at which Latitude received this span."),
     ]
+    """
+    ISO-8601 timestamp at which Latitude received this span.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

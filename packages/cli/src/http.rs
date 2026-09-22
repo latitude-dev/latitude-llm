@@ -1,8 +1,9 @@
 //! HTTP client construction and TLS-error diagnostics.
 //!
 //! [`HttpConfig`] holds the inputs that go into building a [`reqwest::Client`]
-//! for a CLI: the binary name (used to scope env vars) and any compile-time
-//! trust roots a binary author baked in via `CliApp::extra_root_cert`.
+//! for a CLI: the binary name (used to scope env vars and to compose the
+//! `User-Agent`) and any compile-time trust roots a binary author baked in
+//! via `CliApp::extra_root_cert`.
 //!
 //! [`HttpConfig::build_client`] honors a small set of environment variables
 //! so users can adapt TLS / proxy behavior without rebuilding the CLI.
@@ -16,6 +17,7 @@
 //! | `<NAME>_PROXY`                    | HTTP(S) proxy URL — replaces `HTTPS_PROXY`/`HTTP_PROXY` for this CLI. Pair with `<NAME>_NO_PROXY` for a scoped bypass list, or rely on the global `NO_PROXY` (used as a fallback when `<NAME>_NO_PROXY` is unset). |
 //! | `<NAME>_TIMEOUT_SECS`             | Total request timeout in seconds (default: no timeout). |
 //! | `<NAME>_CONNECT_TIMEOUT_SECS`     | Connection-establishment timeout in seconds.        |
+//! | `<NAME>_USER_AGENT_SUFFIX`        | Product token appended to the `User-Agent` (e.g. `partner-app/3.1`) so a tool built on top of the CLI can tag its traffic without replacing the CLI's identity. |
 //!
 //! Aliases: `<NAME>_EXTRA_CA_CERTS` (= `_CA_BUNDLE`),
 //! `<NAME>_INSECURE_SKIP_VERIFY` (= `_INSECURE`).
@@ -67,6 +69,11 @@ pub struct HttpConfig {
     /// than reqwest-typed certs. Each `Vec<u8>` is the raw bytes supplied
     /// to [`HttpConfig::with_extra_root_cert`].
     extra_root_certs_pem: Vec<Vec<u8>>,
+    /// Consumer-supplied `User-Agent` suffix resolved from the
+    /// `--user-agent-suffix` flag. Takes precedence over the
+    /// `<NAME>_USER_AGENT_SUFFIX` env var when set. `None` means fall back
+    /// to the env var (or no suffix).
+    user_agent_suffix_override: Option<Arc<str>>,
 }
 
 /// Transport-neutral view of the resolved HTTP/TLS configuration.
@@ -131,6 +138,7 @@ impl HttpConfig {
             prefix,
             extra_root_certs: Vec::new(),
             extra_root_certs_pem: Vec::new(),
+            user_agent_suffix_override: None,
         })
     }
 
@@ -161,6 +169,20 @@ impl HttpConfig {
         self
     }
 
+    /// Set the consumer-supplied `User-Agent` suffix (from the
+    /// `--user-agent-suffix` flag). When present it takes precedence over
+    /// the `<NAME>_USER_AGENT_SUFFIX` env var. A blank *or* header-invalid
+    /// value clears the override so the env-var fallback still applies —
+    /// an unusable flag value never suppresses an otherwise-valid env
+    /// suffix (and never drops the CLI's own `User-Agent`).
+    pub fn with_user_agent_suffix_override(mut self, suffix: Option<String>) -> Self {
+        self.user_agent_suffix_override = suffix
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty() && HeaderValue::from_str(s).is_ok())
+            .map(Arc::from);
+        self
+    }
+
     /// CLI binary name (e.g. `"bigcommerce"`).
     pub fn name(&self) -> &str {
         &self.name
@@ -171,6 +193,68 @@ impl HttpConfig {
     /// so the transform stays consistent across the codebase.
     pub fn env_prefix(&self) -> &str {
         &self.prefix
+    }
+
+    /// Compose the `User-Agent` header value this CLI's HTTP client sends:
+    /// `{product}/{version}` (e.g. `elevenlabs-cli/1.4.0`), optionally followed
+    /// by a consumer-supplied suffix (e.g. `elevenlabs-cli/1.4.0 partner-app/3.1`).
+    ///
+    /// The product token is derived from the binary name so each generated
+    /// CLI's traffic is distinguishable on the API backend (rather than the
+    /// shared `fern-cli-sdk` crate). It is normalized to end with `-cli` (see
+    /// [`HttpConfig::user_agent_product`]) so the token unambiguously denotes
+    /// CLI traffic. The version is the crate version stamped in at generation
+    /// time (`CARGO_PKG_VERSION`), which for a generated CLI is the release
+    /// version from `fern generate`.
+    ///
+    /// A tool built on top of this CLI can append its own product token
+    /// either with the `--user-agent-suffix` flag or by setting
+    /// `<NAME>_USER_AGENT_SUFFIX` (see [`HttpConfig::user_agent_suffix`]); the
+    /// suffix is added after the CLI's own identity rather than replacing it,
+    /// so both are visible to the backend.
+    pub fn user_agent(&self) -> String {
+        let base = format!(
+            "{}/{}",
+            Self::user_agent_product(&self.name),
+            env!("CARGO_PKG_VERSION")
+        );
+        match self.user_agent_suffix() {
+            Some(suffix) => format!("{base} {suffix}"),
+            None => base,
+        }
+    }
+
+    /// Derive the `User-Agent` product token from the binary name, ensuring it
+    /// ends with `-cli` so the token clearly identifies CLI traffic. A binary
+    /// named `elevenlabs` yields `elevenlabs-cli`; one already named
+    /// `elevenlabs-cli` is left unchanged (the suffix is not doubled).
+    fn user_agent_product(name: &str) -> String {
+        if name.ends_with("-cli") {
+            name.to_string()
+        } else {
+            format!("{name}-cli")
+        }
+    }
+
+    /// Read the optional consumer-supplied `User-Agent` suffix. The
+    /// configured suffix flag (surfaced via
+    /// [`HttpConfig::with_user_agent_suffix_override`]) takes precedence; if
+    /// unset, falls back to the scoped env var. Both the flag and the env var
+    /// default to `--user-agent-suffix` / `<NAME>_USER_AGENT_SUFFIX` but can
+    /// be renamed at generation time (see [`crate::user_agent`]). This lets a
+    /// tool built on top of the CLI voluntarily tag its traffic (e.g.
+    /// `partner-app/3.1`) without replacing the CLI's own identity.
+    ///
+    /// The value is trimmed and only accepted if it is non-empty and valid
+    /// HTTP header content; otherwise it is ignored so a malformed suffix can
+    /// never drop the CLI's own `User-Agent`.
+    fn user_agent_suffix(&self) -> Option<String> {
+        let raw = match &self.user_agent_suffix_override {
+            Some(s) => Some(s.to_string()),
+            None => first_env([scoped(&self.prefix, &crate::user_agent::suffix_env_segment())]),
+        };
+        raw.map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty() && HeaderValue::from_str(s).is_ok())
     }
 
     /// Resolve the transport-neutral view of this config: compile-time
@@ -250,7 +334,7 @@ impl HttpConfig {
         let prefix = &self.prefix;
 
         let mut builder = reqwest::Client::builder();
-        let user_agent = format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+        let user_agent = self.user_agent();
         if let Ok(header_value) = HeaderValue::from_str(&user_agent) {
             let mut headers = HeaderMap::new();
             headers.insert(USER_AGENT, header_value);
@@ -288,6 +372,59 @@ impl HttpConfig {
             builder = builder
                 .danger_accept_invalid_certs(true)
                 .danger_accept_invalid_hostnames(true);
+        }
+
+        // --- Redirect policy ---
+        //
+        // reqwest's default follows up to `MAX_REDIRECTS` hops and strips only
+        // the headers it hardcodes as sensitive: `Authorization`, `Cookie`,
+        // `Proxy-Authorization`, `WWW-Authenticate`. A Fern CLI's credential
+        // very often lives in a spec-declared *custom* header (`xi-api-key`,
+        // `X-API-Key`), which reqwest cannot know about — so a redirect to an
+        // attacker-controlled host resends it verbatim. `HeaderValue::
+        // set_sensitive` does not help: reqwest's stripping consults its own
+        // list, not that flag.
+        //
+        // Even for `Authorization`-based auth, where reqwest does strip, the
+        // request URL and body are still delivered to the new host. So refuse
+        // to cross a host boundary at all rather than trying to sanitize.
+        //
+        // Refusing is deliberately loud. Silently dropping the credential
+        // would turn a redirect into a confusing 401 that looks like the
+        // user's credentials are wrong.
+        let allow_cross_host_key = scoped(prefix, "_ALLOW_CROSS_HOST_REDIRECTS");
+        if first_env_truthy([allow_cross_host_key.clone()]).is_none() {
+            let env_key = allow_cross_host_key.clone();
+            builder = builder.redirect(reqwest::redirect::Policy::custom(move |attempt| {
+                // `Policy::custom` replaces reqwest's built-in hop limit, so
+                // re-impose it here or a redirect loop runs forever.
+                if attempt.previous().len() >= MAX_REDIRECTS {
+                    return attempt
+                        .error(format!("too many redirects (limit {MAX_REDIRECTS})"));
+                }
+                // Render both origins before deciding: `Attempt::error`
+                // consumes `attempt`, so nothing may still borrow it.
+                let crossing = attempt
+                    .previous()
+                    .last()
+                    .map(|previous| {
+                        (
+                            crosses_host(previous, attempt.url()),
+                            origin_only(previous),
+                            origin_only(attempt.url()),
+                        )
+                    })
+                    .filter(|(is_crossing, _, _)| *is_crossing);
+                match crossing {
+                    Some((_, from, to)) => attempt.error(format!(
+                        "refusing to follow a redirect from {from} to {to}: it crosses a host \
+                         boundary, and a credential carried in a custom header would be resent \
+                         to the new host. If this redirect is expected, set {env_key}=1 to \
+                         allow it."
+                    )),
+                    None => attempt.follow(),
+                }
+            }));
         }
 
         // --- Proxy override ---
@@ -431,6 +568,112 @@ fn scoped(prefix: &str, suffix: &str) -> String {
 }
 
 /// Return the first non-empty env var value among the given keys, in order.
+/// Redirect hops allowed before the chain is treated as a loop. Matches
+/// reqwest's own default, which `Policy::custom` replaces.
+const MAX_REDIRECTS: usize = 10;
+
+/// Whether following `next` leaves the host `previous` was served from.
+///
+/// Compares the host only, deliberately more permissive than reqwest's own
+/// cross-origin test (which also compares the effective port). A plain
+/// `http://api.example.com` → `https://api.example.com` upgrade, or a hop to a
+/// different port on the same host, stays within one operator's
+/// infrastructure; the threat this guards is a hop to a *different host*.
+/// reqwest still applies its stricter port-sensitive stripping to
+/// `Authorization` on top of this, so nothing is weakened by the looser rule.
+fn crosses_host(previous: &reqwest::Url, next: &reqwest::Url) -> bool {
+    previous.host_str() != next.host_str()
+}
+
+/// `scheme://host[:port]` with the path, query and fragment dropped. Redirect
+/// targets are frequently pre-signed URLs whose query string carries a
+/// credential, so error messages name the origin only.
+fn origin_only(url: &reqwest::Url) -> String {
+    match (url.host_str(), url.port()) {
+        (Some(host), Some(port)) => format!("{}://{host}:{port}", url.scheme()),
+        (Some(host), None) => format!("{}://{host}", url.scheme()),
+        (None, _) => url.scheme().to_string(),
+    }
+}
+
+/// Convert a redirect-policy failure into a client-side error, or return the
+/// original error untouched.
+///
+/// A refused cross-host redirect (and a hop-limit overrun) reaches the executor
+/// as an ordinary [`reqwest::Error`], so without this it lands in the generic
+/// transport arm and gets two things wrong. It is retried — `decide_retry` sees
+/// a transport failure and re-issues a request whose outcome cannot change —
+/// and it is reported as `internalError` with a 500, which reads as "the CLI
+/// broke" when the CLI in fact did its job. Worse, the explanation ends up only
+/// in the structured output; stderr shows a bare "HTTP request failed", so the
+/// two hosts and the opt-out variable never reach anyone reading a log.
+///
+/// Classified as [`CliError::Validation`] — the same bucket as other
+/// refused-before-sending conditions. It is a policy decision rather than
+/// malformed input, but for the person at the terminal the useful distinction is
+/// "is this mine to act on?", and it is: the message names the opt-out.
+pub(crate) fn redirect_refusal_error(error: &reqwest::Error) -> Option<CliError> {
+    if !error.is_redirect() {
+        return None;
+    }
+    // Walk the source chain: reqwest's own Display is just "error following
+    // redirect for url (...)"; the reason lives in the policy's error.
+    let mut message = error.to_string();
+    let mut source = std::error::Error::source(error);
+    while let Some(cause) = source {
+        message.push_str(": ");
+        message.push_str(&cause.to_string());
+        source = std::error::Error::source(cause);
+    }
+    Some(CliError::Validation(message))
+}
+
+/// Refuse a pagination target that crosses a host boundary.
+///
+/// The same trust boundary the redirect policy above guards, reached by a
+/// different route: `x-fern-pagination`'s `Uri` variant takes a
+/// server-supplied next-page URL and the `Path` variant resolves one that may
+/// be absolute, so in both cases the *response* chooses where the next request
+/// goes. Following that to another host resends the credential — including a
+/// spec-declared custom header (`xi-api-key`, `X-API-Key`) that reqwest cannot
+/// know to strip — so the same rule applies: refuse to leave the host.
+///
+/// Host-only comparison, matching [`crosses_host`]: an `http` -> `https`
+/// upgrade or a port change stays within one operator's infrastructure. A
+/// `next` that is relative (or otherwise not an absolute URL) cannot redirect
+/// anywhere, so it is allowed without inspection.
+///
+/// Opt out with `<PREFIX>_ALLOW_CROSS_HOST_PAGINATION`, deliberately separate
+/// from the redirect opt-out: allowing a redirect is not consent to let a
+/// response body steer the next request.
+pub(crate) fn check_pagination_target(
+    cli_name: &str,
+    base_url: &str,
+    next_url: &str,
+) -> Result<(), String> {
+    let Ok(next) = reqwest::Url::parse(next_url) else {
+        // Relative — inherits the base's origin, so there is nothing to cross.
+        return Ok(());
+    };
+    let base = reqwest::Url::parse(base_url)
+        .map_err(|e| format!("base URL `{base_url}` is not a valid URL: {e}"))?;
+    if !crosses_host(&base, &next) {
+        return Ok(());
+    }
+    let prefix = cli_name.to_uppercase().replace('-', "_");
+    let allow_key = scoped(&prefix, "_ALLOW_CROSS_HOST_PAGINATION");
+    if first_env_truthy([allow_key.clone()]).is_some() {
+        return Ok(());
+    }
+    Err(format!(
+        "refusing to follow a pagination link from {} to {}: it crosses a host boundary, and a \
+         credential carried in a custom header would be sent to the new host. If this is \
+         expected, set {allow_key}=1 to allow it.",
+        origin_only(&base),
+        origin_only(&next),
+    ))
+}
+
 fn first_env<S: AsRef<str>>(keys: impl IntoIterator<Item = S>) -> Option<String> {
     keys.into_iter().find_map(|k| {
         let k = k.as_ref();
@@ -766,6 +1009,121 @@ mod tests {
         let cfg = HttpConfig::new("openapi-fixture").unwrap();
         assert_eq!(cfg.env_prefix(), "OPENAPI_FIXTURE");
         assert_eq!(cfg.name(), "openapi-fixture");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn user_agent_uses_binary_name_and_crate_version() {
+        let mut env = EnvGuard::default();
+        env.unset("ELEVENLABS_USER_AGENT_SUFFIX");
+        let cfg = HttpConfig::new("elevenlabs").unwrap();
+        let ua = cfg.user_agent();
+        // The product token is normalized to end with `-cli`.
+        assert_eq!(ua, format!("elevenlabs-cli/{}", env!("CARGO_PKG_VERSION")));
+        // Must not fall back to the shared crate name.
+        assert!(!ua.starts_with("fern-cli-sdk/"));
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn user_agent_does_not_double_cli_suffix() {
+        let mut env = EnvGuard::default();
+        env.unset("ELEVENLABS_CLI_USER_AGENT_SUFFIX");
+        // A binary name that already ends with `-cli` is used verbatim.
+        let cfg = HttpConfig::new("elevenlabs-cli").unwrap();
+        assert_eq!(
+            cfg.user_agent(),
+            format!("elevenlabs-cli/{}", env!("CARGO_PKG_VERSION")),
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn user_agent_appends_consumer_suffix_from_env() {
+        let mut env = EnvGuard::default();
+        env.set("ELEVENLABS_USER_AGENT_SUFFIX", "partner-app/3.1");
+        let cfg = HttpConfig::new("elevenlabs").unwrap();
+        assert_eq!(
+            cfg.user_agent(),
+            format!("elevenlabs-cli/{} partner-app/3.1", env!("CARGO_PKG_VERSION")),
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn user_agent_ignores_blank_or_invalid_suffix() {
+        let mut env = EnvGuard::default();
+        let base = format!("elevenlabs-cli/{}", env!("CARGO_PKG_VERSION"));
+
+        // Whitespace-only suffix is dropped.
+        env.set("ELEVENLABS_USER_AGENT_SUFFIX", "   ");
+        assert_eq!(HttpConfig::new("elevenlabs").unwrap().user_agent(), base);
+
+        // A suffix with control characters is not a valid header value and is
+        // ignored rather than dropping the CLI's own User-Agent.
+        env.set("ELEVENLABS_USER_AGENT_SUFFIX", "bad\nvalue");
+        assert_eq!(HttpConfig::new("elevenlabs").unwrap().user_agent(), base);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn user_agent_flag_override_takes_precedence_over_env() {
+        let mut env = EnvGuard::default();
+        env.set("ELEVENLABS_USER_AGENT_SUFFIX", "from-env/1.0");
+        // The `--user-agent-suffix` flag override wins over the env var.
+        let cfg = HttpConfig::new("elevenlabs")
+            .unwrap()
+            .with_user_agent_suffix_override(Some("from-flag/2.0".to_string()));
+        assert_eq!(
+            cfg.user_agent(),
+            format!("elevenlabs-cli/{} from-flag/2.0", env!("CARGO_PKG_VERSION")),
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn user_agent_blank_flag_override_falls_back_to_env() {
+        let mut env = EnvGuard::default();
+        env.set("ELEVENLABS_USER_AGENT_SUFFIX", "from-env/1.0");
+        // A blank/whitespace flag value clears the override, so the env-var
+        // fallback still applies.
+        let cfg = HttpConfig::new("elevenlabs")
+            .unwrap()
+            .with_user_agent_suffix_override(Some("   ".to_string()));
+        assert_eq!(
+            cfg.user_agent(),
+            format!("elevenlabs-cli/{} from-env/1.0", env!("CARGO_PKG_VERSION")),
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn user_agent_flag_override_ignores_invalid_value() {
+        let mut env = EnvGuard::default();
+        env.unset("ELEVENLABS_USER_AGENT_SUFFIX");
+        let base = format!("elevenlabs-cli/{}", env!("CARGO_PKG_VERSION"));
+        // An override that is not valid header content is dropped rather than
+        // corrupting the CLI's own User-Agent.
+        let cfg = HttpConfig::new("elevenlabs")
+            .unwrap()
+            .with_user_agent_suffix_override(Some("bad\nvalue".to_string()));
+        assert_eq!(cfg.user_agent(), base);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn user_agent_invalid_flag_override_falls_back_to_env() {
+        let mut env = EnvGuard::default();
+        env.set("ELEVENLABS_USER_AGENT_SUFFIX", "from-env/1.0");
+        // A header-invalid flag value clears the override just like a blank
+        // one, so a valid env suffix is not suppressed by unusable flag input.
+        let cfg = HttpConfig::new("elevenlabs")
+            .unwrap()
+            .with_user_agent_suffix_override(Some("bad\nvalue".to_string()));
+        assert_eq!(
+            cfg.user_agent(),
+            format!("elevenlabs-cli/{} from-env/1.0", env!("CARGO_PKG_VERSION")),
+        );
     }
 
     #[test]
@@ -1187,5 +1545,357 @@ Wf86aX6PepsntZv2GYlA5UpabfT2EZICICpJ5h/iI+i341gBmLiAFQOyTDT+/wQc\n\
         let p = RetryPolicy::default();
         let outcome = RetryOutcome { status: Some(429), retry_after: None };
         assert!(decide_retry(0, &outcome, &p, "POST", false, false).is_some());
+    }
+
+    #[test]
+    fn crosses_host_compares_host_only() {
+        let parse = |s: &str| reqwest::Url::parse(s).expect("valid url");
+        // A different host is a crossing, whatever the scheme.
+        assert!(crosses_host(
+            &parse("https://api.example.com/v1"),
+            &parse("https://evil.example.net/v1")
+        ));
+        // A scheme upgrade on the same host is not — reqwest's own
+        // port-sensitive rule would call this cross-origin and strip
+        // `Authorization`, which is fine; we just don't refuse the hop.
+        assert!(!crosses_host(
+            &parse("http://api.example.com/v1"),
+            &parse("https://api.example.com/v1")
+        ));
+        // Same host, different port: same operator, not the modelled threat.
+        assert!(!crosses_host(
+            &parse("https://api.example.com/v1"),
+            &parse("https://api.example.com:8443/v1")
+        ));
+    }
+
+    #[test]
+    fn origin_only_drops_path_and_query() {
+        let url = reqwest::Url::parse(
+            "https://cdn.example.com:8443/signed/object?X-Amz-Signature=deadbeef",
+        )
+        .expect("valid url");
+        assert_eq!(origin_only(&url), "https://cdn.example.com:8443");
+    }
+
+    /// Every guard test below uses a CLI name unique to that test, so the
+    /// `<PREFIX>_ALLOW_CROSS_HOST_*` variable it reads is its own. Sharing one
+    /// prefix made `#[serial]` load-bearing for *correctness*: the guard is
+    /// read from the process environment, so one test setting the shared
+    /// variable while another cleared it flipped the other's expected outcome
+    /// in whichever direction the interleaving landed. That is invisible on an
+    /// idle machine and shows up on a loaded CI runner. With per-test prefixes
+    /// the variables cannot collide at all, and a future test that forgets
+    /// `#[serial]` cannot reintroduce the flake.
+    ///
+    /// A wiremock server that answers everything with `template`.
+    async fn always_respond(template: wiremock::ResponseTemplate) -> wiremock::MockServer {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::any())
+            .respond_with(template)
+            .mount(&server)
+            .await;
+        server
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn cross_host_redirect_is_refused_before_the_credential_is_resent() {
+        // The credential here is a *custom* header, which is the case reqwest
+        // cannot protect: its redirect stripping covers `Authorization` and
+        // friends only. Without the policy in `build_client`, reqwest happily
+        // follows the hop and hands `xi-api-key` to the redirect target.
+        let mut env = EnvGuard::default();
+        env.unset("REDIRECTREFUSE_ALLOW_CROSS_HOST_REDIRECTS");
+
+        let target = always_respond(wiremock::ResponseTemplate::new(200).set_body_string("{}")).await;
+        // Same machine, different *host string* — a genuine cross-host hop
+        // without needing DNS or a second interface.
+        let target_url = format!("http://localhost:{}/", target.address().port());
+        let api = always_respond(
+            wiremock::ResponseTemplate::new(302).insert_header("location", target_url.as_str()),
+        )
+        .await;
+
+        let client = HttpConfig::new("redirectrefuse")
+            .expect("config")
+            .build_client()
+            .expect("client");
+        let error = client
+            .get(api.uri())
+            .header("xi-api-key", "super-secret")
+            .send()
+            .await
+            .expect_err("a cross-host redirect must not be followed");
+
+        let rendered = format!("{error:?}");
+        assert!(
+            rendered.contains("crosses a host boundary"),
+            "the error should explain the refusal, got: {rendered}"
+        );
+        assert!(
+            rendered.contains("REDIRECTREFUSE_ALLOW_CROSS_HOST_REDIRECTS"),
+            "the error should name the opt-out, got: {rendered}"
+        );
+        assert!(
+            target
+                .received_requests()
+                .await
+                .unwrap_or_default()
+                .is_empty(),
+            "the credential-bearing request must never reach the redirect target"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn redirect_refusal_is_classified_client_side_with_the_full_reason() {
+        // The refusal reason lives in the policy error, not in reqwest's own
+        // Display ("error following redirect for url (...)"), so the source
+        // chain has to be walked or the message reaching the user is useless.
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let mut env = EnvGuard::default();
+            env.unset("REDIRECTCLASSIFY_ALLOW_CROSS_HOST_REDIRECTS");
+
+            let redirector = wiremock::MockServer::start().await;
+            wiremock::Mock::given(wiremock::matchers::any())
+                .respond_with(
+                    wiremock::ResponseTemplate::new(302)
+                        .insert_header("location", "http://example.com/elsewhere"),
+                )
+                // The whole point: refused once, never retried.
+                .expect(1)
+                .mount(&redirector)
+                .await;
+
+            let cfg = HttpConfig::new("redirectclassify").unwrap();
+            let client = cfg.build_client().unwrap();
+            let error = client
+                .get(format!("{}/v1/thing", redirector.uri()))
+                .send()
+                .await
+                .expect_err("the guard should refuse this redirect");
+
+            let classified =
+                redirect_refusal_error(&error).expect("a redirect error must be classified");
+            match classified {
+                CliError::Validation(message) => {
+                    assert!(
+                        message.contains("crosses a host boundary"),
+                        "the policy reason must survive the source-chain walk, got: {message}"
+                    );
+                    assert!(
+                        message.contains("example.com"),
+                        "the message should name the target host, got: {message}"
+                    );
+                    assert!(
+                        message.contains("ALLOW_CROSS_HOST_REDIRECTS"),
+                        "the message should name the opt-out, got: {message}"
+                    );
+                }
+                other => panic!("expected CliError::Validation, got {other:?}"),
+            }
+        });
+    }
+
+    #[test]
+    fn non_redirect_transport_errors_are_left_alone() {
+        // Connection failures must keep falling through to the retry path —
+        // those genuinely are transient.
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let cfg = HttpConfig::new("redirecttransport").unwrap();
+            let client = cfg.build_client().unwrap();
+            // Nothing listening: a connect error, not a redirect error.
+            let error = client
+                .get("http://127.0.0.1:1/nope")
+                .send()
+                .await
+                .expect_err("connect should fail");
+            assert!(
+                redirect_refusal_error(&error).is_none(),
+                "a connect error must not be reclassified as a policy refusal"
+            );
+        });
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn pagination_target_on_the_same_host_is_allowed() {
+        let mut env = EnvGuard::default();
+        env.unset("PAGESAMEHOST_ALLOW_CROSS_HOST_PAGINATION");
+
+        // Same host, deeper path.
+        assert!(check_pagination_target(
+            "pagesamehost",
+            "https://api.example.com/v1/things",
+            "https://api.example.com/v1/things?cursor=2"
+        )
+        .is_ok());
+        // Scheme upgrade and port change stay within one operator's infra —
+        // same rule as `crosses_host` applies to redirects.
+        assert!(check_pagination_target(
+            "pagesamehost",
+            "http://api.example.com/v1/things",
+            "https://api.example.com/v1/things?cursor=2"
+        )
+        .is_ok());
+        assert!(check_pagination_target(
+            "pagesamehost",
+            "https://api.example.com/v1/things",
+            "https://api.example.com:8443/v1/things?cursor=2"
+        )
+        .is_ok());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn relative_pagination_target_is_allowed_without_inspection() {
+        let mut env = EnvGuard::default();
+        env.unset("PAGERELATIVE_ALLOW_CROSS_HOST_PAGINATION");
+
+        // A relative target inherits the base origin, so it cannot cross hosts.
+        for next in ["/v1/things?cursor=2", "things?cursor=2", "?cursor=2"] {
+            assert!(
+                check_pagination_target("pagerelative", "https://api.example.com/v1/things", next)
+                    .is_ok(),
+                "relative target {next} should be allowed"
+            );
+        }
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn cross_host_pagination_target_is_refused() {
+        let mut env = EnvGuard::default();
+        env.unset("PAGEREFUSE_ALLOW_CROSS_HOST_PAGINATION");
+
+        let err = check_pagination_target(
+            "pagerefuse",
+            "https://api.example.com/v1/things",
+            "https://evil.example.net/v1/things?cursor=2",
+        )
+        .expect_err("a cross-host pagination link must be refused");
+
+        assert!(
+            err.contains("https://api.example.com") && err.contains("https://evil.example.net"),
+            "the error should name both origins, got: {err}"
+        );
+        assert!(
+            err.contains("PAGEREFUSE_ALLOW_CROSS_HOST_PAGINATION"),
+            "the error should name the opt-out, got: {err}"
+        );
+        // The origin only — a pagination link's query string can itself carry a
+        // credential, so it must not be echoed into logs.
+        assert!(
+            !err.contains("cursor=2"),
+            "the error must not echo the target's query string, got: {err}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn cross_host_pagination_target_is_allowed_when_explicitly_enabled() {
+        let mut env = EnvGuard::default();
+        env.set("PAGEOPTIN_ALLOW_CROSS_HOST_PAGINATION", "1");
+
+        assert!(check_pagination_target(
+            "pageoptin",
+            "https://api.example.com/v1/things",
+            "https://cdn.example.net/v1/things?cursor=2"
+        )
+        .is_ok());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn pagination_opt_out_is_separate_from_the_redirect_opt_out() {
+        // Allowing redirects is not consent to let a response body steer the
+        // next request, so the redirect key must not unlock pagination.
+        let mut env = EnvGuard::default();
+        env.unset("PAGEOPTOUTSPLIT_ALLOW_CROSS_HOST_PAGINATION");
+        env.set("PAGEOPTOUTSPLIT_ALLOW_CROSS_HOST_REDIRECTS", "1");
+
+        assert!(
+            check_pagination_target(
+                "pageoptoutsplit",
+                "https://api.example.com/v1/things",
+                "https://evil.example.net/v1/things"
+            )
+            .is_err(),
+            "the redirect opt-out must not enable cross-host pagination"
+        );
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn cross_host_redirect_is_followed_when_explicitly_allowed() {
+        let mut env = EnvGuard::default();
+        env.set("REDIRECTOPTIN_ALLOW_CROSS_HOST_REDIRECTS", "1");
+
+        let target = always_respond(
+            wiremock::ResponseTemplate::new(200).set_body_string(r#"{"reached":true}"#),
+        )
+        .await;
+        let target_url = format!("http://localhost:{}/", target.address().port());
+        let api = always_respond(
+            wiremock::ResponseTemplate::new(302).insert_header("location", target_url.as_str()),
+        )
+        .await;
+
+        let client = HttpConfig::new("redirectoptin")
+            .expect("config")
+            .build_client()
+            .expect("client");
+        let body = client
+            .get(api.uri())
+            .send()
+            .await
+            .expect("opt-in should allow the hop")
+            .text()
+            .await
+            .expect("body");
+
+        assert!(body.contains("reached"), "expected to land on the target, got: {body}");
+        drop(env);
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn same_host_redirect_is_still_followed() {
+        // The guard must not break ordinary same-host redirects (trailing
+        // slash normalization, path rewrites, http -> https upgrades).
+        let mut env = EnvGuard::default();
+        env.unset("REDIRECTSAMEHOST_ALLOW_CROSS_HOST_REDIRECTS");
+
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::path("/final"))
+            .respond_with(wiremock::ResponseTemplate::new(200).set_body_string(r#"{"final":true}"#))
+            .mount(&server)
+            .await;
+        wiremock::Mock::given(wiremock::matchers::path("/start"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(302)
+                    .insert_header("location", format!("{}/final", server.uri()).as_str()),
+            )
+            .mount(&server)
+            .await;
+
+        let client = HttpConfig::new("redirectsamehost")
+            .expect("config")
+            .build_client()
+            .expect("client");
+        let body = client
+            .get(format!("{}/start", server.uri()))
+            .header("xi-api-key", "super-secret")
+            .send()
+            .await
+            .expect("same-host redirect should be followed")
+            .text()
+            .await
+            .expect("body");
+
+        assert!(body.contains("final"), "expected to land on /final, got: {body}");
     }
 }

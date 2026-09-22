@@ -31,6 +31,10 @@ class ExperimentVariant(UniversalBaseModel):
         FieldMetadata(alias="filterSet"),
         pydantic.Field(alias="filterSet", description="Session filters selecting this variant's population."),
     ]
+    """
+    Session filters selecting this variant's population.
+    """
+
     query: typing.Optional[str] = pydantic.Field(default=None)
     """
     Free-text / semantic search applied to the population, or `null`.

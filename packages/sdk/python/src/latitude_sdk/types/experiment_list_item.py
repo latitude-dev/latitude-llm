@@ -20,11 +20,19 @@ class ExperimentListItem(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this experiment."),
     ]
+    """
+    Organization that owns this experiment.
+    """
+
     project_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectId"),
         pydantic.Field(alias="projectId", description="Project this experiment belongs to."),
     ]
+    """
+    Project this experiment belongs to.
+    """
+
     slug: str = pydantic.Field()
     """
     URL-safe slug derived from `name`. Unique within the project.
@@ -50,16 +58,28 @@ class ExperimentListItem(UniversalBaseModel):
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
     ]
+    """
+    ISO-8601 timestamp of creation.
+    """
+
     updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="updatedAt"),
         pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last update."),
     ]
+    """
+    ISO-8601 timestamp of the last update.
+    """
+
     variant_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="variantCount"),
         pydantic.Field(alias="variantCount", description="Number of variants in the experiment."),
     ]
+    """
+    Number of variants in the experiment.
+    """
+
     sessions_distinct: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="sessionsDistinct"),
@@ -68,6 +88,10 @@ class ExperimentListItem(UniversalBaseModel):
             description="Distinct sessions across the union of every variant's population (a session in several variants counts once).",
         ),
     ]
+    """
+    Distinct sessions across the union of every variant's population (a session in several variants counts once).
+    """
+
     users_distinct: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="usersDistinct"),
@@ -76,5 +100,8 @@ class ExperimentListItem(UniversalBaseModel):
             description="Distinct users across the union of every variant's population (a user in several variants counts once).",
         ),
     ]
+    """
+    Distinct users across the union of every variant's population (a user in several variants counts once).
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

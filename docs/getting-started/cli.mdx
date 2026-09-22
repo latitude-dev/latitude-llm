@@ -118,6 +118,15 @@ latitude traces list --help                # inspect traces (project-scoped — 
 latitude api-keys list
 ```
 
+Most resources are project-scoped and take `--project-slug`. Set the project once for a session with `LATITUDE_PROJECT_SLUG` (or the global `--global-project-slug` flag) and you can drop it from individual commands — `--project-slug` still wins wherever you pass it:
+
+```bash
+export LATITUDE_PROJECT_SLUG=my-app
+latitude traces list                       # uses my-app
+latitude traces list --project-slug other  # uses other
+latitude projects list                     # unaffected — not project-scoped
+```
+
 A few global flags worth knowing (run `latitude --help` for the full list):
 
 - `--query <JMESPath>` — project/filter the response before it's formatted, e.g. `--query "items[].slug"`.
@@ -155,6 +164,7 @@ You can also set a default format for a session with the `LATITUDE_OUTPUT` envir
 | Variable | Purpose |
 | --- | --- |
 | `LATITUDE_API_KEY` | API key used to authenticate (alternative to the keyring). |
+| `LATITUDE_PROJECT_SLUG` | Project used by project-scoped commands when `--project-slug` is omitted (same as the global `--global-project-slug`). |
 | `LATITUDE_OUTPUT` | Default output format when `--format` is omitted. |
 | `LATITUDE_BASE_URL` | Override the API base URL (e.g. self-hosted or a mock server). |
 | `LATITUDE_TIMEOUT_SECS` | Total request timeout, in seconds. |

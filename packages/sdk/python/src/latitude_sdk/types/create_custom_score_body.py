@@ -19,6 +19,10 @@ class CreateCustomScoreBody(UniversalBaseModel):
             description="Simulation this score is tied to, if any. `null` (default) when not part of a simulation.",
         ),
     ]
+    """
+    Simulation this score is tied to, if any. `null` (default) when not part of a simulation.
+    """
+
     value: float = pydantic.Field()
     """
     Normalized score value in [0, 1]. Higher = better.
@@ -63,6 +67,10 @@ class CreateCustomScoreBody(UniversalBaseModel):
             description='User-supplied tag identifying the score\'s origin (e.g. `"prod-pipeline"`, `"qa-script-v2"`).',
         ),
     ]
+    """
+    User-supplied tag identifying the score's origin (e.g. `"prod-pipeline"`, `"qa-script-v2"`).
+    """
+
     metadata: typing.Optional[typing.Dict[str, typing.Any]] = pydantic.Field(default=None)
     """
     Arbitrary user-supplied metadata persisted alongside the score.
@@ -77,5 +85,8 @@ class CreateCustomScoreBody(UniversalBaseModel):
             description="Discriminator: omit (or `false`) for custom scores. Required `true` for evaluation scores.",
         ),
     ]
+    """
+    Discriminator: omit (or `false`) for custom scores. Required `true` for evaluation scores.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

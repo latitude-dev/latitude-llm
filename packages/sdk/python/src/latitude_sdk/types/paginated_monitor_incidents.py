@@ -24,10 +24,17 @@ class PaginatedMonitorIncidents(UniversalBaseModel):
             description="Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue.",
         ),
     ]
+    """
+    Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue.
+    """
+
     has_more: typing_extensions.Annotated[
         bool,
         FieldMetadata(alias="hasMore"),
         pydantic.Field(alias="hasMore", description="`true` when there is at least one more page after this one."),
     ]
+    """
+    `true` when there is at least one more page after this one.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

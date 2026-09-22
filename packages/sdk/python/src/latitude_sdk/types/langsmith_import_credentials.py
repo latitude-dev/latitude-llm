@@ -20,6 +20,10 @@ class LangsmithImportCredentials(UniversalBaseModel):
         FieldMetadata(alias="apiKey"),
         pydantic.Field(alias="apiKey", description="LangSmith API key (`lsv2_pt_…`)."),
     ]
+    """
+    LangSmith API key (`lsv2_pt_…`).
+    """
+
     workspace_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="workspaceId"),
@@ -29,5 +33,8 @@ class LangsmithImportCredentials(UniversalBaseModel):
             description="Workspace to import from, for accounts with more than one. Omit to use the key's default workspace.",
         ),
     ]
+    """
+    Workspace to import from, for accounts with more than one. Omit to use the key's default workspace.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

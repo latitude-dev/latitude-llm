@@ -17,5 +17,8 @@ class SignalsLifecycleBody(UniversalBaseModel):
             description="Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.",
         ),
     ]
+    """
+    Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

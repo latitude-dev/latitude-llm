@@ -22,6 +22,10 @@ class IncidentNotificationsSetting(UniversalBaseModel):
             description="Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
         ),
     ]
+    """
+    Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.
+    """
+
     monitor_match: typing_extensions.Annotated[
         typing.Optional[bool],
         FieldMetadata(alias="monitor.match"),
@@ -31,6 +35,10 @@ class IncidentNotificationsSetting(UniversalBaseModel):
             description="Send a notification when a match monitor opens an incident. Defaults to `true` when omitted.",
         ),
     ]
+    """
+    Send a notification when a match monitor opens an incident. Defaults to `true` when omitted.
+    """
+
     monitor_threshold: typing_extensions.Annotated[
         typing.Optional[bool],
         FieldMetadata(alias="monitor.threshold"),
@@ -40,6 +48,10 @@ class IncidentNotificationsSetting(UniversalBaseModel):
             description="Send a notification when a threshold monitor opens an incident. Defaults to `true` when omitted.",
         ),
     ]
+    """
+    Send a notification when a threshold monitor opens an incident. Defaults to `true` when omitted.
+    """
+
     monitor_escalating: typing_extensions.Annotated[
         typing.Optional[bool],
         FieldMetadata(alias="monitor.escalating"),
@@ -49,5 +61,8 @@ class IncidentNotificationsSetting(UniversalBaseModel):
             description="Send a notification when an escalating monitor opens an incident. Defaults to `true` when omitted.",
         ),
     ]
+    """
+    Send a notification when an escalating monitor opens an incident. Defaults to `true` when omitted.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

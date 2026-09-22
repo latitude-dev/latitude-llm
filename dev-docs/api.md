@@ -104,6 +104,32 @@ pnpm mcp:emit       # rewrites apps/api/mcp.json
 
 CI guards drift via `.github/workflows/api-manifests.yml`: on every PR, both emitters run and `git diff --exit-code` fails the job if the committed manifests don't match the regenerated ones.
 
+## Global parameters
+
+A **global parameter** is a value a generated client resolves once instead of on every call. We declare them in `API_GLOBAL_PARAMETERS` (`apps/api/src/constants.ts`); `emit-openapi.ts` writes them to the spec root as [`x-fern-global-parameters`](https://buildwithfern.com/learn/api-definitions/openapi/extensions/global-parameters).
+
+Today there is exactly one: `projectSlug`, which 119 of our 139 operations take as a path parameter. It lets CLI users export `LATITUDE_PROJECT_SLUG` once instead of passing `--project-slug` to every command.
+
+```
+--project-slug (per-operation flag)  →  --global-project-slug  →  $LATITUDE_PROJECT_SLUG
+```
+
+Leftmost wins. Nothing about the underlying parameter changes: it stays `required: true` in `openapi.json` and a non-optional string in the IR. `target` just names the `{…}` slot in the path template that the resolved value fills at request-build time. The CLI never enforces path parameters at parse time (only multipart fields are clap-`required`), so omitting the flag parses fine and the global injects the value before the URL is rendered.
+
+Three settings are load-bearing and easy to "simplify" into a bug:
+
+- **`apply: explicit`** — a path global is injected into every operation that opts in. Under `apply: auto` that means *all* operations, and one with no `{projectSlug}` in its template would carry the value as a stray query parameter (`/v1/projects?projectSlug=…`). `emit-openapi.ts` derives the per-operation `x-fern-global-parameter` opt-in from the parameters each operation already declares, so the two can't drift.
+- **`parameter-name`** — derived in `emit-openapi.ts` as `global<Target>` (`globalProjectSlug` → `--global-project-slug`), never left to default. The global's flag must avoid `--project-slug`. When a global's flag name collides with a per-operation flag, the generator can't register it `global(true)` (clap rejects duplicate long names), so it attaches it per-leaf and skips the colliding commands, falling back to reading `env` itself. That fallback hangs off `try_get_one` returning `Err` for an unknown arg id — and clap's `verify_arg` is entirely inside `#[cfg(debug_assertions)]`, so a release build returns `Ok(None)` and never reaches it. The env var works in `cargo build` and silently fails in every shipped binary. A non-colliding name keeps the arg on the `global(true)` path, where clap's own `.env()` does the work. Name it after the target it backs and the feature dies in release only. This is not a regression to downgrade around: before generator 0.38.3 a colliding global had no env fallback at all.
+- **`env`** — the only reason to prefer this extension over [`x-fern-sdk-variables`](https://buildwithfern.com/learn/api-definitions/openapi/extensions/sdk-variables), which derives its env var from the variable name (`PROJECT_SLUG`, unprefixed) with no way to override it.
+
+### Surface support
+
+`x-fern-global-parameters` is **CLI-only today**. The Fern CLI lowers it into the IR (`globalParameters`, carrying `env`, `apply` and the `parameter-name` alias), but the TypeScript and Python SDK generators ignore it — Fern's own `seed/ts-sdk/x-fern-global-parameters` fixture still destructures the path parameter out of the request object, and its client options expose no global. Our SDK output is byte-identical with and without the extension. So SDK callers still pass `projectSlug` per method, and `LATITUDE_PROJECT_SLUG` does nothing there. If Fern adds SDK support later, it arrives on a regeneration with no spec change.
+
+`emit-openapi.ts` also appends `envFallbackNote(env)` to the description of each parameter a global backs, so `--project-slug`'s own help names the environment variable. That note is worded for the CLI on purpose: descriptions propagate to SDK JSDoc, where the variable does nothing.
+
+One rough edge remains upstream: per-command `--help` still lists the backed parameter under **Required parameters** and spells it into the usage line even when the environment satisfies it, and `--schema` omits the global entirely because its flag is registered hidden.
+
 ## Sharing logic with the web
 
 `apps/web` and `@repo/operations` both orchestrate the same domain use-cases — they're parallel consumers of `packages/domain/*`, not nested (the web does not call through to the API for its own product features). When you add an endpoint that mirrors a web action, reuse the existing `@domain/<entity>/use-cases/*` use-case rather than reimplementing the policy in the API route. If the web has the logic inline in a server fn, extract it to a use-case first.

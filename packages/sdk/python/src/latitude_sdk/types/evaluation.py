@@ -34,6 +34,10 @@ class Evaluation(UniversalBaseModel):
             description="ISO-8601 timestamp at which the evaluation was last realigned, or `null` if never aligned.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the evaluation was last realigned, or `null` if never aligned.
+    """
+
     archived_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="archivedAt"),
@@ -43,6 +47,10 @@ class Evaluation(UniversalBaseModel):
             description="ISO-8601 timestamp at which the evaluation was archived, or `null`.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the evaluation was archived, or `null`.
+    """
+
     deleted_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="deletedAt"),
@@ -52,16 +60,28 @@ class Evaluation(UniversalBaseModel):
             description="ISO-8601 timestamp at which the evaluation was deleted, or `null`.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the evaluation was deleted, or `null`.
+    """
+
     created_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
     ]
+    """
+    ISO-8601 timestamp of creation.
+    """
+
     updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="updatedAt"),
         pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last update."),
     ]
+    """
+    ISO-8601 timestamp of the last update.
+    """
+
     sampling: float = pydantic.Field()
     """
     Sampling rate as a percentage in `[0, 100]`. `0` means the evaluation is paused.

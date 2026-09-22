@@ -53,7 +53,7 @@ class ToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
@@ -109,7 +109,7 @@ class ToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
@@ -174,7 +174,7 @@ class ToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.
@@ -243,7 +243,7 @@ class ToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.
@@ -309,7 +309,7 @@ class ToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.
@@ -373,7 +373,7 @@ class ToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.
@@ -430,7 +430,7 @@ class ToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.
@@ -498,7 +498,7 @@ class ToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.
@@ -573,7 +573,7 @@ class AsyncToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
@@ -637,7 +637,7 @@ class AsyncToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
@@ -710,7 +710,7 @@ class AsyncToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.
@@ -787,7 +787,7 @@ class AsyncToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.
@@ -861,7 +861,7 @@ class AsyncToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.
@@ -933,7 +933,7 @@ class AsyncToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.
@@ -998,7 +998,7 @@ class AsyncToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.
@@ -1074,7 +1074,7 @@ class AsyncToolsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         tool_name : str
             Tool name. URL-encode names containing special characters.

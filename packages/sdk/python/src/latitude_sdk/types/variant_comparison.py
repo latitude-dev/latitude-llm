@@ -16,6 +16,10 @@ class VariantComparison(UniversalBaseModel):
         FieldMetadata(alias="variantId"),
         pydantic.Field(alias="variantId", description="Id of the variant these metrics belong to."),
     ]
+    """
+    Id of the variant these metrics belong to.
+    """
+
     baseline: bool = pydantic.Field()
     """
     `true` when this is the baseline variant; every metric's `delta` is `null`.
@@ -38,5 +42,8 @@ class VariantComparison(UniversalBaseModel):
             description="Population keys (a subset of `sessions.count` / `sessions.users`) that deviate from the baseline by more than 25%.",
         ),
     ]
+    """
+    Population keys (a subset of `sessions.count` / `sessions.users`) that deviate from the baseline by more than 25%.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

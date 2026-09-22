@@ -14,6 +14,10 @@ class ToolCallHistogramBucket(UniversalBaseModel):
         FieldMetadata(alias="bucketStart"),
         pydantic.Field(alias="bucketStart", description="ISO-8601 UTC timestamp of the bucket's start."),
     ]
+    """
+    ISO-8601 UTC timestamp of the bucket's start.
+    """
+
     calls: int = pydantic.Field()
     """
     Number of calls in this bucket.
@@ -29,5 +33,8 @@ class ToolCallHistogramBucket(UniversalBaseModel):
         FieldMetadata(alias="p50DurationNs"),
         pydantic.Field(alias="p50DurationNs", description="Median call duration in this bucket, in nanoseconds."),
     ]
+    """
+    Median call duration in this bucket, in nanoseconds.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

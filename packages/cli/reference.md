@@ -60,7 +60,7 @@ Returns ranked causes per dimension and Outcome and Safety issue summaries for t
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 
 #### `latitude agent-score get`
 
@@ -70,7 +70,7 @@ Returns the project's Agent Score for today: one number from 0 to 100 and the fi
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 
 #### `latitude agent-score history`
 
@@ -80,7 +80,7 @@ Returns the project's published Agent Scores in a date range, oldest first. Days
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--from` | `string (date)` | No | Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`. |
 | `--to` | `string (date)` | No | Inclusive end date as `YYYY-MM-DD`. Defaults to today. |
 
@@ -96,7 +96,7 @@ Compute a metric over a filtered stream (`traces`, `sessions`, `spans`, `scores`
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 ---
@@ -111,7 +111,7 @@ Creates a published annotation score against a target trace. The trace is resolv
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude annotations delete`
@@ -122,7 +122,7 @@ Deletes an API-created annotation by its Latitude-generated identifier.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--annotation-id` | `string` | Yes | Latitude-generated annotation identifier returned when the annotation was created. |
 
 #### `latitude annotations get`
@@ -133,7 +133,7 @@ Returns an API-created annotation by its Latitude-generated identifier.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--annotation-id` | `string` | Yes | Latitude-generated annotation identifier returned when the annotation was created. |
 
 #### `latitude annotations update`
@@ -144,7 +144,7 @@ Updates an API-created annotation while retaining its Latitude-generated identif
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--annotation-id` | `string` | Yes | Latitude-generated annotation identifier returned when the annotation was created. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -211,7 +211,7 @@ Adds a custom column. The column starts empty on every row; rows are written onl
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -223,7 +223,7 @@ Creates an empty dataset in the project. The slug is derived from `name`.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude datasets delete`
@@ -234,7 +234,7 @@ Deletes a dataset by slug.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 
 #### `latitude datasets delete-column`
@@ -245,7 +245,7 @@ Removes a column (built-in or custom) from the active schema. Its data is preser
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--identifier` | `string` | Yes | Stable column identifier. |
 
@@ -257,7 +257,7 @@ Deletes rows matching the supplied selection.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -273,7 +273,7 @@ Exports the selected rows as CSV. Returns one of three outcomes, discriminated b
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -285,7 +285,7 @@ Returns one dataset by slug.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 
 #### `latitude datasets import-rows-from-traces`
@@ -296,7 +296,7 @@ Imports one row per trace matched by `traces`.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -308,7 +308,7 @@ Appends one or more rows to the dataset.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -320,7 +320,7 @@ Returns a cursor-paginated page of datasets in the project.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
 | `--sort-by` | `name | updatedAt` | No | Field to sort by. Defaults to `updatedAt`. |
@@ -334,7 +334,7 @@ Returns the ordered active column schema — the built-in columns plus any custo
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--include-removed` | `true | false` | No | When `true`, also returns soft-removed columns (each carrying `removed: true`). Defaults to `false`. |
 
@@ -346,7 +346,7 @@ Returns a cursor-paginated page of rows.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
@@ -361,7 +361,7 @@ Sets the left-to-right order of columns. This is a metadata edit and does not ch
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -373,7 +373,7 @@ Restores a soft-removed column (built-in or custom) to the active schema, reconn
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--identifier` | `string` | Yes | Stable column identifier. |
 
@@ -385,7 +385,7 @@ Updates a dataset's `name` and/or `description`. Renaming regenerates the slug �
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -397,7 +397,7 @@ Renames a column. Works for both built-in and custom columns.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--identifier` | `string` | Yes | Stable column identifier. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
@@ -410,7 +410,7 @@ Partially updates a single row. Only the cells you send are changed; omitted cel
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--dataset-slug` | `string` | Yes | Dataset slug (human-readable identifier within the project). |
 | `--row-id` | `string` | Yes | Stable row identifier (from `listDatasetRows`). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
@@ -427,7 +427,7 @@ Creates an experiment. The slug is derived from `name`. Omit `variants` to seed 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude experiments delete`
@@ -438,7 +438,7 @@ Deletes an experiment. Its slug becomes reusable.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--experiment-slug` | `string` | Yes | Experiment slug (human-readable identifier within the project). |
 
 #### `latitude experiments get`
@@ -449,7 +449,7 @@ Returns a single experiment plus its comparison: per-variant metrics, deltas vs 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--experiment-slug` | `string` | Yes | Experiment slug (human-readable identifier within the project). |
 
 #### `latitude experiments list`
@@ -460,7 +460,7 @@ Returns the project's experiments with cheap summary metrics (variant count, dis
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 100. |
 | `--search` | `string` | No | Filter by name (case-insensitive substring). |
@@ -473,7 +473,7 @@ Replaces an experiment's mutable fields. `variants`, when supplied, fully replac
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--experiment-slug` | `string` | Yes | Experiment slug (human-readable identifier within the project). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -489,7 +489,7 @@ Cancels an import that has not finished. Traces already imported are kept, and t
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--import-id` | `string` | Yes | Import id. |
 
 #### `latitude imports create`
@@ -500,7 +500,7 @@ Imports historical traces from another observability platform into the project. 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude imports get`
@@ -511,7 +511,7 @@ Returns a single import, including its recent run history.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--import-id` | `string` | Yes | Import id. |
 
 #### `latitude imports list`
@@ -522,7 +522,7 @@ Returns the project's imports from other observability platforms, newest first. 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 
 #### `latitude imports retry`
 
@@ -532,7 +532,7 @@ Retries a failed, cancelled, or capped import from where it stopped, as a new im
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--import-id` | `string` | Yes | Import id. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -548,7 +548,7 @@ Returns incidents in the project, ordered from oldest to newest. The time window
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time window. Returns incidents whose lifetime overlaps `[fromIso, toIso]`. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time window. Defaults to now. |
 | `--source-type` | `monitor | signal` | No | Restrict to incidents triggered by this source type: `monitor` or `signal`. |
@@ -563,7 +563,7 @@ Resolves (closes) an ongoing incident. An already-closed incident is returned un
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--incident-id` | `string` | Yes | Incident identifier. |
 
 ---
@@ -629,7 +629,7 @@ Returns one record's current body plus its mutating version history (newest firs
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
 | `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
 
@@ -641,7 +641,7 @@ Returns the before/after bodies for one change — the version authored by `span
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
 | `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
 | `--span-id` | `string` | Yes | Span that authored the change (the `after` side). |
@@ -654,7 +654,7 @@ Returns the store's current records (ids, token counts, last-updated) as a snaps
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
 | `--at` | `string (date-time)` | No | Reconstruct the store as of this ISO-8601 timestamp. Defaults to the current state. |
 
@@ -666,7 +666,7 @@ Returns a per-record diff of the store between two points in time — added, upd
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
 | `--from` | `string (date-time)` | No | Lower bound (inclusive) of the diff, ISO-8601. Defaults to the empty state. |
 | `--to` | `string (date-time)` | No | Upper bound (inclusive) of the diff, ISO-8601. Defaults to the current state. |
@@ -679,7 +679,7 @@ Returns the retrieval (`search_memory`) events for one record, newest first and 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
 | `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
 | `--limit` | `integer` | No | Maximum number of read events to return. Capped at 200. |
@@ -692,7 +692,7 @@ Returns the end-users who accessed one record with per-user read and write count
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
 | `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
 
@@ -704,7 +704,7 @@ Returns the end-users who accessed the store (reads and writes both count as acc
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
 
 #### `latitude memory list-stores`
@@ -715,7 +715,7 @@ Returns a cursor-paginated page of the project's memory stores, one roll-up row 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
 | `--sort` | `lastUpdated | lastRead | records | tokens | sessions | users` | No | Field to sort by. Defaults to `lastUpdated` (most recently written first). |
@@ -733,7 +733,7 @@ Creates a monitor with one rule. The slug is derived from `name`.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude monitors delete`
@@ -744,7 +744,7 @@ Deletes a monitor. System monitors cannot be deleted.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--monitor-slug` | `string` | Yes | Monitor slug (human-readable identifier within the project). |
 
 #### `latitude monitors get`
@@ -755,7 +755,7 @@ Returns a single monitor by slug.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--monitor-slug` | `string` | Yes | Monitor slug (human-readable identifier within the project). |
 
 #### `latitude monitors list`
@@ -766,7 +766,7 @@ Returns the project's monitors, system monitors first, then by most recent activ
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 100. |
 | `--search` | `string` | No | Filter by name (case-insensitive substring). |
@@ -779,7 +779,7 @@ Returns live monitors matching the supplied target type and/or filter subset.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude monitors list-incidents`
@@ -790,7 +790,7 @@ Returns the incidents opened by a monitor, most recent first. Each item's `notif
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--monitor-slug` | `string` | Yes | Monitor slug (human-readable identifier within the project). |
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 100. |
@@ -803,7 +803,7 @@ Mutes a monitor so its incidents stop sending notifications. Allowed on all moni
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--monitor-slug` | `string` | Yes | Monitor slug (human-readable identifier within the project). |
 
 #### `latitude monitors unmute`
@@ -814,7 +814,7 @@ Lifts a monitor's mute so its incidents notify again.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--monitor-slug` | `string` | Yes | Monitor slug (human-readable identifier within the project). |
 
 #### `latitude monitors update`
@@ -825,7 +825,7 @@ Updates a monitor's metadata and incident severity. Target, trigger, metric, and
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--monitor-slug` | `string` | Yes | Monitor slug (human-readable identifier within the project). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -881,7 +881,7 @@ Deletes a project by slug.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 
 #### `latitude projects get`
 
@@ -891,7 +891,7 @@ Returns a single project by slug.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 
 #### `latitude projects list`
 
@@ -907,7 +907,7 @@ Updates a project's name and/or settings. Renaming never changes the slug, and t
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude projects usage`
@@ -918,7 +918,7 @@ Returns the credits one project spent in the current billing period, broken down
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 
 ---
 
@@ -932,7 +932,7 @@ Creates a saved search within the project. At least one of `query` or `filters` 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude saved-searches delete`
@@ -943,7 +943,7 @@ Deletes a saved search by slug.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--search-slug` | `string` | Yes | Saved-search slug (human-readable identifier within the project). |
 
 #### `latitude saved-searches get`
@@ -954,7 +954,7 @@ Returns a single saved search by slug.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--search-slug` | `string` | Yes | Saved-search slug (human-readable identifier within the project). |
 
 #### `latitude saved-searches list`
@@ -965,7 +965,7 @@ Returns every saved search in the project. The response uses the standard pagina
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 
 #### `latitude saved-searches list-traces`
 
@@ -975,7 +975,7 @@ Returns a cursor-paginated page of traces that match the saved search's `query` 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--search-slug` | `string` | Yes | Saved-search slug (human-readable identifier within the project). |
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
@@ -990,7 +990,7 @@ Updates a saved search. Renaming may regenerate the slug — clients should re-r
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--search-slug` | `string` | Yes | Saved-search slug (human-readable identifier within the project). |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -1006,7 +1006,7 @@ Creates a score against a target trace. The trace is resolved by explicit id (`t
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 ---
@@ -1021,7 +1021,7 @@ Returns session analytics for the project: a total (or median) per metric over t
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
 
@@ -1033,7 +1033,7 @@ Returns a single session by id, including its `conversation`: the system instruc
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
 
 #### `latitude sessions get-assessment`
@@ -1044,7 +1044,7 @@ Explains a session across outcome, reliability, cost, speed, and safety with com
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
 | `--cursor` | `string` | No | Opaque cursor returned by a previous assessment page. Omit for the first page. |
 
@@ -1056,7 +1056,7 @@ Returns the session's memory footprint: per-record read, added, and removed toke
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
 | `--trace-id` | `string` | No | Restrict the memory footprint to this trace of the session. Omit for the whole session. |
 
@@ -1068,7 +1068,7 @@ Returns the memory writes the session made as per-record before/after diffs. Pas
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
 | `--trace-id` | `string` | No | Restrict the memory changes to this trace of the session. Omit for the whole session. |
 
@@ -1080,7 +1080,7 @@ Returns one signal by slug, including its `scoreEvidence` and occurrence stats s
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
 | `--signal-slug` | `string` | Yes | Signal slug. |
 
@@ -1092,7 +1092,7 @@ Returns a cursor-paginated page of sessions in the project. A session groups the
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude sessions list-signals`
@@ -1103,7 +1103,7 @@ Returns the signals that occurred in the session, including each signal's `score
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
 
 #### `latitude sessions list-traces`
@@ -1114,7 +1114,7 @@ Returns a cursor-paginated page of the traces that belong to the session. Rows m
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
@@ -1133,7 +1133,7 @@ Returns signal analytics for the project: counts of ongoing, new, and escalating
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
 
@@ -1145,7 +1145,7 @@ Creates a user-defined signal with its membership detector — from `settings` (
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude signals delete`
@@ -1156,7 +1156,7 @@ Soft-deletes a signal and archives its detector so it stops matching new traces.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--signal-slug` | `string` | Yes | Signal slug. |
 
 #### `latitude signals export`
@@ -1167,7 +1167,7 @@ Enqueues an asynchronous CSV export. The response returns immediately; the downl
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude signals get`
@@ -1178,7 +1178,7 @@ Returns the full-history detail view of one signal, including its `scoreEvidence
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--signal-slug` | `string` | Yes | Signal slug. |
 
 #### `latitude signals ignore`
@@ -1189,7 +1189,7 @@ Marks each signal in `signalIds` as ignored, archiving it. Monitoring is stopped
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude signals list`
@@ -1200,7 +1200,7 @@ Returns a cursor-paginated page of signals in the project. Each item includes it
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
 | `--query` | `string` | No | Free-text semantic search across the signals' names and descriptions. |
@@ -1218,7 +1218,7 @@ Returns the page of distinct traces that contributed at least one occurrence of 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--signal-slug` | `string` | Yes | Signal slug. |
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
@@ -1231,7 +1231,7 @@ Starts (or realigns) monitoring for the signal. When the signal has no active ev
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--signal-slug` | `string` | Yes | Signal slug. |
 
 #### `latitude signals mute`
@@ -1242,7 +1242,7 @@ Silences notifications for each signal in `signalIds`. Muted signals keep tracki
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude signals resolve`
@@ -1253,7 +1253,7 @@ Marks each signal in `signalIds` as resolved, archiving it and re-enabling its n
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude signals submit-feedback`
@@ -1264,7 +1264,7 @@ Records a one-time verdict on whether a flagger-detected signal is a real proble
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--signal-slug` | `string` | Yes | Signal slug. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -1276,7 +1276,7 @@ Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The def
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--signal-slug` | `string` | Yes | Signal slug. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive). Defaults to ~14 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive). Defaults to now. |
@@ -1289,7 +1289,7 @@ Returns each signal in `signalIds` to the active list and re-enables its notific
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude signals unmonitor`
@@ -1300,7 +1300,7 @@ Stops monitoring the signal. Idempotent — signals that aren't being monitored 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--signal-slug` | `string` | Yes | Signal slug. |
 
 #### `latitude signals unmute`
@@ -1311,7 +1311,7 @@ Re-enables notifications for each signal in `signalIds`.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude signals unresolve`
@@ -1322,7 +1322,7 @@ Reopens each signal in `signalIds` without marking it as regressed, re-enabling 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude signals update`
@@ -1333,7 +1333,7 @@ Updates a signal's name, description, and evaluation pre-gate `filters`. Filter 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--signal-slug` | `string` | Yes | Signal slug. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
@@ -1349,7 +1349,7 @@ Returns a cursor-paginated page of spans across all traces in the project matchi
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 ---
@@ -1364,7 +1364,7 @@ Returns other tools called in the same traces as this one, ranked by shared trac
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--tool-name` | `string` | Yes | Tool name. URL-encode names containing special characters. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
@@ -1379,7 +1379,7 @@ Returns where the tool is used, broken down by a dimension: `model` and `provide
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--tool-name` | `string` | Yes | Tool name. URL-encode names containing special characters. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
@@ -1394,7 +1394,7 @@ Returns the most common error outputs of the tool's failed calls, grouped into c
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--tool-name` | `string` | Yes | Tool name. URL-encode names containing special characters. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
@@ -1408,7 +1408,7 @@ Returns the latest definition seen for the tool plus its global usage metrics. P
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--tool-name` | `string` | Yes | Tool name. URL-encode names containing special characters. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
@@ -1422,7 +1422,7 @@ Returns per-bucket call counts over the range. Omit `toolName` to aggregate acro
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
 | `--tool-name` | `string` | No | Tool name. URL-encode names containing special characters. |
@@ -1437,7 +1437,7 @@ Returns every tool in the project over the range — the union of defined and ca
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
 | `--trend-bucket-seconds` | `integer` | No | Bucket width in seconds. Derived from the range (~30 buckets) when omitted. |
@@ -1450,7 +1450,7 @@ Returns a cursor-paginated page of the tool's most recent calls, newest first, w
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--tool-name` | `string` | Yes | Tool name. URL-encode names containing special characters. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
@@ -1466,7 +1466,7 @@ Returns the most common top-level input keys and their most common values for th
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--tool-name` | `string` | Yes | Tool name. URL-encode names containing special characters. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
@@ -1486,7 +1486,7 @@ Returns trace analytics for the project: a total (or median) per metric over the
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
 
@@ -1498,7 +1498,7 @@ Enqueues a CSV export of the traces matched by `traces`. The export runs asynchr
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude traces get`
@@ -1509,7 +1509,7 @@ Returns a single trace by id, including its `conversation`: the system instructi
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--trace-id` | `string` | Yes | 32-character trace identifier. |
 
 #### `latitude traces get-annotation`
@@ -1520,7 +1520,7 @@ Returns one annotation by id pinned to the trace.
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--trace-id` | `string` | Yes | 32-character trace identifier. |
 | `--annotation-id` | `string` | Yes | Stable annotation identifier. |
 
@@ -1532,7 +1532,7 @@ Returns the trace's memory footprint: per-record read, added, and removed token 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--trace-id` | `string` | Yes | 32-character trace identifier. |
 
 #### `latitude traces get-memory-changes`
@@ -1543,7 +1543,7 @@ Returns the memory writes the trace made as per-record before/after diffs, scope
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--trace-id` | `string` | Yes | 32-character trace identifier. |
 
 #### `latitude traces get-span`
@@ -1554,7 +1554,7 @@ Returns one span by id, including the LLM conversation (system instructions, inp
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--trace-id` | `string` | Yes | 32-character trace identifier. |
 | `--span-id` | `string` | Yes | 16-character span identifier. |
 
@@ -1566,7 +1566,7 @@ Returns a cursor-paginated page of traces in the project. Combine `filters` with
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 #### `latitude traces list-annotations`
@@ -1577,7 +1577,7 @@ Returns a cursor-paginated page of annotations pinned to the trace, including bo
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--trace-id` | `string` | Yes | 32-character trace identifier. |
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
@@ -1590,7 +1590,7 @@ Returns every span belonging to the trace, ordered by `startTime` ascending. Spa
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--trace-id` | `string` | Yes | 32-character trace identifier. |
 
 ---
@@ -1615,7 +1615,7 @@ Returns the end-user's per-bucket session activity across the range, oldest firs
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--user-id` | `string` | Yes | End-user identifier. URL-encode values containing special characters. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
@@ -1629,7 +1629,7 @@ Returns the behaviour clusters observed on the end-user's sessions, most frequen
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--user-id` | `string` | Yes | End-user identifier. URL-encode values containing special characters. |
 | `--limit` | `integer` | No | Maximum number of behaviours to return. |
 
@@ -1641,7 +1641,7 @@ Returns the lifetime profile of one end-user — trace, session, token, cost, an
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--user-id` | `string` | Yes | End-user identifier. URL-encode values containing special characters. |
 | `--errors-only` | `true | false` | No | When `true`, scope every aggregate to errored traces only. |
 
@@ -1653,7 +1653,7 @@ Returns a page of the project's identified end-users over the range, each with t
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
 | `--limit` | `integer` | No | Page size. Max 100. |
@@ -1670,7 +1670,7 @@ Returns the memory stores the end-user accessed (reads and writes both count as 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--user-id` | `string` | Yes | End-user identifier. URL-encode values containing special characters. |
 
 #### `latitude users overview`
@@ -1681,7 +1681,7 @@ Returns project-wide end-user aggregates over the range — unique and new users
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
 
@@ -1693,7 +1693,7 @@ Returns the signals that occurred on the end-user's traces, most recent occurren
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--user-id` | `string` | Yes | End-user identifier. URL-encode values containing special characters. |
 | `--limit` | `integer` | No | Maximum number of signals to return. |
 
@@ -1705,7 +1705,7 @@ Returns the end-user's top values of a usage dimension — `model`, `provider`, 
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
-| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
 | `--user-id` | `string` | Yes | End-user identifier. URL-encode values containing special characters. |
 | `--dimension` | `model | provider | tool` | Yes | Dimension to break the usage down by. |
 | `--limit` | `integer` | No | Maximum number of values to return. |
@@ -1725,9 +1725,23 @@ These flags are available on every command:
 | `--format <json\|table\|yaml\|csv>` | Output format (default: `json`) |
 | `--output <PATH>` | Write binary responses to a file |
 | `--base-url <URL>` | Override the API base URL |
-| `--page-all` | Auto-paginate and stream all results |
-| `--page-limit <N>` | Max pages to fetch (default: `10`) |
+| `--no-extract` | Print the full response body instead of the `x-fern-sdk-return-value` extraction |
+| `--no-retry` | Disable retries declared by `x-fern-retries`, including network errors |
 | `-q, --quiet` | Suppress stdout on success |
 | `-h, --help` | Print help |
 | `-V, --version` | Print version |
 
+Operations the spec describes how to page (via `x-fern-pagination` or a root `page_token` parameter) also accept:
+
+| Flag | Description |
+|------|-------------|
+| `--page-all` | Auto-paginate and stream all results |
+| `--page-limit <N>` | Max pages to fetch (default: `10`) |
+| `--page-delay <MS>` | Delay between page fetches in milliseconds (default: `100`) |
+| `--no-pager` | Disable the pager even on interactive terminals |
+
+Operations the spec marks as streaming (via `x-fern-streaming`) also accept:
+
+| Flag | Description |
+|------|-------------|
+| `--no-stream` | Buffer the streaming response and print it as a single value once complete |

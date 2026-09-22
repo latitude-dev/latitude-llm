@@ -27,6 +27,9 @@ export class OauthKeysClient {
      *
      * @param {OauthKeysClient.RequestOptions} requestOptions - Request-specific configuration.
      *
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
+     *
      * @example
      *     await client.oauthKeys.list()
      */
@@ -84,6 +87,8 @@ export class OauthKeysClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.oauthKeys.get("oauthKeyId")
@@ -159,6 +164,8 @@ export class OauthKeysClient {
      *
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.oauthKeys.revoke("oauthKeyId")

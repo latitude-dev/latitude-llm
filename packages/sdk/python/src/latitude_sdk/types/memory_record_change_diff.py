@@ -18,6 +18,10 @@ class MemoryRecordChangeDiff(UniversalBaseModel):
             description="Kind of memory operation: `add`/`update`/`remove` (mutations), `read` (retrieval), or `store_create`/`store_delete` (store lifecycle).",
         ),
     ]
+    """
+    Kind of memory operation: `add`/`update`/`remove` (mutations), `read` (retrieval), or `store_create`/`store_delete` (store lifecycle).
+    """
+
     before_body: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="beforeBody"),
@@ -27,6 +31,10 @@ class MemoryRecordChangeDiff(UniversalBaseModel):
             description="The record's body before the change. `null` for the record's first version, a re-create after removal, or when the prior body was not captured.",
         ),
     ]
+    """
+    The record's body before the change. `null` for the record's first version, a re-create after removal, or when the prior body was not captured.
+    """
+
     after_body: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="afterBody"),
@@ -36,6 +44,10 @@ class MemoryRecordChangeDiff(UniversalBaseModel):
             description="The record's body after the change. `null` for a `remove`, or when the body was not captured.",
         ),
     ]
+    """
+    The record's body after the change. `null` for a `remove`, or when the body was not captured.
+    """
+
     degraded: bool = pydantic.Field()
     """
     `true` when a side's body was unavailable, so the diff is incomplete.

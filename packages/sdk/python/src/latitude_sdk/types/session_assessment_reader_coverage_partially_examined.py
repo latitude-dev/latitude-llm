@@ -23,6 +23,10 @@ class SessionAssessmentReaderCoveragePartiallyExamined(UniversalBaseModel):
         FieldMetadata(alias="readerId"),
         pydantic.Field(alias="readerId", description="Stable identifier of the evidence reader."),
     ]
+    """
+    Stable identifier of the evidence reader.
+    """
+
     label: str = pydantic.Field()
     """
     Human-readable reader name.
@@ -33,21 +37,37 @@ class SessionAssessmentReaderCoveragePartiallyExamined(UniversalBaseModel):
         FieldMetadata(alias="scoreDimensions"),
         pydantic.Field(alias="scoreDimensions", description="Dimensions the reader can inform."),
     ]
+    """
+    Dimensions the reader can inform.
+    """
+
     finding_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="findingCount"),
         pydantic.Field(alias="findingCount", description="Number of findings produced by readable inputs."),
     ]
+    """
+    Number of findings produced by readable inputs.
+    """
+
     readable_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="readableCount"),
         pydantic.Field(alias="readableCount", description="Number of inputs the reader could examine."),
     ]
+    """
+    Number of inputs the reader could examine.
+    """
+
     total_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="totalCount"),
         pydantic.Field(alias="totalCount", description="Total candidate inputs for the reader."),
     ]
+    """
+    Total candidate inputs for the reader.
+    """
+
     limitation: SessionAssessmentReaderCoveragePartiallyExaminedLimitation = pydantic.Field()
     """
     Reason the reader could not completely examine the session.

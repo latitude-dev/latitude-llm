@@ -19,5 +19,8 @@ class UserUsageSlice(UniversalBaseModel):
         FieldMetadata(alias="traceCount"),
         pydantic.Field(alias="traceCount", description="Distinct traces of the user carrying this value."),
     ]
+    """
+    Distinct traces of the user carrying this value.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

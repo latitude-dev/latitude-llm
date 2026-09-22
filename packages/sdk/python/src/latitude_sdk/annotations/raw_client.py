@@ -47,7 +47,7 @@ class RawAnnotationsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         value : float
             Normalized score value in [0, 1]. Higher = better.
@@ -157,7 +157,7 @@ class RawAnnotationsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         annotation_id : str
             Latitude-generated annotation identifier returned when the annotation was created.
@@ -236,7 +236,7 @@ class RawAnnotationsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         annotation_id : str
             Latitude-generated annotation identifier returned when the annotation was created.
@@ -303,7 +303,7 @@ class RawAnnotationsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         annotation_id : str
             Latitude-generated annotation identifier returned when the annotation was created.
@@ -415,7 +415,7 @@ class AsyncRawAnnotationsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         value : float
             Normalized score value in [0, 1]. Higher = better.
@@ -525,7 +525,7 @@ class AsyncRawAnnotationsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         annotation_id : str
             Latitude-generated annotation identifier returned when the annotation was created.
@@ -604,7 +604,7 @@ class AsyncRawAnnotationsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         annotation_id : str
             Latitude-generated annotation identifier returned when the annotation was created.
@@ -671,7 +671,7 @@ class AsyncRawAnnotationsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         annotation_id : str
             Latitude-generated annotation identifier returned when the annotation was created.

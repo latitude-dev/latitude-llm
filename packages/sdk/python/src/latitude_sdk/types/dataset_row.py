@@ -17,11 +17,19 @@ class DatasetRow(UniversalBaseModel):
     row_id: typing_extensions.Annotated[
         str, FieldMetadata(alias="rowId"), pydantic.Field(alias="rowId", description="Stable row identifier.")
     ]
+    """
+    Stable row identifier.
+    """
+
     dataset_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="datasetId"),
         pydantic.Field(alias="datasetId", description="Dataset this row belongs to."),
     ]
+    """
+    Dataset this row belongs to.
+    """
+
     input: typing.Optional[DatasetRowInput] = pydantic.Field(default=None)
     """
     Input cell. Omitted when the `input` column is removed.
@@ -41,6 +49,10 @@ class DatasetRow(UniversalBaseModel):
             description="The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. Omitted when the `expectedOutput` column is removed.",
         ),
     ]
+    """
+    The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. Omitted when the `expectedOutput` column is removed.
+    """
+
     metadata: typing.Optional[DatasetRowMetadata] = pydantic.Field(default=None)
     """
     Metadata cell. Omitted when the `metadata` column is removed.
@@ -56,6 +68,10 @@ class DatasetRow(UniversalBaseModel):
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp at which the row was inserted."),
     ]
+    """
+    ISO-8601 timestamp at which the row was inserted.
+    """
+
     version: int = pydantic.Field()
     """
     Dataset version this row belongs to.

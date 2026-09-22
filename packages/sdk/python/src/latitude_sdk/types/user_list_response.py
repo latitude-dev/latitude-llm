@@ -21,11 +21,19 @@ class UserListResponse(UniversalBaseModel):
         FieldMetadata(alias="totalCount"),
         pydantic.Field(alias="totalCount", description="Total users matching the filters across every page."),
     ]
+    """
+    Total users matching the filters across every page.
+    """
+
     has_more: typing_extensions.Annotated[
         bool,
         FieldMetadata(alias="hasMore"),
         pydantic.Field(alias="hasMore", description="`true` when there is at least one more page after this one."),
     ]
+    """
+    `true` when there is at least one more page after this one.
+    """
+
     limit: int = pydantic.Field()
     """
     Page size used for this response.

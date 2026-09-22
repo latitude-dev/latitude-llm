@@ -40,7 +40,7 @@ class RawImportsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -126,7 +126,7 @@ class RawImportsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         credentials : ImportCredentials
 
@@ -237,7 +237,7 @@ class RawImportsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         import_id : str
             Import id.
@@ -316,7 +316,7 @@ class RawImportsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         import_id : str
             Import id.
@@ -400,7 +400,7 @@ class RawImportsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         import_id : str
             Import id.
@@ -496,7 +496,7 @@ class AsyncRawImportsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -582,7 +582,7 @@ class AsyncRawImportsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         credentials : ImportCredentials
 
@@ -693,7 +693,7 @@ class AsyncRawImportsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         import_id : str
             Import id.
@@ -772,7 +772,7 @@ class AsyncRawImportsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         import_id : str
             Import id.
@@ -856,7 +856,7 @@ class AsyncRawImportsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         import_id : str
             Import id.

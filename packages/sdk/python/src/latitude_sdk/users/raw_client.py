@@ -56,7 +56,7 @@ class RawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`.
@@ -167,7 +167,7 @@ class RawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`.
@@ -260,7 +260,7 @@ class RawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.
@@ -360,7 +360,7 @@ class RawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.
@@ -458,7 +458,7 @@ class RawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.
@@ -548,7 +548,7 @@ class RawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.
@@ -633,7 +633,7 @@ class RawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.
@@ -717,7 +717,7 @@ class RawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.
@@ -817,7 +817,7 @@ class AsyncRawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`.
@@ -928,7 +928,7 @@ class AsyncRawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`.
@@ -1021,7 +1021,7 @@ class AsyncRawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.
@@ -1121,7 +1121,7 @@ class AsyncRawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.
@@ -1219,7 +1219,7 @@ class AsyncRawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.
@@ -1309,7 +1309,7 @@ class AsyncRawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.
@@ -1394,7 +1394,7 @@ class AsyncRawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.
@@ -1478,7 +1478,7 @@ class AsyncRawUsersClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         user_id : str
             End-user identifier. URL-encode values containing special characters.

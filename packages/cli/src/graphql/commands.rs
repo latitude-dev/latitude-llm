@@ -5,8 +5,12 @@
 use clap::builder::PossibleValuesParser;
 use clap::{Arg, Command};
 
-use crate::graphql::discovery::{GraphQLSchema as RestDescription, GraphQLResource as RestResource};
+use crate::cli_args::{HELP_HEADING_OPTIONAL, HELP_HEADING_REQUEST, HELP_HEADING_REQUIRED};
+use crate::graphql::discovery::{
+    GraphQLSchema as RestDescription, GraphQLResource as RestResource, MethodParameter,
+};
 use crate::text::to_kebab_flag;
+use std::collections::HashMap;
 
 /// Names of built-in flags that must not be duplicated by parameter-derived flags.
 const BUILTIN_FLAG_NAMES: &[&str] = &[
@@ -125,51 +129,13 @@ fn build_resource_command(name: &str, resource: &RestResource) -> Option<Command
             true,
         );
 
-        let mut method_cmd = Command::new(method_name.to_string())
-            .about(about)
-            .arg(
-                Arg::new("params")
-                    .long("params")
-                    .help("Additional parameters as JSON (overrides individual flags)")
-                    .value_name("JSON"),
-            )
-            .arg(
-                Arg::new("json")
-                    .long("json")
-                    .help("JSON string for the request body (use `-` to read from stdin)")
-                    .value_name("JSON|-"),
-            );
+        let mut method_cmd = Command::new(method_name.to_string()).about(about);
 
-        // Pagination flags
-        method_cmd = method_cmd
-            .arg(
-                Arg::new("page-all")
-                    .long("page-all")
-                    .help("Auto-paginate through all results (NDJSON)")
-                    .action(clap::ArgAction::SetTrue),
-            )
-            .arg(
-                Arg::new("page-limit")
-                    .long("page-limit")
-                    .help("Maximum number of pages to fetch (default: 10)")
-                    .value_name("N")
-                    .value_parser(clap::value_parser!(u32)),
-            )
-            .arg(
-                Arg::new("page-delay")
-                    .long("page-delay")
-                    .help("Delay in milliseconds between page fetches (default: 100)")
-                    .value_name("MS")
-                    .value_parser(clap::value_parser!(u64)),
-            )
-            .arg(
-                Arg::new("no-pager")
-                    .long("no-pager")
-                    .help("Disable pager even on interactive terminals")
-                    .action(clap::ArgAction::SetTrue),
-            );
+        // Parameters first, required before optional, so heading order in
+        // `--help` follows insertion order (see openapi::commands).
+        let mut required_args: Vec<Arg> = Vec::new();
+        let mut optional_args: Vec<Arg> = Vec::new();
 
-        // Generate individual flags from method parameters
         let mut param_names: Vec<_> = method.parameters.keys().collect();
         param_names.sort();
         for param_name in param_names {
@@ -188,11 +154,40 @@ fn build_resource_command(name: &str, resource: &RestResource) -> Option<Command
                 _ => "VALUE",
             };
 
-            let help_text = crate::text::truncate_description(
+            let mut help_text = crate::text::truncate_description(
                 param.description.as_deref().unwrap_or(""),
                 crate::text::CLI_DESCRIPTION_LIMIT,
                 true,
             );
+
+            // A flattened required leaf is one of several ways to satisfy the
+            // input: the whole-arg object shorthand (or `--json`) works too.
+            // Say so, since clap never enforces the leaf and the executor
+            // leaves validation to the server.
+            //
+            // Deliberately tests `param.default` (the spec's `defaultValue`)
+            // rather than the clap default that
+            // `openapi::commands::unconditionally_required` consults. The two
+            // `default` notions are not the same thing: `x-fern-default` is a
+            // client-side value the CLI materializes as a clap default, while
+            // a GraphQL input field's `defaultValue` is the *server's*
+            // fallback and is deliberately not promoted (see below). Both
+            // rules mean "the caller may omit it"; a shared helper would hide
+            // that they get there by different routes. `param.required`
+            // already accounts for ancestors — the parser computes
+            // `field_required = parent_required && is_non_null(...)` — so no
+            // ancestor walk is needed here.
+            let is_required = param.required && param.default.is_none();
+            if is_required {
+                if let Some(shorthand) = input_shorthand_flag(param, &method.parameters) {
+                    if shorthand != *param_name {
+                        if !help_text.is_empty() {
+                            help_text.push(' ');
+                        }
+                        help_text.push_str(&format!("[or via --{shorthand} JSON]"));
+                    }
+                }
+            }
 
             let mut arg = Arg::new(param_name.clone())
                 .long(kebab_name)
@@ -217,8 +212,65 @@ fn build_resource_command(name: &str, resource: &RestResource) -> Option<Command
                 arg = arg.value_parser(PossibleValuesParser::new(enum_values.clone()));
             }
 
-            method_cmd = method_cmd.arg(arg);
+            if is_required {
+                required_args.push(arg);
+            } else {
+                optional_args.push(arg);
+            }
         }
+
+        for arg in required_args {
+            method_cmd = method_cmd.arg(arg.help_heading(HELP_HEADING_REQUIRED));
+        }
+        for arg in optional_args {
+            method_cmd = method_cmd.arg(arg.help_heading(HELP_HEADING_OPTIONAL));
+        }
+
+        method_cmd = method_cmd
+            .arg(
+                Arg::new("params")
+                    .long("params")
+                    .help("Additional parameters as JSON (overrides individual flags)")
+                    .value_name("JSON")
+                    .help_heading(HELP_HEADING_REQUEST),
+            )
+            .arg(
+                Arg::new("json")
+                    .long("json")
+                    .help("JSON string for the request body (use `-` to read from stdin)")
+                    .value_name("JSON|-")
+                    .help_heading(HELP_HEADING_REQUEST),
+            )
+            .arg(
+                Arg::new("page-all")
+                    .long("page-all")
+                    .help("Auto-paginate through all results (NDJSON)")
+                    .action(clap::ArgAction::SetTrue)
+                    .help_heading(HELP_HEADING_REQUEST),
+            )
+            .arg(
+                Arg::new("page-limit")
+                    .long("page-limit")
+                    .help("Maximum number of pages to fetch (default: 10)")
+                    .value_name("N")
+                    .value_parser(clap::value_parser!(u32))
+                    .help_heading(HELP_HEADING_REQUEST),
+            )
+            .arg(
+                Arg::new("page-delay")
+                    .long("page-delay")
+                    .help("Delay in milliseconds between page fetches (default: 100)")
+                    .value_name("MS")
+                    .value_parser(clap::value_parser!(u64))
+                    .help_heading(HELP_HEADING_REQUEST),
+            )
+            .arg(
+                Arg::new("no-pager")
+                    .long("no-pager")
+                    .help("Disable pager even on interactive terminals")
+                    .action(clap::ArgAction::SetTrue)
+                    .help_heading(HELP_HEADING_REQUEST),
+            );
 
         cmd = cmd.subcommand(method_cmd);
     }
@@ -241,11 +293,30 @@ fn build_resource_command(name: &str, resource: &RestResource) -> Option<Command
     }
 }
 
+/// The kebab flag of the whole-input-arg object shorthand that can stand in
+/// for a flattened leaf (`graphql_field_path == ""` on the same
+/// `graphql_input_arg`), if the parser emitted one.
+fn input_shorthand_flag(
+    param: &MethodParameter,
+    all_params: &HashMap<String, MethodParameter>,
+) -> Option<String> {
+    let arg_name = param.graphql_input_arg.as_deref()?;
+    if param.graphql_field_path.as_deref() == Some("") {
+        return None;
+    }
+    all_params
+        .iter()
+        .find(|(_, p)| {
+            p.graphql_input_arg.as_deref() == Some(arg_name)
+                && p.graphql_field_path.as_deref() == Some("")
+        })
+        .map(|(name, _)| to_kebab_flag(name))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graphql::discovery::{MethodParameter, GraphQLOperation as RestMethod, GraphQLResource as RestResource};
-    use std::collections::HashMap;
+    use crate::graphql::discovery::{GraphQLOperation as RestMethod, GraphQLResource as RestResource};
 
     fn make_doc() -> RestDescription {
         let mut methods = HashMap::new();
@@ -348,6 +419,96 @@ mod tests {
         assert!(args.contains(&"uuid".to_string()), "uuid flag missing");
         assert!(args.contains(&"status".to_string()), "status flag missing");
         assert!(args.contains(&"params".to_string()), "params flag missing");
+
+        let heading = |id: &str| {
+            get_user_cmd
+                .get_arguments()
+                .find(|a| a.get_id() == id)
+                .and_then(|a| a.get_help_heading())
+        };
+        assert_eq!(heading("uuid"), Some(HELP_HEADING_REQUIRED));
+        assert_eq!(heading("status"), Some(HELP_HEADING_OPTIONAL));
+        assert_eq!(heading("params"), Some(HELP_HEADING_REQUEST));
+        assert_eq!(heading("page-all"), Some(HELP_HEADING_REQUEST));
+    }
+
+    /// A required input object flattened to per-field flags: required
+    /// leaves are listed as required and point at the `--input` shorthand
+    /// as the alternative; the shorthand itself, nullable leaves and
+    /// leaves with a server default are optional.
+    #[test]
+    fn test_required_input_object_help_grouping() {
+        let field = |required: bool, default: Option<&str>, path: &str| MethodParameter {
+            param_type: Some("string".to_string()),
+            required,
+            default: default.map(str::to_string),
+            graphql_input_arg: Some("input".to_string()),
+            graphql_field_path: Some(path.to_string()),
+            ..Default::default()
+        };
+        let mut params = HashMap::new();
+        params.insert(
+            "input".to_string(),
+            MethodParameter {
+                param_type: Some("object".to_string()),
+                graphql_input_arg: Some("input".to_string()),
+                graphql_field_path: Some(String::new()),
+                required: false,
+                ..Default::default()
+            },
+        );
+        params.insert("name".to_string(), field(true, None, "name"));
+        params.insert("nickname".to_string(), field(false, None, "nickname"));
+        params.insert("tier".to_string(), field(true, Some("free"), "tier"));
+
+        let mut methods = HashMap::new();
+        methods.insert(
+            "create".to_string(),
+            RestMethod {
+                parameters: params,
+                ..Default::default()
+            },
+        );
+        let mut resources = HashMap::new();
+        resources.insert(
+            "users".to_string(),
+            RestResource {
+                methods,
+                resources: HashMap::new(),
+            },
+        );
+        let doc = RestDescription {
+            name: "test-cli".to_string(),
+            resources,
+            ..Default::default()
+        };
+
+        let cmd = build_cli(&doc);
+        let leaf = cmd
+            .find_subcommand("users")
+            .and_then(|c| c.find_subcommand("create"))
+            .expect("users create missing");
+        let arg = |id: &str| {
+            leaf.get_arguments()
+                .find(|a| a.get_id().as_str() == id)
+                .unwrap_or_else(|| panic!("{id} flag missing"))
+        };
+        assert_eq!(arg("name").get_help_heading(), Some(HELP_HEADING_REQUIRED));
+        assert_eq!(
+            arg("name").get_help().map(|h| h.to_string()),
+            Some("[or via --input JSON]".to_string())
+        );
+        assert_eq!(arg("input").get_help_heading(), Some(HELP_HEADING_OPTIONAL));
+        assert_eq!(arg("nickname").get_help_heading(), Some(HELP_HEADING_OPTIONAL));
+        assert_eq!(arg("tier").get_help_heading(), Some(HELP_HEADING_OPTIONAL));
+        assert!(!arg("name").is_required_set());
+
+        let help = leaf.clone().render_help().to_string();
+        let req = help.find(HELP_HEADING_REQUIRED).unwrap();
+        let opt = help.find(HELP_HEADING_OPTIONAL).unwrap();
+        let required_section = &help[req..opt];
+        assert!(required_section.contains("--name <"), "{help}");
+        assert!(!required_section.contains("--input <"), "{help}");
     }
 
     #[test]

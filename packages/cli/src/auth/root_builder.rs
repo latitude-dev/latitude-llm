@@ -25,6 +25,7 @@ use std::sync::Arc;
 use super::builder::SchemeBinding;
 use super::credential::AuthCredentialSource;
 use super::oauth2::{MisconfiguredOAuth2Provider, OAuth2Grant, OAuth2TokenProvider};
+use super::oauth2_contract::OAuth2Endpoint;
 use super::provider::DynAuthProvider;
 
 /// Trait implemented by all typed auth builders. Converts the builder
@@ -240,6 +241,11 @@ pub struct OAuth2Auth {
     access_token: AuthCredentialSource,
     refresh_token: AuthCredentialSource,
     token_url: Option<String>,
+    token_endpoint: Option<OAuth2Endpoint>,
+    refresh_endpoint: Option<OAuth2Endpoint>,
+    token_header: String,
+    token_prefix: String,
+    scopes: Vec<String>,
 }
 
 impl OAuth2Auth {
@@ -253,12 +259,51 @@ impl OAuth2Auth {
             access_token: AuthCredentialSource::Missing,
             refresh_token: AuthCredentialSource::Missing,
             token_url: None,
+            token_endpoint: None,
+            refresh_endpoint: None,
+            token_header: "Authorization".to_string(),
+            token_prefix: "Bearer".to_string(),
+            scopes: Vec::new(),
         }
     }
 
     /// Set the OAuth2 token endpoint URL (from spec or Fern IR).
     pub fn token_url(mut self, url: impl Into<String>) -> Self {
         self.token_url = Some(url.into());
+        self
+    }
+
+    /// Configure the IR-derived token endpoint contract.
+    pub fn token_endpoint(mut self, endpoint: OAuth2Endpoint) -> Self {
+        self.token_endpoint = Some(endpoint);
+        self
+    }
+
+    /// Configure the IR-derived refresh endpoint contract.
+    pub fn refresh_endpoint(mut self, endpoint: OAuth2Endpoint) -> Self {
+        self.refresh_endpoint = Some(endpoint);
+        self
+    }
+
+    /// Header used to authenticate protected API requests.
+    pub fn token_header(mut self, header: impl Into<String>) -> Self {
+        self.token_header = header.into();
+        self
+    }
+
+    /// Prefix prepended to the access token. An empty prefix sends the raw token.
+    pub fn token_prefix(mut self, prefix: impl Into<String>) -> Self {
+        self.token_prefix = prefix.into();
+        self
+    }
+
+    /// Request these scopes during the client-credentials exchange.
+    pub fn scopes<I, S>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.scopes = scopes.into_iter().map(Into::into).collect();
         self
     }
 
@@ -357,12 +402,26 @@ impl AuthSchemeBuilder for OAuth2Auth {
         // that grant; we treat them (and any missing token_url) as incomplete
         // config and fail fast at request time instead of authenticating
         // silently.
+        let has_token_endpoint = self.token_endpoint.is_some();
         let provider: DynAuthProvider = match (
+            self.token_endpoint,
             self.token_url.as_deref(),
             self.client_id.env_var_name(),
             self.client_secret.env_var_name(),
         ) {
-            (Some(token_url), Some(client_id_env), Some(client_secret_env)) => {
+            (Some(token_endpoint), _, Some(client_id_env), Some(client_secret_env)) => {
+                Arc::new(OAuth2TokenProvider::from_client_credentials(
+                    self.name.clone(),
+                    client_id_env,
+                    client_secret_env,
+                    self.scopes,
+                    token_endpoint,
+                    self.refresh_endpoint,
+                    self.token_header,
+                    self.token_prefix,
+                ))
+            }
+            (None, Some(token_url), Some(client_id_env), Some(client_secret_env)) => {
                 let grant = match self.refresh_token.env_var_name() {
                     Some(refresh_token_env) => OAuth2Grant::RefreshToken {
                         client_id_env: client_id_env.to_string(),
@@ -373,7 +432,11 @@ impl AuthSchemeBuilder for OAuth2Auth {
                         OAuth2Grant::ClientCredentials {
                             client_id_env: client_id_env.to_string(),
                             client_secret_env: client_secret_env.to_string(),
-                            scope: None,
+                            scope: if self.scopes.is_empty() {
+                                None
+                            } else {
+                                Some(self.scopes.join(" "))
+                            },
                         }
                     }
                     None => {
@@ -390,16 +453,15 @@ impl AuthSchemeBuilder for OAuth2Auth {
                         );
                     }
                 };
-                Arc::new(OAuth2TokenProvider::new(
-                    self.name.clone(),
-                    token_url.to_string(),
-                    grant,
-                ))
+                Arc::new(
+                    OAuth2TokenProvider::new(self.name.clone(), token_url.to_string(), grant)
+                        .with_token_application(self.token_header, self.token_prefix),
+                )
             }
             _ => Arc::new(MisconfiguredOAuth2Provider::new(
                 self.name.clone(),
                 oauth2_missing_config_reason(
-                    self.token_url.is_some(),
+                    self.token_url.is_some() || has_token_endpoint,
                     self.client_id.env_var_name().is_some(),
                     self.client_secret.env_var_name().is_some(),
                 ),
@@ -438,20 +500,20 @@ mod tests {
 
     #[test]
     fn bearer_auth_builds_token_binding() {
-        let (name, binding) = BearerAuth::new("bearerAuth")
-            .env("MY_TOKEN")
-            .into_binding();
+        let (name, binding) = BearerAuth::new("bearerAuth").env("MY_TOKEN").into_binding();
         assert_eq!(name, "bearerAuth");
-        assert!(matches!(binding, SchemeBinding::Token(AuthCredentialSource::Env(ref e)) if e == "MY_TOKEN"));
+        assert!(
+            matches!(binding, SchemeBinding::Token(AuthCredentialSource::Env(ref e)) if e == "MY_TOKEN")
+        );
     }
 
     #[test]
     fn api_key_auth_builds_token_binding() {
-        let (name, binding) = ApiKeyAuth::new("apiKey")
-            .env("API_KEY")
-            .into_binding();
+        let (name, binding) = ApiKeyAuth::new("apiKey").env("API_KEY").into_binding();
         assert_eq!(name, "apiKey");
-        assert!(matches!(binding, SchemeBinding::Token(AuthCredentialSource::Env(ref e)) if e == "API_KEY"));
+        assert!(
+            matches!(binding, SchemeBinding::Token(AuthCredentialSource::Env(ref e)) if e == "API_KEY")
+        );
     }
 
     #[test]
@@ -477,7 +539,9 @@ mod tests {
             .token_url("https://auth.example.com/token")
             .into_binding();
         assert_eq!(name, "OAuth2Security");
-        assert!(matches!(binding, SchemeBinding::Token(AuthCredentialSource::Env(ref e)) if e == "MY_ACCESS_TOKEN"));
+        assert!(
+            matches!(binding, SchemeBinding::Token(AuthCredentialSource::Env(ref e)) if e == "MY_ACCESS_TOKEN")
+        );
     }
 
     // FER-10745: without a static access token, the client-credentials flow

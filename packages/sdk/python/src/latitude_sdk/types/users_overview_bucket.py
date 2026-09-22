@@ -19,16 +19,28 @@ class UsersOverviewBucket(UniversalBaseModel):
         FieldMetadata(alias="activeUsers"),
         pydantic.Field(alias="activeUsers", description="Distinct identified users active in the bucket."),
     ]
+    """
+    Distinct identified users active in the bucket.
+    """
+
     trace_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="traceCount"),
         pydantic.Field(alias="traceCount", description="Identified traces in the bucket."),
     ]
+    """
+    Identified traces in the bucket.
+    """
+
     session_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="sessionCount"),
         pydantic.Field(alias="sessionCount", description="Distinct user-attributed sessions starting in the bucket."),
     ]
+    """
+    Distinct user-attributed sessions starting in the bucket.
+    """
+
     error_session_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="errorSessionCount"),
@@ -36,5 +48,8 @@ class UsersOverviewBucket(UniversalBaseModel):
             alias="errorSessionCount", description="Of `sessionCount`, those with at least one errored trace."
         ),
     ]
+    """
+    Of `sessionCount`, those with at least one errored trace.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

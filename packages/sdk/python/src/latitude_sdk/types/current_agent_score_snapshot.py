@@ -35,11 +35,19 @@ class CurrentAgentScoreSnapshot(UniversalBaseModel):
             description="Version of the formulas, prompts and frozen references that produced this score. Scores from different versions are not directly comparable.",
         ),
     ]
+    """
+    Version of the formulas, prompts and frozen references that produced this score. Scores from different versions are not directly comparable.
+    """
+
     window_days: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="windowDays"),
         pydantic.Field(alias="windowDays", description="Length in days of the rolling window this score covers."),
     ]
+    """
+    Length in days of the rolling window this score covers.
+    """
+
     eligible_session_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="eligibleSessionCount"),
@@ -47,6 +55,10 @@ class CurrentAgentScoreSnapshot(UniversalBaseModel):
             alias="eligibleSessionCount", description="Production sessions in the window the score was computed over."
         ),
     ]
+    """
+    Production sessions in the window the score was computed over.
+    """
+
     policy_cap: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="policyCap"),
@@ -56,5 +68,8 @@ class CurrentAgentScoreSnapshot(UniversalBaseModel):
             description="Ceiling a safety policy rule applied to the score, or `null` when no rule applied.",
         ),
     ]
+    """
+    Ceiling a safety policy rule applied to the score, or `null` when no rule applied.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

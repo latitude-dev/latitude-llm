@@ -49,7 +49,7 @@ class RawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -148,7 +148,7 @@ class RawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -240,7 +240,7 @@ class RawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -330,7 +330,7 @@ class RawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -417,7 +417,7 @@ class RawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -509,7 +509,7 @@ class RawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -605,7 +605,7 @@ class RawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -700,7 +700,7 @@ class RawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -798,7 +798,7 @@ class AsyncRawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -897,7 +897,7 @@ class AsyncRawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -989,7 +989,7 @@ class AsyncRawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -1079,7 +1079,7 @@ class AsyncRawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -1166,7 +1166,7 @@ class AsyncRawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -1258,7 +1258,7 @@ class AsyncRawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -1354,7 +1354,7 @@ class AsyncRawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.
@@ -1449,7 +1449,7 @@ class AsyncRawMemoryClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         store_id : str
             Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store.

@@ -22,11 +22,19 @@ class SessionSignal(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this signal."),
     ]
+    """
+    Organization that owns this signal.
+    """
+
     project_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectId"),
         pydantic.Field(alias="projectId", description="Project this signal belongs to."),
     ]
+    """
+    Project this signal belongs to.
+    """
+
     slug: str = pydantic.Field()
     """
     URL-safe slug derived from `name`. Unique within the project.
@@ -55,6 +63,10 @@ class SessionSignal(UniversalBaseModel):
             description="Agent Score dimension and evidence-role pairs informed by this signal. An empty list means the signal is diagnostic only.",
         ),
     ]
+    """
+    Agent Score dimension and evidence-role pairs informed by this signal. An empty list means the signal is diagnostic only.
+    """
+
     states: typing.List[SessionSignalStatesItem] = pydantic.Field()
     """
     Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`).
@@ -69,6 +81,10 @@ class SessionSignal(UniversalBaseModel):
             description="ISO-8601 timestamp at which the signal was resolved, or `null`.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the signal was resolved, or `null`.
+    """
+
     ignored_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="ignoredAt"),
@@ -78,6 +94,10 @@ class SessionSignal(UniversalBaseModel):
             description="ISO-8601 timestamp at which the signal was ignored, or `null`.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the signal was ignored, or `null`.
+    """
+
     regressed_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="regressedAt"),
@@ -87,6 +107,10 @@ class SessionSignal(UniversalBaseModel):
             description="ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`.
+    """
+
     muted_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="mutedAt"),
@@ -96,16 +120,28 @@ class SessionSignal(UniversalBaseModel):
             description="ISO-8601 timestamp at which notifications were muted, or `null`. Muting only silences notifications; incidents still open.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which notifications were muted, or `null`. Muting only silences notifications; incidents still open.
+    """
+
     created_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
     ]
+    """
+    ISO-8601 timestamp of creation.
+    """
+
     updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="updatedAt"),
         pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last update."),
     ]
+    """
+    ISO-8601 timestamp of the last update.
+    """
+
     occurrences: int = pydantic.Field()
     """
     Number of occurrences within the session.
@@ -118,15 +154,26 @@ class SessionSignal(UniversalBaseModel):
             alias="firstSeenAt", description="ISO-8601 timestamp of the earliest occurrence in the session."
         ),
     ]
+    """
+    ISO-8601 timestamp of the earliest occurrence in the session.
+    """
+
     last_seen_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="lastSeenAt"),
         pydantic.Field(alias="lastSeenAt", description="ISO-8601 timestamp of the latest occurrence in the session."),
     ]
+    """
+    ISO-8601 timestamp of the latest occurrence in the session.
+    """
+
     trace_ids: typing_extensions.Annotated[
         typing.List[str],
         FieldMetadata(alias="traceIds"),
         pydantic.Field(alias="traceIds", description="Traces of the session where the signal occurred."),
     ]
+    """
+    Traces of the session where the signal occurred.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

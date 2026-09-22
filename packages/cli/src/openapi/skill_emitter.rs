@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use clap::{Arg, Command};
 
 use crate::auth::{AuthCredentialSource, SchemeBinding};
+use crate::openapi::commands::group_tag_description_for_group;
 use crate::openapi::discovery::{RestDescription, RestResource, SecurityScheme};
 use crate::text;
 
@@ -42,12 +43,13 @@ pub fn generate_skills(
     doc: &RestDescription,
     bin_name: &str,
     auth_bindings: &[(String, SchemeBinding)],
+    auth_strategy: crate::auth::AuthStrategy,
 ) -> Vec<(PathBuf, String)> {
     let mut files: Vec<(PathBuf, String)> = Vec::new();
 
     // Shared skill
     let shared_path = PathBuf::from(format!("{bin_name}-shared")).join("SKILL.md");
-    let shared_content = render_shared_skill(doc, bin_name, auth_bindings);
+    let shared_content = render_shared_skill(doc, bin_name, auth_bindings, auth_strategy);
     files.push((shared_path, shared_content));
 
     // Per-group skills — sorted for deterministic output
@@ -71,6 +73,7 @@ fn render_shared_skill(
     doc: &RestDescription,
     bin_name: &str,
     auth_bindings: &[(String, SchemeBinding)],
+    auth_strategy: crate::auth::AuthStrategy,
 ) -> String {
     let mut out = String::new();
 
@@ -88,7 +91,7 @@ fn render_shared_skill(
     if auth_bindings.is_empty() && doc.security_schemes.is_empty() {
         let _ = writeln!(out, "No authentication configured.\n");
     } else {
-        render_auth_section(&mut out, doc, bin_name, auth_bindings);
+        render_auth_section(&mut out, doc, bin_name, auth_bindings, auth_strategy);
     }
 
     // Global + commonly-used flags.
@@ -102,15 +105,46 @@ fn render_shared_skill(
     // per-op capability hints (`paginable`, `binaryResponse`); this
     // SKILL.md table is for the human reader who just wants the
     // affordance list. See ADR-0006 for the JSON contract.
+    // Which per-op affordances this API actually has. Advertising a flag the
+    // spec can never produce is worse than omitting it: the reported CLI
+    // documented `-o, --output` on an API with no binary responses (0 of 130
+    // operations accepted it) and pointed agents at `paginable` /
+    // `binaryResponse` hints that `--schema` never emits for such a spec, so
+    // step one of the prerequisite file was unfollowable.
+    let has_binary_response = doc_has_binary_response(doc);
+    let has_pagination = doc_has_pagination(doc);
+
     let _ = writeln!(out, "## Global Flags\n");
-    let _ = writeln!(
-        out,
-        "These flags appear across the CLI. The harness-level ones (`--dry-run`, \
-         `--format`, `--base-url`, `--quiet`) are available on every command; the \
-         rest (`--page-all`, `--output`, ...) surface on operations whose spec \
-         supports the affordance — check the per-op `--schema` output's \
-         `paginable` / `binaryResponse` hints to know which ops carry them.\n"
-    );
+    let mut affordances: Vec<&str> = Vec::new();
+    if has_pagination {
+        affordances.push("`--page-all`");
+    }
+    if has_binary_response {
+        affordances.push("`--output`");
+    }
+    if affordances.is_empty() {
+        let _ = writeln!(
+            out,
+            "These flags are available on every command in this CLI.\n"
+        );
+    } else {
+        let hints = match (has_pagination, has_binary_response) {
+            (true, true) => "`paginable` / `binaryResponse` hints",
+            (true, false) => "`paginable` hint",
+            (false, true) => "`binaryResponse` hint",
+            (false, false) => unreachable!("affordances is non-empty"),
+        };
+        let _ = writeln!(
+            out,
+            "These flags appear across the CLI. The harness-level ones (`--dry-run`, \
+             `--format`, `--base-url`, `--quiet`) are available on every command; \
+             {} surface{} only on operations whose spec supports the affordance — \
+             check the per-op `--schema` output's {hints} to know which ops carry \
+             them.\n",
+            affordances.join(" and "),
+            if affordances.len() == 1 { "s" } else { "" },
+        );
+    }
     let _ = writeln!(out, "| Flag | Description | Default |");
     let _ = writeln!(out, "|------|-------------|---------|");
     let _ = writeln!(
@@ -119,7 +153,7 @@ fn render_shared_skill(
     );
     let _ = writeln!(
         out,
-        "| `--format <FMT>` | Output format: `json`, `table`, `yaml`, `csv`, `raw`, `jsonl`, `http` | `json` |"
+        "| `--format <FMT>` | Output format: `json`, `table`, `yaml`, `csv`, `raw`, `jsonl`, `http` | `table` on a TTY, `json` when piped |"
     );
     let _ = writeln!(
         out,
@@ -133,26 +167,35 @@ fn render_shared_skill(
         out,
         "| `--json <JSON>` | Request body for POST/PATCH/PUT | |"
     );
-    let _ = writeln!(
-        out,
-        "| `-o, --output <PATH>` | Write binary responses to a file; use `-` to stream to stdout for piping into other commands (e.g. `ffplay -`, `aplay -`). | |"
-    );
-    let _ = writeln!(
-        out,
-        "| `--page-all` | Auto-paginate (NDJSON) | off |"
-    );
-    let _ = writeln!(
-        out,
-        "| `--page-limit <N>` | Max pages to fetch | `10` |"
-    );
-    let _ = writeln!(
-        out,
-        "| `--page-delay <MS>` | Delay between page fetches | `100` |"
-    );
-    let _ = writeln!(
-        out,
-        "| `--no-pager` | Disable pager even on interactive terminals | |"
-    );
+    // `--output` is registered only on operations with a binary response, and
+    // the pagination flags only where the spec says how to page. Emitting
+    // either row unconditionally documented a flag the parser rejects. The
+    // `ffplay -` / `aplay -` examples were also audio-API boilerplate; the
+    // description is now media-agnostic.
+    if has_binary_response {
+        let _ = writeln!(
+            out,
+            "| `-o, --output <PATH>` | Write a binary response to a file; `-` streams the bytes to stdout for piping. Only on operations that return binary. | |"
+        );
+    }
+    if has_pagination {
+        let _ = writeln!(
+            out,
+            "| `--page-all` | Auto-paginate (NDJSON). Only on paginable operations. | off |"
+        );
+        let _ = writeln!(
+            out,
+            "| `--page-limit <N>` | Max pages to fetch | `10` |"
+        );
+        let _ = writeln!(
+            out,
+            "| `--page-delay <MS>` | Delay between page fetches | `100` |"
+        );
+        let _ = writeln!(
+            out,
+            "| `--no-pager` | Disable pager even on interactive terminals | |"
+        );
+    }
     let _ = writeln!(
         out,
         "| `--no-retry` | Disable retries | |"
@@ -190,11 +233,43 @@ fn render_shared_skill(
     out
 }
 
+/// True when any operation in the spec returns a binary response, so
+/// `--output` exists somewhere in the CLI.
+fn doc_has_binary_response(doc: &RestDescription) -> bool {
+    any_method(doc, &|m| m.has_binary_response)
+}
+
+/// True when any operation is paginable, so the pagination flags exist
+/// somewhere in the CLI. Mirrors `commands::method_has_pagination`.
+fn doc_has_pagination(doc: &RestDescription) -> bool {
+    if doc.pagination_token_query_param.is_some() || doc.pagination_token_response_path.is_some() {
+        return true;
+    }
+    any_method(doc, &|m| m.pagination.is_some())
+}
+
+/// Walk every method in the resource tree until `predicate` holds.
+fn any_method(
+    doc: &RestDescription,
+    predicate: &dyn Fn(&crate::openapi::discovery::RestMethod) -> bool,
+) -> bool {
+    fn walk(
+        resources: &std::collections::HashMap<String, crate::openapi::discovery::RestResource>,
+        predicate: &dyn Fn(&crate::openapi::discovery::RestMethod) -> bool,
+    ) -> bool {
+        resources.values().any(|resource| {
+            resource.methods.values().any(predicate) || walk(&resource.resources, predicate)
+        })
+    }
+    walk(&doc.resources, predicate)
+}
+
 fn render_auth_section(
     out: &mut String,
     doc: &RestDescription,
     bin_name: &str,
     auth_bindings: &[(String, SchemeBinding)],
+    auth_strategy: crate::auth::AuthStrategy,
 ) {
     if !auth_bindings.is_empty() {
         for (scheme_name, binding) in auth_bindings {
@@ -212,19 +287,38 @@ fn render_auth_section(
         }
         let _ = writeln!(out);
 
-        // Emit setup instructions based on binding sources
+        // Emit setup instructions based on binding sources.
         let env_vars = collect_env_vars(auth_bindings);
         if !env_vars.is_empty() {
-            let _ = writeln!(out, "Set the required environment variable(s):\n");
+            // Multiple schemes are alternatives unless the strategy is `All`:
+            // `Any` tries each in turn, and `Auto` resolves to `Any` or
+            // `Routing`, both of which apply one scheme per request. Telling an
+            // agent to export every variable was actively harmful — it is the
+            // shadowing scenario the CLI's own auth errors warn about, and on a
+            // two-scheme API it guaranteed the agent set up the ambiguity.
+            let all_required = matches!(auth_strategy, crate::auth::AuthStrategy::All);
+            if env_vars.len() > 1 && !all_required {
+                let _ = writeln!(
+                    out,
+                    "These are alternative schemes for the same request — set **one** of:\n"
+                );
+            } else {
+                let _ = writeln!(out, "Set the required environment variable(s):\n");
+            }
             let _ = writeln!(out, "```bash");
             for var in &env_vars {
                 let _ = writeln!(out, "export {var}=\"<your-token>\"");
             }
             let _ = writeln!(out, "```\n");
 
-            let _ = writeln!(out, "Verify authentication works:\n");
+            // `--help` reads no credentials and contacts nothing, so it
+            // verified nothing — an agent following this step got a pass
+            // signal from an unauthenticated CLI. `auth status` is the
+            // credential-resolution report and is grafted onto every Fern CLI
+            // (ADR-0007 § always-graft), so it is always a valid instruction.
+            let _ = writeln!(out, "Verify authentication resolves:\n");
             let _ = writeln!(out, "```bash");
-            let _ = writeln!(out, "{bin_name} --help");
+            let _ = writeln!(out, "{bin_name} auth status");
             let _ = writeln!(out, "```\n");
         }
     } else {
@@ -279,6 +373,11 @@ fn describe_credential_source(src: &AuthCredentialSource) -> String {
         AuthCredentialSource::Keyring { service, account } => {
             format!("keyring `{service}:{account}` (populated by `auth login`)")
         }
+        AuthCredentialSource::KeyringField {
+            service,
+            account,
+            field,
+        } => format!("`{field}` in keyring `{service}:{account}` (populated by `auth login`)"),
         AuthCredentialSource::Missing => "(unbound)".to_string(),
     }
 }
@@ -373,14 +472,39 @@ fn render_group_skill(
 }
 
 fn group_description(doc: &RestDescription, group_name: &str) -> String {
-    // Try x-fern-groups metadata first
-    if let Some(info) = doc.groups.get(group_name) {
-        if let Some(ref summary) = info.summary {
-            return summary.clone();
+    let tag_description = group_tag_description_for_group(
+        group_name,
+        doc.group_tag_names.get(group_name).map(Vec::as_slice),
+        &doc.tag_descriptions,
+        doc.group_tag_operation_counts.get(group_name),
+        doc.group_operation_counts.get(group_name).copied(),
+        &doc.tag_group_names,
+        &doc.tag_description_order,
+    )
+    .filter(|description| !description.is_empty());
+
+    if let Some(summary) = doc
+        .groups
+        .get(group_name)
+        .and_then(|info| info.summary.as_deref())
+        .filter(|summary| !summary.is_empty())
+    {
+        if !text::is_name_restating(summary, group_name) || tag_description.is_none() {
+            return summary.to_string();
         }
-        if let Some(ref description) = info.description {
-            return first_sentence(description);
-        }
+    }
+
+    if let Some(description) = doc
+        .groups
+        .get(group_name)
+        .and_then(|info| info.description.as_deref())
+        .filter(|description| !description.is_empty())
+    {
+        return text::first_sentence(description);
+    }
+
+    if let Some(description) = tag_description {
+        return description;
     }
 
     // Fall back to spec title/description
@@ -388,14 +512,6 @@ fn group_description(doc: &RestDescription, group_name: &str) -> String {
         return format!("{title}: Operations on {group_name}");
     }
     format!("Operations on {group_name}")
-}
-
-fn first_sentence(s: &str) -> String {
-    if let Some(idx) = s.find(". ") {
-        s[..=idx].to_string()
-    } else {
-        s.to_string()
-    }
 }
 
 fn render_resource_tree(out: &mut String, resource: &RestResource, depth: usize) {
@@ -481,7 +597,9 @@ pub fn example_placeholder(param: &crate::openapi::discovery::MethodParameter) -
 mod tests {
     use super::*;
     use std::collections::HashMap;
-    use crate::openapi::discovery::{MethodParameter, RestDescription, RestMethod, RestResource};
+    use crate::openapi::discovery::{
+        MethodParameter, RestDescription, RestMethod, RestResource, SdkGroupInfo,
+    };
 
     fn minimal_doc() -> RestDescription {
         let mut resources = HashMap::new();
@@ -529,7 +647,7 @@ mod tests {
     #[test]
     fn generates_shared_and_group_files() {
         let doc = minimal_doc();
-        let files = generate_skills(&doc, "testcli", &bindings_for("TEST_API_KEY"));
+        let files = generate_skills(&doc, "testcli", &bindings_for("TEST_API_KEY"), crate::auth::AuthStrategy::default());
         let names: Vec<String> = files.iter().map(|(p, _)| p.display().to_string()).collect();
         assert!(names.contains(&"testcli-shared/SKILL.md".to_string()));
         assert!(names.contains(&"testcli-items/SKILL.md".to_string()));
@@ -539,7 +657,7 @@ mod tests {
     #[test]
     fn shared_skill_has_valid_frontmatter() {
         let doc = minimal_doc();
-        let files = generate_skills(&doc, "testcli", &bindings_for("TEST_API_KEY"));
+        let files = generate_skills(&doc, "testcli", &bindings_for("TEST_API_KEY"), crate::auth::AuthStrategy::default());
         let shared = &files[0].1;
         assert!(shared.starts_with("---\n"));
         assert!(shared.contains("name: \"testcli-shared\""));
@@ -552,7 +670,7 @@ mod tests {
     #[test]
     fn group_skill_has_valid_frontmatter() {
         let doc = minimal_doc();
-        let files = generate_skills(&doc, "testcli", &bindings_for("TEST_API_KEY"));
+        let files = generate_skills(&doc, "testcli", &bindings_for("TEST_API_KEY"), crate::auth::AuthStrategy::default());
         let group = &files[1].1;
         assert!(group.starts_with("---\n"));
         assert!(group.contains("name: \"testcli-items\""));
@@ -562,7 +680,7 @@ mod tests {
     #[test]
     fn shared_skill_contains_auth_section() {
         let doc = minimal_doc();
-        let files = generate_skills(&doc, "testcli", &bindings_for("TEST_API_KEY"));
+        let files = generate_skills(&doc, "testcli", &bindings_for("TEST_API_KEY"), crate::auth::AuthStrategy::default());
         let shared = &files[0].1;
         assert!(shared.contains("## Authentication"));
         assert!(shared.contains("TEST_API_KEY"));
@@ -572,18 +690,97 @@ mod tests {
     #[test]
     fn shared_skill_contains_global_flags() {
         let doc = minimal_doc();
-        let files = generate_skills(&doc, "testcli", &[]);
+        let files = generate_skills(&doc, "testcli", &[], crate::auth::AuthStrategy::default());
         let shared = &files[0].1;
         assert!(shared.contains("## Global Flags"));
         assert!(shared.contains("--dry-run"));
         assert!(shared.contains("--format"));
+        // The `--format` default is TTY-dependent; advertising `json` was
+        // simply wrong (subcommand `--help` has always stated it correctly).
+        assert!(
+            shared.contains("`table` on a TTY, `json` when piped"),
+            "shared skill must state the real --format default: {shared}",
+        );
+    }
+
+    /// Per-op flags must not be advertised on an API that cannot produce them.
+    ///
+    /// The reported prerequisite file documented `-o, --output` on an API with
+    /// no binary responses — 0 of 130 operations accepted it and the parser
+    /// rejected it — and pointed agents at `--schema` hints that never appear
+    /// for such a spec. Step one of the file was therefore unfollowable.
+    #[test]
+    fn shared_skill_omits_per_op_flags_the_spec_cannot_produce() {
+        let doc = minimal_doc();
+        assert!(!doc_has_pagination(&doc));
+        assert!(!doc_has_binary_response(&doc));
+
+        let files = generate_skills(&doc, "testcli", &[], crate::auth::AuthStrategy::default());
+        let shared = &files[0].1;
+        for absent in ["--page-all", "--page-limit", "--page-delay", "--no-pager", "--output"] {
+            assert!(
+                !shared.contains(absent),
+                "{absent} must not be advertised on a spec that never registers it: {shared}",
+            );
+        }
+        // …and neither should the hints that only exist alongside them.
+        assert!(!shared.contains("paginable"));
+        assert!(!shared.contains("binaryResponse"));
+        assert!(
+            shared.contains("available on every command in this CLI"),
+            "with no per-op affordances the paragraph should say so: {shared}",
+        );
+    }
+
+    /// The other direction: a paginable / binary-returning API still gets both
+    /// the rows and the `--schema` hint pointer.
+    #[test]
+    fn shared_skill_advertises_per_op_flags_when_the_spec_has_them() {
+        let mut doc = minimal_doc();
+        doc.pagination_token_query_param = Some("pageToken".to_string());
+        if let Some(resource) = doc.resources.get_mut("items") {
+            if let Some(method) = resource.methods.get_mut("list") {
+                method.has_binary_response = true;
+            }
+        }
+
+        let files = generate_skills(&doc, "testcli", &[], crate::auth::AuthStrategy::default());
+        let shared = &files[0].1;
         assert!(shared.contains("--page-all"));
+        assert!(shared.contains("--output"));
+        assert!(shared.contains("`paginable` / `binaryResponse` hints"));
+    }
+
+    /// Multiple schemes are alternatives unless the strategy is `All`. Telling
+    /// an agent to export every variable set up the exact shadowing the CLI's
+    /// own auth errors warn about.
+    #[test]
+    fn shared_skill_says_set_one_of_for_alternative_schemes() {
+        let doc = minimal_doc();
+        let bindings = vec![
+            ("BearerAuth".to_string(), bindings_for("API_KEY")[0].1.clone()),
+            ("TokenAuth".to_string(), bindings_for("TOKEN")[0].1.clone()),
+        ];
+
+        let any = generate_skills(&doc, "testcli", &bindings, crate::auth::AuthStrategy::Any);
+        assert!(
+            any[0].1.contains("set **one** of"),
+            "alternative schemes must not tell the agent to export both: {}",
+            any[0].1,
+        );
+
+        let all = generate_skills(&doc, "testcli", &bindings, crate::auth::AuthStrategy::All);
+        assert!(
+            all[0].1.contains("Set the required environment variable(s)"),
+            "an `All` strategy genuinely needs every variable: {}",
+            all[0].1,
+        );
     }
 
     #[test]
     fn group_skill_lists_methods() {
         let doc = minimal_doc();
-        let files = generate_skills(&doc, "testcli", &[]);
+        let files = generate_skills(&doc, "testcli", &[], crate::auth::AuthStrategy::default());
         let group = &files[1].1;
         assert!(group.contains("`get`"));
         assert!(group.contains("`list`"));
@@ -593,7 +790,7 @@ mod tests {
     #[test]
     fn group_skill_has_prerequisite_link() {
         let doc = minimal_doc();
-        let files = generate_skills(&doc, "testcli", &[]);
+        let files = generate_skills(&doc, "testcli", &[], crate::auth::AuthStrategy::default());
         let group = &files[1].1;
         assert!(group.contains("testcli-shared/SKILL.md"));
         assert!(group.contains("testcli generate-skills"));
@@ -602,7 +799,7 @@ mod tests {
     #[test]
     fn group_skill_has_discovering_commands() {
         let doc = minimal_doc();
-        let files = generate_skills(&doc, "testcli", &[]);
+        let files = generate_skills(&doc, "testcli", &[], crate::auth::AuthStrategy::default());
         let group = &files[1].1;
         assert!(group.contains("## Discovering Commands"));
         assert!(group.contains("testcli items --help"));
@@ -701,7 +898,7 @@ mod tests {
             ..Default::default()
         };
 
-        let files = generate_skills(&doc, "cli", &[]);
+        let files = generate_skills(&doc, "cli", &[], crate::auth::AuthStrategy::default());
         let group = &files[1].1;
         assert!(group.contains("`list`"));
         assert!(group.contains("### nested"));
@@ -714,7 +911,7 @@ mod tests {
             name: "empty".to_string(),
             ..Default::default()
         };
-        let files = generate_skills(&doc, "empty", &[]);
+        let files = generate_skills(&doc, "empty", &[], crate::auth::AuthStrategy::default());
         assert_eq!(files.len(), 1);
         assert!(files[0].0.display().to_string().contains("shared"));
     }
@@ -723,13 +920,75 @@ mod tests {
     fn deterministic_output_across_calls() {
         let doc = minimal_doc();
         let bindings = bindings_for("KEY");
-        let a = generate_skills(&doc, "test", &bindings);
-        let b = generate_skills(&doc, "test", &bindings);
+        let a = generate_skills(&doc, "test", &bindings, crate::auth::AuthStrategy::default());
+        let b = generate_skills(&doc, "test", &bindings, crate::auth::AuthStrategy::default());
         assert_eq!(a.len(), b.len());
         for (fa, fb) in a.iter().zip(b.iter()) {
             assert_eq!(fa.0, fb.0);
             assert_eq!(fa.1, fb.1);
         }
+    }
+
+    #[test]
+    fn tag_description_drives_group_skill_description() {
+        let mut doc = minimal_doc();
+        doc.tag_descriptions.insert(
+            "items".to_string(),
+            "Manage the items available to your account.".to_string(),
+        );
+        let files = generate_skills(&doc, "test", &[], crate::auth::AuthStrategy::default());
+        assert!(files[1]
+            .1
+            .contains("description: \"Manage the items available to your account.\""));
+    }
+
+    #[test]
+    fn name_restating_summary_falls_through_to_tag_description() {
+        let mut doc = minimal_doc();
+        doc.groups.insert(
+            "items".to_string(),
+            SdkGroupInfo {
+                summary: Some("Items".to_string()),
+                ..Default::default()
+            },
+        );
+        doc.tag_descriptions.insert(
+            "items".to_string(),
+            "Manage the items available to your account.".to_string(),
+        );
+
+        let files = generate_skills(&doc, "test", &[], crate::auth::AuthStrategy::default());
+        assert!(files[1]
+            .1
+            .contains("description: \"Manage the items available to your account.\""));
+        assert!(!files[1].1.contains("description: \"Items\""));
+    }
+
+    #[test]
+    fn group_description_wins_over_tag_description_when_summary_is_absent() {
+        let mut doc = minimal_doc();
+        doc.groups.insert(
+            "items".to_string(),
+            SdkGroupInfo {
+                description: Some(
+                    "Manage item inventory across every connected account. This is extended prose."
+                        .to_string(),
+                ),
+                ..Default::default()
+            },
+        );
+        doc.tag_descriptions.insert(
+            "items".to_string(),
+            "Items exposed by the API.".to_string(),
+        );
+
+        let files = generate_skills(&doc, "test", &[], crate::auth::AuthStrategy::default());
+        assert!(files[1]
+            .1
+            .contains("description: \"Manage item inventory across every connected account.\""));
+        assert!(!files[1]
+            .1
+            .contains("description: \"Items exposed by the API.\""));
     }
 
     #[test]
@@ -754,7 +1013,7 @@ mod tests {
             resources,
             ..Default::default()
         };
-        let files = generate_skills(&doc, "cli", &[]);
+        let files = generate_skills(&doc, "cli", &[], crate::auth::AuthStrategy::default());
         let group = &files[1].1;
         assert!(group.contains("\\\"quotes\\\""));
     }
