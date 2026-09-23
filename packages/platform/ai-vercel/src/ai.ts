@@ -39,10 +39,18 @@ type BedrockGeographyPrefix = "eu" | "us" | "apac"
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192
 const MAX_ERROR_TEXT_LENGTH = 4_000
 
-export const SUPPORTED_GENERATION_PROVIDERS = ["amazon-bedrock", "anthropic", "openai", "google", "custom"] as const
+export const SUPPORTED_GENERATION_PROVIDERS = [
+  "amazon-bedrock",
+  "anthropic",
+  "openai",
+  "google",
+  "custom",
+  "orcarouter",
+] as const
 
 /** providerOptions key for the OpenAI-compatible provider (its `name` setting). */
 const CUSTOM_PROVIDER_OPTIONS_KEY = "custom"
+const ORCAROUTER_PROVIDER_OPTIONS_KEY = "orcarouter"
 const BEDROCK_MINIMAX_M25_MODEL_ID = "minimax.minimax-m2.5"
 const BEDROCK_MINIMAX_M25_FALLBACK_MODEL = {
   provider: "amazon-bedrock",
@@ -319,6 +327,39 @@ const createCustomProvider = (): Effect.Effect<ReturnType<typeof createOpenAICom
   })
 
 /**
+ * The `orcarouter` provider is the OrcaRouter gateway (https://www.orcarouter.ai),
+ * an OpenAI-compatible endpoint: `LAT_ORCAROUTER_API_KEY` is required, the base URL
+ * defaults to `https://api.orcarouter.ai/v1` and can be overridden.
+ */
+const createOrcaRouterProvider = (): Effect.Effect<ReturnType<typeof createOpenAICompatible>, AICredentialError> =>
+  Effect.gen(function* () {
+    const apiKey = yield* parseEnv("LAT_ORCAROUTER_API_KEY", "string").pipe(
+      Effect.mapError(
+        () =>
+          new AICredentialError({
+            provider: "orcarouter",
+            message: "OrcaRouter is unavailable: set LAT_ORCAROUTER_API_KEY.",
+          }),
+      ),
+    )
+    const baseURL = yield* parseEnvOptional("LAT_ORCAROUTER_BASE_URL", "string").pipe(
+      Effect.mapError(
+        () =>
+          new AICredentialError({
+            provider: "orcarouter",
+            message: "OrcaRouter is unavailable: LAT_ORCAROUTER_BASE_URL must be a string.",
+          }),
+      ),
+    )
+
+    return createOpenAICompatible({
+      name: ORCAROUTER_PROVIDER_OPTIONS_KEY,
+      baseURL: baseURL ?? "https://api.orcarouter.ai/v1",
+      apiKey,
+    })
+  })
+
+/**
  * Creates a Vercel AI SDK language model for supported providers.
  * Failures are returned on the Effect error channel.
  */
@@ -343,6 +384,9 @@ export const createProviderModel = (
 
     case "custom":
       return createCustomProvider().pipe(Effect.map((custom) => custom(model)))
+
+    case "orcarouter":
+      return createOrcaRouterProvider().pipe(Effect.map((orcarouter) => orcarouter(model)))
 
     default:
       return Effect.fail(
@@ -627,7 +671,7 @@ type EmbeddingModel = EmbedCall["model"]
 type EmbedProviderOptions = NonNullable<EmbedCall["providerOptions"]>
 type RerankingModel = Parameters<typeof rerank>[0]["model"]
 
-export const SUPPORTED_EMBEDDING_PROVIDERS = ["voyage", "openai", "google", "custom"] as const
+export const SUPPORTED_EMBEDDING_PROVIDERS = ["voyage", "openai", "google", "custom", "orcarouter"] as const
 
 export const SUPPORTED_RERANKING_PROVIDERS = ["voyage", "amazon-bedrock"] as const
 
@@ -675,6 +719,15 @@ const createEmbeddingCall = (
         Effect.map((custom) => ({
           model: custom.embeddingModel(input.model),
           providerOptions: { [CUSTOM_PROVIDER_OPTIONS_KEY]: { dimensions: EMBEDDING_DIMENSIONS } },
+        })),
+      )
+
+    case "orcarouter":
+      return createOrcaRouterProvider().pipe(
+        credentialToAIError,
+        Effect.map((orcarouter) => ({
+          model: orcarouter.embeddingModel(input.model),
+          providerOptions: { [ORCAROUTER_PROVIDER_OPTIONS_KEY]: { dimensions: EMBEDDING_DIMENSIONS } },
         })),
       )
 
