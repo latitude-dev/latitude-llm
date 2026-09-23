@@ -1,6 +1,6 @@
 # Slack integration
 
-Multi-tenant Slack OAuth + notification routing. One Latitude organization ↔ one Slack workspace; notifications fan out to operator-configured channels per `NotificationGroup`.
+Multi-tenant Slack OAuth + notification routing. Each Latitude organization connects at most one Slack workspace, and a workspace may be connected to several organizations; notifications fan out to operator-configured channels per `NotificationGroup`.
 
 ## What ships in v1
 
@@ -28,7 +28,9 @@ latitude.slack_integration_details      (child — slack-specific)
   routes jsonb DEFAULT '{}'             ← Phase 3 add
 ```
 
-The cross-org claim ("one workspace, one Latitude org") is enforced by a partial unique index on `integrations(kind, vendor_account_id) WHERE revoked_at IS NULL`. Reinstall = soft-revoke the previous row + INSERT a new pair; the previous details row stays for audit. **Routes are NOT carried across reinstall** — the new active row begins with `routes = {}`.
+One active Slack integration per org is enforced by the partial unique index on `integrations(organization_id, kind) WHERE revoked_at IS NULL`. There is **no** cross-org workspace claim: the shared `(kind, vendor_account_id)` partial unique index excludes `kind = 'slack'`, because the integration is outbound-only (Latitude → Slack), so nothing ever has to resolve a `team_id` back to a single org. Each org's install carries its own tokens, routes, and refresh lock (`org:${organizationId}:slack:refresh`). Reinstall = soft-revoke the previous row + INSERT a new pair; the previous details row stays for audit. **Routes are NOT carried across reinstall** — the new active row begins with `routes = {}`.
+
+Adding an inbound Slack surface (events webhook, `@latitude` mentions, slash commands) would need a way to pick the org for a `team_id` (e.g. per-channel ownership) before it can ship.
 
 ### `routes` shape
 
@@ -123,7 +125,7 @@ Slack token rotation is on for every app (dev / staging / production). **Phase 3
 
 ## Operator runbook
 
-- **Disconnect**: settings page → Disconnect button. Soft-revokes locally; best-effort `auth.revoke` to Slack with a 5s timeout. The disconnected integration's row is kept (for audit + the cross-org claim).
+- **Disconnect**: settings page → Disconnect button. Soft-revokes locally, then a best-effort `auth.revoke` to Slack with a 5s timeout, **skipped while another org still has an active install for the same `team_id`** (checked across orgs with the admin client via `hasActiveSlackIntegrationForTeamAcrossOrgs`). Without token rotation every install in a workspace shares one bot token, and revoking it deactivates the bot for all of them. The disconnected integration's row is kept for audit.
 - **Reconnect**: re-runs the OAuth flow. **Routes are NOT preserved** — operator re-picks channels.
 - **Private channels**: only appear in the picker if the bot is already a member. Invite the bot in Slack first, then click "Refresh channels" in the settings UI.
 

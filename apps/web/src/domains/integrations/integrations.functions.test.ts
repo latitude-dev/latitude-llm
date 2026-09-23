@@ -4,7 +4,15 @@ import {
   type SlackIntegrationRepositoryShape,
 } from "@domain/integrations"
 import { InMemorySlackIntegrationRepositoryLive } from "@domain/integrations/testing"
-import { generateId, OrganizationId, SlackIntegrationId, SqlClient, type SqlClientShape, UserId } from "@domain/shared"
+import {
+  generateId,
+  OrganizationId,
+  RepositoryError,
+  SlackIntegrationId,
+  SqlClient,
+  type SqlClientShape,
+  UserId,
+} from "@domain/shared"
 import { Effect, Exit, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -63,8 +71,13 @@ const makeIntegration = (overrides: Partial<SlackIntegration> = {}): SlackIntegr
   }
 }
 
-const runWith = (layers: { readonly repo: ReturnType<typeof InMemorySlackIntegrationRepositoryLive> }) =>
-  disconnectSlackIntegrationEffect.pipe(Effect.provide(layers.repo), Effect.provide(NoopSqlClient))
+const runWith = (layers: {
+  readonly repo: ReturnType<typeof InMemorySlackIntegrationRepositoryLive>
+  readonly isWorkspaceConnectedElsewhere?: (teamId: string) => Effect.Effect<boolean, RepositoryError>
+}) =>
+  disconnectSlackIntegrationEffect({
+    isWorkspaceConnectedElsewhere: layers.isWorkspaceConnectedElsewhere ?? (() => Effect.succeed(false)),
+  }).pipe(Effect.provide(layers.repo), Effect.provide(NoopSqlClient))
 
 const findActive = async (repoLayer: ReturnType<typeof InMemorySlackIntegrationRepositoryLive>) => {
   const effect = Effect.gen(function* () {
@@ -119,5 +132,43 @@ describe("disconnectSlackIntegrationEffect", () => {
     // Local row is revoked even though Slack-side failed.
     const stillActive = await findActive(repoLayer)
     expect(stillActive).toBeNull()
+  })
+
+  it("skips Slack auth.revoke while another org still has the workspace connected", async () => {
+    const seed = makeIntegration()
+    const repoLayer = InMemorySlackIntegrationRepositoryLive({ organizationId: ORG_A, seed: [seed] })
+    const checkedTeams: string[] = []
+
+    const result = await Effect.runPromise(
+      runWith({
+        repo: repoLayer,
+        isWorkspaceConnectedElsewhere: (teamId) => {
+          checkedTeams.push(teamId)
+          return Effect.succeed(true)
+        },
+      }),
+    )
+
+    expect(result).toEqual({ revoked: true })
+    expect(checkedTeams).toEqual([seed.teamId])
+    expect(revokeMock).not.toHaveBeenCalled()
+    expect(await findActive(repoLayer)).toBeNull()
+  })
+
+  it("skips Slack auth.revoke when the sharing check fails", async () => {
+    const seed = makeIntegration()
+    const repoLayer = InMemorySlackIntegrationRepositoryLive({ organizationId: ORG_A, seed: [seed] })
+
+    const result = await Effect.runPromise(
+      runWith({
+        repo: repoLayer,
+        isWorkspaceConnectedElsewhere: () =>
+          Effect.fail(new RepositoryError({ cause: new Error("db down"), operation: "test" })),
+      }),
+    )
+
+    expect(result).toEqual({ revoked: true })
+    expect(revokeMock).not.toHaveBeenCalled()
+    expect(await findActive(repoLayer)).toBeNull()
   })
 })
