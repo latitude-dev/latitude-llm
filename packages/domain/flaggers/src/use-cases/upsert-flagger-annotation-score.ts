@@ -255,6 +255,19 @@ export const upsertSafetyFindingScore = (input: UpsertSafetyFindingScoreInput) =
     })
 
     if (existing !== null) {
+      if (input.analysisHash !== undefined) {
+        const existingMetadata = existing.metadata as { analysisHash?: string } | null
+        if (existingMetadata?.analysisHash !== input.analysisHash) {
+          const scoreRepository = yield* ScoreRepository
+          yield* scoreRepository.save({
+            ...existing,
+            traceId: input.traceId,
+            feedback: input.feedback,
+            metadata: flaggerScoreMetadata(input),
+            updatedAt: new Date(),
+          })
+        }
+      }
       return { status: "existing", scoreId: existing.id } satisfies FlaggerScoreResult
     }
 
