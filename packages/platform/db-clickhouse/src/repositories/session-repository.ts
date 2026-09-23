@@ -53,6 +53,10 @@ import { countSessionsBySearchQuery, type FetchFullSessions, listSessionsBySearc
 import { isActiveSearch } from "./search-plan.ts"
 import { TOKEN_ANALYTICS_SUM_SELECT, toTokenAnalytics } from "./token-analytics.ts"
 
+/**
+ * Full listing row. The filter-free listing reads this bar only for the
+ * page's sessions (see LIST_CANDIDATES); project-wide scans carry this width.
+ */
 export const LIST_SELECT = `
   organization_id,
   project_id,
@@ -116,6 +120,40 @@ const DETAIL_SELECT = `${LIST_SELECT},
 `
 
 const ROOT_SPAN_FILTER = "((parent_span_id = '') OR (parent_span_id = '0000000000000000'))"
+
+/**
+ * Candidate stage for the filter-free listing: sort keys + LLM eligibility
+ * only. Stage B re-reads the full SELECT bar for at most `limit` ids.
+ */
+const LIST_CANDIDATES = `
+  organization_id,
+  project_id,
+  session_id,
+  min(min_start_time)          AS start_time,
+  max(max_end_time)            AS end_time,
+  -- Same sentinel rule as LIST_SELECT.
+  if(max(max_start_time) >= min(min_start_time),
+     max(max_start_time),
+     max(max_end_time))         AS last_activity_time,
+  -- sessions_mv only sums empty-parent spans, so local roots nested under a never-exported parent (e.g. Vercel AI SDK under the app's HTTP span) store 0; fall back to wall-clock.
+  if(sum(duration_ns) > 0,
+     sum(duration_ns),
+     greatest(0, reinterpretAsInt64(max(max_end_time))
+                   - reinterpretAsInt64(min(min_start_time)))) AS duration_ns,
+  if(
+    min(time_of_first_token) < toDateTime64('2261-01-01', 9, 'UTC')
+      AND min(time_of_first_token) > min(min_start_time),
+    reinterpretAsInt64(min(time_of_first_token))
+      - reinterpretAsInt64(min(min_start_time)),
+    0
+  )                              AS time_to_first_token_ns,
+  sum(span_count)              AS span_count,
+  uniqExactMerge(trace_count)  AS trace_count,
+  sum(cost_total_microcents)   AS cost_total_microcents,
+  sum(tokens_total)            AS tokens_total,
+  groupUniqArrayIfMerge(models)        AS models
+`
+
 const ROOT_DURATION = `if(${ROOT_SPAN_FILTER} AND evidence_end_time > evidence_start_time,
   reinterpretAsInt64(evidence_end_time) - reinterpretAsInt64(evidence_start_time),
   toInt64(0))`
@@ -207,17 +245,17 @@ type SessionListRow = {
   cost_total_microcents: string
   unpriced_span_count: string
   user_id: string
-  user_email: string
+  user_email: string | undefined
   tags: string[]
-  metadata: Record<string, string>
+  metadata: Record<string, string> | undefined
   models: string[]
   providers: string[]
-  service_names: string[]
-  agent_names: string[]
-  tools: string[]
-  defined_tools: string[]
-  simulation_id: string
-  root_span_id: string
+  service_names: string[] | undefined
+  agent_names: string[] | undefined
+  tools: string[] | undefined
+  defined_tools: string[] | undefined
+  simulation_id: string | undefined
+  root_span_id: string | undefined
   root_span_name: string
 }
 
@@ -403,10 +441,10 @@ const toDomainSession = (row: SessionListRow): Session => ({
   metadata: row.metadata ?? {},
   models: row.models.map(normalizeCHString),
   providers: row.providers.map(normalizeCHString),
-  serviceNames: row.service_names.map(normalizeCHString),
-  agentNames: row.agent_names.map(normalizeCHString),
-  definedTools: row.defined_tools.map(normalizeCHString),
-  rootSpanId: SpanId(normalizeCHString(row.root_span_id)),
+  serviceNames: row.service_names?.map(normalizeCHString) ?? [],
+  agentNames: row.agent_names?.map(normalizeCHString) ?? [],
+  definedTools: row.defined_tools?.map(normalizeCHString) ?? [],
+  rootSpanId: SpanId(normalizeCHString(row.root_span_id ?? "")),
   rootSpanName: normalizeCHString(row.root_span_name),
 })
 
@@ -667,49 +705,117 @@ export const SessionRepositoryLive = Layer.effect(
         const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-        return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${LIST_SELECT}
-                      FROM sessions
-                      WHERE organization_id = {organizationId:String}
-                        AND project_id = {projectId:String}
-                        ${extraWhere}
-                      GROUP BY organization_id, project_id, session_id
-                      ${havingClause}
-                      ORDER BY ${sort.expr} ${orderDir}, session_id ${orderDir}
-                      LIMIT {limit:UInt32}`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                limit: limit + 1,
-                ...filterParams,
-                ...(options.cursor
-                  ? {
-                      cursorSortValue: options.cursor.sortValue,
-                      cursorSessionId: options.cursor.sessionId,
-                    }
-                  : {}),
-              },
-              format: "JSONEachRow",
+        /**
+         * Filter-free requests run a two-stage list: candidates by narrow
+         * aggregate columns, then full rows keyed by the selected ids. The
+         * wide facet states are only read for the page's sessions, and the
+         * public API body keeps all Session fields populated.
+         */
+        const hasFilters = resolvedFilters !== undefined && Object.keys(resolvedFilters).length > 0
+
+        const cursorParams = options.cursor
+          ? {
+              cursorSortValue: options.cursor.sortValue,
+              cursorSessionId: options.cursor.sessionId,
+            }
+          : {}
+
+        const fetchByIds = (ids: readonly string[]) =>
+          chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${LIST_SELECT}
+                        FROM sessions
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND session_id IN ({sessionIds:Array(String)})
+                        GROUP BY organization_id, project_id, session_id`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  sessionIds: ids as string[],
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionListRow>()
             })
-            return result.json<SessionListRow>()
-          })
-          .pipe(
-            Effect.map((rows): SessionListPage => {
-              const hasMore = rows.length > limit
-              const pageRows = hasMore ? rows.slice(0, limit) : rows
-              const items = pageRows.map(toDomainSession)
-              const last = hasMore ? pageRows[pageRows.length - 1] : undefined
-              if (!last) return { items, hasMore }
-              return {
-                items,
-                hasMore,
-                nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
-              }
-            }),
-            Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
-          )
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "listByProjectId")))
+
+        const fetchList = () =>
+          chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${LIST_SELECT}
+                        FROM sessions
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          ${extraWhere}
+                        GROUP BY organization_id, project_id, session_id
+                        ${havingClause}
+                        ORDER BY ${sort.expr} ${orderDir}, session_id ${orderDir}
+                        LIMIT {limit:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  limit: limit + 1,
+                  ...filterParams,
+                  ...cursorParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionListRow>()
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "listByProjectId")))
+
+        // Filter-free requests: stage A picks the page's ids with narrow
+        // aggregate columns, stage B re-reads the full row for those ids so
+        // the API body keeps every Session field populated.
+        const leanList = Effect.gen(function* () {
+          const candidates = yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${LIST_CANDIDATES}
+                        FROM sessions
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                        GROUP BY organization_id, project_id, session_id
+                        ${havingClause}
+                        ORDER BY ${sort.expr} ${orderDir}, session_id ${orderDir}
+                        LIMIT {limit:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  limit: limit + 1,
+                  ...cursorParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ session_id: string }>()
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "listByProjectId")))
+          if (candidates.length === 0) return []
+          const ids = candidates.map((c) => c.session_id)
+          const fullRows = yield* fetchByIds(ids)
+          const byId = new Map(fullRows.map((r) => [normalizeCHString(r.session_id), r] as const))
+          return ids.flatMap((id) => (byId.has(normalizeCHString(id)) ? [byId.get(normalizeCHString(id))!] : []))
+        })
+
+        const page = hasFilters ? fetchList() : leanList
+        return yield* page.pipe(
+          Effect.map((rows): SessionListPage => {
+            const hasMore = rows.length > limit
+            const pageRows = hasMore ? rows.slice(0, limit) : rows
+            const items = pageRows.map(toDomainSession)
+            const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+            if (!last) return { items, hasMore }
+            return {
+              items,
+              hasMore,
+              nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
+            }
+          }),
+          Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
+        )
       })
 
     const getCohortBaseline: SessionRepositoryShape["getCohortBaseline"] = ({
