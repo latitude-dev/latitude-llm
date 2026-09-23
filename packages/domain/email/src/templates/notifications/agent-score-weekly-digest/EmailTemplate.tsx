@@ -1,5 +1,11 @@
-import { SCORE_DIMENSION_LABELS, SCORE_DIMENSIONS, type ScoreDimension } from "@domain/shared"
-import { Section, Text } from "@react-email/components"
+import {
+  SCORE_DIMENSION_DESCRIPTIONS,
+  SCORE_DIMENSION_LABELS,
+  SCORE_DIMENSIONS,
+  type ScoreDimension,
+  scoreBandColor,
+} from "@domain/shared"
+import { Img, Section, Text } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
@@ -17,13 +23,13 @@ interface AgentScoreWeeklyDigestEmailProps {
   readonly headline: string
   readonly coverage: string
   readonly dimensions: Record<ScoreDimension, { readonly score: number; readonly delta: number | null }>
+  readonly cardImageUrl: string
   readonly scoreUrl: string | null
   readonly webAppUrl: string
 }
 
-const UP = "#15803D"
-const DOWN = "#B91C1C"
-const STEADY = "#64748B"
+const MUTED = "#66727F"
+const BORDER = "#EEF0F2"
 
 export const formatScore = (value: number): string => value.toFixed(0)
 
@@ -31,58 +37,56 @@ export const formatScore = (value: number): string => value.toFixed(0)
 export const formatDelta = (delta: number): string =>
   `${delta > 0 ? "+" : delta < 0 ? "−" : "±"}${Math.abs(delta).toFixed(1)}`
 
-const deltaColor = (delta: number | null): string => {
-  if (delta === null || delta === 0) return STEADY
-  return delta > 0 ? UP : DOWN
-}
-
-function DimensionTable({ dimensions }: Pick<AgentScoreWeeklyDigestEmailProps, "dimensions">) {
+/**
+ * One row per dimension, mirroring the score page's cards: the name and what it asks on the left,
+ * the score in its band colour on the right. Colour lives on the text rather than only in the
+ * hero image so a recipient with images turned off still sees which dimension is the weak one.
+ */
+function DimensionRows({ dimensions }: Pick<AgentScoreWeeklyDigestEmailProps, "dimensions">) {
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
       <tbody>
-        {SCORE_DIMENSIONS.map((dimension) => {
+        {SCORE_DIMENSIONS.map((dimension, index) => {
           const entry = dimensions[dimension]
           return (
             <tr key={dimension}>
               <td
                 style={{
-                  padding: "8px 12px",
-                  backgroundColor: "#F8FAFC",
-                  color: "#64748B",
-                  fontSize: 13,
-                  borderRadius: "6px 0 0 6px",
+                  padding: "12px 0",
+                  borderTop: index === 0 ? "none" : `1px solid ${BORDER}`,
+                  verticalAlign: "middle",
                 }}
               >
-                {SCORE_DIMENSION_LABELS[dimension]}
+                <Text style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#0F172A" }}>
+                  {SCORE_DIMENSION_LABELS[dimension]}
+                </Text>
+                <Text style={{ margin: "2px 0 0 0", fontSize: 13, color: MUTED }}>
+                  {SCORE_DIMENSION_DESCRIPTIONS[dimension]}
+                </Text>
               </td>
               <td
                 style={{
-                  padding: "8px 12px",
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #F1F5F9",
-                  color: "#0F172A",
-                  fontSize: 13,
-                  fontWeight: 600,
+                  padding: "12px 0",
+                  borderTop: index === 0 ? "none" : `1px solid ${BORDER}`,
                   textAlign: "right",
-                  width: 64,
+                  verticalAlign: "middle",
+                  whiteSpace: "nowrap",
+                  width: 96,
                 }}
               >
-                {formatScore(entry.score)}
-              </td>
-              <td
-                style={{
-                  padding: "8px 12px",
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #F1F5F9",
-                  borderLeft: "none",
-                  color: deltaColor(entry.delta),
-                  fontSize: 13,
-                  textAlign: "right",
-                  width: 72,
-                  borderRadius: "0 6px 6px 0",
-                }}
-              >
-                {entry.delta === null ? "—" : formatDelta(entry.delta)}
+                <Text
+                  style={{
+                    margin: 0,
+                    fontSize: 20,
+                    fontWeight: 600,
+                    color: scoreBandColor(entry.score),
+                  }}
+                >
+                  {formatScore(entry.score)}
+                </Text>
+                {entry.delta === null ? null : (
+                  <Text style={{ margin: "2px 0 0 0", fontSize: 12, color: MUTED }}>{formatDelta(entry.delta)}</Text>
+                )}
               </td>
             </tr>
           )
@@ -100,31 +104,35 @@ export function AgentScoreWeeklyDigestEmail({
   headline,
   coverage,
   dimensions,
+  cardImageUrl,
   scoreUrl,
   webAppUrl,
 }: AgentScoreWeeklyDigestEmailProps) {
   return (
-    <ContainerLayout previewText={headline} footer={<EmailFooter unsubscribe={{ webAppUrl, group: "agent_score" }} />}>
+    <ContainerLayout
+      previewText={`${score.toFixed(1)} — ${movement}`}
+      footer={<EmailFooter unsubscribe={{ webAppUrl, group: "agent_score" }} />}
+    >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
         {headline}
       </EmailText>
-
-      <Section className="mb-6">
-        <Text style={{ margin: 0, fontSize: 44, lineHeight: "52px", fontWeight: 600, color: "#0F172A" }}>
-          {formatScore(score)}
-        </Text>
-        <Text style={{ margin: "4px 0 0 0", fontSize: 14, color: "#475569" }}>{movement}</Text>
-      </Section>
-
-      <DimensionTable dimensions={dimensions} />
-
-      <EmailText variant="bodySmall" className="mt-4">
-        {coverage}
-      </EmailText>
-
-      <EmailText variant="bodySmall" className="mt-2">
+      <Text style={{ margin: "0 0 16px 0", fontSize: 14, color: MUTED }}>
         {projectName ? `${organizationName} / ${projectName}` : organizationName}
-      </EmailText>
+      </Text>
+
+      {/* The score lives in the alt text too: most clients block remote images by default, and the
+          number is the one thing the reader opened this for. */}
+      <Img
+        src={cardImageUrl}
+        alt={`Agent Score ${score.toFixed(1)} — ${movement}`}
+        width="552"
+        style={{ width: "100%", maxWidth: 552, height: "auto", display: "block" }}
+      />
+
+      <Text style={{ margin: "12px 0 0 0", fontSize: 15, color: "#0F172A" }}>{movement}</Text>
+      <Text style={{ margin: "4px 0 24px 0", fontSize: 13, color: MUTED }}>{coverage}</Text>
+
+      <DimensionRows dimensions={dimensions} />
 
       {scoreUrl ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
@@ -145,10 +153,12 @@ AgentScoreWeeklyDigestEmail.PreviewProps = {
   dimensions: {
     outcome: { score: 74, delta: 2.5 },
     reliability: { score: 81, delta: 0 },
-    cost: { score: 66, delta: -1.2 },
+    cost: { score: 52, delta: -1.2 },
     speed: { score: 70, delta: 4.1 },
     safety: { score: 92, delta: null },
   },
+  cardImageUrl:
+    "http://localhost:3000/api/agent-score/ring.png?score=71.4&d=74,81,52,70,92&card=1&s=68.9,69,70.2,69.8,71,71.4",
   scoreUrl: "http://localhost:3000/projects/checkout-agent/agent-score?date=2026-09-21",
   webAppUrl: "http://localhost:3000",
 } satisfies AgentScoreWeeklyDigestEmailProps

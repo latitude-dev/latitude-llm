@@ -295,6 +295,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
           organizationId: OrganizationId(payload.organizationId),
           projectId: ProjectId(payload.projectId),
           digest: digested.digest,
+          manualRequestId: payload.manualRequestId,
         })
       }).pipe(
         Effect.flatMap((result) => {

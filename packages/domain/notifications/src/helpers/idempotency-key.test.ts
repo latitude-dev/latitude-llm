@@ -15,6 +15,7 @@ const digestPayload = (overrides: Partial<AgentScoreWeeklyDigestPayload> = {}): 
   windowDays: 7,
   eligibleSessionCount: 312,
   publishedDayCount: 5,
+  series: [{ date: "2026-09-21", score: 71 }],
   dimensions: {
     outcome: { score: 74, delta: null },
     reliability: { score: 81, delta: null },
@@ -58,5 +59,26 @@ describe("buildIdempotencyKey for agent-score.weekly-digest", () => {
     })
 
     expect(nextWeek).not.toBe(thisWeek)
+  })
+})
+
+describe("buildIdempotencyKey for a manual agent-score.weekly-digest send", () => {
+  const key = (overrides: Partial<AgentScoreWeeklyDigestPayload> = {}) =>
+    buildIdempotencyKey({ kind: "agent-score.weekly-digest", payload: digestPayload(overrides) })
+
+  it("is never swallowed by the week's digest from the weekly job", () => {
+    expect(key({ manualRequestId: cuid("m1") })).not.toBe(key())
+  })
+
+  it("keeps two manual sends of the same week apart", () => {
+    expect(key({ manualRequestId: cuid("m1") })).not.toBe(key({ manualRequestId: cuid("m2") }))
+  })
+
+  it("still dedupes a retry of the same manual send into itself", () => {
+    expect(key({ manualRequestId: cuid("m1") })).toBe(key({ manualRequestId: cuid("m1") }))
+  })
+
+  it("leaves the weekly job's key exactly as it was", () => {
+    expect(key()).toBe(`agent-score.weekly-digest:${cuid("p")}:2026-09-22`)
   })
 })

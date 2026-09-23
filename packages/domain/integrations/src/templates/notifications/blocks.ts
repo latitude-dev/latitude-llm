@@ -139,7 +139,6 @@ export const COLORS = {
   // Lifecycle overrides
   resolved: "#27AE60", // green — incident recovered regardless of severity
   wrapped: "#E8700A", // orange — Claude Code brand
-  agentScore: "#0080FF", // blue — product primary
   announcement: "#2F80ED",
 } as const
 

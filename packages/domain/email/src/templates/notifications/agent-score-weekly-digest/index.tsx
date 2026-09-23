@@ -1,4 +1,4 @@
-import { SCORE_DIMENSION_LABELS, SCORE_DIMENSIONS } from "@domain/shared"
+import { agentScoreImageUrl, SCORE_DIMENSION_LABELS, SCORE_DIMENSIONS } from "@domain/shared"
 import { Effect } from "effect"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -24,6 +24,14 @@ export const agentScoreWeeklyDigestRenderer: NotificationEmailRenderer<"agent-sc
       const scoreUrl = ctx.project
         ? `${ctx.webAppUrl.replace(/\/$/, "")}/projects/${ctx.project.slug}/agent-score?date=${payload.date}`
         : null
+      const cardImageUrl = agentScoreImageUrl(ctx.webAppUrl, {
+        score: payload.score,
+        dimensions: Object.fromEntries(
+          SCORE_DIMENSIONS.map((dimension) => [dimension, payload.dimensions[dimension].score]),
+        ),
+        series: payload.series.map((point) => point.score),
+        layout: "card",
+      })
 
       const dimensionLines = SCORE_DIMENSIONS.map((dimension) => {
         const entry = payload.dimensions[dimension]
@@ -41,6 +49,7 @@ export const agentScoreWeeklyDigestRenderer: NotificationEmailRenderer<"agent-sc
             headline={headline}
             coverage={coverage}
             dimensions={payload.dimensions}
+            cardImageUrl={cardImageUrl}
             scoreUrl={scoreUrl}
             webAppUrl={ctx.webAppUrl}
           />,

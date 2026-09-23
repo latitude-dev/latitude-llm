@@ -162,7 +162,9 @@ one week and half for the next. It is also the idempotency anchor —
 `agent-score.weekly-digest:${projectId}:${windowEnd}` — so a retry that sees a newer snapshot still
 lands on the same key. The project id is in the key because it is not in the
 `(organization_id, user_id, idempotency_key)` unique index, and two scored projects in one
-organisation would otherwise collide.
+organisation would otherwise collide. A manual send appends `:manual:${manualRequestId}`, a fresh id
+per click, so it is never deduped into the week's earlier digest; a BullMQ retry of that one send
+carries the same id and still dedupes into itself.
 
 **The fold lives in the worker, not the producer.** `@domain/integrations` depends on
 `@domain/notifications` for its Slack renderers, so a producer importing `@domain/agent-score` closes
@@ -185,13 +187,29 @@ email subject, so a subject that claims a change is one worth opening.
 Per-dimension deltas are computed only when the composite comparison holds, because the reasons a
 composite cannot be compared apply to every dimension under it.
 
+### Images
+
+Both channels embed a PNG from `apps/web` at `/api/agent-score/ring.png`: `?layout=card` (ring plus
+the week's trend) for the email, `?layout=slack` (ring plus a meter per dimension) for Slack. The
+query string carries only scores, so the route is public, unsigned, and cached by value across
+organisations. It mirrors the score page's ring from the same geometry in `@domain/shared`.
+
+**Slack rejects a message outright when it cannot download a top-level `image` block** —
+`invalid_blocks` with "downloading image failed" — instead of rendering around the gap the way it
+does for a section accessory. That is every image on a deploy whose web app Slack cannot reach.
+`postMessage` in `@platform/slack` therefore retries once with the image blocks removed; the rejected
+attempt posted nothing, so the retry cannot duplicate a message. This applies to every kind, so the
+incident trend chart degrades the same way. A renderer that uses an image block must carry its facts
+in text too: the digest's plain dimension line is what survives.
+
 ### Testing it
 
 A weekly cron is otherwise observable once a week. **Project actions → Send weekly Agent Score
 digest** in the backoffice publishes the same producer task over the window the cron would resolve
 today. It re-checks the feature flag (the gate normally lives in the fan-out) so a manual send cannot
 notify an organisation about a feature its members cannot open; whether the project has a score is
-left to the producer.
+left to the producer. Every click is a new send that notifies every member again, like the Wrapped
+button — sharing the weekly job's key would make every click after the week's first a silent no-op.
 
 ## Files
 

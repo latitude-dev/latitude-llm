@@ -118,6 +118,10 @@ describe("agentScoreWeeklyDigestPayloadSchema", () => {
     windowDays: 7,
     eligibleSessionCount: 312,
     publishedDayCount: 5,
+    series: [
+      { date: "2026-09-17", score: 68.9 },
+      { date: "2026-09-21", score: 71.4 },
+    ],
     dimensions: {
       outcome: { score: 74, delta: 2.5 },
       reliability: { score: 81, delta: null },
@@ -161,6 +165,12 @@ describe("agentScoreWeeklyDigestPayloadSchema", () => {
   it("rejects a payload with no project anchor for the idempotency key", () => {
     const { projectId: _projectId, ...anchorless } = digest
     expect(payloadSchemaFor("agent-score.weekly-digest").safeParse(anchorless).success).toBe(false)
+  })
+
+  it("accepts a manual send's request id, and parses a stored digest that has none", () => {
+    const schema = payloadSchemaFor("agent-score.weekly-digest")
+    expect(schema.parse({ ...digest, manualRequestId: cuid("req") }).manualRequestId).toBe(cuid("req"))
+    expect(schema.parse(digest).manualRequestId).toBeUndefined()
   })
 
   it("routes to its own preferences group", () => {

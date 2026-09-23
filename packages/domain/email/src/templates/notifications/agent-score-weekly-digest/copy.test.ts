@@ -13,6 +13,10 @@ const payload = (overrides: Partial<AgentScoreWeeklyDigestPayload> = {}): AgentS
   windowDays: 7,
   eligibleSessionCount: 1312,
   publishedDayCount: 5,
+  series: [
+    { date: "2026-09-17", score: 68.9 },
+    { date: "2026-09-21", score: 71.4 },
+  ],
   dimensions: {
     outcome: { score: 74, delta: null },
     reliability: { score: 81, delta: null },

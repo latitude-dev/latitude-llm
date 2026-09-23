@@ -23,6 +23,10 @@ const digest = (overrides: Partial<WeeklyAgentScoreDigestInput> = {}): WeeklyAge
   windowDays: 7,
   eligibleSessionCount: 120,
   publishedDayCount: 2,
+  series: [
+    { date: "2026-09-17", score: 60 },
+    { date: "2026-09-21", score: 70 },
+  ],
   dimensions: {
     outcome: { score: 74, delta: 2 },
     reliability: { score: 81, delta: 0 },
@@ -135,6 +139,32 @@ describe("requestAgentScoreDigestNotificationsUseCase", () => {
     expect(second.status).toBe("ok")
     if (first.status !== "ok" || second.status !== "ok") throw new Error("unreachable")
     expect(first.requests[0]?.idempotencyKey).not.toBe(second.requests[0]?.idempotencyKey)
+  })
+
+  it("carries a manual send's request id onto the payload and into the key", async () => {
+    const result = await Effect.runPromise(
+      requestAgentScoreDigestNotificationsUseCase({
+        organizationId: ORG,
+        projectId: PROJECT,
+        digest: digest(),
+        manualRequestId: cuid("req"),
+      }).pipe(Effect.provide(setup())),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.payload.manualRequestId).toBe(cuid("req"))
+    expect(result.requests[0]?.idempotencyKey).toBe(
+      `agent-score.weekly-digest:${PROJECT}:2026-09-22:manual:${cuid("req")}`,
+    )
+  })
+
+  it("writes no request id for the weekly job, whose key stays the week alone", async () => {
+    const result = await run(setup())
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.payload).not.toHaveProperty("manualRequestId")
   })
 
   it("skips when the organization has no members left to notify", async () => {

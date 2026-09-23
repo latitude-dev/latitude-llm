@@ -21,12 +21,14 @@ import { resolveRecipients } from "../helpers/resolve-recipients.ts"
  * `flaggers → ai → cache-redis → integrations`. The worker owns the fold instead, and TypeScript
  * checks the two shapes line up at the call site.
  */
-export type WeeklyAgentScoreDigestInput = Omit<AgentScoreWeeklyDigestPayload, "projectId">
+export type WeeklyAgentScoreDigestInput = Omit<AgentScoreWeeklyDigestPayload, "projectId" | "manualRequestId">
 
 export interface RequestAgentScoreDigestNotificationsInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly digest: WeeklyAgentScoreDigestInput
+  /** Present only for a send staff triggered by hand; see the payload field of the same name. */
+  readonly manualRequestId?: string | undefined
 }
 
 export interface AgentScoreDigestNotificationRequest {
@@ -63,7 +65,11 @@ export const requestAgentScoreDigestNotificationsUseCase = (input: RequestAgentS
       return { status: "skipped", reason: "no-recipients" } as const
     }
 
-    const payload: AgentScoreWeeklyDigestPayload = { projectId: input.projectId, ...input.digest }
+    const payload: AgentScoreWeeklyDigestPayload = {
+      projectId: input.projectId,
+      ...input.digest,
+      ...(input.manualRequestId ? { manualRequestId: input.manualRequestId } : {}),
+    }
     const idempotencyKey = buildIdempotencyKey({ kind: "agent-score.weekly-digest", payload })
 
     const requests: AgentScoreDigestNotificationRequest[] = recipients.map((userId) => ({

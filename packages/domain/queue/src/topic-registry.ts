@@ -167,6 +167,11 @@ const _registry = {
       /** Inclusive UTC date bounds, `YYYY-MM-DD`, resolved once by the cron. */
       readonly windowStart: string
       readonly windowEnd: string
+      /**
+       * Set by the backoffice's manual send, never by the cron. Joins the idempotency key so each
+       * manual send notifies again instead of deduping into the week's earlier digest.
+       */
+      readonly manualRequestId?: string
     }
     /**
      * Producer step for issue assignments. Fired by the domain-events

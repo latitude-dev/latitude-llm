@@ -1,6 +1,6 @@
 import { type AdminFeatureFlagEligibility, AdminFeatureFlagRepository, getProjectDetailsUseCase } from "@domain/admin"
 import { agentScoreDigestWindow } from "@domain/agent-score"
-import { OrganizationId, ProjectId, ValidationError } from "@domain/shared"
+import { generateId, OrganizationId, ProjectId, ValidationError } from "@domain/shared"
 import { AdminFeatureFlagRepositoryLive, AdminProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -28,6 +28,12 @@ export const isDigestEligible = (eligibility: AdminFeatureFlagEligibility, organ
  * The feature-flag gate is re-checked here because the fan-out is where it normally lives: without
  * it, a manual send would notify an organization about a feature its members cannot open. Whether
  * the project has a score at all is left to the producer, which is the one place that decides it.
+ *
+ * Every click is its own send. The weekly job keys its notifications by project and week, so a retry
+ * dedupes into the digest already delivered; a manual send carrying that same key would do nothing
+ * after the week's first, and say "enqueued" while doing it. A fresh request id per click joins the
+ * key instead. That means each click notifies every member again, which the modal warns about, the
+ * same way the Wrapped button does.
  *
  * The organization comes from the project lookup rather than the caller, so a request cannot name a
  * tenant it has nothing to do with. No BullMQ dedupeKey: a failed jobId stays burned until removed,
@@ -70,6 +76,7 @@ export const adminSendAgentScoreDigest = createServerFn({ method: "POST" })
           projectId: project.id,
           windowStart: from,
           windowEnd: to,
+          manualRequestId: generateId(),
         })
         .pipe(withTracing),
     )

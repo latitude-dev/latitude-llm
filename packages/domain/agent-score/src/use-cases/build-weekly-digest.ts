@@ -46,6 +46,8 @@ export interface WeeklyAgentScoreDigest {
   readonly eligibleSessionCount: number
   /** Days in the window that published a score; the rest are gaps rather than zeros. */
   readonly publishedDayCount: number
+  /** Every published day in the window, oldest first, for the trend the digest draws. */
+  readonly series: readonly { readonly date: string; readonly score: number }[]
   readonly dimensions: Record<ScoreDimension, { readonly score: number; readonly delta: number | null }>
   readonly comparison: AgentScoreDigestComparison
 }
@@ -129,6 +131,7 @@ export const buildWeeklyAgentScoreDigest = (input: {
       windowDays: current.windowDays,
       eligibleSessionCount: current.eligibleSessionCount,
       publishedDayCount: ordered.length,
+      series: ordered.map((snapshot) => ({ date: snapshot.date, score: snapshot.score })),
       dimensions,
       comparison,
     },

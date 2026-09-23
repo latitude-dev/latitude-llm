@@ -266,8 +266,18 @@ export const agentScoreWeeklyDigestPayloadSchema = z.object({
   eligibleSessionCount: z.number().int().nonnegative(),
   /** Days in the window that published a score; the rest are gaps rather than zeros. */
   publishedDayCount: z.number().int().positive(),
+  /** Every published day in the window, oldest first, for the trend the digest draws. */
+  series: z
+    .array(z.object({ date: z.iso.date(), score: z.number() }))
+    .max(31)
+    .readonly(),
   dimensions: z.record(scoreDimensionSchema, z.object({ score: z.number(), delta: z.number().nullable() })),
   comparison: agentScoreDigestComparisonSchema,
+  /**
+   * Present only on a digest staff sent by hand. It joins the idempotency key so each manual send is
+   * its own notification, where the weekly job's key is the week alone and a retry dedupes into it.
+   */
+  manualRequestId: cuidSchema.optional(),
 })
 export type AgentScoreWeeklyDigestPayload = z.infer<typeof agentScoreWeeklyDigestPayloadSchema>
 
