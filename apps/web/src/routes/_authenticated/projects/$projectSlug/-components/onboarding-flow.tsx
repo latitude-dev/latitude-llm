@@ -88,11 +88,6 @@ export function OnboardingFlow({
     if (!flashInstalled && !flashError) return
     if (flashInstalled === "ok") {
       toast({ description: "Slack connected" })
-    } else if (flashError === "workspace_taken") {
-      toast({
-        variant: "destructive",
-        description: "This Slack workspace is already connected to another Latitude organization.",
-      })
     } else if (flashError === "oauth_failed") {
       toast({
         variant: "destructive",

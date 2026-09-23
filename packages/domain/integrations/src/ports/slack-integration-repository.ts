@@ -2,7 +2,6 @@ import type { NotificationGroup, RepositoryError, SlackIntegrationId, SqlClient 
 import { Context, type Effect } from "effect"
 import type { SlackIntegration } from "../entities/slack-integration.ts"
 import type { SlackRoute } from "../entities/slack-route.ts"
-import type { SlackIntegrationConflictError } from "../errors.ts"
 
 export interface SlackIntegrationRepositoryShape {
   /**
@@ -12,18 +11,15 @@ export interface SlackIntegrationRepositoryShape {
   findActiveByOrganizationId(): Effect.Effect<SlackIntegration | null, RepositoryError, SqlClient>
 
   /**
-   * Inserts an integration row. The `(team_id) WHERE revoked_at IS NULL`
-   * partial unique index produces a {@link SlackIntegrationConflictError}
-   * if another organization already owns the workspace. Same-org
-   * re-installs should soft-revoke the existing row first; this method
-   * does not perform that cleanup.
+   * Inserts an integration row. Several organizations may hold an active
+   * install for the same workspace. Same-org re-installs should
+   * soft-revoke the existing row first; this method does not perform
+   * that cleanup.
    *
    * The repository writes `organization_id` from the RLS context — the
    * value carried on the entity is informational at this layer.
    */
-  save(
-    integration: SlackIntegration,
-  ): Effect.Effect<SlackIntegration, RepositoryError | SlackIntegrationConflictError, SqlClient>
+  save(integration: SlackIntegration): Effect.Effect<SlackIntegration, RepositoryError, SqlClient>
 
   /**
    * Stamps `revoked_at` on a row guarded by `revoked_at IS NULL` so

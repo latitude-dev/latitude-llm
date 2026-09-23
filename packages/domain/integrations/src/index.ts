@@ -15,11 +15,7 @@ export {
   slackRouteSchema,
   slackRoutesSchema,
 } from "./entities/slack-route.ts"
-export {
-  SlackIntegrationConflictError,
-  SlackRefreshLockUnavailableError,
-  SlackTokenRefreshError,
-} from "./errors.ts"
+export { SlackRefreshLockUnavailableError, SlackTokenRefreshError } from "./errors.ts"
 export {
   type SlackDeliveryClaim,
   SlackDeliveryRepository,

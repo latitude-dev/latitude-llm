@@ -15,11 +15,10 @@ import { slackRoutesSchema } from "./slack-route.ts"
  * user must reconnect); it stays `null` while healthy.
  *
  * Active vs revoked is encoded by `revokedAt`: a row with
- * `revokedAt = null` is the workspace's currently-live install.
+ * `revokedAt = null` is the organization's currently-live install.
  * Re-installing into the same organization replaces the active row
- * (the previous one is soft-revoked first); a partial unique index on
- * `(team_id) WHERE revoked_at IS NULL` makes cross-organization
- * conflicts fail at insert time.
+ * (the previous one is soft-revoked first). The same workspace may be
+ * actively installed in several organizations at once.
  */
 export const slackIntegrationSchema = z.object({
   id: slackIntegrationIdSchema,
