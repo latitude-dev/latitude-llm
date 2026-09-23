@@ -261,6 +261,12 @@ export {
   type SessionAssessmentPageCursor,
 } from "./pagination/session-assessment-cursor.ts"
 export {
+  type AgentScoreDigestCandidate,
+  type AgentScoreDigestScope,
+  AgentScoreDigestSource,
+  type AgentScoreDigestSourceShape,
+} from "./ports/agent-score-digest-source.ts"
+export {
   type AgentScoreSnapshotHistoryScope,
   type AgentScoreSnapshotLatestScope,
   AgentScoreSnapshotRepository,
@@ -583,6 +589,15 @@ export {
   type SpeedUnmeasuredReason,
   type SpeedWindowGate,
 } from "./scoring/window-gates.ts"
+export {
+  AGENT_SCORE_DIGEST_WINDOW_DAYS,
+  type AgentScoreDigestComparison,
+  agentScoreDigestWindow,
+  type BuildWeeklyAgentScoreDigestResult,
+  buildWeeklyAgentScoreDigest,
+  runWeeklyAgentScoreDigest,
+  type WeeklyAgentScoreDigest,
+} from "./use-cases/build-weekly-digest.ts"
 export {
   AGENT_SCORE_BATCH_SIZE,
   type ComputeAgentScoreInput,

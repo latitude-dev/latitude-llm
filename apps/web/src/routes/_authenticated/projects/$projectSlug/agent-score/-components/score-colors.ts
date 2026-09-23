@@ -1,3 +1,5 @@
+import { scoreBandOf } from "@domain/shared"
+
 const SCORE_COLORS = {
   unavailable: { className: "text-muted-foreground", color: "#6b7280" },
   low: { className: "text-[#de5f47]", color: "#de5f47" },
@@ -5,9 +7,6 @@ const SCORE_COLORS = {
   high: { className: "text-[#75c970]", color: "#75c970" },
 } as const
 
-export const scoreColors = (score: number | null) => {
-  if (score === null) return SCORE_COLORS.unavailable
-  if (score < 60) return SCORE_COLORS.low
-  if (score < 80) return SCORE_COLORS.medium
-  return SCORE_COLORS.high
-}
+const BAND_KEY = { unknown: "unavailable", low: "low", medium: "medium", high: "high" } as const
+
+export const scoreColors = (score: number | null) => SCORE_COLORS[BAND_KEY[scoreBandOf(score)]]

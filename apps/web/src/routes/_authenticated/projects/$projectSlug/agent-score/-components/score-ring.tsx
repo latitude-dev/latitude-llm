@@ -1,3 +1,4 @@
+import { buildWeightedRingSegments, clampScore, type RingDimension } from "@domain/shared"
 import { Text } from "@repo/ui"
 import { formatScore, formatTotalScore, type ScoreDimensionKey } from "./agent-score-format.ts"
 import { DIMENSION_META } from "./dimension-meta.ts"
@@ -10,48 +11,9 @@ const VITALITY_STROKE_WIDTH = 4
 const OUTER_HIT_STROKE_WIDTH = 14
 const OUTER_IDLE_OPACITY = 0.6
 const DIMMED_OPACITY = 0.2
-export const DIMENSION_SEGMENT_GAP_RATIO = 0.04
-
-interface RingDimension<Id extends string = string> {
-  readonly id: Id
-  readonly weight: number
-  readonly score: number | null
-}
-
 type VitalityDimension = RingDimension<ScoreDimensionKey>
 
 export type VitalityRingSection = "vitality" | ScoreDimensionKey
-
-export interface WeightedRingSegment<Id extends string = string> extends RingDimension<Id> {
-  readonly start: number
-  readonly length: number
-}
-
-export const buildWeightedRingSegments = <Id extends string>(
-  dimensions: readonly RingDimension<Id>[],
-  ringLength: number,
-  gapRatio = DIMENSION_SEGMENT_GAP_RATIO,
-): WeightedRingSegment<Id>[] => {
-  const weights = dimensions.map((dimension) => (Number.isFinite(dimension.weight) ? Math.max(0, dimension.weight) : 0))
-  const totalWeight = weights.reduce((total, weight) => total + weight, 0)
-  const normalizedWeights = totalWeight > 0 ? weights.map((weight) => weight / totalWeight) : weights.map(() => 0)
-  const gapLength = ringLength * Math.max(0, gapRatio)
-  let cursor = 0
-
-  return dimensions.map((dimension, index) => {
-    const slotLength = ringLength * (normalizedWeights[index] ?? 0)
-    const segmentGap = Math.min(gapLength, slotLength)
-    const segment = {
-      ...dimension,
-      start: cursor + segmentGap / 2,
-      length: Math.max(0, slotLength - segmentGap),
-    }
-    cursor += slotLength
-    return segment
-  })
-}
-
-const clampScore = (score: number): number => Math.max(0, Math.min(100, score))
 
 const scoreColor = (score: number | null): string => scoreColors(score).className
 

@@ -1,7 +1,15 @@
 import { ClaudeCodeIcon, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
-import { ArrowRightIcon, BrainCircuitIcon, CheckIcon, GaugeIcon, MinusIcon, SlidersHorizontalIcon } from "lucide-react"
+import {
+  ArrowRightIcon,
+  BrainCircuitIcon,
+  CheckIcon,
+  GaugeIcon,
+  MailIcon,
+  MinusIcon,
+  SlidersHorizontalIcon,
+} from "lucide-react"
 import { adminGetAgentScore } from "../../../domains/admin/agent-score.functions.ts"
 import { adminGetProject } from "../../../domains/admin/projects.functions.ts"
 import { adminGetProjectTaxonomy } from "../../../domains/admin/taxonomy.functions.ts"
@@ -14,6 +22,7 @@ import {
   PropertiesStrip,
 } from "../-components/dashboard/index.ts"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
+import { AgentScoreDigestButton } from "./-components/agent-score-digest-button.tsx"
 import { AgentScoreRecalculateButton } from "./-components/agent-score-recalculate-button.tsx"
 import { AgentScoreSection } from "./-components/agent-score-section.tsx"
 import { AgentScoreSeedHistoryButton } from "./-components/agent-score-seed-history-button.tsx"
@@ -151,6 +160,12 @@ function BackofficeProjectDetailPage() {
           title="Recalculate Agent Score"
           description="Recompute today's score and refresh the evidence for the latest displayed score. Published scores are not changed."
           action={<AgentScoreRecalculateButton projectId={project.id} projectName={project.name} />}
+        />
+        <ActionRow
+          icon={MailIcon}
+          title="Send weekly Agent Score digest"
+          description="Send this week's digest now instead of waiting for Monday's cron. Nothing is sent if the project published no score in the last 7 days."
+          action={<AgentScoreDigestButton projectId={project.id} projectName={project.name} />}
         />
         <ActionRow
           icon={SlidersHorizontalIcon}

@@ -15,8 +15,8 @@ Four orthogonal axes — keep them straight:
 
 | Axis | Type | Examples | Lives in |
 | --- | --- | --- | --- |
-| **Kind** | flat enum (event-type) | `incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message` | `NOTIFICATION_KIND_META` in `@domain/notifications` |
-| **Group** | user-visible category | `signals`, `monitors`, `wrapped_reports`, `custom_messages`, `personal`, `destinations`, `billing` | `NOTIFICATION_GROUPS` in `@domain/shared` |
+| **Kind** | flat enum (event-type) | `incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `agent-score.weekly-digest`, `custom.message` | `NOTIFICATION_KIND_META` in `@domain/notifications` |
+| **Group** | user-visible category | `signals`, `monitors`, `wrapped_reports`, `agent_score`, `custom_messages`, `personal`, `destinations`, `billing` | `NOTIFICATION_GROUPS` in `@domain/shared` |
 | **Topic** | sub-toggle inside a group | `signal.discovered`, `signal.escalating`, `signal.regressed`, `signal.reprioritized` | `NOTIFICATION_TOPICS` in `@domain/shared` |
 | **Channel** | delivery surface | `email`, `slack` | per-channel worker + registry |
 
@@ -67,7 +67,7 @@ Reach for a topic when a group's existing switch is too coarse — the recipient
 
 A new group adds a new user-visible preferences toggle and (optionally) a new project-level gate.
 
-1. Add the group to `NOTIFICATION_GROUPS` and `NOTIFICATION_GROUP_META` in `packages/domain/shared/src/notification-preferences.ts` (groups today: `signals`, `monitors`, `wrapped_reports`, `custom_messages`, `personal`, `destinations`, `billing`). `notificationPreferencesSchema` is built from `NOTIFICATION_GROUPS` and auto-extends. Set `slackRoutable` on the meta: non-routable groups (e.g. `personal` — single-recipient kinds) are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out; the Slack renderer registry still needs a (stub) entry because it is exhaustive.
+1. Add the group to `NOTIFICATION_GROUPS` and `NOTIFICATION_GROUP_META` in `packages/domain/shared/src/notification-preferences.ts` (groups today: `signals`, `monitors`, `wrapped_reports`, `agent_score`, `custom_messages`, `personal`, `destinations`, `billing`). `notificationPreferencesSchema` is built from `NOTIFICATION_GROUPS` and auto-extends. Set `slackRoutable` on the meta: non-routable groups (e.g. `personal` — single-recipient kinds) are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out; the Slack renderer registry still needs a (stub) entry because it is exhaustive.
 2. The user-prefs settings page (`apps/web/src/routes/_authenticated/projects/$projectSlug/settings/account.tsx`) iterates `NOTIFICATION_GROUPS` to render toggles — the new group appears **automatically** with its label/description from the meta.
 3. Add at least one kind to the new group (use the "Adding a new kind" steps).
 4. **Project-level gate (optional)** — only if the new group should be opt-out-able per project:

@@ -105,3 +105,75 @@ describe("signalReprioritizedPayloadSchema", () => {
     expect(parsed.success).toBe(false)
   })
 })
+
+describe("agentScoreWeeklyDigestPayloadSchema", () => {
+  const digest = {
+    projectId: cuid("p"),
+    date: "2026-09-21",
+    windowStart: "2026-09-16",
+    windowEnd: "2026-09-22",
+    score: 71.4,
+    interval: { lower: 68.1, upper: 74.7 },
+    scoringVersion: "agent-score-v5-provisional",
+    windowDays: 7,
+    eligibleSessionCount: 312,
+    publishedDayCount: 5,
+    series: [
+      { date: "2026-09-17", score: 68.9 },
+      { date: "2026-09-21", score: 71.4 },
+    ],
+    dimensions: {
+      outcome: { score: 74, delta: 2.5 },
+      reliability: { score: 81, delta: null },
+      cost: { score: 66, delta: -1.2 },
+      speed: { score: 70, delta: 0 },
+      safety: { score: 92, delta: 0.4 },
+    },
+    comparison: {
+      status: "comparable",
+      baselineDate: "2026-09-17",
+      baselineScore: 68.9,
+      delta: 2.5,
+      significant: false,
+    },
+  }
+
+  it("parses a published digest", () => {
+    expect(payloadSchemaFor("agent-score.weekly-digest").parse(digest)).toMatchObject({
+      score: 71.4,
+      publishedDayCount: 5,
+    })
+  })
+
+  it("parses every comparison branch", () => {
+    for (const comparison of [
+      { status: "none" },
+      { status: "incomparable", reason: "scoringVersion", baselineDate: "2026-09-17", baselineScore: 68.9 },
+      { status: "incomparable", reason: "windowDays", baselineDate: "2026-09-17", baselineScore: 68.9 },
+    ]) {
+      expect(payloadSchemaFor("agent-score.weekly-digest").safeParse({ ...digest, comparison }).success).toBe(true)
+    }
+  })
+
+  it("requires every dimension — a partial record would render a blank row", () => {
+    const { safety: _safety, ...partial } = digest.dimensions
+    expect(payloadSchemaFor("agent-score.weekly-digest").safeParse({ ...digest, dimensions: partial }).success).toBe(
+      false,
+    )
+  })
+
+  it("rejects a payload with no project anchor for the idempotency key", () => {
+    const { projectId: _projectId, ...anchorless } = digest
+    expect(payloadSchemaFor("agent-score.weekly-digest").safeParse(anchorless).success).toBe(false)
+  })
+
+  it("accepts a manual send's request id, and parses a stored digest that has none", () => {
+    const schema = payloadSchemaFor("agent-score.weekly-digest")
+    expect(schema.parse({ ...digest, manualRequestId: cuid("req") }).manualRequestId).toBe(cuid("req"))
+    expect(schema.parse(digest).manualRequestId).toBeUndefined()
+  })
+
+  it("routes to its own preferences group", () => {
+    expect(routeOf("agent-score.weekly-digest", digest)).toEqual({ group: "agent_score", topic: null })
+  })
+})

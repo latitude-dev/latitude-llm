@@ -1,6 +1,7 @@
 // Entities
 
 export type {
+  AgentScoreWeeklyDigestPayload,
   BillingLimitReachedPayload,
   CustomMessagePayload,
   DestinationQuarantinedPayload,
@@ -22,6 +23,7 @@ export type {
   WrappedReportPayload,
 } from "./entities/notification.ts"
 export {
+  agentScoreWeeklyDigestPayloadSchema,
   billingLimitReachedPayloadSchema,
   customMessagePayloadSchema,
   destinationQuarantinedPayloadSchema,
@@ -99,6 +101,14 @@ export type {
   MarkNotificationSeenInput,
 } from "./use-cases/mark-notification-seen.ts"
 export { markNotificationSeenUseCase } from "./use-cases/mark-notification-seen.ts"
+export type {
+  AgentScoreDigestNotificationRequest,
+  RequestAgentScoreDigestNotificationsError,
+  RequestAgentScoreDigestNotificationsInput,
+  RequestAgentScoreDigestNotificationsResult,
+  WeeklyAgentScoreDigestInput,
+} from "./use-cases/request-agent-score-digest-notifications.ts"
+export { requestAgentScoreDigestNotificationsUseCase } from "./use-cases/request-agent-score-digest-notifications.ts"
 export type {
   BillingLimitNotificationRequest,
   RequestBillingLimitNotificationsError,

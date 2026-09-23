@@ -14,6 +14,7 @@ export const NOTIFICATION_GROUPS = [
   "signals",
   "monitors",
   "wrapped_reports",
+  "agent_score",
   "custom_messages",
   "personal",
   "destinations",
@@ -129,6 +130,13 @@ export const NOTIFICATION_GROUP_META: Record<
   wrapped_reports: {
     label: "Wrapped reports",
     description: "Weekly Claude Code Wrapped reports for your projects.",
+    slackRoutable: true,
+    severityFiltered: false,
+    topics: [],
+  },
+  agent_score: {
+    label: "Agent Score",
+    description: "Weekly Agent Score reports for your projects.",
     slackRoutable: true,
     severityFiltered: false,
     topics: [],

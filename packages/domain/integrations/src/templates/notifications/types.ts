@@ -80,6 +80,7 @@ export type SlackRenderDepsByKind = {
   readonly "incident.opened": SignalRepository | UserRepository | SqlClient
   readonly "incident.closed": SignalRepository | UserRepository | SqlClient
   readonly "wrapped.report": never
+  readonly "agent-score.weekly-digest": never
   readonly "custom.message": never
   readonly "issue.assigned": never
   readonly "signal.discovered": SignalRepository | SqlClient

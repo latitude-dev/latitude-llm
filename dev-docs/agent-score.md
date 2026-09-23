@@ -123,6 +123,29 @@ pnpm --filter @app/workers agent-score:calibrate-latency -- \
   > packages/domain/agent-score/src/artifacts/launch-latency-reference-artifact.ts
 ```
 
+## Weekly digest
+
+A separate repeatable schedule (`agent-score-digest:weekly`, Mondays at 08:00 UTC) emails each
+scored project's members its current score and how it moved over the week. It runs after the daily
+sweep has had time to land, so a project that published today is digested with today's number.
+
+Eligibility is the organisation's `agentScore` flag plus a published score inside the seven-day
+window. The second is a question only `agent_score_snapshots` can answer: the sweep's ClickHouse
+source reports which projects have enough traffic to attempt a score, and a project can clear the
+session floor every day while publishing nothing. A project whose newest score predates the window
+is not digested at all rather than sent a stale number.
+
+The digest never borrows an older score, and it does not assume the week is dense. Its baseline is
+the oldest snapshot still inside the window, because withheld days write no row and a fixed
+seven-day offset would usually land on a gap. It refuses to subtract across a scoring version bump
+or a window step change, since either makes the difference an artifact of the change rather than
+movement in the agent, and it marks a move whose confidence intervals overlap as one the evidence
+does not separate from noise.
+
+Delivery, recipients, per-user preferences and the three renderers are the notification system's:
+see [notifications.md](notifications.md) § Weekly Agent Score digest. Staff can send one immediately
+from **Project actions → Send weekly Agent Score digest** in the backoffice.
+
 ## Local seed data
 
 After the standard Postgres and ClickHouse seeds, run
