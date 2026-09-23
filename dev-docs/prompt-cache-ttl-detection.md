@@ -6,7 +6,7 @@ placeholder for something better.
 
 The ceiling divides cache-eligible token volume by whether each call's gap to its predecessor fits
 inside the provider's cache lifetime. That lifetime is the one input the query cannot compute, and
-models.dev does not carry it.
+the [`@domain/models`](./models.md) bundled catalog does not carry it.
 
 Investigated 2026-07-31 against V2 production (`latitude.spans`, ClickHouse service
 `Latitude V2 PRODUCTION`), 7-day window. Every number below is reproducible with the queries given.
