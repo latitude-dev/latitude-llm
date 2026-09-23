@@ -2,9 +2,20 @@ import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostMetricCatalog } from "../entities/cost-metric-catalog.ts"
 import type { CostMetricReading } from "../entities/cost-metric-reading.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
-import type { LatencyModel, NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
+import type {
+  LatencyModel,
+  NormalizedSessionAssessmentInput,
+  NormalizedSessionCostEvidence,
+} from "../entities/session-assessment-input.ts"
 import { aggregateSessionCost, type CostFamilyDenominators } from "./aggregate-session-cost.ts"
 import type { SessionWindowContribution } from "./bootstrap-window.ts"
+
+const missesLatencyReference = (evidence: NormalizedSessionCostEvidence | undefined): boolean =>
+  evidence?.criticalPathComplete === true && evidence.unreferencedLatencyModels.length > 0
+
+/** Whether a session enters Speed at all: its path reconstructed and every model on it is referenced. */
+export const isSpeedUsable = (evidence: NormalizedSessionCostEvidence | undefined): boolean =>
+  evidence?.criticalPathComplete === true && evidence.unreferencedLatencyModels.length === 0
 
 /**
  * One session reduced to the numbers a window needs, and nothing else.
@@ -31,8 +42,7 @@ export const foldSessionContribution = ({
     denominators,
   })
   const evidence = session.costEvidence
-  const criticalPathComplete = evidence?.criticalPathComplete ?? false
-  const missingLatencyReference = criticalPathComplete && (evidence?.unreferencedLatencyModels.length ?? 0) > 0
+  const missingLatencyReference = missesLatencyReference(evidence)
 
   return {
     sessionId: session.sessionId,
@@ -45,7 +55,7 @@ export const foldSessionContribution = ({
     speed: {
       observedNs: evidence?.observedCriticalPathNs ?? 0,
       avoidableNs: (evidence?.measuredAvoidableNs ?? 0) + (evidence?.estimatedAvoidableNs ?? 0),
-      usableForDenominator: criticalPathComplete && !missingLatencyReference,
+      usableForDenominator: isSpeedUsable(evidence),
       missingLatencyReference,
     },
   }

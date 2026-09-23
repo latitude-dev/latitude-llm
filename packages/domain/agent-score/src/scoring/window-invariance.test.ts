@@ -84,6 +84,7 @@ const signalSession = ({
   fold: (index % 2) as 0 | 1,
   familyPenaltyShare: { spend: 0, context: 0, tools: penalty, memory: 0, recovery: 0 },
   avoidableNs: 0,
+  speedUsable: true,
   unlinkedSignalIds: signals,
   inclusionProbabilityBySignalId: new Map(signals.map((signalId) => [signalId, 1])),
   linkedSignalIds: [],
