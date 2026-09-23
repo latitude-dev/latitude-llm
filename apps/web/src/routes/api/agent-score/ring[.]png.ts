@@ -6,26 +6,10 @@ import {
   renderScoreCardPng,
   renderScoreRingPng,
   renderScoreSlackCardPng,
-  TRANSPARENT_1x1_PNG,
 } from "../../../domains/agent-score/score-image/render-score-image.ts"
+import { respondFallback, respondRendered } from "../../../domains/agent-score/score-image/respond.ts"
 
 const logger = createLogger("agent-score.ring-image")
-
-/**
- * Mail-client and Slack image proxies cache aggressively, which is the point: the URL is keyed by
- * the scores themselves, so every organisation reporting the same numbers shares one cached image.
- */
-const PNG_CACHE_HEADER = "public, max-age=31536000, immutable" as const
-
-const respondPng = (buffer: Buffer): Response =>
-  // biome-ignore lint/suspicious/noExplicitAny: Node Buffer is a valid BodyInit; TS lib types disagree.
-  new Response(buffer as any, {
-    headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": PNG_CACHE_HEADER,
-      "Content-Length": String(buffer.byteLength),
-    },
-  })
 
 /**
  * The Agent Score ring, rendered for the weekly digest's email and Slack message.
@@ -40,7 +24,8 @@ const respondPng = (buffer: Buffer): Response =>
  *
  * Any failure degrades to a 1×1 transparent PNG rather than an error status: these images sit in
  * somebody's inbox, and a broken-image icon is worse than a missing one. The text around them
- * already carries every number the image shows.
+ * already carries every number the image shows. The fallback is served uncached, so a transient
+ * failure is retried on the next fetch instead of sticking to every organisation's copy of that URL.
  */
 export const Route = createFileRoute("/api/agent-score/ring.png")({
   server: {
@@ -59,10 +44,10 @@ export const Route = createFileRoute("/api/agent-score/ring.png")({
                 ? await renderScoreSlackCardPng(input)
                 : await renderScoreRingPng(input)
 
-          return respondPng(png)
+          return respondRendered(png)
         } catch (error) {
           logger.error("agent-score ring render failed", error)
-          return respondPng(TRANSPARENT_1x1_PNG)
+          return respondFallback()
         }
       },
     },
