@@ -24,7 +24,10 @@ Customer and backoffice refresh actions start Temporal directly. They do not dep
 The Agent Score page uses one selected UTC date for the score, dimension values, evidence, and
 computation requirements. The date is stored in the route's `date` search parameter. Without a
 selected date, the page opens the latest published score through today. If no score exists, it
-opens today. The latest lookup has no history-range limit.
+opens today. The latest lookup has no history-range limit. The global `@repo/ui` `DateRangePicker`
+uses single-day mode here; selection and day arrows retain UTC date
+semantics and cannot advance beyond today. Displayed composite scores are floored to whole
+numbers; stored scores and dimension calculations retain their precision.
 
 The page reads the Temporal descriptions for both the scheduled and forced workflow IDs for the
 selected date. Any non-terminal execution is shown as an in-progress calculation, including after
@@ -39,6 +42,22 @@ The 7-day or 30-day history graph ends on the selected date. Missing days remain
 selected date shows the graph, even when today's computation is pending. Dates without a score
 show their computation requirements when available. Query keys include the selected date, so
 navigation cannot reuse another day's score or evidence while the next request loads.
+
+## Shareable score images
+
+The camera action in the vitality panel opens a snapshot modal with a PNG preview, Copy image,
+and Download PNG. The image captures the selected published score and its five dimensions at
+click time. Unpublished dates disable the action; missing dimensions display a dash. Copy and
+download use the same generated PNG. Clipboard failures show a toast, unsupported image copying
+leaves download available, and generation failures offer a retry.
+
+`agent-score-snapshot.ts` renders the 1270-square Figma composition to a 2540-square canvas export.
+It uses the original background PNGs and exported headline/branding assets from
+`public/agent-score-snapshot/`, plus locally served Inter fonts. No project data or generated
+images are uploaded. The export palette is separate from the dashboard: scores below 60 use red,
+60–79 use blue in place of yellow, and scores of 80 or more use green. The overall score selects
+the background; each disc uses its own solid score-band color without a gradient. The central number is floored and the smaller
+numbers use the page's dimension rounding.
 
 ## Published evidence
 

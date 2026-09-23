@@ -2,6 +2,7 @@ import { Badge, Icon, Text } from "@repo/ui"
 import { GaugeIcon } from "lucide-react"
 import type { AdminAgentScoreDto } from "../../../../domains/admin/agent-score.functions.ts"
 import { AgentVitality } from "../../../_authenticated/projects/$projectSlug/agent-score/-components/agent-vitality.tsx"
+import { ScoreSummary } from "../../../_authenticated/projects/$projectSlug/agent-score/-components/score-summary.tsx"
 import { DashboardSection } from "../../-components/dashboard/index.ts"
 import { AgentScoreTrend } from "./agent-score-trend.tsx"
 
@@ -29,12 +30,14 @@ export function AgentScoreSection({ agentScore }: { readonly agentScore: AdminAg
           <div className="flex flex-col gap-3 lg:flex-row">
             <AgentVitality
               snapshot={snapshot}
-              history={agentScore.history}
               dimensionWeights={agentScore.dimensionWeights}
               explanation={agentScore.explanation}
               isLoading={false}
             />
-            <AgentScoreTrend endDate={agentScore.currentDate} history={agentScore.history} />
+            <div className="flex min-w-0 flex-1 flex-col gap-3">
+              <ScoreSummary snapshot={snapshot} history={agentScore.history} isLoading={false} />
+              <AgentScoreTrend endDate={agentScore.currentDate} history={agentScore.history} />
+            </div>
           </div>
 
           {snapshot.policyCap !== null ? (
