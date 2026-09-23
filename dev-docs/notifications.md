@@ -206,9 +206,10 @@ in text too: the digest's plain dimension line is what survives.
 
 A weekly cron is otherwise observable once a week. **Project actions → Send weekly Agent Score
 digest** in the backoffice publishes the same producer task over the window the cron would resolve
-today. It re-checks the feature flag (the gate normally lives in the fan-out) so a manual send cannot
-notify an organisation about a feature its members cannot open; whether the project has a score is
-left to the producer. Every click is a new send that notifies every member again, like the Wrapped
+today. It re-runs the fan-out's own eligibility for that one project, the organisation's flag and
+`AgentScoreDigestSource`, so a manual send reaches exactly the projects the weekly job would: never a
+sample or showcase project, whose seeded history would read as real, and never one with no score in
+the window. Every click is a new send that notifies every member again, like the Wrapped
 button — sharing the weekly job's key would make every click after the week's first a silent no-op.
 
 ## Files
