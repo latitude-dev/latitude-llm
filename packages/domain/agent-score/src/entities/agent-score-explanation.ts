@@ -110,6 +110,12 @@ const speedWindowGateSchema = z.object({
   completeSessionCount: z.number(),
   incompleteSessionCount: z.number(),
   completeShareOfEligible: z.number(),
+  /** Absent on stored explanations that predate excluding sessions with unreferenced models. */
+  missingLatencyReferenceSessionCount: z.number().optional(),
+  unreferencedLatencyModels: z
+    .array(z.object({ provider: z.string(), model: z.string(), sessionCount: z.number() }))
+    .readonly()
+    .optional(),
 })
 
 /** Score evidence is stored with published snapshots; unpublished computations use the cache. */

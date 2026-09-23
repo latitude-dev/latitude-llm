@@ -68,7 +68,7 @@ const blockerMetric = (dimension: PublicationDimension): string | undefined => {
   if (reason === "publishableSessionFloor") return "costCoverage"
   if (reason === "noReadableSessions") return "costReadableSessions"
   if (reason === "completePathFloor") return "speedCompleteSessions"
-  if (reason === "completePathCoverageFloor") return "speedCoverage"
+  if (reason === "completePathCoverageFloor" || reason === "latencyReferenceCoverage") return "speedCoverage"
   if (reason === "noObservedTime") return "speedObservedTime"
   if (reason === "rateLimitedHintedFloor") return "safetyRateLimitedCoverage"
   if (reason === "incompatibleJudgment") return "safetyIncompatibleEvaluations"
@@ -123,6 +123,15 @@ const requirementValue = (requirement: ReadinessRequirement): string => {
   return `${formatCount(requirement.current)} / ${formatCount(requirement.required)}${suffix}`
 }
 
+const modelName = ({ model }: { readonly model: string }) => model || "an unnamed model"
+
+const unreferencedModelsStatus = (explanation: Explanation): string | undefined => {
+  const [first, ...rest] = explanation.coverage.speed.unreferencedLatencyModels ?? []
+  if (!first) return undefined
+  const more = rest.length > 0 ? ` and ${formatCount(rest.length)} more` : ""
+  return `No speed reference for ${modelName(first)}${more}`
+}
+
 const readinessForDimension = (dimension: ScoreDimensionKey, explanation: Explanation) =>
   explanation.readiness.dimensions.find((entry) => entry.scoreDimension === dimension)
 
@@ -140,11 +149,16 @@ const rowForDimension = (dimension: ScoreDimensionKey, explanation: Explanation)
     return { dimension, label: DIMENSION_LABELS[dimension], state: "collecting", status: "Waiting for evidence" }
   }
 
+  const status =
+    (publication?.unmeasuredReason === "latencyReferenceCoverage"
+      ? unreferencedModelsStatus(explanation)
+      : undefined) ?? requirementStatus(requirement)
+
   return {
     dimension,
     label: DIMENSION_LABELS[dimension],
     state: ACTION_NEEDED_METRICS.has(requirement.metric) ? "actionNeeded" : "collecting",
-    status: requirementStatus(requirement),
+    status,
     value: requirementValue(requirement),
   }
 }

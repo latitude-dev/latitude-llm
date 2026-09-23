@@ -982,6 +982,7 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
         denominators: costEvidence.denominators,
         observedCriticalPathNs: costEvidence.criticalPath.observedNs,
         criticalPathComplete: costEvidence.criticalPath.completeness === "complete",
+        unreferencedLatencyModels: costEvidence.unreferencedLatencyModels,
         measuredAvoidableNs: costEvidence.speed.measuredAvoidableNs,
         estimatedAvoidableNs: costEvidence.speed.estimatedAvoidableNs,
         measuredAvoidableMicrocents: 0,

@@ -114,6 +114,11 @@ export const READER_LIMITATIONS = [
   "missingLatencyReference",
 ] as const
 
+export interface LatencyModel {
+  readonly provider: string
+  readonly model: string
+}
+
 export interface AssessmentReaderFact {
   readonly readerId: string
   readonly label: string
@@ -147,6 +152,8 @@ export interface NormalizedSessionCostEvidence {
   readonly denominators: CostFamilyDenominators
   readonly observedCriticalPathNs: number
   readonly criticalPathComplete: boolean
+  /** Critical-path models with no frozen latency reference; any entry keeps the session out of Speed. */
+  readonly unreferencedLatencyModels: readonly LatencyModel[]
   readonly measuredAvoidableNs: number
   readonly estimatedAvoidableNs: number
   readonly measuredAvoidableMicrocents: number

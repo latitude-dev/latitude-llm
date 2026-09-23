@@ -77,6 +77,7 @@ const session = ({
       denominators: EMPTY_COST_FAMILY_DENOMINATORS,
       observedCriticalPathNs: 1_000_000,
       criticalPathComplete: true,
+      unreferencedLatencyModels: [],
       measuredAvoidableNs: avoidableNs,
       estimatedAvoidableNs: 0,
       measuredAvoidableMicrocents: 0,

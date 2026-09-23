@@ -4,7 +4,7 @@ import { PROVISIONAL_COST_METRIC_CATALOG } from "../entities/cost-metric-catalog
 import { LAUNCH_COST_ARTIFACT_VERSION } from "./launch-cost-scoring-artifact.ts"
 import { LAUNCH_LATENCY_ARTIFACT_VERSION } from "./launch-latency-reference-artifact.ts"
 
-export const LAUNCH_SCORING_VERSION = "agent-score-v7-provisional"
+export const LAUNCH_SCORING_VERSION = "agent-score-v8-provisional"
 
 const BUNDLED_JUDGE = FLAGGER_DEFAULT_CLASSIFIER_MODEL
 
