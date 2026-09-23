@@ -1,5 +1,6 @@
 import { formatMetricValue, type MonitorMetric } from "@domain/shared"
-import { BarChart, type BarChartOverlay, HistogramSkeleton, Text } from "@repo/ui"
+import { BarChart, type BarChartOverlay, EmptyState, HistogramSkeleton, Text } from "@repo/ui"
+import { ActivityIcon } from "lucide-react"
 import { useCallback, useMemo } from "react"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { IncidentMarkerPopover } from "../../../../../../domains/alerts/incident-marker-popover.tsx"
@@ -164,9 +165,7 @@ export function MonitorMetricChart({
       {isLoading ? (
         <HistogramSkeleton height={200} />
       ) : !hasData ? (
-        <div className="flex min-h-[120px] items-center justify-center">
-          <Text.H6 color="foregroundMuted">No activity in this window</Text.H6>
-        </div>
+        <EmptyState icon={ActivityIcon} message="No activity in this window" />
       ) : (
         <BarChart
           data={chartData}
