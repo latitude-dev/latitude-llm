@@ -223,18 +223,12 @@ const findSafetyFindingByKind = (input: {
 }) =>
   Effect.gen(function* () {
     const scoreRepository = yield* ScoreRepository
-    const published = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
+    return yield* scoreRepository.findPublishedSystemSafetyFindingByKind({
       projectId: input.projectId,
       sessionId: input.sessionId as SessionId,
       flaggerSlug: input.flaggerSlug,
+      safetyFindingKind: input.safetyFindingKind,
     })
-
-    return (
-      published.find((score) => {
-        const metadata = score.metadata as { flaggerSlug?: string; safetyFindingKind?: string } | null
-        return metadata?.flaggerSlug === input.flaggerSlug && metadata?.safetyFindingKind === input.safetyFindingKind
-      }) ?? null
-    )
   })
 
 export interface UpsertSafetyFindingScoreInput extends FlaggerScoreInput {

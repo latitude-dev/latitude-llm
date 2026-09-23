@@ -741,6 +741,41 @@ export const ScoreRepositoryLive = Layer.effect(
             .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null)))
         }),
 
+      findPublishedSystemSafetyFindingByKind: ({
+        projectId,
+        sessionId,
+        flaggerSlug,
+        safetyFindingKind,
+      }: {
+        readonly projectId: ProjectId
+        readonly sessionId: SessionId
+        readonly flaggerSlug: string
+        readonly safetyFindingKind: string
+      }) =>
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(scores)
+                .where(
+                  and(
+                    eq(scores.organizationId, organizationId),
+                    eq(scores.projectId, projectId),
+                    eq(scores.sourceType, "annotation"),
+                    eq(scores.sourceId, "SYSTEM"),
+                    eq(scores.sessionId, sessionId as string),
+                    isNull(scores.draftedAt),
+                    sql`${scores.metadata}->>'flaggerSlug' = ${flaggerSlug}`,
+                    sql`${scores.metadata}->>'safetyFindingKind' = ${safetyFindingKind}`,
+                  ),
+                )
+                .limit(1),
+            )
+            .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null)))
+        }),
+
       listPublishedSystemAnnotationsBySession: ({
         projectId,
         sessionId,

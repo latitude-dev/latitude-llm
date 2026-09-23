@@ -364,6 +364,37 @@ describe("upsertSafetyFindingScore", () => {
     expect(scores.size).toBe(1)
   })
 
+  it("dedups a safety finding beyond the historical 200-row scan window", async () => {
+    const { upsert, upsertSafetyFinding, scores } = makeHarness()
+
+    const first = await upsertSafetyFinding({
+      safetyFindingKind: "injectionAttempt",
+      feedback: "An override was attempted.",
+      analysisHash: GENERATION_A,
+    })
+    const findingScore = scores.get(first.scoreId)
+    if (!findingScore) throw new Error("missing safety finding score")
+    scores.set(first.scoreId, { ...findingScore, createdAt: new Date("2020-01-01T00:00:00.000Z") })
+
+    for (let index = 0; index < 200; index++) {
+      await upsert({
+        feedback: `Filler finding ${index}.`,
+        flaggerSlug: "jailbreaking",
+        contentHash: `${(index + 1).toString(16).padStart(64, "0")}`,
+      })
+    }
+
+    expect(scores.size).toBe(201)
+
+    const rerun = await upsertSafetyFinding({
+      safetyFindingKind: "injectionAttempt",
+      feedback: "The same override, re-worded.",
+      analysisHash: GENERATION_B,
+    })
+    expect(rerun).toEqual({ status: "existing", scoreId: first.scoreId })
+    expect(scores.size).toBe(201)
+  })
+
   it("records an escalation from an attempt to a confirmed compliance", async () => {
     const { upsertSafetyFinding, scores } = makeHarness()
 
