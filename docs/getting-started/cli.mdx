@@ -66,15 +66,17 @@ The CLI authenticates with an **organization-scoped API key**. Create one in the
     Store the key once in your operating system's secret store (Keychain on MacOS, Secret Service on Linux, Credential Manager on Windows):
 
     ```bash
-    latitude auth login
+    latitude auth login --with-token
     ```
 
-    You'll be prompted to paste your API key; it's saved to the keyring under `latitude:ApiKeyAuth` and reused on every subsequent command. Manage it with:
+    Paste your API key when prompted and press Enter. It's saved to the keyring under `latitude:ApiKeyAuth` and reused on every subsequent command. Manage it with:
 
     ```bash
     latitude auth status    # show which credential sources are set, for each scheme
     latitude auth logout    # remove the stored key from the keyring
     ```
+
+    Need more than one key, like one for production and one for your sandbox? Use [profiles](#profiles).
   </Tab>
   <Tab title="Environment variable">
     Export the key in your shell — handy for CI or ephemeral environments:
@@ -88,11 +90,79 @@ The CLI authenticates with an **organization-scoped API key**. Create one in the
   </Tab>
 </Tabs>
 
-The key also decides **which environment** you're reading: a `lat_sandbox_` key from a [sandbox](/observability/features/sandbox) scopes every command to that sandbox's traces, and a live key to production. Because the environment variable beats the keyring, you can keep your live key in the keyring and switch per command:
+The CLI also reads a `.env` file from the current directory, or from the nearest parent directory that has one. The `LATITUDE_API_KEY` you keep there for [tracing](/telemetry/start-tracing) authenticates the CLI too. Variables exported in your shell win over `.env`. Settings that change where requests go or how TLS is checked (`LATITUDE_BASE_URL`, the proxy and CA bundle variables, `LATITUDE_INSECURE`) are ignored when they come from `.env`, so export those from your shell instead.
+
+## Profiles
+
+A profile is a named setup for the CLI with its own API key, stored in the keyring. With profiles you can keep several keys side by side and choose one per command, per shell, or as your default, instead of re-exporting `LATITUDE_API_KEY` every time you switch.
+
+### Production and sandbox
+
+The most common use is switching between your project's live data and its [sandbox](/observability/features/sandbox). Both use the same project slugs. The API key alone decides which one a command reads: a live key from **Settings → Keys → API Keys**, or a `lat_sandbox_` key from **Sandbox configuration** inside the sandbox. Give each key its own profile:
 
 ```bash
-LATITUDE_API_KEY=lat_sandbox_... latitude traces list --project-slug my-app
+# Production: create the profile, make it the default, then paste your live key
+latitude profiles create production --use
+latitude auth login --with-token -p production
+
+# Sandbox: create the profile, then paste your lat_sandbox_ key
+latitude profiles create sandbox
+latitude auth login --with-token -p sandbox
 ```
+
+Commands now run against production by default. Add `-p sandbox` (or `--profile sandbox`) to run one against the sandbox. The project slug is the same in both, so set it once:
+
+```bash
+export LATITUDE_PROJECT_SLUG=my-app
+
+latitude traces list                                 # production traces of my-app
+latitude traces list -p sandbox                      # sandbox traces of my-app
+latitude traces get --trace-id <traceId> -p sandbox  # one sandbox trace
+```
+
+To change the default instead of passing `-p` each time:
+
+```bash
+latitude profiles use sandbox       # sandbox is now the default
+latitude profiles use production    # and back
+export LATITUDE_PROFILE=sandbox     # or pick a profile for the current shell only
+```
+
+### Managing profiles
+
+```bash
+latitude profiles list                        # every profile, with the default marked
+latitude profiles current                     # the profile this command would use, and why
+latitude profiles show sandbox                # one profile's settings
+latitude auth login --with-token -p sandbox   # replace the sandbox key
+latitude profiles remove sandbox              # delete the profile and its stored key
+latitude profiles use -                       # clear the default profile
+```
+
+Profiles live in a `profiles.toml` file in the CLI's config directory: `~/Library/Application Support/latitude/` on MacOS, `~/.config/latitude/` on Linux, and `%APPDATA%\latitude\` on Windows. The file never holds a key. Each key stays in the keyring under `latitude:ApiKeyAuth#<profile>`.
+
+A profile can also carry a default project, which helps when your profiles point at different projects:
+
+```bash
+latitude profiles create support-bot --project-slug support-bot
+```
+
+A profile's project wins over `LATITUDE_PROJECT_SLUG` and `--global-project-slug`. Passing `--project-slug` on a command still overrides it.
+
+### Which key a command uses
+
+The CLI uses the first of these that's set:
+
+1. The profile passed with `-p` / `--profile`.
+2. `LATITUDE_API_KEY`, from your shell or a `.env` file.
+3. The profile named by `LATITUDE_PROFILE`, or else the default set with `latitude profiles use`.
+4. The key stored by `latitude auth login` with no profile selected.
+
+A selected profile only ever sends its own key. If it has none stored, the command fails to authenticate instead of falling back to another key.
+
+<Warning>
+  `LATITUDE_API_KEY` beats both the default profile and `LATITUDE_PROFILE`. If it's set in your shell or in `.env` (for example, because your app's tracing reads it from there), commands keep using it after `latitude profiles use`. Pass `-p` to override it. `latitude profiles current` reports `credential_overridden_by_env` when this happens, and `latitude auth status` shows the profile's key as `shadowed`. Profiles only affect the CLI, so your app keeps reading `LATITUDE_API_KEY` as before.
+</Warning>
 
 ## Usage
 
@@ -127,12 +197,23 @@ latitude traces list --project-slug other  # uses other
 latitude projects list                     # unaffected — not project-scoped
 ```
 
+A [profile](#profiles) can carry its own default project as well.
+
 A few global flags worth knowing (run `latitude --help` for the full list):
 
-- `--query <JMESPath>` — project/filter the response before it's formatted, e.g. `--query "items[].slug"`.
+- `--profile <name>` / `-p` — run the command under a named [profile](#profiles).
+- `--query <JMESPath>` — project/filter the response before it's formatted, e.g. `--query "items[].slug"`. When an API operation has its own `query` parameter (like the free-text search on `traces list`), that parameter is exposed as `--query-param` instead.
 - `--dry-run` — validate the request locally without sending it to the API.
 - `--quiet` / `-q` — suppress success output (errors still print to stderr).
+- `--human` — force table output even when stdout is piped.
+- `--schema` — print a machine-readable JSON description of a command's inputs and outputs, the agent-facing counterpart to `--help`.
 - `--debug` — dump the raw HTTP request and response to stderr.
+
+API commands also take a few request options:
+
+- `--params <JSON>` — pass parameters as a JSON object. These override the individual flags.
+- `--json <JSON|->` — on commands that send a request body, pass the whole body as JSON. Use `-` to read it from stdin.
+- `--retries <N>` / `--no-retry` — change how many times a failed request is retried, or turn retries off.
 
 ## Output formats
 
@@ -157,22 +238,26 @@ latitude traces list --format jsonl | jq .   # stream trace-by-trace
 latitude projects list --query "items[].{slug: slug, name: name}" --format yaml
 ```
 
-You can also set a default format for a session with the `LATITUDE_OUTPUT` environment variable (e.g. `export LATITUDE_OUTPUT=json`); the `--format` flag always overrides it.
+You can also set a default format for a session with the `LATITUDE_OUTPUT` environment variable (e.g. `export LATITUDE_OUTPUT=json`); the `--format` flag always overrides it. `--human` is shorthand for `--format table`, for when you pipe output but still want the table.
 
 ## Environment variables
 
 | Variable | Purpose |
 | --- | --- |
 | `LATITUDE_API_KEY` | API key used to authenticate (alternative to the keyring). |
+| `LATITUDE_PROFILE` | [Profile](#profiles) to use when `--profile` is omitted. |
 | `LATITUDE_PROJECT_SLUG` | Project used by project-scoped commands when `--project-slug` is omitted (same as the global `--global-project-slug`). |
 | `LATITUDE_OUTPUT` | Default output format when `--format` is omitted. |
+| `LATITUDE_RETRIES` | How many times to retry a failed request when `--retries` is omitted. |
 | `LATITUDE_BASE_URL` | Override the API base URL (e.g. self-hosted or a mock server). |
 | `LATITUDE_TIMEOUT_SECS` | Total request timeout, in seconds. |
+| `LATITUDE_CONNECT_TIMEOUT_SECS` | Connection timeout, in seconds. |
 | `LATITUDE_PROXY` | HTTP(S) proxy URL. |
 | `LATITUDE_CA_BUNDLE` | Path to a PEM file with extra trust roots. |
 | `LATITUDE_INSECURE=1` | Skip TLS verification (debugging only). |
+| `LATITUDE_USER_AGENT_SUFFIX` | Product token appended to the `User-Agent`, e.g. `my-tool/1.0` (`--user-agent-suffix` overrides it). |
 
-The standard `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` / `SSL_CERT_FILE` variables are honored as well.
+The standard `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` / `SSL_CERT_FILE` variables are honored as well. Any of these can also go in a `.env` file, except `LATITUDE_BASE_URL` and the proxy, CA bundle, and TLS variables, which the CLI only reads from your shell (see [Authentication](#authentication)).
 
 ## Shell completion
 
@@ -210,4 +295,4 @@ sudo mv latitude.1 /usr/local/share/man/man1/ && man latitude
 
 ## For Agents
 
-The CLI pairs naturally with agents: `--format json`/`jsonl` for structured output, `--schema` for machine-readable help, and `latitude generate-skills` to teach an agent the command surface — everything it needs to drive Latitude locally with no MCP connection. Prefer the [MCP server](/getting-started/mcp) when you'd rather connect the agent over the network with OAuth.
+The CLI pairs naturally with agents: `--format json`/`jsonl` for structured output, `--schema` for machine-readable help, and `latitude generate-skills` to teach an agent the command surface — everything it needs to drive Latitude locally with no MCP connection. Have agents pass `-p` on every command when you use [profiles](#profiles), so each call names its environment and can't be redirected by a `LATITUDE_API_KEY` in the environment. Prefer the [MCP server](/getting-started/mcp) when you'd rather connect the agent over the network with OAuth.

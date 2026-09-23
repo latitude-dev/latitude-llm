@@ -67,6 +67,12 @@ generation). Two things about its `generators.yml` block are load-bearing:
   (plus a `.agents`/`.claude` skill scaffold) for hand-written commands — we
   don't use those. `config.binaryName: latitude` names the binary explicitly
   rather than deriving it from the OpenAPI title.
+- **`config.profiles.enabled: true`** turns on Fern's named profiles: the
+  `latitude profiles` group, the global `--profile`/`-p` flag, and
+  `LATITUDE_PROFILE`. The profiles runtime (`src/profiles/`) ships in the
+  crate either way; the flag only adds the `.profiles(ProfilesConfig::new())`
+  call to `main.rs`. Dropping it removes the command surface from every
+  user's CLI, so treat it as a breaking change.
 
 ## How `--local` works
 
