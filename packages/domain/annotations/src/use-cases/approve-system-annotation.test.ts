@@ -1,4 +1,4 @@
-import { QueuePublisher, WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
+import { QueuePublisher, WorkflowAlreadyStartedError, WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
@@ -88,6 +88,44 @@ describe("approveSystemAnnotationUseCase", () => {
         options: { workflowId: `annotations:approve:${draft.id}` },
       },
     ])
+    expect(published).toEqual([
+      {
+        queue: "product-feedback",
+        task: "submitSystemAnnotatorReview",
+        payload: {
+          upstreamScoreId: draft.id,
+          review: { decision: "approve" },
+        },
+        options: { dedupeKey: `submitSystemAnnotatorReview:${draft.id}:approve` },
+      },
+    ])
+  })
+
+  it("collapses WorkflowAlreadyStartedError into a no-op and still enqueues the review", async () => {
+    const draft = buildSystemDraftAnnotation()
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    scores.set(draft.id, draft)
+    const workflowStarter: WorkflowStarterShape = {
+      start: (workflow, _input, options) =>
+        Effect.fail(new WorkflowAlreadyStartedError({ workflow, workflowId: options.workflowId })),
+      signalWithStart: () => Effect.die("signalWithStart is not used by approveSystemAnnotationUseCase"),
+    }
+    const { publisher, published } = createFakeQueuePublisher()
+
+    const result = await Effect.runPromise(
+      approveSystemAnnotationUseCase({ scoreId: draft.id }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(ScoreRepository, scoreRepository),
+            Layer.succeed(WorkflowStarter, workflowStarter),
+            Layer.succeed(QueuePublisher, publisher),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ action: "approved", scoreId: draft.id })
     expect(published).toEqual([
       {
         queue: "product-feedback",
