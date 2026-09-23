@@ -1,4 +1,5 @@
 import { agentScoreWeeklyDigestPayloadSchema } from "@domain/notifications"
+import { formatTotalScore } from "@domain/shared"
 import { Text } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { GaugeIcon } from "lucide-react"
@@ -46,7 +47,7 @@ export function AgentScoreWeeklyDigestNotification({ notification }: { readonly 
       projectId={notification.projectId}
       icon={<GaugeIcon />}
       title="Your weekly Agent Score"
-      description={`${score.toFixed(0)} · ${movement}`}
+      description={`${formatTotalScore(score)} · ${movement}`}
       url={project ? `/projects/${project.slug}/agent-score?date=${date}` : undefined}
     />
   )

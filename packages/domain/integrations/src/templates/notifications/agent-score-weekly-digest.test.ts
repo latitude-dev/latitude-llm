@@ -85,7 +85,7 @@ describe("agentScoreWeeklyDigestRenderer", () => {
     const result = render()
 
     expect(JSON.stringify(result.blocks[0])).toContain("Support Agent")
-    expect(JSON.stringify(result.blocks[1])).toContain("Agent Score · 67.9")
+    expect(JSON.stringify(result.blocks[1])).toContain("Agent Score · 67")
     expect(JSON.stringify(result.blocks[1])).toContain("+9.7 this week")
   })
 

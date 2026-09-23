@@ -37,17 +37,24 @@ export const scoreBandOf = (score: number | null): ScoreBand => {
 }
 
 /**
- * Light-theme hex for each band, resolved from the `--viz-*` design tokens the score page renders
- * with. Concrete values because email, Slack and the PNG renderer have no CSS variables to read.
+ * Hex for each band, matching the score page's palette. Concrete sRGB values because email, Slack
+ * and the PNG renderer have no CSS variables or `oklch()` to read; `medium` is the page's
+ * `oklch(85.2% 0.199 91.936)`, which sits just outside sRGB and clamps to this.
  */
 export const SCORE_BAND_COLORS: Record<ScoreBand, string> = {
-  low: "#DA8072",
-  medium: "#EB9737",
-  high: "#62BC8C",
-  unknown: "#66727F",
+  low: "#DE5F47",
+  medium: "#FDC700",
+  high: "#75C970",
+  unknown: "#6B7280",
 }
 
 export const scoreBandColor = (score: number | null): string => SCORE_BAND_COLORS[scoreBandOf(score)]
+
+/**
+ * The composite as every surface prints it: floored, so a score reads 100 only when it is 100. The
+ * score page, the digest email, its Slack message and the rendered ring all use this one rule.
+ */
+export const formatTotalScore = (value: number): string => Math.floor(value).toString()
 
 const scoreDimensionDescription = "Agent Score dimension this evidence informs."
 const evidenceRoleDescription = "How this evidence informs the dimension."

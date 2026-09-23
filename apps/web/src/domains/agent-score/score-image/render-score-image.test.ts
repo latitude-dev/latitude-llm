@@ -8,26 +8,34 @@ const ring = (score: number | null, dimensions: Record<string, number | null> = 
   buildScoreRingSvg({ score, dimensions, weights: WEIGHTS })
 
 describe("buildScoreRingSvg", () => {
-  it("colours the composite arc and its label by band", () => {
+  it("colours the composite arc and its disc by band", () => {
     expect(ring(92)).toContain(SCORE_BAND_COLORS.high)
     expect(ring(71)).toContain(SCORE_BAND_COLORS.medium)
     expect(ring(42)).toContain(SCORE_BAND_COLORS.low)
   })
 
-  it("renders the score to one decimal, like the page it mirrors", () => {
-    expect(ring(71.4)).toContain(">71.4<")
+  it("prints the score floored and in the foreground colour, like the page it mirrors", () => {
+    const svg = ring(71.9)
+    expect(svg).toMatch(/fill="#030711"[^>]*>71</)
+    expect(svg).not.toContain(">72<")
+    expect(svg).toContain(">Agent vitality<")
   })
 
-  it("draws a dash for a project with no score, and no progress arc", () => {
+  it("never rounds a near-perfect score up to 100", () => {
+    expect(ring(99.6)).toContain(">99<")
+  })
+
+  it("draws a dash and no band colour for a project with no score", () => {
     const svg = ring(null)
     expect(svg).toContain(">—<")
-    expect(svg).toContain(SCORE_BAND_COLORS.unknown)
-    expect(svg).not.toContain(SCORE_BAND_COLORS.high)
+    for (const color of [SCORE_BAND_COLORS.low, SCORE_BAND_COLORS.medium, SCORE_BAND_COLORS.high]) {
+      expect(svg).not.toContain(color)
+    }
   })
 
-  it("draws one outer track per dimension whether or not it scored", () => {
-    const tracks = ring(80, { outcome: 90 }).match(/stroke-opacity="0.22"/g) ?? []
-    expect(tracks).toHaveLength(5)
+  it("draws an outer segment only for the dimensions that scored, with no grey track behind them", () => {
+    const segments = ring(80, { outcome: 90, reliability: 70, cost: null }).match(/stroke-opacity="0.6"/g) ?? []
+    expect(segments).toHaveLength(2)
   })
 
   it("colours each outer segment by its own band, not the composite's", () => {
@@ -36,7 +44,7 @@ describe("buildScoreRingSvg", () => {
     expect(svg).toContain(SCORE_BAND_COLORS.high)
   })
 
-  it("escapes nothing it did not put there — the only text is a number", () => {
+  it("escapes nothing it did not put there — the only text is a number and a fixed label", () => {
     expect(ring(50)).not.toMatch(/<text[^>]*>[^<]*[<>&][^<]*<\/text>/)
   })
 })
@@ -45,13 +53,15 @@ describe("buildScoreCardSvg", () => {
   const card = (series: readonly number[]) =>
     buildScoreCardSvg({ score: 71, dimensions: { outcome: 74 }, weights: WEIGHTS, series })
 
+  const TREND = 'stroke="#2B7FFF"'
+
   it("draws the trend when the week published more than one score", () => {
-    expect(card([68, 69, 71])).toContain("Score evolution")
+    expect(card([68, 69, 71])).toContain(TREND)
   })
 
   it("draws no trend from a single published day, which has no shape to show", () => {
-    expect(card([71])).not.toContain("Score evolution")
-    expect(card([])).not.toContain("Score evolution")
+    expect(card([71])).not.toContain(TREND)
+    expect(card([])).not.toContain(TREND)
   })
 
   it("scales a flat high week to its own range rather than flattening it against 0-100", () => {

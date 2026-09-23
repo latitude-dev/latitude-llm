@@ -1,4 +1,4 @@
-import { agentScoreImageUrl, SCORE_DIMENSION_LABELS, SCORE_DIMENSIONS } from "@domain/shared"
+import { agentScoreImageUrl, formatTotalScore, SCORE_DIMENSION_LABELS, SCORE_DIMENSIONS } from "@domain/shared"
 import { Effect } from "effect"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -55,7 +55,7 @@ export const agentScoreWeeklyDigestRenderer: NotificationEmailRenderer<"agent-sc
           />,
         ),
         subject: buildSubject(payload, projectName),
-        text: `${headline}\n\n${formatScore(payload.score)} — ${movement}\n\n${dimensionLines}\n\n${coverage}${
+        text: `${headline}\n\n${formatTotalScore(payload.score)} — ${movement}\n\n${dimensionLines}\n\n${coverage}${
           scoreUrl ? `\n\nSee the full breakdown:\n${scoreUrl}` : ""
         }`,
       }

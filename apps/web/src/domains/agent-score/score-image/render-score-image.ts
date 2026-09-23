@@ -1,6 +1,7 @@
 import {
   buildWeightedRingSegments,
   clampScore,
+  formatTotalScore,
   SCORE_DIMENSION_LABELS,
   SCORE_DIMENSIONS,
   type ScoreDimension,
@@ -25,11 +26,18 @@ const VIEWBOX = 100
 const CENTER = 50
 const OUTER_RADIUS = 45
 const INNER_RADIUS = 36
-const STROKE_WIDTH = 5
-const OUTER_IDLE_OPACITY = 0.5
-const OUTER_TRACK_OPACITY = 0.22
-const INNER_TRACK_OPACITY = 0.16
-const TRACK_COLOR = "#66727F"
+const STROKE_WIDTH = 4
+const OUTER_IDLE_OPACITY = 0.6
+const DISC_OPACITY = 0.1
+const FOREGROUND = "#030711"
+const MUTED = "#66727F"
+
+// The page draws the ring in a 176px box, so its 30px number and 12px label are 17 and 6.8 units
+// here, stacked with its 4px gap and centred as one block.
+const NUMBER_SIZE = 17
+const NUMBER_CENTER_Y = 44.3
+const LABEL_SIZE = 6.8
+const LABEL_CENTER_Y = 61.4
 
 const RING_SIZE = 240
 const CARD_WIDTH = 600
@@ -59,7 +67,13 @@ const arc = (input: {
 }): string =>
   `<circle cx="${CENTER}" cy="${CENTER}" r="${input.radius}" fill="none" stroke="${input.color}" stroke-opacity="${input.opacity}" stroke-width="${STROKE_WIDTH}" stroke-linecap="round" stroke-dasharray="${fmt(input.length)} ${fmt(input.total - input.length)}" stroke-dashoffset="${fmt(-input.offset)}" transform="rotate(-90 ${CENTER} ${CENTER})" />`
 
-/** The ring alone, in a 100×100 user-space box the caller places. */
+/**
+ * The ring alone, in a 100×100 user-space box the caller places.
+ *
+ * Each dimension's outer segment is drawn at its full weighted length in its own band colour, and
+ * the inner arc is the only one whose length is the score. That is the page's reading of the ring:
+ * the outer ring says which dimension is where, the inner ring says how far the whole agent got.
+ */
 const buildRingMarkup = (input: ScoreRingInput): string => {
   const outerLength = circumference(OUTER_RADIUS)
   const innerLength = circumference(INNER_RADIUS)
@@ -74,24 +88,18 @@ const buildRingMarkup = (input: ScoreRingInput): string => {
 
   const parts: string[] = []
 
+  if (input.score !== null) {
+    parts.push(
+      `<circle cx="${CENTER}" cy="${CENTER}" r="${INNER_RADIUS - STROKE_WIDTH / 2}" fill="${scoreBandColor(input.score)}" fill-opacity="${DISC_OPACITY}" />`,
+    )
+  }
+
   for (const segment of segments) {
+    if (segment.score === null || segment.length <= 0) continue
     parts.push(
       arc({
         radius: OUTER_RADIUS,
         length: segment.length,
-        offset: segment.start,
-        color: TRACK_COLOR,
-        opacity: OUTER_TRACK_OPACITY,
-        total: outerLength,
-      }),
-    )
-    if (segment.score === null) continue
-    const progress = segment.length * (clampScore(segment.score) / 100)
-    if (progress <= 0) continue
-    parts.push(
-      arc({
-        radius: OUTER_RADIUS,
-        length: progress,
         offset: segment.start,
         color: scoreBandColor(segment.score),
         opacity: OUTER_IDLE_OPACITY,
@@ -100,9 +108,6 @@ const buildRingMarkup = (input: ScoreRingInput): string => {
     )
   }
 
-  parts.push(
-    `<circle cx="${CENTER}" cy="${CENTER}" r="${INNER_RADIUS}" fill="none" stroke="${TRACK_COLOR}" stroke-opacity="${INNER_TRACK_OPACITY}" stroke-width="${STROKE_WIDTH}" />`,
-  )
   if (input.score !== null) {
     parts.push(
       arc({
@@ -116,9 +121,10 @@ const buildRingMarkup = (input: ScoreRingInput): string => {
     )
   }
 
-  const label = input.score === null ? "—" : input.score.toFixed(1)
+  const label = input.score === null ? "—" : formatTotalScore(input.score)
   parts.push(
-    `<text x="${CENTER}" y="${CENTER}" font-family="Inter" font-size="19" font-weight="600" fill="${scoreBandColor(input.score)}" text-anchor="middle" dominant-baseline="central">${escapeXml(label)}</text>`,
+    `<text x="${CENTER}" y="${NUMBER_CENTER_Y}" font-family="Inter" font-size="${NUMBER_SIZE}" font-weight="600" fill="${FOREGROUND}" text-anchor="middle" dominant-baseline="central">${escapeXml(label)}</text>`,
+    `<text x="${CENTER}" y="${LABEL_CENTER_Y}" font-family="Inter" font-size="${LABEL_SIZE}" fill="${MUTED}" text-anchor="middle" dominant-baseline="central">Agent vitality</text>`,
   )
 
   return parts.join("")
@@ -144,13 +150,13 @@ const PANEL_GAP = 12
 const TREND_PANEL_LEFT = RING_PANEL_WIDTH + PANEL_GAP
 const TREND_LEFT = TREND_PANEL_LEFT + 24
 const TREND_RIGHT = CARD_WIDTH - 24
-const TREND_TOP = 52
+const TREND_TOP = 28
 const TREND_BOTTOM = CARD_HEIGHT - 28
-const TREND_COLOR = "#5B9BE8"
+const TREND_COLOR = "#2B7FFF"
 const TREND_FILL_OPACITY = 0.16
 
 /**
- * The week's published scores as a filled area, mirroring the score page's "Score evolution" panel.
+ * The week's published scores as a filled area, mirroring the score page's trend.
  *
  * Scaled to the series' own range rather than 0–100: a project sitting at 97–99 all week would
  * otherwise draw a flat line at the top and say nothing about its week. A padded range keeps the
@@ -187,7 +193,6 @@ const buildTrendMarkup = (series: readonly number[]): string => {
     `<path d="${area}" fill="${TREND_COLOR}" fill-opacity="${TREND_FILL_OPACITY}" />`,
     `<path d="${line}" fill="none" stroke="${TREND_COLOR}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />`,
     dots,
-    `<text x="${TREND_LEFT}" y="${TREND_TOP - 20}" font-family="Inter" font-size="12" fill="#66727F">Score evolution</text>`,
   ].join("")
 }
 

@@ -1,4 +1,5 @@
 import {
+  formatTotalScore,
   SCORE_DIMENSION_DESCRIPTIONS,
   SCORE_DIMENSION_LABELS,
   SCORE_DIMENSIONS,
@@ -110,7 +111,7 @@ export function AgentScoreWeeklyDigestEmail({
 }: AgentScoreWeeklyDigestEmailProps) {
   return (
     <ContainerLayout
-      previewText={`${score.toFixed(1)} — ${movement}`}
+      previewText={`${formatTotalScore(score)} — ${movement}`}
       footer={<EmailFooter unsubscribe={{ webAppUrl, group: "agent_score" }} />}
     >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
@@ -124,7 +125,7 @@ export function AgentScoreWeeklyDigestEmail({
           number is the one thing the reader opened this for. */}
       <Img
         src={cardImageUrl}
-        alt={`Agent Score ${score.toFixed(1)} — ${movement}`}
+        alt={`Agent Score ${formatTotalScore(score)} — ${movement}`}
         width="552"
         style={{ width: "100%", maxWidth: 552, height: "auto", display: "block" }}
       />

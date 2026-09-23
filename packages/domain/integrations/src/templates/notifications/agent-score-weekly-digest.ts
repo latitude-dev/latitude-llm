@@ -1,4 +1,4 @@
-import { agentScoreImageUrl, SCORE_DIMENSION_LABELS, SCORE_DIMENSIONS } from "@domain/shared"
+import { agentScoreImageUrl, formatTotalScore, SCORE_DIMENSION_LABELS, SCORE_DIMENSIONS } from "@domain/shared"
 import type { ImageBlock } from "@slack/web-api"
 import { Effect } from "effect"
 import { actionsLink, contextLine, escapeMrkdwn, header, sectionMarkdown } from "./blocks.ts"
@@ -19,7 +19,7 @@ export const agentScoreWeeklyDigestRenderer: SlackNotificationRenderer<"agent-sc
   ctx,
 ) => {
   const projectName = ctx.project?.name ?? ctx.organization.name
-  const score = payload.score.toFixed(1)
+  const score = formatTotalScore(payload.score)
 
   const movement =
     payload.comparison.status === "comparable"

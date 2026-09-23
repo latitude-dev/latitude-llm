@@ -1,4 +1,5 @@
 import type { AgentScoreWeeklyDigestPayload } from "@domain/notifications"
+import { formatTotalScore } from "@domain/shared"
 
 const DATE_FMT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
 
@@ -50,7 +51,7 @@ export const buildHeadline = (projectName: string | null): string =>
  */
 export const buildSubject = (payload: AgentScoreWeeklyDigestPayload, projectName: string | null): string => {
   const scope = projectName ? ` for ${projectName}` : ""
-  const base = `Agent Score ${payload.score.toFixed(0)}${scope}`
+  const base = `Agent Score ${formatTotalScore(payload.score)}${scope}`
   const { comparison } = payload
   if (comparison.status !== "comparable" || !comparison.significant || comparison.delta === 0) return base
   return `${base} (${comparison.delta > 0 ? "+" : "−"}${Math.abs(comparison.delta).toFixed(1)} this week)`
