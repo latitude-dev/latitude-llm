@@ -66,65 +66,63 @@ export function ScoreSnapshotButton({
       >
         <Icon icon={CameraIcon} size="sm" />
       </Button>
-      <Modal
-        open={open}
-        onOpenChange={setOpen}
-        dismissible
-        size="medium"
-        title="Score snapshot"
-        description="Copy or download an image of the selected score."
-        footer={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              disabled={state.status !== "ready" || !canCopy}
-              isLoading={isCopying}
-              onClick={() => void copy()}
-            >
-              <Icon icon={CopyIcon} size="sm" />
-              Copy image
-            </Button>
-            <Button
-              disabled={state.status !== "ready"}
-              onClick={() => {
-                if (state.status === "ready") downloadScoreSnapshot(state.image)
-              }}
-            >
-              <Icon icon={DownloadIcon} size="sm" />
-              Download PNG
-            </Button>
-          </div>
-        }
-      >
-        <div className="flex flex-col gap-3">
-          {state.status === "ready" ? (
-            <img
-              src={state.image.previewUrl}
-              alt={`Agent Score snapshot for ${projectName}`}
-              className="aspect-square w-full rounded-lg border border-border"
-            />
-          ) : state.status === "error" ? (
-            <div className="flex flex-col items-start gap-3 py-6">
-              <Text.H6 color="destructive">Could not generate the snapshot.</Text.H6>
-              <Button variant="outline" onClick={() => void generate()}>
-                Try again
+      <Modal.Root open={open} onOpenChange={setOpen}>
+        <Modal.Content dismissible className="max-w-[520px]">
+          <Modal.Header title="Score snapshot" description="Copy or download an image of the selected score." />
+          <Modal.Body>
+            <div className="flex flex-col gap-3">
+              {state.status === "ready" ? (
+                <img
+                  src={state.image.previewUrl}
+                  alt={`Agent Score snapshot for ${projectName}`}
+                  className="aspect-square w-full rounded-lg border border-border"
+                />
+              ) : state.status === "error" ? (
+                <div className="flex flex-col items-start gap-3 py-6">
+                  <Text.H6 color="destructive">Could not generate the snapshot.</Text.H6>
+                  <Button variant="outline" onClick={() => void generate()}>
+                    Try again
+                  </Button>
+                </div>
+              ) : (
+                <Skeleton
+                  role="status"
+                  aria-label="Generating snapshot"
+                  className="aspect-square w-full shrink-0 rounded-lg bg-foreground/10 motion-reduce:animate-none"
+                  style={{ animationDuration: "1s" }}
+                />
+              )}
+              {!canCopy ? (
+                <Text.H6 color="foregroundMuted">
+                  Image copying is unavailable in this browser. You can download the PNG instead.
+                </Text.H6>
+              ) : null}
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                disabled={state.status !== "ready" || !canCopy}
+                isLoading={isCopying}
+                onClick={() => void copy()}
+              >
+                <Icon icon={CopyIcon} size="sm" />
+                Copy image
+              </Button>
+              <Button
+                disabled={state.status !== "ready"}
+                onClick={() => {
+                  if (state.status === "ready") downloadScoreSnapshot(state.image)
+                }}
+              >
+                <Icon icon={DownloadIcon} size="sm" />
+                Download PNG
               </Button>
             </div>
-          ) : (
-            <Skeleton
-              role="status"
-              aria-label="Generating snapshot"
-              className="aspect-square w-full shrink-0 rounded-lg bg-foreground/10 motion-reduce:animate-none"
-              style={{ animationDuration: "1s" }}
-            />
-          )}
-          {!canCopy ? (
-            <Text.H6 color="foregroundMuted">
-              Image copying is unavailable in this browser. You can download the PNG instead.
-            </Text.H6>
-          ) : null}
-        </div>
-      </Modal>
+          </Modal.Footer>
+        </Modal.Content>
+      </Modal.Root>
     </>
   )
 }

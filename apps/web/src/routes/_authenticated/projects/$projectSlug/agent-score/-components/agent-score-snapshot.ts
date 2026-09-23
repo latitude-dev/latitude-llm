@@ -149,10 +149,10 @@ export async function createScoreSnapshot(input: ScoreSnapshotInput): Promise<Sc
   SCORE_DIMENSION_ORDER.forEach((dimension, index) => {
     const x = 122 + index * 220.176
     drawScoreDisc({ context, x, y: 992, size: 145.296, score: snapshot.dimensions[dimension]?.score ?? null })
-    context.font = '600 20px "Snapshot Labels"'
+    context.font = '600 24px "Snapshot Labels"'
     context.textAlign = "center"
     context.fillStyle = "#ffffff"
-    context.fillText(DIMENSION_LABELS[dimension], x + 72.648, 1177.296)
+    context.fillText(DIMENSION_LABELS[dimension], x + 72.648, 1180.296)
   })
   const blob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob(
