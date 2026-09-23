@@ -233,4 +233,46 @@ describe("analyticsQuerySchema", () => {
     expect(isValidAnalyticsRange(range)).toBe(true)
     expect(isValidAnalyticsRange({ fromIso: range.toIso, toIso: range.fromIso })).toBe(false)
   })
+
+  it("accepts gtePercentile on duration/ttft/cost for traces and sessions", () => {
+    for (const stream of ["traces", "sessions"] as const) {
+      for (const field of ["duration", "ttft", "cost"] as const) {
+        const result = analyticsQuerySchema.safeParse({
+          stream,
+          metric: { kind: "count" },
+          filters: { [field]: [{ op: "gtePercentile", value: 90 }] },
+          range,
+        })
+        expect(result.success).toBe(true)
+      }
+    }
+  })
+
+  it("rejects gtePercentile on a non-percentile-eligible field for traces and sessions", () => {
+    // These fields would otherwise reach `buildTraceFilterClauses`/`buildSessionFilterClauses`
+    // unresolved and throw an unhandled 500 instead of a validation 400.
+    for (const stream of ["traces", "sessions"] as const) {
+      const result = analyticsQuerySchema.safeParse({
+        stream,
+        metric: { kind: "count" },
+        filters: { tokensInput: [{ op: "gtePercentile", value: 90 }] },
+        range,
+      })
+      expect(result.success).toBe(false)
+    }
+  })
+
+  it("rejects gtePercentile on scores/behaviors/moments filters (no percentile resolution step)", () => {
+    // scores/behaviors/moments never resolve `gtePercentile` into an absolute threshold, so any
+    // field would otherwise reach `buildClickHouseWhere` unresolved and throw an unhandled 500.
+    for (const stream of ["scores", "behaviors", "moments"] as const) {
+      const result = analyticsQuerySchema.safeParse({
+        stream,
+        metric: { kind: "count" },
+        filters: { duration: [{ op: "gtePercentile", value: 90 }] },
+        range,
+      })
+      expect(result.success).toBe(false)
+    }
+  })
 })
