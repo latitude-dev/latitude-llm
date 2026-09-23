@@ -17,31 +17,31 @@ const toScore = (raw: string | null): number | null => {
   return Number.isFinite(parsed) ? clamp(parsed) : null
 }
 
-const toScoreList = (raw: string | null): number[] =>
-  raw === null
-    ? []
-    : raw
-        .split(",")
-        .map((part) => toScore(part))
-        .filter((score): score is number => score !== null)
+/** Positional: an empty or unparseable slot stays in place as `null` rather than shifting the rest. */
+const toScoreSlots = (raw: string | null): (number | null)[] =>
+  raw === null || raw === "" ? [] : raw.split(",").map((part) => toScore(part))
 
 interface ParsedScoreParams {
   readonly score: number | null
   readonly dimensions: Partial<Record<ScoreDimension, number | null>>
-  /** Published scores for the week, oldest first. Capped so a crafted URL cannot draw thousands of points. */
-  readonly series: readonly number[]
+  /**
+   * One slot per day of the window, `null` for a day that published no score. Capped so a crafted
+   * URL cannot draw thousands of points.
+   */
+  readonly series: readonly (number | null)[]
 }
 
 const MAX_SERIES_POINTS = 31
 
 /**
- * `?score=71.4&d=74,81,66,70,92&s=68.9,70,71.4`
+ * `?score=71.4&d=74,81,66,70,92&s=68.9,,70,71.4`
  *
- * `d` is positional in `SCORE_DIMENSIONS` order, which keeps the URL short enough to stay readable
- * in a Slack block and an email source.
+ * Both lists are positional: `d` in `SCORE_DIMENSIONS` order, `s` one slot per day of the window
+ * with a gap left empty. That keeps the URL short enough to stay readable in a Slack block and an
+ * email source.
  */
 export const parseScoreParams = (url: URL): ParsedScoreParams => {
-  const dimensionScores = toScoreList(url.searchParams.get("d"))
+  const dimensionScores = toScoreSlots(url.searchParams.get("d"))
   const dimensions: Partial<Record<ScoreDimension, number | null>> = {}
   SCORE_DIMENSIONS.forEach((dimension, index) => {
     const value = dimensionScores[index]
@@ -51,6 +51,6 @@ export const parseScoreParams = (url: URL): ParsedScoreParams => {
   return {
     score: toScore(url.searchParams.get("score")),
     dimensions,
-    series: toScoreList(url.searchParams.get("s")).slice(0, MAX_SERIES_POINTS),
+    series: toScoreSlots(url.searchParams.get("s")).slice(0, MAX_SERIES_POINTS),
   }
 }

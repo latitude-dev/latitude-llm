@@ -12,16 +12,45 @@ import { SCORE_DIMENSIONS, type ScoreDimension } from "./score-evidence.ts"
  */
 export type ScoreImageLayout = "ring" | "card" | "slack"
 
+export interface ScoreImageTrend {
+  /** Inclusive UTC date bounds of the window, `YYYY-MM-DD`. */
+  readonly from: string
+  readonly to: string
+  /** The published days, in any order; a day with no score is simply absent. */
+  readonly points: readonly { readonly date: string; readonly score: number }[]
+}
+
 export interface ScoreImageParams {
   readonly score: number
   readonly dimensions: Partial<Record<ScoreDimension, number>>
-  /** Published scores for the window, oldest first. Only the card layout draws them. */
-  readonly series?: readonly number[]
+  /** The window's published days. Only the card layout draws them. */
+  readonly trend?: ScoreImageTrend
   /** `ring` alone, `card` for the email's ring-plus-trend, `slack` for ring-plus-dimension-meters. */
   readonly layout?: ScoreImageLayout
 }
 
 const round = (value: number): string => value.toFixed(1).replace(/\.0$/, "")
+
+const DAY_MS = 86_400_000
+
+/**
+ * One slot per day of the window, empty where the day published no score.
+ *
+ * Positional rather than a list of scores, because a withheld day writes no row: a week scored on
+ * Tuesday, Wednesday and Monday would otherwise be drawn as three evenly spaced points, putting
+ * Wednesday in the middle of the week and misplacing every movement after a gap.
+ */
+const trendSlots = (trend: ScoreImageTrend): string[] => {
+  const byDate = new Map(trend.points.map((point) => [point.date, point.score]))
+  const start = Date.parse(`${trend.from}T00:00:00.000Z`)
+  const end = Date.parse(`${trend.to}T00:00:00.000Z`)
+  const slots: string[] = []
+  for (let at = start; at <= end; at += DAY_MS) {
+    const score = byDate.get(new Date(at).toISOString().slice(0, 10))
+    slots.push(score === undefined ? "" : round(score))
+  }
+  return slots
+}
 
 export const agentScoreImageUrl = (webAppUrl: string, params: ScoreImageParams): string => {
   const base = webAppUrl.replace(/\/$/, "")
@@ -34,8 +63,8 @@ export const agentScoreImageUrl = (webAppUrl: string, params: ScoreImageParams):
 
   const layout = params.layout ?? "ring"
   if (layout !== "ring") query.set("layout", layout)
-  if (layout === "card" && params.series && params.series.length > 1) {
-    query.set("s", params.series.map(round).join(","))
+  if (layout === "card" && params.trend && params.trend.points.length > 1) {
+    query.set("s", trendSlots(params.trend).join(","))
   }
 
   return `${base}/api/agent-score/ring.png?${query.toString()}`

@@ -138,8 +138,11 @@ export const buildScoreRingSvg = (input: ScoreRingInput): string =>
   svgDocument(VIEWBOX, VIEWBOX, buildRingMarkup(input))
 
 interface ScoreCardInput extends ScoreRingInput {
-  /** Published days in the window, oldest first. Fewer than two points draws no trend. */
-  readonly series: readonly number[]
+  /**
+   * One slot per day of the window, `null` for a day that published no score. Fewer than two
+   * published days draws no trend, since one point has no shape to show.
+   */
+  readonly series: readonly (number | null)[]
 }
 
 const PANEL_FILL = "#F8FAFC"
@@ -162,11 +165,12 @@ const TREND_FILL_OPACITY = 0.16
  * otherwise draw a flat line at the top and say nothing about its week. A padded range keeps the
  * shape readable while the ring carries the absolute value.
  */
-const buildTrendMarkup = (series: readonly number[]): string => {
-  if (series.length < 2) return ""
+const buildTrendMarkup = (series: readonly (number | null)[]): string => {
+  const published = series.filter((score): score is number => score !== null)
+  if (published.length < 2) return ""
 
-  const min = Math.min(...series)
-  const max = Math.max(...series)
+  const min = Math.min(...published)
+  const max = Math.max(...published)
   const padding = Math.max(1, (max - min) * 0.25)
   const low = Math.max(0, min - padding)
   const high = Math.min(100, max + padding)
@@ -174,26 +178,41 @@ const buildTrendMarkup = (series: readonly number[]): string => {
 
   const width = TREND_RIGHT - TREND_LEFT
   const height = TREND_BOTTOM - TREND_TOP
-  const points = series.map((score, index) => ({
-    x: TREND_LEFT + (index / (series.length - 1)) * width,
-    y: TREND_BOTTOM - ((clampScore(score) - low) / span) * height,
-  }))
+  const xOf = (day: number) => TREND_LEFT + (series.length > 1 ? (day / (series.length - 1)) * width : 0)
+  const yOf = (score: number) => TREND_BOTTOM - ((clampScore(score) - low) / span) * height
 
-  const line = points.map((point, index) => `${index === 0 ? "M" : "L"}${fmt(point.x)},${fmt(point.y)}`).join(" ")
-  const area = `${line} L${fmt(TREND_RIGHT)},${fmt(TREND_BOTTOM)} L${fmt(TREND_LEFT)},${fmt(TREND_BOTTOM)} Z`
+  // Each point sits on its own day, and the line stops at an unscored day rather than bridging it:
+  // the score page leaves those days as gaps, and a line drawn across one would invent a value.
+  const runs: { readonly x: number; readonly y: number }[][] = []
+  let run: { readonly x: number; readonly y: number }[] = []
+  series.forEach((score, day) => {
+    if (score === null) {
+      if (run.length > 0) runs.push(run)
+      run = []
+      return
+    }
+    run.push({ x: xOf(day), y: yOf(score) })
+  })
+  if (run.length > 0) runs.push(run)
 
-  const dots = points
-    .map(
-      (point) =>
-        `<circle cx="${fmt(point.x)}" cy="${fmt(point.y)}" r="3" fill="#FFFFFF" stroke="${TREND_COLOR}" stroke-width="2" />`,
+  const parts: string[] = []
+  for (const points of runs) {
+    if (points.length < 2) continue
+    const first = points[0] as { readonly x: number; readonly y: number }
+    const last = points[points.length - 1] as { readonly x: number; readonly y: number }
+    const line = points.map((point, index) => `${index === 0 ? "M" : "L"}${fmt(point.x)},${fmt(point.y)}`).join(" ")
+    parts.push(
+      `<path d="${line} L${fmt(last.x)},${fmt(TREND_BOTTOM)} L${fmt(first.x)},${fmt(TREND_BOTTOM)} Z" fill="${TREND_COLOR}" fill-opacity="${TREND_FILL_OPACITY}" />`,
+      `<path d="${line}" fill="none" stroke="${TREND_COLOR}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />`,
     )
-    .join("")
+  }
+  for (const point of runs.flat()) {
+    parts.push(
+      `<circle cx="${fmt(point.x)}" cy="${fmt(point.y)}" r="3" fill="#FFFFFF" stroke="${TREND_COLOR}" stroke-width="2" />`,
+    )
+  }
 
-  return [
-    `<path d="${area}" fill="${TREND_COLOR}" fill-opacity="${TREND_FILL_OPACITY}" />`,
-    `<path d="${line}" fill="none" stroke="${TREND_COLOR}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />`,
-    dots,
-  ].join("")
+  return parts.join("")
 }
 
 /**

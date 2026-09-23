@@ -50,7 +50,7 @@ describe("buildScoreRingSvg", () => {
 })
 
 describe("buildScoreCardSvg", () => {
-  const card = (series: readonly number[]) =>
+  const card = (series: readonly (number | null)[]) =>
     buildScoreCardSvg({ score: 71, dimensions: { outcome: 74 }, weights: WEIGHTS, series })
 
   const TREND = 'stroke="#2B7FFF"'
@@ -62,6 +62,31 @@ describe("buildScoreCardSvg", () => {
   it("draws no trend from a single published day, which has no shape to show", () => {
     expect(card([71])).not.toContain(TREND)
     expect(card([])).not.toContain(TREND)
+  })
+
+  const dotXs = (svg: string) =>
+    [...svg.matchAll(/<circle cx="([\d.]+)" cy="[\d.]+" r="3"/g)].map((match) => Number(match[1]))
+
+  it("puts each published day at its own position in the week, not evenly spaced by count", () => {
+    const xs = dotXs(card([60, 62, null, null, null, null, 70]))
+
+    expect(xs).toHaveLength(3)
+    const [first, second, last] = xs as [number, number, number]
+    const dayWidth = (last - first) / 6
+    expect(second - first).toBeCloseTo(dayWidth, 1)
+  })
+
+  it("stops the line at an unscored day instead of drawing across it", () => {
+    const svg = card([60, 62, 64, null, 66, 68, 70])
+
+    expect(svg.match(/fill="none" stroke="#2B7FFF"/g)).toHaveLength(2)
+  })
+
+  it("draws a lone published day between gaps as a dot with no line", () => {
+    const svg = card([60, 62, null, 65, null, 68, 70])
+
+    expect(svg.match(/fill="none" stroke="#2B7FFF"/g)).toHaveLength(2)
+    expect(dotXs(svg)).toHaveLength(5)
   })
 
   it("scales a flat high week to its own range rather than flattening it against 0-100", () => {

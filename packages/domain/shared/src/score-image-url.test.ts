@@ -24,19 +24,45 @@ describe("agentScoreImageUrl", () => {
     expect(url.searchParams.has("d")).toBe(false)
   })
 
-  it("adds the series only for the card layout", () => {
-    const series = [68.9, 70, 71.4]
-    const ring = new URL(agentScoreImageUrl("https://app.example", { score: 71, dimensions: DIMENSIONS, series }))
+  const TREND = {
+    from: "2026-09-17",
+    to: "2026-09-23",
+    points: [
+      { date: "2026-09-17", score: 68.9 },
+      { date: "2026-09-18", score: 70 },
+      { date: "2026-09-23", score: 71.4 },
+    ],
+  }
+
+  it("adds the trend only for the card layout", () => {
+    const ring = new URL(agentScoreImageUrl("https://app.example", { score: 71, dimensions: DIMENSIONS, trend: TREND }))
     const card = new URL(
-      agentScoreImageUrl("https://app.example", { score: 71, dimensions: DIMENSIONS, series, layout: "card" }),
+      agentScoreImageUrl("https://app.example", { score: 71, dimensions: DIMENSIONS, trend: TREND, layout: "card" }),
     )
     const slack = new URL(
-      agentScoreImageUrl("https://app.example", { score: 71, dimensions: DIMENSIONS, series, layout: "slack" }),
+      agentScoreImageUrl("https://app.example", { score: 71, dimensions: DIMENSIONS, trend: TREND, layout: "slack" }),
     )
 
     expect(ring.searchParams.has("s")).toBe(false)
     expect(slack.searchParams.has("s")).toBe(false)
-    expect(card.searchParams.get("s")).toBe("68.9,70,71.4")
+    expect(card.searchParams.has("s")).toBe(true)
+  })
+
+  it("gives every day of the window its own slot, leaving unscored days empty", () => {
+    const card = new URL(
+      agentScoreImageUrl("https://app.example", { score: 71, dimensions: DIMENSIONS, trend: TREND, layout: "card" }),
+    )
+
+    expect(card.searchParams.get("s")).toBe("68.9,70,,,,,71.4")
+  })
+
+  it("places points by their date, whatever order they arrive in", () => {
+    const shuffled = { ...TREND, points: [...TREND.points].reverse() }
+    const card = new URL(
+      agentScoreImageUrl("https://app.example", { score: 71, dimensions: DIMENSIONS, trend: shuffled, layout: "card" }),
+    )
+
+    expect(card.searchParams.get("s")).toBe("68.9,70,,,,,71.4")
   })
 
   it("names the layout, and leaves it off for the bare ring", () => {
@@ -51,12 +77,12 @@ describe("agentScoreImageUrl", () => {
     expect(at("slack").get("layout")).toBe("slack")
   })
 
-  it("leaves out a series with nothing to draw", () => {
+  it("leaves out a trend with nothing to draw", () => {
     const url = new URL(
       agentScoreImageUrl("https://app.example", {
         score: 71,
         dimensions: DIMENSIONS,
-        series: [71],
+        trend: { from: "2026-09-17", to: "2026-09-23", points: [{ date: "2026-09-20", score: 71 }] },
         layout: "card",
       }),
     )

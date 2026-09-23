@@ -29,7 +29,7 @@ export const agentScoreWeeklyDigestRenderer: NotificationEmailRenderer<"agent-sc
         dimensions: Object.fromEntries(
           SCORE_DIMENSIONS.map((dimension) => [dimension, payload.dimensions[dimension].score]),
         ),
-        series: payload.series.map((point) => point.score),
+        trend: { from: payload.windowStart, to: payload.windowEnd, points: payload.series },
         layout: "card",
       })
 
