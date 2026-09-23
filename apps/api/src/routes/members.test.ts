@@ -284,6 +284,56 @@ describe("Members routes — invite authorization", () => {
   })
 })
 
+describe("Members routes — remove authorization", () => {
+  setupTestApi()
+
+  it<ApiTestContext>("DELETE /v1/members/:memberId rejects non-admin members (403 Forbidden)", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const nonAdmin = await seedExtraMember(database, tenant.organizationId, {
+      role: "member",
+      email: "non-admin@example.com",
+    })
+    const target = await seedExtraMember(database, tenant.organizationId, { role: "admin" })
+
+    const clientId = `lct_${generateId()}`
+    const oauthAccessToken = `loa_${crypto.randomUUID()}`
+    const oneHour = 60 * 60 * 1000
+
+    await database.db.insert(oauthApplications).values({
+      id: generateId(),
+      name: "Non-admin MCP Client",
+      clientId,
+      userId: nonAdmin.userId,
+      organizationId: tenant.organizationId,
+      disabled: false,
+    })
+
+    await database.db.insert(oauthAccessTokens).values({
+      id: generateId(),
+      accessToken: oauthAccessToken,
+      clientId,
+      userId: nonAdmin.userId,
+      accessTokenExpiresAt: new Date(Date.now() + oneHour),
+      scopes: "openid profile email",
+    })
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/members/${target.memberId}`, {
+        method: "DELETE",
+        headers: createOAuthAuthHeaders(oauthAccessToken),
+      }),
+    )
+
+    expect(response.status).toBe(403)
+
+    const rows = await listMembersJson(app, createOAuthAuthHeaders(tenant.oauthAccessToken))
+    expect(rows.find((member) => member.id === target.memberId)).toBeDefined()
+  })
+})
+
 describe("Members routes — OAuth mutations happy path", () => {
   setupTestApi()
 

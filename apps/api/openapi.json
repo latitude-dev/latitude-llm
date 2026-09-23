@@ -25158,7 +25158,7 @@
         "x-fern-sdk-group-name": "members",
         "x-fern-sdk-method-name": "remove",
         "summary": "Remove a member",
-        "description": "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.",
+        "description": "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.",
         "security": [
           {
             "ApiKeyAuth": []

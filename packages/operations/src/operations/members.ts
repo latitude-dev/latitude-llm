@@ -295,7 +295,7 @@ const removeMember = memberEndpoint({
     sdkMethod: "remove",
     summary: "Remove a member",
     description:
-      "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.",
+      "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.",
     security: PROTECTED_SECURITY,
     request: { params: MemberIdParamsSchema },
     responses: openApiNoContentResponses({ description: "Member removed" }),
@@ -305,6 +305,15 @@ const removeMember = memberEndpoint({
   execute: (input, ctx) =>
     Effect.gen(function* () {
       const requestingUserId = yield* requireOAuthUserId(ctx.auth)
+
+      const membershipRepo = yield* MembershipRepository
+      const isAdmin = yield* membershipRepo.isAdmin(ctx.organization.id, requestingUserId)
+      if (!isAdmin) {
+        return yield* new ForbiddenError({
+          message: "Only organization owners and admins can remove members",
+        })
+      }
+
       yield* removeMemberUseCase({ membershipId: MembershipId(input.params.memberId), requestingUserId })
       return { status: 204 } as const
     }).pipe(withPostgres(MembershipRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
