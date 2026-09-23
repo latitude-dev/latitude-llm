@@ -306,7 +306,8 @@
             ]
           },
           "test-and-fix/simulations",
-          "test-and-fix/regression-testing"
+          "test-and-fix/regression-testing",
+          "test-and-fix/simulate-in-ci"
         ]
       },
       {
