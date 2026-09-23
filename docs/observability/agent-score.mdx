@@ -1,0 +1,101 @@
+---
+title: Agent Score
+description: Measure your production agent across outcome, reliability, cost, speed, and safety.
+---
+
+# Agent Score
+
+Agent Score is a project-level score from 0 to 100 that summarizes how your agent behaves in production. It combines five dimensions calculated from real sessions:
+
+| Dimension | What it measures |
+| --- | --- |
+| **Outcome** | Whether users accomplished what they came for |
+| **Reliability** | Whether the agent completed sessions without terminal operational failures |
+| **Cost** | How efficiently the agent used model spend and context |
+| **Speed** | How quickly the agent completed user-visible work |
+| **Safety** | Whether the agent avoided causing harm |
+
+Open your project and select **Agent Score** under **Observe**.
+
+<Frame caption="The Agent Score page: overall vitality, the window and session count behind it, the published trend, and one expandable section per dimension.">
+  <img src="/images/observability/agent-score-overview.png" alt="Agent Score page showing a vitality ring at 93 over a 7-day window of 1,589 sessions, a published trend, and the Outcome quality and Reliability dimension sections" />
+</Frame>
+
+## Read the score
+
+The page shows the overall score, each dimension score, and the evidence behind them. Scores use a 0 to 100 scale and include a 95% confidence range.
+
+Use the dimension sections to see:
+
+- issues that lowered the score
+- healthy evidence
+- links to affected signals and the relevant investigation page
+- evidence coverage when a score is not ready
+
+The trend chart shows published scores from the last 7 or 30 days. Missing dates are gaps, not zeroes.
+
+## Scoring window
+
+Latitude calculates Agent Score daily from the shortest window with at least 50 eligible sessions:
+
+1. 7 days
+2. 14 days
+3. 21 days
+4. 28 days
+
+Eligible sessions are production sessions with LLM activity. Simulations are excluded. If the project has fewer than 50 eligible sessions in 28 days, Latitude withholds the score until enough evidence is available.
+
+## Publication requirements
+
+Latitude publishes the overall score only when all five dimensions have enough usable evidence. It does not average the dimensions that are ready or fill missing dimensions with a default value.
+
+When a score is not ready, the page shows what evidence is still missing. Common reasons include:
+
+- fewer than 50 eligible sessions
+- too few readable outcomes or safety judgments
+- incomplete operational, cost, or critical-path timing data
+
+Each date keeps the score and the evidence it was published with. An unscored date shows its readiness rather than borrowing a score from an earlier day, and the page labels the score date so you always know which day you are reading.
+
+## How the overall score is weighted
+
+| Dimension | Weight |
+| --- | --- |
+| Outcome | 35% |
+| Reliability | 25% |
+| Cost | 15% |
+| Speed | 15% |
+| Safety | 10% |
+
+Each dimension has its own estimator and coverage requirements. The weights do not redistribute when a dimension is unavailable.
+
+## Investigate a low score
+
+1. Open the affected dimension.
+2. Review the issues listed under **Affected by**.
+3. Follow an issue to its signal or the linked investigation page.
+4. Inspect representative sessions to identify the behavior, tool, model, or workflow causing the drop.
+5. Fix the underlying problem and watch the trend after new production sessions arrive.
+
+<Frame caption="Each dimension lists what lowered it under Affected by, with the reach of each cause in its own unit.">
+  <img src="/images/observability/agent-score-cost-evidence.png" alt="Cost dimension at 90 with Affected by rows: model spend on avoidable work at $1.23, unused tool definitions at 1.4M tokens, repeated tool calls at 388 call equivalents, and sessions that recovered from errors at 310 session equivalents" />
+</Frame>
+
+<Note>
+Agent Score is still provisionally calibrated. Treat it as a structured production-health benchmark, then use the evidence in each dimension to decide what to investigate.
+</Note>
+
+## Share a score
+
+The camera action on the vitality panel renders the selected published score and its five dimensions as an image you can copy or download as a PNG.
+
+<Frame caption="The score snapshot: the selected published score and its five dimensions, ready to copy or download.">
+  <img src="/images/observability/agent-score-snapshot.png" alt="Score snapshot dialog reading My Agent Vitality is 93, with Outcome 96, Reliability 96, Cost 90, Speed 95 and Safety 88, and buttons to copy the image or download a PNG" />
+</Frame>
+
+## Related
+
+- [Sessions](./sessions): Review complete agent interactions
+- [Signals](../signals/overview): Investigate recurring failure patterns
+- [Cost](./cost): Analyze model spend and caching
+- [Tools](./tools): Review tool reliability and latency
