@@ -56,12 +56,15 @@ A sandbox key can only ever write to its sandbox, and a production key can only 
 The same `lat_sandbox_` key also **reads** the sandbox over the [API](https://api.latitude.so/docs) and the [CLI](/getting-started/cli) — the key alone decides which environment you're talking to, on reads exactly as on writes. So an agent can pull a dev trace and investigate it, instead of you pasting screenshots:
 
 ```bash
-# `LATITUDE_API_KEY` beats the keyring, so this points the shell at the sandbox
-export LATITUDE_API_KEY=lat_sandbox_...
+# One time: store the sandbox key in its own CLI profile (paste it when prompted)
+latitude profiles create sandbox
+latitude auth login --with-token -p sandbox
 
-latitude traces list --project-slug my-app --format json
-latitude traces get --project-slug my-app --trace-id <traceId> --format json
+latitude traces list -p sandbox --project-slug my-app --format json
+latitude traces get -p sandbox --project-slug my-app --trace-id <traceId> --format json
 ```
+
+[CLI profiles](/getting-started/cli#profiles) keep your live key alongside the sandbox one, so `-p` picks the environment for each command. For a one-off shell or a CI job, `export LATITUDE_API_KEY=lat_sandbox_...` works too.
 
 Two things follow from the key being the boundary:
 
@@ -97,6 +100,6 @@ Sending traces to a sleeping sandbox is **rejected** with a `403` (mirroring how
 
 ## Related
 
-- [Environments](../observability/features/environments): Separate dev, staging, and production traces with tags or metadata
-- [Start tracing](../telemetry/start-tracing): Instrument your agent and send traces to Latitude
-- [Traces](../observability/traces): The traces UI you use inside a sandbox
+- [Environments](/observability/features/environments): Separate dev, staging, and production traces with tags or metadata
+- [Start tracing](/telemetry/start-tracing): Instrument your agent and send traces to Latitude
+- [Traces](/observability/traces): The traces UI you use inside a sandbox

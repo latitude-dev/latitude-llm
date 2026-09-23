@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.16.0] - 2026-09-23
+
+### Added
+
+- Named profiles, each with its own API key in the OS keyring, so a production key and a sandbox key can live side by side. Pick one per command with `--profile` / `-p`, per shell with `LATITUDE_PROFILE`, or as the default with `latitude profiles use`. Manage them with `latitude profiles create`, `list`, `current`, `show`, `set`, `use`, and `remove`. `latitude auth login --with-token -p <profile>` stores a key in that profile, and `latitude auth status` reports which profile is in use.
+- A profile can carry a default project (`latitude profiles create <name> --project-slug <slug>`). It wins over `LATITUDE_PROJECT_SLUG` and `--global-project-slug`; `--project-slug` still wins over it.
+
+### Notes
+
+- A `LATITUDE_API_KEY` set in the shell or in `.env` still wins over the default profile and `LATITUDE_PROFILE`; only `-p` overrides it. With no profile selected, the CLI behaves as before and keeps using the key stored by `latitude auth login`.
+
 ## [7.15.0] - 2026-09-22
 
 ### Added

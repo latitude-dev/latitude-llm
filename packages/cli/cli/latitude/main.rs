@@ -3,11 +3,13 @@
 
 use fern_cli_sdk::app::CliApp;
 use fern_cli_sdk::openapi::OpenApiBinding;
+use fern_cli_sdk::profiles::ProfilesConfig;
 use fern_cli_sdk::auth::{BearerAuth};
 use fern_cli_sdk::openapi::discovery::{GlobalParameter, GlobalParameterApplyMode, GlobalParameterLocation};
 
 fn main() {
     let app = CliApp::new("latitude")
+        .profiles(ProfilesConfig::new())
         .auth(BearerAuth::new("ApiKeyAuth").env("LATITUDE_API_KEY"))
         .global_parameter(GlobalParameter {
             name: "projectSlug".into(),

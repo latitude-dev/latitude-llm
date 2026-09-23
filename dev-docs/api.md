@@ -111,10 +111,10 @@ A **global parameter** is a value a generated client resolves once instead of on
 Today there is exactly one: `projectSlug`, which 119 of our 139 operations take as a path parameter. It lets CLI users export `LATITUDE_PROJECT_SLUG` once instead of passing `--project-slug` to every command.
 
 ```
---project-slug (per-operation flag)  →  --global-project-slug  →  $LATITUDE_PROJECT_SLUG
+--project-slug (per-operation flag)  →  profile's projectSlug  →  --global-project-slug  →  $LATITUDE_PROJECT_SLUG
 ```
 
-Leftmost wins. Nothing about the underlying parameter changes: it stays `required: true` in `openapi.json` and a non-optional string in the IR. `target` just names the `{…}` slot in the path template that the resolved value fills at request-build time. The CLI never enforces path parameters at parse time (only multipart fields are clap-`required`), so omitting the flag parses fine and the global injects the value before the URL is rendered.
+Leftmost wins. A CLI profile's `projectSlug` becomes the `default_value` of the per-operation `--project-slug` arg, so it outranks both global rungs whether the profile was picked with `-p` or ambiently (`LATITUDE_PROFILE`, `profiles use`). Credentials order differently: there, `LATITUDE_API_KEY` beats an ambient profile and only `-p` beats the env var. Nothing about the underlying parameter changes: it stays `required: true` in `openapi.json` and a non-optional string in the IR. `target` just names the `{…}` slot in the path template that the resolved value fills at request-build time. The CLI never enforces path parameters at parse time (only multipart fields are clap-`required`), so omitting the flag parses fine and the global injects the value before the URL is rendered.
 
 Three settings are load-bearing and easy to "simplify" into a bug:
 

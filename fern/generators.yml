@@ -46,3 +46,5 @@ groups:
         config:
           binaryName: latitude
           customCommands: false
+          profiles:
+            enabled: true
