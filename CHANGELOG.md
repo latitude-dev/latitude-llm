@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## v0.3.116 - 2026-09-23
+
+### Agent Score
+
+- The vitality panel now has a camera action that renders the selected published score and its five dimensions as a shareable PNG, with a preview, Copy image and Download PNG. The image is generated in the browser, so no project data is uploaded. Its background follows the overall score band (red below 60, blue from 60 to 79, green from 80). Unpublished dates disable the action, and a generation failure offers a retry (ref: #4715).
+- Polished the Agent Score dashboard. The date navigator now uses the shared single-day `DateRangePicker`, keeps UTC dates and cannot advance past today. Displayed composite scores are floored to whole numbers, while stored scores keep their precision (ref: #4715).
+
+### CLI and SDKs
+
+- The CLI now supports named profiles, each with its own API key in the OS keyring, so production and sandbox keys can live side by side. Pick one per command with `-p`, per shell with `LATITUDE_PROFILE`, or by default with `latitude profiles use`. A profile can also carry a default project. A `LATITUDE_API_KEY` from the shell or `.env` still wins unless `-p` is passed. Ships as CLI 7.16.0, and the CLI docs now cover profiles, `.env` loading and the `--with-token` requirement on `auth login` (ref: #4716).
+
 ## v0.3.115 - 2026-09-22
 
 ### Agent Score
