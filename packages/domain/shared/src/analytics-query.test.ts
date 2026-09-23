@@ -219,6 +219,34 @@ describe("analyticsQuerySchema", () => {
     ).toBe(false)
   })
 
+  it("accepts a metadata.* filter on the streams whose backing table carries a metadata column", () => {
+    for (const stream of ["traces", "sessions", "spans"] as const) {
+      const result = analyticsQuerySchema.safeParse({
+        stream,
+        metric: { kind: "count" },
+        filters: { "metadata.agentVersion": [{ op: "eq", value: "2" }] },
+        range,
+      })
+      expect(result.success).toBe(true)
+    }
+  })
+
+  it("rejects a metadata.* filter on scores/behaviors/moments (their backing tables carry no metadata column)", () => {
+    // Regression: previously this reached the ClickHouse filter builder unresolved,
+    // producing "Unknown expression or function identifier `metadata`" (a 500), since
+    // session_moment_labels/session_semantic_moments/taxonomy_observations/scores
+    // have no `metadata` column to index into.
+    for (const stream of ["scores", "behaviors", "moments"] as const) {
+      const result = analyticsQuerySchema.safeParse({
+        stream,
+        metric: { kind: "count" },
+        filters: { "metadata.agentVersion": [{ op: "eq", value: "2" }] },
+        range,
+      })
+      expect(result.success).toBe(false)
+    }
+  })
+
   it("caps the limit", () => {
     const result = analyticsQuerySchema.safeParse({
       stream: "traces",
