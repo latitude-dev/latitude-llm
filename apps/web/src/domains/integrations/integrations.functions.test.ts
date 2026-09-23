@@ -134,7 +134,7 @@ describe("disconnectSlackIntegrationEffect", () => {
     expect(stillActive).toBeNull()
   })
 
-  it("skips Slack auth.revoke while another org still has the workspace connected", async () => {
+  it("skips Slack auth.revoke for a long-lived token while another org still has the workspace connected", async () => {
     const seed = makeIntegration()
     const repoLayer = InMemorySlackIntegrationRepositoryLive({ organizationId: ORG_A, seed: [seed] })
     const checkedTeams: string[] = []
@@ -170,5 +170,22 @@ describe("disconnectSlackIntegrationEffect", () => {
     expect(result).toEqual({ revoked: true })
     expect(revokeMock).not.toHaveBeenCalled()
     expect(await findActive(repoLayer)).toBeNull()
+  })
+
+  it("revokes a rotating token even while another org still has the workspace connected", async () => {
+    revokeMock.mockResolvedValue({ ok: true })
+    const seed = makeIntegration({
+      botAccessToken: "xoxe.xoxb-rotating",
+      refreshToken: "xoxe-1-refresh",
+      tokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const repoLayer = InMemorySlackIntegrationRepositoryLive({ organizationId: ORG_A, seed: [seed] })
+    const isWorkspaceConnectedElsewhere = vi.fn(() => Effect.succeed(true))
+
+    const result = await Effect.runPromise(runWith({ repo: repoLayer, isWorkspaceConnectedElsewhere }))
+
+    expect(result).toEqual({ revoked: true })
+    expect(revokeMock).toHaveBeenCalledTimes(1)
+    expect(isWorkspaceConnectedElsewhere).not.toHaveBeenCalled()
   })
 })

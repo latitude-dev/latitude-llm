@@ -8,8 +8,8 @@
  * org isolation. Disconnect soft-revokes locally first, then makes a
  * best-effort `auth.revoke` call on Slack — local revoke is the
  * source of truth, so a Slack-side network or auth blip does not
- * block the user. The Slack-side revoke is skipped while another org
- * still has the workspace connected.
+ * block the user. The Slack-side revoke is skipped when the token is
+ * long-lived and another org still has the workspace connected.
  */
 import {
   configureSlackRouteUseCase,
@@ -131,10 +131,12 @@ export const getActiveSlackIntegration = createServerFn({ method: "GET" }).handl
  * issues a best-effort `auth.revoke` against Slack. Idempotent: if no
  * active integration exists, returns `{ revoked: false }`.
  *
- * Orgs connected to the same workspace share one Slack installation,
- * and without token rotation one bot token; revoking that token
- * deactivates the bot for every org. So the Slack-side revoke only
- * runs once no other org holds an active install for the workspace.
+ * With token rotation each install holds its own token pair, and
+ * `auth.revoke` only kills that one token. Without rotation every
+ * install in a workspace gets the same long-lived bot token, and
+ * revoking it deactivates the bot for all of them — so in that case
+ * the Slack-side revoke only runs once no other org holds an active
+ * install for the workspace.
  *
  * Token plaintext (needed for the Slack-side revoke) only flows
  * through this server fn; it is **not** exposed over the wire — the
@@ -170,14 +172,17 @@ export const disconnectSlackIntegrationEffect = (deps: {
 
     yield* revokeSlackIntegrationUseCase({ id: active.id as SlackIntegrationId })
 
-    // Must run after our own soft-revoke so any remaining active install belongs to another org.
-    const sharedWithOtherOrgs = yield* deps.isWorkspaceConnectedElsewhere(active.teamId).pipe(
-      Effect.catchTag("RepositoryError", (cause) => {
-        logger.warn("Slack workspace sharing check failed; skipping auth.revoke to keep other orgs' bot alive", cause)
-        return Effect.succeed(true)
-      }),
-    )
-    if (sharedWithOtherOrgs) return { revoked: true } as const
+    const hasLongLivedToken = active.tokenExpiresAt === null || active.refreshToken === null
+    if (hasLongLivedToken) {
+      // Must run after our own soft-revoke so any remaining active install belongs to another org.
+      const sharedWithOtherOrgs = yield* deps.isWorkspaceConnectedElsewhere(active.teamId).pipe(
+        Effect.catchTag("RepositoryError", (cause) => {
+          logger.warn("Slack workspace sharing check failed; skipping auth.revoke to keep other orgs' bot alive", cause)
+          return Effect.succeed(true)
+        }),
+      )
+      if (sharedWithOtherOrgs) return { revoked: true } as const
+    }
 
     // Best-effort Slack-side revoke. The try/catch lives inside the
     // promise body so any failure (network blip, 401, rate limit, etc.)

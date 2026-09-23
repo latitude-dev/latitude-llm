@@ -125,7 +125,7 @@ Slack token rotation is on for every app (dev / staging / production). **Phase 3
 
 ## Operator runbook
 
-- **Disconnect**: settings page → Disconnect button. Soft-revokes locally, then a best-effort `auth.revoke` to Slack with a 5s timeout, **skipped while another org still has an active install for the same `team_id`** (checked across orgs with the admin client via `hasActiveSlackIntegrationForTeamAcrossOrgs`). Without token rotation every install in a workspace shares one bot token, and revoking it deactivates the bot for all of them. The disconnected integration's row is kept for audit.
+- **Disconnect**: settings page → Disconnect button. Soft-revokes locally, then a best-effort `auth.revoke` to Slack with a 5s timeout. With token rotation each install has its own token pair and the revoke always runs. Without rotation every install in a workspace shares one long-lived bot token, and revoking it deactivates the bot for all of them, so the revoke is **skipped while another org still has an active install for the same `team_id`** (checked across orgs with the admin client via `hasActiveSlackIntegrationForTeamAcrossOrgs`). The disconnected integration's row is kept for audit.
 - **Reconnect**: re-runs the OAuth flow. **Routes are NOT preserved** — operator re-picks channels.
 - **Private channels**: only appear in the picker if the bot is already a member. Invite the bot in Slack first, then click "Refresh channels" in the settings UI.
 
