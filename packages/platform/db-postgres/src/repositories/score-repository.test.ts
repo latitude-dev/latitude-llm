@@ -1309,6 +1309,72 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(found?.id).toBe(verdict.id)
   })
 
+  it("findPublishedSystemSafetyFindingByKind finds findings outside the 200-row session scan window", async () => {
+    const organizationId = "w".repeat(24)
+    const sessionId = "session-busy-safety-finding"
+    const safetyFindingKind = "injectionAttempt"
+
+    const finding = await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        sessionId,
+        value: 0,
+        passed: false,
+        feedback: "An override was attempted.",
+        metadata: {
+          rawFeedback: "An override was attempted.",
+          flaggerSlug: "jailbreaking",
+          safetyFindingKind,
+        },
+        draftedAt: null,
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: new Date("2020-01-01T00:00:00.000Z") })
+      .where(eq(scoresTable.id, finding.id as string))
+
+    await Effect.runPromise(
+      Effect.forEach(
+        Array.from({ length: 200 }, (_, index) => index),
+        (index) =>
+          writeScoreUseCase({
+            projectId: annotationProjectId,
+            sourceType: "annotation",
+            sourceId: "SYSTEM",
+            sessionId,
+            value: 0,
+            passed: false,
+            feedback: `Filler finding ${index}`,
+            metadata: {
+              rawFeedback: `Filler finding ${index}`,
+              flaggerSlug: "jailbreaking",
+              contentHash: `${(index + 2).toString(16).padStart(64, "0")}`,
+            },
+            draftedAt: null,
+          }),
+      ).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const found = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.findPublishedSystemSafetyFindingByKind({
+          projectId: annotationProjectId,
+          sessionId: sessionId as SessionId,
+          flaggerSlug: "jailbreaking",
+          safetyFindingKind,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(found).not.toBeNull()
+    expect(found?.id).toBe(finding.id)
+  })
+
   it("listFlaggerSlugsBySignalId returns distinct flagger slugs ordered most-recent-first and filters out drafts, non-SYSTEM annotations, and other signals", async () => {
     const organizationId = "z".repeat(24)
     const signalA = SignalId("a".repeat(24))
