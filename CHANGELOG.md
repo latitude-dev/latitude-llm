@@ -2,9 +2,15 @@
 
 ## Unreleased
 
+## v0.3.118 - 2026-09-23
+
 ### Agent Score
 
-- A generation on a model with no frozen latency reference no longer withholds the whole Agent Score. Sessions that ran through such a model are left out of Speed, which is computed from the remaining sessions as long as they still clear the complete critical-path floors (50 sessions and half of eligible sessions). Before this, one call to `gpt-5-mini`, `claude-sonnet-4-5` or any other model the calibrated reference lacks withheld every dimension for the whole window. When the excluded sessions are what take Speed below a floor, the readiness panel now names the unreferenced model instead of "Needs timing data". Scoring version moves to `agent-score-v8-provisional`.
+- A generation on a model with no frozen latency reference no longer withholds the whole Agent Score. Sessions that ran through such a model are left out of Speed, which is computed from the remaining sessions as long as they still clear the complete critical-path floors (50 sessions and half of eligible sessions). Before this, one call to `gpt-5-mini`, `claude-sonnet-4-5` or any other model the calibrated reference lacks withheld every dimension for the whole window. When the excluded sessions are what take Speed below a floor, the readiness panel now names the unreferenced model instead of "Needs timing data". Scoring version moves to `agent-score-v8-provisional` (ref: #4721).
+
+### Integrations
+
+- One Slack workspace can now be connected to several Latitude organisations. Connecting a workspace that another organisation already uses no longer fails with a "workspace taken" error. Disconnecting skips the Slack-side token revoke while another organisation still shares the same long-lived bot token. A Postgres migration drops Slack from the unique vendor account index; GitHub and agent dispatch keep it (ref: #4719).
 
 ## v0.3.117 - 2026-09-23
 
