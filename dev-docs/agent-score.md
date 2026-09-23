@@ -99,11 +99,16 @@ cohort. The artifact contains detailed input/output token and streaming cohorts 
 roll-ups. A detailed miss can use its exact provider/model roll-up. It never uses another model or a
 fleet-wide fallback.
 
-An exact provider/model pair that is absent from the artifact is unmeasured. If an applicable
-critical-path generation uses that pair, Speed does not publish. This includes a model introduced
-after the freeze and a model that has not reached the sample or organization gate. The fail-closed
-result preserves score comparability and prevents a thin tenant-specific cohort from becoming a
-shared reference.
+An exact provider/model pair that is absent from the artifact is unmeasured. A session with an
+applicable critical-path generation on that pair is excluded from both sides of the Speed ratio,
+because its generation time cannot be judged and counting it would read as necessary time. This
+includes a model introduced after the freeze and a model that has not reached the sample or
+organization gate. Speed then publishes over the remaining sessions if they still clear the complete
+critical-path floors (50 sessions and half of eligible sessions). When the excluded sessions are
+what took Speed below a floor, Speed is withheld with `latencyReferenceCoverage`, and the readiness
+panel names the unreferenced models with the most excluded sessions. Never borrowing another
+model's reference preserves score comparability and prevents a thin tenant-specific cohort from
+becoming a shared reference.
 
 Create a later freeze with `pnpm --filter @app/workers agent-score:calibrate-latency`. The command
 requires an inclusive `--since`, an exclusive `--until`, an exclusive `--ingested-until` snapshot,

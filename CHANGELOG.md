@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Agent Score
+
+- A generation on a model with no frozen latency reference no longer withholds the whole Agent Score. Sessions that ran through such a model are left out of Speed, which is computed from the remaining sessions as long as they still clear the complete critical-path floors (50 sessions and half of eligible sessions). Before this, one call to `gpt-5-mini`, `claude-sonnet-4-5` or any other model the calibrated reference lacks withheld every dimension for the whole window. When the excluded sessions are what take Speed below a floor, the readiness panel now names the unreferenced model instead of "Needs timing data". Scoring version moves to `agent-score-v8-provisional`.
+
 ## v0.3.117 - 2026-09-23
 
 ### Agent Score

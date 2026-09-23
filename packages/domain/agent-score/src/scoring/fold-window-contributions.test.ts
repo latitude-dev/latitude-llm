@@ -36,6 +36,7 @@ describe("foldWindowBatch", () => {
         denominators: { spend: 1_000, context: 0, tools: 0, memory: 0, recovery: 0 },
         observedCriticalPathNs: 1_000,
         criticalPathComplete: true,
+        unreferencedLatencyModels: [],
         measuredAvoidableNs: 250,
         estimatedAvoidableNs: 0,
         measuredAvoidableMicrocents: 0,
@@ -94,6 +95,7 @@ describe("foldWindowBatch cost causes", () => {
       denominators: { spend: 0, context: 0, tools: 10, memory: 0, recovery: 0 },
       observedCriticalPathNs: 1_000,
       criticalPathComplete: true,
+      unreferencedLatencyModels: [],
       measuredAvoidableNs: 0,
       estimatedAvoidableNs: 0,
       measuredAvoidableMicrocents: 0,
@@ -116,5 +118,99 @@ describe("foldWindowBatch cost causes", () => {
     expect(fold.foldedSessionCount).toBe(1)
     expect([...fold.costCauseUnits.keys()]).toEqual([])
     expect([...fold.speedCauseNs.keys()]).toEqual([])
+  })
+})
+
+describe("foldWindowBatch unreferenced latency models", () => {
+  const speedSession = ({
+    sessionId,
+    unreferencedLatencyModels = [],
+    criticalPathComplete = true,
+  }: {
+    readonly sessionId: string
+    readonly unreferencedLatencyModels?: readonly { readonly provider: string; readonly model: string }[]
+    readonly criticalPathComplete?: boolean
+  }): NormalizedSessionAssessmentInput => ({
+    sessionId: SessionId(sessionId),
+    hasReadableUserTask: true,
+    momentsAnalyzed: true,
+    observedMicrocents: 0,
+    observedDurationNs: 1_000,
+    findings: [],
+    readers: [],
+    screeningDecisions: [],
+    scoringEligibleSignalIds: [],
+    costEvidence: {
+      readings: [],
+      workloadStratum: "test",
+      denominators: { spend: 0, context: 0, tools: 0, memory: 0, recovery: 0 },
+      observedCriticalPathNs: 1_000,
+      criticalPathComplete,
+      unreferencedLatencyModels,
+      measuredAvoidableNs: 100,
+      estimatedAvoidableNs: 0,
+      measuredAvoidableMicrocents: 0,
+      estimatedAvoidableMicrocents: 0,
+      avoidableNsByCause: { "recovered:tool": 100 },
+    },
+  })
+
+  const foldBatch = (
+    sessions: readonly NormalizedSessionAssessmentInput[],
+    fold = EMPTY_WINDOW_FOLD,
+  ): ReturnType<typeof foldWindowBatch> =>
+    foldWindowBatch({
+      fold,
+      sessions,
+      denominatorsFor: () => ({ spend: 0, context: 0, tools: 0, memory: 0, recovery: 0 }),
+      artifact: LAUNCH_COST_SCORING_ARTIFACT,
+      catalog: PROVISIONAL_COST_METRIC_CATALOG,
+    })
+
+  it("keeps a session whose path runs through an unreferenced model out of Speed", () => {
+    const fold = foldBatch([
+      speedSession({ sessionId: "referenced" }),
+      speedSession({
+        sessionId: "unreferenced",
+        unreferencedLatencyModels: [{ provider: "openai", model: "gpt-5-mini" }],
+      }),
+    ])
+
+    expect(fold.contributions.map((contribution) => contribution.speed)).toEqual([
+      expect.objectContaining({ usableForDenominator: true, missingLatencyReference: false }),
+      expect.objectContaining({ usableForDenominator: false, missingLatencyReference: true }),
+    ])
+    expect(aggregateWindowSpeed(fold.contributions)).toMatchObject({
+      observedNs: 1_000,
+      avoidableNs: 100,
+      includedSessionCount: 1,
+      excludedSessionCount: 1,
+    })
+    expect(fold.speedCauseNs.get("recovered:tool")).toBe(100)
+  })
+
+  it("tallies the unreferenced models per session across batches", () => {
+    const gpt5Mini = { provider: "openai", model: "gpt-5-mini" }
+    const sonnet = { provider: "anthropic", model: "claude-sonnet-4-5" }
+    const first = foldBatch([speedSession({ sessionId: "a", unreferencedLatencyModels: [gpt5Mini, sonnet] })])
+    const fold = foldBatch([speedSession({ sessionId: "b", unreferencedLatencyModels: [gpt5Mini] })], first)
+
+    expect([...fold.unreferencedLatencyModels.values()]).toEqual([
+      { ...gpt5Mini, sessionCount: 2 },
+      { ...sonnet, sessionCount: 1 },
+    ])
+  })
+
+  it("does not blame a missing reference for a session whose path did not reconstruct", () => {
+    const fold = foldBatch([
+      speedSession({
+        sessionId: "incomplete",
+        criticalPathComplete: false,
+        unreferencedLatencyModels: [{ provider: "openai", model: "gpt-5-mini" }],
+      }),
+    ])
+
+    expect(fold.contributions[0]?.speed).toMatchObject({ usableForDenominator: false, missingLatencyReference: false })
+    expect(fold.unreferencedLatencyModels.size).toBe(0)
   })
 })

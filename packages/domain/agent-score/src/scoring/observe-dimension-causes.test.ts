@@ -10,6 +10,7 @@ const signalEvidence: SessionSignalEvidence = {
   fold: 0,
   familyPenaltyShare: { spend: 0, context: 0, tools: 0, memory: 0, recovery: 0 },
   avoidableNs: 0,
+  speedUsable: true,
   unlinkedSignalIds: ["signal-1"],
   inclusionProbabilityBySignalId: new Map([["signal-1", 1]]),
   linkedSignalIds: [],

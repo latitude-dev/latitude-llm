@@ -12,6 +12,7 @@ import {
   type SignalResidualGroup,
   type SpeedSignalResidual,
 } from "./estimate-signal-residuals.ts"
+import { isSpeedUsable } from "./fold-window-contributions.ts"
 import { linkSignalOccurrences, type SignalOccurrence } from "./link-signal-occurrences.ts"
 
 /** One session reduced to what the matched estimator needs, and nothing that would keep it resident. */
@@ -21,6 +22,8 @@ export interface SessionSignalEvidence {
   readonly fold: 0 | 1
   readonly familyPenaltyShare: Readonly<Record<CostFamily, number>>
   readonly avoidableNs: number
+  /** Same test as the Speed ratio, so a residual is never fitted over sessions Speed excluded. */
+  readonly speedUsable: boolean
   /** Signals present on this session whose occurrence no charged atom already explains. */
   readonly unlinkedSignalIds: readonly string[]
   readonly inclusionProbabilityBySignalId: ReadonlyMap<string, number>
@@ -169,6 +172,7 @@ export const readSessionSignalEvidence = (session: NormalizedSessionAssessmentIn
     fold: foldOf(session.sessionId),
     familyPenaltyShare,
     avoidableNs: (session.costEvidence?.measuredAvoidableNs ?? 0) + (session.costEvidence?.estimatedAvoidableNs ?? 0),
+    speedUsable: isSpeedUsable(session.costEvidence),
     unlinkedSignalIds: [...new Set(linkage.unlinked.map((occurrence) => occurrence.signalId))],
     inclusionProbabilityBySignalId: inclusionProbabilitiesOf(linkage.unlinked),
     linkedSignalIds: [...new Set(linkage.linked.map((entry) => entry.occurrence.signalId))],
@@ -320,7 +324,11 @@ export const buildWindowSignalEffects = ({
     ...(floors ? { floors } : {}),
   })
   const speed = estimateSpeedSignalResiduals({
-    sessions: toMatchedSessions({ evidence, groupOf, outcomeOf: (session) => session.avoidableNs }),
+    sessions: toMatchedSessions({
+      evidence: evidence.filter((session) => session.speedUsable),
+      groupOf,
+      outcomeOf: (session) => session.avoidableNs,
+    }),
     groups,
     ...(floors ? { floors } : {}),
   })
