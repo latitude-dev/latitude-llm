@@ -320,6 +320,31 @@ export const causesIncludeConnectionReset = (error: unknown): boolean => {
   return false
 }
 
+/**
+ * Walks `error` and nested `cause` chains for a definitive "object does not
+ * exist at this key" signal from either object-storage backend: S3's
+ * `NoSuchKey` (thrown by name, or wrapped with that phrase in the message by
+ * flydrive) or the local fs driver's `ENOENT`. Unlike a connection reset or
+ * timeout, this can never succeed on retry — the key is generated once via
+ * `crypto.randomUUID()` per write, so a miss here means the object was never
+ * there, not that it moved or is still propagating.
+ */
+export const causesIndicateMissingStorageObject = (error: unknown): boolean => {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+
+  while (current !== null && current !== undefined && !seen.has(current)) {
+    seen.add(current)
+    if (isRecord(current)) {
+      if (current.name === "NoSuchKey" || current.code === "ENOENT") return true
+      if (typeof current.message === "string" && /specified key does not exist/i.test(current.message)) return true
+    }
+    current = isRecord(current) ? current.cause : undefined
+  }
+
+  return false
+}
+
 export const isNotFoundError = (error: unknown): error is NotFoundError => error instanceof NotFoundError
 
 export const isConflictError = (error: unknown): error is ConflictError => error instanceof ConflictError

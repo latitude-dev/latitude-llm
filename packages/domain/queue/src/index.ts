@@ -271,4 +271,10 @@ export interface QueueConsumer {
   readonly subscribe: <T extends QueueName>(queue: T, handlers: TaskHandlers<T>, options?: SubscribeOptions<T>) => void
 }
 
-export { QueueClientError, QueuePublishError, QueueSubscribeError, WorkflowAlreadyStartedError } from "./errors.ts"
+export {
+  NonRetryableTaskError,
+  QueueClientError,
+  QueuePublishError,
+  QueueSubscribeError,
+  WorkflowAlreadyStartedError,
+} from "./errors.ts"
