@@ -4,7 +4,7 @@ import { OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { ensureManualDigestEligible, isDigestEligible } from "./agent-score-digest.functions.ts"
+import { ensureManualDigestEligible, isDigestEligible } from "./agent-score-digest.ts"
 
 const ORG = "org-a".padEnd(24, "x")
 const OTHER = "org-b".padEnd(24, "x")
