@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## v0.3.117 - 2026-09-23
+
+### Agent Score
+
+- Added a weekly Agent Score digest, sent every Monday at 08:00 UTC by email, Slack and the in-app bell to members of organisations with Agent Score enabled. It covers each project that published a score during the week. The digest shows the score ring and trend as an image, the week's change and a per-dimension breakdown. A change that falls inside the confidence intervals is reported as steady, and no delta is shown when the scoring version or window changed during the week. Sample and showcase projects are skipped. Users can turn it off through a new `agent_score` notification preferences group. A Postgres migration adds a date index on `agent_score_snapshots` (ref: #4718).
+- Staff can send a project's digest on demand from the backoffice project actions. It uses the same eligibility rules as the weekly job (ref: #4718).
+
+### Integrations
+
+- Slack messages with image blocks are now reposted without the images when Slack cannot download them, instead of being rejected entirely. Before this, incident alerts with trend charts were dropped on deploys that Slack could not reach (ref: #4718).
+
+### Flaggers
+
+- Fixed flagger re-screening writing duplicate scores for the same finding on sessions with more than 200 system annotations. Anchor deduplication now queries directly instead of scanning a capped window (ref: #4607).
+
 ## v0.3.116 - 2026-09-23
 
 ### Agent Score
