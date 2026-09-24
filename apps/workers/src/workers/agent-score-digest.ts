@@ -19,6 +19,16 @@ interface AgentScoreDigestWorkerDeps {
   readonly adminPostgresClient: PostgresClient
 }
 
+export const publishAgentScoreDigestNotificationRequest = (
+  publisher: QueuePublisherShape,
+  payload: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly windowStart: string
+    readonly windowEnd: string
+  },
+) => publisher.publish("notifications", "request-agent-score-digest-notifications", payload)
+
 export const createAgentScoreDigestWorker = ({
   consumer,
   publisher,
@@ -28,11 +38,13 @@ export const createAgentScoreDigestWorker = ({
     triggerWeeklyRun: () => {
       const { from, to } = agentScoreDigestWindow(new Date())
 
+      // No dedupeKey on publish: BullMQ dedupe by jobId blocks legitimate
+      // retries after a failed run (the failed jobId stays "burned" until
+      // removed). The cron only fires weekly so there's no realistic
+      // duplicate-publish risk from this path; per-recipient dedupe lives on
+      // `(organization_id, user_id, idempotency_key)` in the notification step.
       return fanOutAgentScoreDigest({
-        publish: (payload) =>
-          publisher.publish("notifications", "request-agent-score-digest-notifications", payload, {
-            dedupeKey: `notifications:request-agent-score-digest:${payload.projectId}:${payload.windowEnd}`,
-          }),
+        publish: (payload) => publishAgentScoreDigestNotificationRequest(publisher, payload),
       })({ windowStart: from, windowEnd: to }).pipe(
         Effect.tap((result) =>
           Effect.sync(() =>
