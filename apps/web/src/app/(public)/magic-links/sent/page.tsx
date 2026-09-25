@@ -24,7 +24,7 @@ export default async function MagicLinkSent({
       header={
         <FocusHeader
           title="You've got mail!"
-          description={`We sent you a magic link to ${email}. Click the link to sign in.`}
+          description={`If an account exists for ${email}, we sent it a magic link. Click the link to sign in.`}
         />
       }
     />
