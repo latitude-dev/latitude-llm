@@ -25,7 +25,7 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
-import { jsonBody, openApiNoContentResponses, PROTECTED_SECURITY, typedResponses } from "../openapi/schemas.ts"
+import { errorResponse, jsonBody, openApiNoContentResponses, PROTECTED_SECURITY, typedResponses } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 import { requireOAuthUserId } from "../utils/require-oauth.ts"
 
@@ -298,7 +298,10 @@ const removeMember = memberEndpoint({
       "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.",
     security: PROTECTED_SECURITY,
     request: { params: MemberIdParamsSchema },
-    responses: openApiNoContentResponses({ description: "Member removed" }),
+    responses: {
+      ...openApiNoContentResponses({ description: "Member removed" }),
+      403: errorResponse("Only organization owners and admins can remove members"),
+    },
   }),
   access: "destructive",
   rateLimitTier: "low",

@@ -259,6 +259,7 @@ export class MembersClient {
      * @param {MembersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.ForbiddenError}
      * @throws {@link Latitude.NotFoundError}
      * @throws {@link errors.LatitudeError}
      * @throws {@link errors.LatitudeTimeoutError}
@@ -312,6 +313,8 @@ export class MembersClient {
                         _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
+                case 403:
+                    throw new Latitude.ForbiddenError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 404:
                     throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
