@@ -65,19 +65,20 @@ the agent produced or disclosed something it should not have.
 
 ## How evidence reaches a dimension
 
-Every scored observation belongs to one of four forms:
+Every benchmark observation belongs to one of four forms:
 
 | Form | What it contributes | Examples |
 | --- | --- | --- |
-| Outcome evidence | A probability that the session accomplished its goal | Task Success verdicts, corrections, abandonment, no output, Outcome signals |
+| Outcome evidence | A direct task-outcome endpoint or issue context | task-outcome verdicts, corrections, abandonment, no output, Outcome signals |
 | Terminal failure evidence | Whether the session ended in an operational failure | unrecovered provider or tool errors, broken final output |
 | Resource evidence | Spend, context tokens, operations, session burden, or critical-path time | cache gap, redundant context, retries, repeated calls, slow generation |
 | Safety evidence | Whether the agent caused confirmed harm | PII disclosure, injection compliance |
 
 Value observations enter in their natural unit. Cost families use money, input tokens, tool calls,
-memory operations, and eligible sessions. Speed uses critical-path time, and calibrated evaluations
-use probabilities. Event observations establish an endpoint, update a probability, or identify
-inefficient resource use. Both forms meet at the session before the dimension aggregates the window.
+memory operations, and eligible sessions. Speed uses critical-path time. Event observations
+establish a task-outcome, terminal-failure, or confirmed-harm endpoint; provide issue context; or
+identify inefficient resource use. Both forms meet at the session before the dimension aggregates
+the window.
 
 Signals use the same path. A signal carries a scoring role for each dimension it informs. Its impact
 comes from observed prevalence and consequence, not from the number of signals or a fixed allocation
@@ -103,8 +104,9 @@ force unrelated evidence to become less important.
 
 Evidence that overlaps on one session is resolved once on that session. Cost evidence is deduplicated
 within its family and capped by the family's eligible units. Time is capped by the critical path the
-session actually consumed. Outcome and risk evidence enter one joint estimate. Duplicate detectors
-and split signal clusters cannot multiply the underlying harm.
+session actually consumed. Outcome uses one task-outcome verdict per session, and Safety uses one
+confirmed-harm union. Duplicate detectors and split signal clusters cannot multiply the underlying
+result.
 
 ### 4. Normalize only after measuring the native quantity
 
@@ -191,37 +193,39 @@ Read them in this order:
 | Cost readers expose family-native eligible and penalized units | Cost must combine money and non-money evidence without pretending every effect is priced |
 | Content readers expose bounded generation inputs and tool definitions | Context and downstream tool or memory footprint cannot be inferred from the latest conversation window |
 | Duration readers expose trace structure and foreground classification | Speed waste must be capped and deduplicated before window aggregation |
-| A sampled Task Success flagger persists passed and failed scores | Outcome needs a direct holistic reference verdict, not a union of defect counts |
+| A sampled task-failure flagger persists passed and failed scores | Outcome needs a direct holistic reference verdict, not a union of defect counts |
 
 ## Fixed score settings
 
 | Setting | Value |
 | --- | --- |
 | Window steps | 7, 14, 21, or 28 days, choosing the shortest step that reaches the target |
-| Session target | 1,000 eligible sessions |
-| Session floor | 200 eligible sessions |
+| Session target | 100 eligible sessions |
+| Session floor | 100 eligible sessions |
 | Reliability reference run | 20 sessions |
-| Safety reference run | 1,000 sessions |
+| Safety reference run | 100 sessions |
 | Composite weights | Outcome 0.35, Reliability 0.25, Cost 0.15, Speed 0.15, Safety 0.10 |
 | Cost families | spend, context, tools, memory, recovery |
 | Fleet latency reference | frozen provider, model, input-size, and streaming cohorts |
 | Publication gate | all five dimensions pass their traffic, coverage, and confidence floors |
 
 The horizons express product expectations. Reliability asks whether the next 20 sessions can all
-complete. Safety asks whether confirmed harm remains absent over 1,000 sessions. They do not allocate
+complete. Safety asks whether confirmed harm remains absent over 100 sessions. They do not allocate
 influence among causes.
 
 ## Required launch artifacts
 
 The structure is fixed. Launch requires these versioned artifacts and acceptance reports:
 
-1. The Task Success prompt, supported judge configuration, calibrated Outcome model, and pooled prior
-   for newly promoted signals.
-2. The Cost scoring artifact: family weights, metric curves, applicability rules, caps, overlap
-   groups, coverage floors, and residual-signal cap, calibrated on shadow traffic.
+1. The task-failure prompt, supported judge configuration, result schema, sampling policy, and
+   Outcome coverage floors.
+2. The initial Cost scoring artifact: family weights, metric curves, applicability rules, caps,
+   overlap groups, coverage floors, and residual-signal cap. Launch requires an audit, shadow
+   calibration, acceptance report, and frozen artifact version. Later production recalibration uses
+   a new scoring version.
 3. Frozen TTFT and throughput reference distributions for every supported cohort.
 4. The matching features and overlap diagnostics used by signal-level Cost and Speed estimators.
-5. Reader-specific coverage and confidence floors validated on representative traffic.
+5. Reader-specific coverage and confidence floors with deterministic acceptance fixtures.
 6. The complete Safety detector suite, its sampling contract, and confirmed-harm fixtures.
-7. Hosted and self-hosted loading of the same formulas, prompts, reference bundles, and calibration
+7. Hosted and self-hosted loading of the same formulas, prompts, reference bundles, and scoring
    artifacts. A substituted judge model creates a distinct local scoring version.

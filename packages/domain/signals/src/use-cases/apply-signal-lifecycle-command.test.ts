@@ -42,6 +42,7 @@ const makeSignal = (id: string, overrides: Partial<Signal> = {}): Signal => ({
   filters: null,
   assigneeId: null,
   priority: null,
+  bundleKey: null,
   centroid: null,
   clusteredAt: null,
   promotedAt: earlier,

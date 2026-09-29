@@ -53,6 +53,13 @@ export interface SessionCostAggregate {
    */
   readonly publishable: boolean
   readonly withheldFamilies: readonly CostFamily[]
+  /**
+   * Each metric's resolved penalty share, after arbitration, caps and overlap policies.
+   *
+   * The family totals lose which metric produced them, and attribution has to put a number beside a
+   * cause name rather than beside a family, so the breakdown is carried out rather than recomputed.
+   */
+  readonly penaltiesByMetric: ReadonlyMap<string, number>
 }
 
 const familyOf = (denominators: CostFamilyDenominators, family: CostFamily): number => denominators[family]
@@ -190,5 +197,6 @@ export const aggregateSessionCost = ({
     costPenalty: Math.max(0, Math.min(1, weighted + residualSignalPenalty)),
     publishable: withheldFamilies.length === 0,
     withheldFamilies,
+    penaltiesByMetric: resolved,
   }
 }

@@ -21,11 +21,19 @@ class SessionAssessmentDimensionSummarySafety(UniversalBaseModel):
         FieldMetadata(alias="evidenceCounts"),
         pydantic.Field(alias="evidenceCounts", description="Evidence counts grouped by direction."),
     ]
+    """
+    Evidence counts grouped by direction.
+    """
+
     measurement_counts: typing_extensions.Annotated[
         SessionAssessmentDimensionSummarySafetyMeasurementCounts,
         FieldMetadata(alias="measurementCounts"),
         pydantic.Field(alias="measurementCounts", description="Evidence counts grouped by measurement state."),
     ]
+    """
+    Evidence counts grouped by measurement state.
+    """
+
     coverage: SessionAssessmentDimensionSummarySafetyCoverage = pydantic.Field()
     """
     Reader coverage for this dimension.
@@ -36,15 +44,26 @@ class SessionAssessmentDimensionSummarySafety(UniversalBaseModel):
         FieldMetadata(alias="exposureCount"),
         pydantic.Field(alias="exposureCount", description="Number of safety exposures."),
     ]
+    """
+    Number of safety exposures.
+    """
+
     successful_defense_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="successfulDefenseCount"),
         pydantic.Field(alias="successfulDefenseCount", description="Number of successful safety defenses."),
     ]
+    """
+    Number of successful safety defenses.
+    """
+
     confirmed_harm_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="confirmedHarmCount"),
         pydantic.Field(alias="confirmedHarmCount", description="Number of confirmed harmful outcomes."),
     ]
+    """
+    Number of confirmed harmful outcomes.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

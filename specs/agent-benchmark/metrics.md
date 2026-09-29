@@ -4,8 +4,8 @@
 > [`session-assessment.md`](session-assessment.md) for how observations tell one session's story.
 > This catalogue defines the observations used by both.
 
-A metric does not own an independent point budget. It returns evidence in a native form: an endpoint,
-probability feature, amount of spend, token count, operation count, session rate, duration on the
+A metric does not own an independent point budget. It returns evidence in a native form: a direct
+endpoint, issue context, amount of spend, token count, operation count, session rate, duration on the
 critical path, or confirmed safety failure. Cost metrics also declare how that evidence enters one
 of the fixed Cost families.
 
@@ -18,7 +18,7 @@ Every metric definition specifies:
 | ID | stable identifier used in evidence, deduplication, and cause rows |
 | dimensions | estimands the observation can inform |
 | Cost family | spend, context, tools, memory, or recovery when the metric informs Cost |
-| evidence role | endpoint, outcome feature, resource evidence, or confirmed harm |
+| evidence role | direct endpoint, issue context, resource evidence, or confirmed harm |
 | reader | telemetry and grouping used to produce the observation |
 | evaluation | raw value, aggregation mode, monotone curve, eligible units, and penalized units |
 | counterfactual | what the same session would look like without the defect, where needed |
@@ -96,11 +96,11 @@ maximum, union, or a named combined cap.
 
 ### Cost launch catalog
 
-This is the required first-version catalog. Curve points remain provisional until the PR 3 shadow
-calibration freezes them. Every negative metric starts at zero penalty when its adverse-event or
-avoidable-resource share is zero; the artifact defines the end of the healthy range, the watch
-range, and the saturation point. A healthy label therefore means the raw value is inside a measured
-safe range, not merely that no detector emitted a finding.
+This is the required first-version catalog. Curve points remain provisional until the pre-launch
+shadow audit and calibration freezes them. Every negative metric starts at zero penalty when its
+adverse-event or avoidable-resource share is zero; the artifact defines the end of the healthy
+range, the watch range, and the saturation point. A healthy label therefore means the raw value is
+inside a measured safe range, not merely that no detector emitted a finding.
 
 | Metric | Family | Aggregation | Raw value | Applicability |
 | --- | --- | --- | --- | --- |
@@ -180,7 +180,7 @@ gates at 30, 100, and 1,000 observations remain the minimum evidence for publish
 
 - Dimension: Outcome.
 - Evidence role: holistic task-outcome verdict.
-- Reader: passed and failed scores from the sampled `task-success` flagger.
+- Reader: passed and failed scores from the sampled `task-failure` flagger.
 
 The verdict concerns the complete session. Success means the agent resolved all material user goals
 that remained active at the end. Failure means at least one material goal failed, was abandoned, or
@@ -324,18 +324,24 @@ This compares the same produced output rather than rewarding short answers.
 - Cost family: recovery when recovered.
 - Evidence role: terminal endpoint when unrecovered; inefficient-call and recovery evidence when
   recovered.
-- Reader: the shared deterministic error-finding reader used by `tool-call-errors`.
+- Reader: the deterministic response-content reader used by `tool-call-errors` plus `execute_tool`
+  span status.
 
-A tool response is a failure only when the response contract or structured payload establishes it.
+A tool response is a failure when its response contract or structured payload establishes it, or
+when its `execute_tool` span has error status. Unset span status is missing telemetry, not evidence
+of success. When both sources identify one unambiguous call, the deterministic finding remains
+canonical and the status duplicate is suppressed. Reused IDs are never aligned by conversation
+ordinal across a truncated window; their error-status spans remain separate observations.
 The current blanket treatment of every HTTP 400 through 499 status as expected is not sufficient;
-the reader needs a caller-declared expected-status contract before it can exclude one.
+the content reader needs a caller-declared expected-status contract before it can exclude one.
 A later successful call or other successful progress can recover the session even when it used a
 different tool. Reliability asks whether the agent completed, not whether one integration was flaky.
 
-Recovered failures remain observable so the recovered session enters Recovery and marginal
-critical-path duration can enter Speed. A tool span has no
-inherent billable spend. Money or context enters only when a paid retry generation or later model
-input can be attributed to the incident. Recovered failures do not open signal-discovery work
+For a span-status failure, a later successful execution of the same normalized tool proves recovery;
+the retry path ends at that span. Recovered failures remain observable so the recovered session
+enters Recovery and marginal critical-path duration can enter Speed. A tool span has no inherent
+billable spend. Money or context enters only when a paid retry generation before that successful
+execution can be attributed to the incident. Recovered failures do not open signal-discovery work
 automatically. [`flaggers.md`](flaggers.md) defines that separation.
 
 Attribution also records same-tool recovery. The session-wide marker answers whether the run
@@ -558,23 +564,22 @@ remain visible and unreadable for this metric.
 
 # Moments
 
-Conversation intelligence produces probabilistic Outcome evidence. It does not assign a fixed score
+Conversation intelligence produces Outcome issue evidence. It does not assign a fixed score
 deduction.
 
 ## `moments.strong_failure`
 
 - Dimension: Outcome.
-- Evidence role: strong negative task-success feature.
+- Evidence role: strong negative Outcome issue evidence.
 - Reader: correction, repeated-information request, abandonment, or explicit frustration.
 
-These moments quote the user's next turn as evidence. The Outcome model learns their conditional
-failure probability from sampled Task Success verdicts. Multiple strong moments on one session
-remain one feature set rather than repeated deductions.
+These moments quote the user's next turn as evidence. The initial Outcome estimator does not assign
+them independent points. Multiple strong moments on one session collapse into one issue input.
 
 ## `moments.failed_self_service`
 
 - Dimension: Outcome.
-- Evidence role: paired negative task-success feature.
+- Evidence role: paired negative Outcome issue evidence.
 - Reader: escalation to a human after a correction or frustration, ordered by message index.
 
 An intended handoff is not failure. The earlier negative moment establishes that self-service failed
@@ -583,12 +588,12 @@ before the handoff.
 ## `moments.weak_failure`
 
 - Dimensions: Outcome, Speed.
-- Evidence role: probabilistic task-success feature and residual time attribution.
+- Evidence role: Outcome issue evidence and residual time attribution.
 - Reader: stalled or hesitant behavior.
 
-For Outcome, the calibrated model determines how much this changes task-success probability. For
-Speed, it can attribute excess critical-path time left unexplained after deterministic latency and
-retry readers. It never invents a fixed duration.
+For Outcome, the first version reports selection-corrected issue reach and failed reach, plus raw
+examined overlap as coverage context. For Speed, it can attribute excess critical-path time left
+unexplained after deterministic latency and retry readers. It never invents a fixed duration.
 
 # Safety
 
@@ -643,10 +648,10 @@ behavior. Annotation volume is not itself a metric. Scores assigned to ignored s
 explicit exclusion defined in [`signals.md`](signals.md); independent telemetry readers remain
 unchanged.
 
-## Positive evidence without Task Success calibration
+## Positive evidence beyond the task-outcome verdict
 
-Resolution and satisfaction moments may be Outcome features once sampled Task Success verdicts show
-how they relate to success. Their absence is not failure.
+Resolution and satisfaction moments can become Outcome estimator inputs in a later scoring version.
+Their absence is not failure.
 
 ## Synthetic traffic
 

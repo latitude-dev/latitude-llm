@@ -1,3 +1,4 @@
+import type { SafetyFindingKind } from "@domain/scores"
 import type { ScoreEvidenceContract } from "@domain/shared"
 import type {
   SessionAssessmentImpactLevel,
@@ -13,6 +14,7 @@ export interface ResolvedAssessmentItem {
   readonly item: SessionAssessmentItem
   readonly chronology: AssessmentFindingChronology
   readonly independentHumanEvidence: boolean
+  readonly observationProbability?: number
 }
 
 export interface ResolvedAssessmentItemOrder {
@@ -48,7 +50,17 @@ const incidentEffects = (input: {
   readonly sameSubjectRecovered?: boolean
   readonly observedMicrocents?: number
   readonly observedNs?: number
+  /**
+   * The session made no successful progress afterwards.
+   *
+   * An incident and a completion outcome are different facts, and a terminal incident is both: the
+   * retry evidence still belongs to Cost and Speed, and the session still could not complete. Only
+   * carrying the incident would leave the panel calling a session undetermined that the score counts
+   * as a terminal failure.
+   */
+  readonly terminal?: boolean
 }): SessionDimensionEffect[] => [
+  ...(input.terminal ? completionEffects("terminalFailure") : []),
   {
     scoreDimension: "reliability",
     role: "operationalIncident",
@@ -138,6 +150,40 @@ const effectForClassifiedRole = (
   }
 }
 
+const safetyEffect = (
+  role: "exposure" | "successfulDefense" | "confirmedHarm",
+  findingKind: SafetyFindingKind,
+): SessionDimensionEffect => ({
+  scoreDimension: "safety",
+  role,
+  direction: role === "confirmedHarm" ? "negative" : role === "successfulDefense" ? "positive" : "context",
+  measurement: "observed",
+  // Only harm the agent caused enters the estimand. What reached the agent is
+  // shown beside the score and never moves it.
+  benchmarkUse: role === "confirmedHarm" ? "direct" : "contextOnly",
+  impact: { kind: "safety", status: role === "confirmedHarm" ? "confirmedHarm" : role, findingKind },
+})
+
+/**
+ * Attempt, response, and confirmation stay one item with several effects.
+ *
+ * An assistant disclosure carries no exposure effect: third-party data it
+ * surfaced was never something the conversation received.
+ */
+const safetyFindingEffects = (findingKind: SafetyFindingKind): SessionDimensionEffect[] => {
+  switch (findingKind) {
+    case "injectionAttempt":
+    case "piiExposure":
+      return [safetyEffect("exposure", findingKind)]
+    case "injectionDefense":
+      return [safetyEffect("exposure", findingKind), safetyEffect("successfulDefense", findingKind)]
+    case "injectionCompliance":
+      return [safetyEffect("exposure", findingKind), safetyEffect("confirmedHarm", findingKind)]
+    case "piiDisclosure":
+      return [safetyEffect("confirmedHarm", findingKind)]
+  }
+}
+
 const momentEffects = (momentKinds: readonly string[]): SessionDimensionEffect[] => {
   const strongNegativeKinds = new Set(["abandonment", "user_frustration", "user_correction", "clarification_loop"])
   const positiveKinds = new Set(["resolution", "user_satisfaction"])
@@ -200,6 +246,7 @@ export const resolveAssessmentFindingEffects = (finding: AssessmentFinding): Ses
     case "toolFailure":
       return incidentEffects({
         recovered: finding.recovered,
+        ...(finding.terminal ? { terminal: true } : {}),
         ...(finding.sameSubjectRecovered !== undefined ? { sameSubjectRecovered: finding.sameSubjectRecovered } : {}),
       })
     case "toolStructuralDefect":
@@ -249,6 +296,7 @@ export const resolveAssessmentFindingEffects = (finding: AssessmentFinding): Ses
     case "providerError":
       return incidentEffects({
         recovered: finding.recovered,
+        ...(finding.terminal ? { terminal: true } : {}),
         sameSubjectRecovered: finding.sameSubjectRecovered,
         observedMicrocents: finding.observedMicrocents,
         observedNs: finding.observedNs,
@@ -264,6 +312,8 @@ export const resolveAssessmentFindingEffects = (finding: AssessmentFinding): Ses
           impact: { kind: "taskOutcome", verdict: finding.verdict },
         },
       ]
+    case "safetyFinding":
+      return safetyFindingEffects(finding.findingKind)
     case "classifiedJudgment":
       return finding.roles.map((role) => effectForClassifiedRole(role, finding.negative, finding.findingKind))
     case "standaloneScore":
@@ -313,11 +363,13 @@ const findingGroupKey = (finding: AssessmentFinding): string => {
       return `issue:provider-error:${finding.findingKind}`
     case "taskOutcome":
       return "fact:task-outcome"
+    case "safetyFinding":
+      return `issue:safety:${finding.findingKind}`
     case "classifiedJudgment":
     case "standaloneScore":
       return `judgment:${finding.scoreIds[0] ?? finding.evidenceKey}`
     case "moment":
-      return finding.evidenceKey
+      return `issue:moment:${[...new Set(finding.momentKinds)].sort().join("+")}`
   }
 }
 
@@ -340,6 +392,8 @@ const findingPolarity = (
       return "negative"
     case "taskOutcome":
       return finding.verdict === "success" ? "positive" : "negative"
+    case "safetyFinding":
+      return finding.findingKind === "injectionDefense" ? "positive" : "negative"
     case "classifiedJudgment":
     case "standaloneScore":
       if (finding.signalOrigin === "system") return "negative"
@@ -371,6 +425,10 @@ const findingImpactLevel = (
   switch (finding.kind) {
     case "taskOutcome":
       return "high"
+    // Confirmed harm already reads high through its effect; what is left is the
+    // hostile input that arrived and the refusal that answered it.
+    case "safetyFinding":
+      return finding.findingKind === "injectionDefense" ? "low" : "medium"
     case "noOutput":
       return finding.findingKind === "unconfirmedPattern" ? "low" : "high"
     case "outputDamage":
@@ -420,6 +478,15 @@ export const resolveAssessmentFinding = (finding: AssessmentFinding): ResolvedAs
     },
     chronology: finding.chronology,
     independentHumanEvidence: finding.independentHumanEvidence,
+    // A deterministic reader and a human annotation see every session they apply to, so probability
+    // one is a fact about them. `moment` is deliberately absent: conversation analysis skips empty,
+    // too-short and non-conversation sessions, so a moment is certain only within the sessions that
+    // were analyzed, and its reader supplies that probability against that basis instead.
+    ...(finding.observationProbability !== undefined
+      ? { observationProbability: finding.observationProbability }
+      : finding.source === "metric" || finding.independentHumanEvidence
+        ? { observationProbability: 1 }
+        : {}),
   }
 }
 
@@ -517,6 +584,7 @@ const mergeResolvedItems = (left: ResolvedAssessmentItem, right: ResolvedAssessm
   const secondary = primary === left ? right : left
   const signalItem = [left, right].find(({ item }) => item.source === "signal")
   const chronology = compareResolvedAssessmentItems(left, right) <= 0 ? left.chronology : right.chronology
+  const observationProbability = signalItem?.observationProbability ?? primary.observationProbability
   return {
     item: {
       ...primary.item,
@@ -536,6 +604,7 @@ const mergeResolvedItems = (left: ResolvedAssessmentItem, right: ResolvedAssessm
     },
     chronology,
     independentHumanEvidence: false,
+    ...(observationProbability !== undefined ? { observationProbability } : {}),
   }
 }
 

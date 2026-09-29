@@ -16,6 +16,7 @@ SessionAssessmentReaderCoverageNotExaminedLimitation = typing.Union[
         "truncatedContent",
         "unknownModelContext",
         "criticalPathUnavailable",
+        "missingLatencyReference",
     ],
     typing.Any,
 ]

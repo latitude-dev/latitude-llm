@@ -12,6 +12,10 @@ class MonitorSignalResponse(UniversalBaseModel):
     job_id: typing_extensions.Annotated[
         str, FieldMetadata(alias="jobId"), pydantic.Field(alias="jobId", description="Identifier of the monitor job.")
     ]
+    """
+    Identifier of the monitor job.
+    """
+
     evaluation_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="evaluationId"),
@@ -21,5 +25,8 @@ class MonitorSignalResponse(UniversalBaseModel):
             description="The id of the evaluation being realigned, or `null` when a brand-new evaluation is being generated.",
         ),
     ]
+    """
+    The id of the evaluation being realigned, or `null` when a brand-new evaluation is being generated.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -11,12 +11,19 @@ import type { CostFamilyResult } from "./aggregate-session-cost.ts"
  */
 export interface SessionWindowContribution {
   readonly sessionId: string
+  /** False when a required Cost family was unreadable; excluded from Cost but retained for Speed. */
+  readonly costUsableForDenominator: boolean
   readonly families: readonly Pick<CostFamilyResult, "family" | "eligibleUnits" | "penalizedUnits">[]
   readonly speed: {
     readonly observedNs: number
     readonly avoidableNs: number
-    /** False when the session's critical path did not reconstruct; excluded from Speed entirely. */
+    /**
+     * False when the session's critical path did not reconstruct or a model on it has no latency
+     * reference; excluded from Speed entirely.
+     */
     readonly usableForDenominator: boolean
+    /** True when the path reconstructed and only a missing latency reference kept it out. */
+    readonly missingLatencyReference: boolean
   }
 }
 
@@ -54,9 +61,9 @@ export const aggregateWindowCost = ({
 }): WindowCostAggregate => {
   const familyPenalties = Object.fromEntries(
     COST_FAMILIES.map((family) => {
-      const rows = contributions.flatMap((contribution) =>
-        contribution.families.filter((entry) => entry.family === family),
-      )
+      const rows = contributions
+        .filter((contribution) => contribution.costUsableForDenominator)
+        .flatMap((contribution) => contribution.families.filter((entry) => entry.family === family))
       const eligible = rows.reduce((total, entry) => total + entry.eligibleUnits, 0)
       const penalized = rows.reduce((total, entry) => total + entry.penalizedUnits, 0)
       return [family, Math.min(artifact.familyCaps[family], ratio(penalized, eligible))]
@@ -79,12 +86,17 @@ export const aggregateWindowCost = ({
  * incomplete session stays visible on that session, but letting it into the window would divide by
  * time nobody could measure — which would read as necessary.
  */
-export const aggregateWindowSpeed = (contributions: readonly SessionWindowContribution[]): WindowSpeedAggregate => {
+export const aggregateWindowSpeed = (
+  contributions: readonly SessionWindowContribution[],
+  residualAvoidableNs = 0,
+): WindowSpeedAggregate => {
   const included = contributions.filter((contribution) => contribution.speed.usableForDenominator)
   const observedNs = included.reduce((total, contribution) => total + contribution.speed.observedNs, 0)
+  // Clamped to observed time, which is what stops a modelled signal effect claiming time nobody spent.
   const avoidableNs = Math.min(
     observedNs,
-    included.reduce((total, contribution) => total + contribution.speed.avoidableNs, 0),
+    included.reduce((total, contribution) => total + contribution.speed.avoidableNs, 0) +
+      Math.max(0, residualAvoidableNs),
   )
 
   return {

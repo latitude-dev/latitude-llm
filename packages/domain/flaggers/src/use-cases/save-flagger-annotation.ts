@@ -32,6 +32,7 @@ export interface SaveFlaggerAnnotationInput extends FlaggerAnnotateInput {
   readonly messageIndex?: number | undefined
   readonly flaggerTraceId?: string | undefined
   readonly scoringArtifactVersion: ScoringArtifactVersion
+  readonly analysisHash?: string | undefined
 }
 
 export type SaveFlaggerAnnotationError =
@@ -70,6 +71,7 @@ export const saveFlaggerAnnotationUseCase = Effect.fn("flaggers.saveFlaggerAnnot
     flaggerTraceId: input.flaggerTraceId,
     flaggerPath: "sampled",
     scoringArtifactVersion,
+    analysisHash: input.analysisHash,
   })
 
   return flaggerAnnotateOutputSchema.parse({

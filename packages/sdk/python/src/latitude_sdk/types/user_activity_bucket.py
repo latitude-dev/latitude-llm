@@ -24,5 +24,8 @@ class UserActivityBucket(UniversalBaseModel):
         FieldMetadata(alias="errorCount"),
         pydantic.Field(alias="errorCount", description="Of `count`, sessions with at least one errored trace."),
     ]
+    """
+    Of `count`, sessions with at least one errored trace.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

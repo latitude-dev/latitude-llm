@@ -30,7 +30,9 @@ Rationale:
 - many users will build their own feedback UI
 - end-user annotations should not depend on Latitude UI
 - the contract must stay simple and agent-friendly
-- the public route should live at `POST /v1/organizations/:organizationId/projects/:projectId/annotations` rather than the generic `/scores` endpoint, even though the write still lands in the canonical scores model with `source = "annotation"`
+- creation lives at `POST /v1/projects/:projectSlug/annotations` rather than the generic `/scores` endpoint, even though the write still lands in the canonical scores model with `source = "annotation"`
+- API clients retain the generated annotation id and use `GET`, `PATCH`, and `DELETE /v1/projects/:projectSlug/annotations/:annotationId` for its lifecycle
+- PATCH updates the same Postgres and ClickHouse score id, clears prior signal ownership, and emits an `AnnotationUpdated` event so discovery and alignment reprocess the current value
 
 ## Draft Annotations
 
@@ -51,7 +53,7 @@ Rules:
 - system-created queue drafts do not use the automatic publication path; they wait for explicit human review
 - drafts do not participate in signal discovery, issue-centroid mutation, issue search-vector maintenance, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
 - if a draft annotation carries `issueId`, that value is editable issue intent only until publication clears `draftedAt`
-- once a draft is published, it should no longer be edited; it may still be deleted later
+- once a managed-UI draft is published, it should no longer be edited; API-created annotations have an explicit id-keyed update lifecycle for external feedback UIs
 - drafts exist to support immediate managed review without relying on temporary browser-only or Redis-only state
 
 ## Manual Issue Selection

@@ -14,6 +14,10 @@ class UserSignal(UniversalBaseModel):
         FieldMetadata(alias="signalId"),
         pydantic.Field(alias="signalId", description="Stable identifier of the signal."),
     ]
+    """
+    Stable identifier of the signal.
+    """
+
     name: str = pydantic.Field()
     """
     Human-readable signal name.
@@ -46,6 +50,10 @@ class UserSignal(UniversalBaseModel):
             alias="affectedTraces", description="Distinct traces of the user that contributed an occurrence."
         ),
     ]
+    """
+    Distinct traces of the user that contributed an occurrence.
+    """
+
     first_seen_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="firstSeenAt"),
@@ -53,6 +61,10 @@ class UserSignal(UniversalBaseModel):
             alias="firstSeenAt", description="ISO-8601 timestamp of the first occurrence on the user's traces."
         ),
     ]
+    """
+    ISO-8601 timestamp of the first occurrence on the user's traces.
+    """
+
     last_seen_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="lastSeenAt"),
@@ -60,5 +72,8 @@ class UserSignal(UniversalBaseModel):
             alias="lastSeenAt", description="ISO-8601 timestamp of the most recent occurrence on the user's traces."
         ),
     ]
+    """
+    ISO-8601 timestamp of the most recent occurrence on the user's traces.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

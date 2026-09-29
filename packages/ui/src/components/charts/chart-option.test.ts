@@ -63,3 +63,49 @@ describe("legend", () => {
     expect(legendOf(true)).toEqual({ show: false })
   })
 })
+
+describe("value axis", () => {
+  it("can retain a fixed scale without rendering the axis", () => {
+    const option = buildChartOption({
+      categories: ["c0"],
+      series: [{ kind: "line", name: "score", values: [66], color: "#000" }],
+      colors,
+      primaryAxis: { show: false, min: 0, max: 100 },
+    }) as {
+      grid: { left: number }
+      yAxis: { show: boolean; min: number; max: number; splitLine: { show: boolean } }
+    }
+
+    expect(option.grid.left).toBe(16)
+    expect(option.yAxis).toMatchObject({ show: false, min: 0, max: 100, splitLine: { show: false } })
+  })
+})
+
+describe("line points", () => {
+  const pointOptionsOf = (showPoints?: boolean) => {
+    const option = buildChartOption({
+      categories: ["c0"],
+      series: [
+        {
+          kind: "line",
+          name: "score",
+          values: [66],
+          color: "#000",
+          ...(showPoints === undefined ? {} : { showPoints }),
+        },
+      ],
+      colors,
+    }) as { series: [{ showSymbol: boolean; showAllSymbol?: boolean }] }
+
+    return option.series[0]
+  }
+
+  it("hides points by default", () => {
+    expect(pointOptionsOf()).toMatchObject({ showSymbol: false })
+    expect(pointOptionsOf().showAllSymbol).toBeUndefined()
+  })
+
+  it("shows every point when the series opts in", () => {
+    expect(pointOptionsOf(true)).toMatchObject({ showSymbol: true, showAllSymbol: true })
+  })
+})

@@ -11,6 +11,7 @@ export interface SignalOccurrence {
   readonly sessionId: string
   readonly findingKey?: string | undefined
   readonly atomIds: readonly string[]
+  readonly inclusionProbability?: number
 }
 
 /**

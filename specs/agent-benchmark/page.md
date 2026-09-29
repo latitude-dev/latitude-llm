@@ -17,12 +17,27 @@ generic point deduction is not enough.
 ## Location
 
 The page is first in the Observe group, above Sessions. It is project-scoped and uses immutable daily
-snapshots for the headline and history. Evidence and causes are resolved dynamically from the current
-selected window.
+snapshots for the headline, dimensions, evidence, and history.
 
-The headline uses the current UTC date's snapshot. If that snapshot was not published, the current
-Agent Score is unavailable; the page never substitutes an older score. Older snapshots remain in the
-trend.
+A top-level UTC date navigator selects the date for the whole page. The default is the latest
+published score date, or today if no score exists. The headline, dimension sections, evidence, and
+computation requirements all use that selected date. The trend ends on the selected date and leaves
+gaps for missing scores. A date without a snapshot never displays a score from an older date.
+
+The staff-only Backoffice project detail shows the latest stored snapshot and all five dimensions
+even when the organization does not have customer access through the `agentScore` feature flag. It
+labels whether customer access is enabled and reports an explicit empty state when no snapshot has
+been published. When a stored or legacy cached explanation matches the snapshot's project, date, and scoring version,
+the view builds each dimension's "Affected by" reasons through the same evidence projection as the
+customer Agent Score page. That keeps attributed causes, issue-derived rows, residual explanations,
+withheld-score observations, labels, ordering, and non-point evidence values aligned between both
+surfaces. Backoffice intentionally omits point-valued amounts so the staff view stays focused on the
+reasons affecting the score. Missing or expired evidence has an explicit state; it never falls back
+to causes for another snapshot. Loading the Backoffice view only reads stored data; recomputation
+remains an explicit project action. That action always enqueues the current UTC date and, when the
+latest displayed snapshot is older, also enqueues that snapshot date so legacy cached evidence can be refreshed.
+Forced recalculation can publish a missing score for the current date but never rewrites an existing
+published score or its stored evidence.
 
 ## Level one
 
@@ -43,7 +58,7 @@ The five dimension cards show the number, interval, meaning, native measurement,
 | Reliability | one-session operational success rate and chance of 20 consecutive successes |
 | Cost | five family results, pricing and content coverage, and estimated recoverable spend where available |
 | Speed | observed critical-path time and estimated avoidable time |
-| Safety | confirmed harmful sessions, examined sessions, and chance of 1,000 sessions without harm |
+| Safety | confirmed harmful sessions, examined sessions, and chance of 100 sessions without harm |
 
 Reliability never appears as the 20-session value alone. Its card, dimension section, tooltip, and
 public representation always show the one-session operational success rate beside it.
@@ -59,7 +74,8 @@ Each dimension section contains:
 - score, interval, and one-sentence meaning when the publication gate passes;
 - the formula definition and current native inputs when they are readable;
 - coverage and important missing evidence;
-- causes ranked by expected fix gain;
+- causes ranked by expected fix gain where measured, otherwise issues ranked by
+  inverse-probability-corrected failed or harmed reach;
 - contextual observations that do not lower this dimension;
 - destinations for investigation.
 
@@ -71,31 +87,31 @@ into a dollar claim.
 
 The evidence list contains only metrics with readable observations and promoted signals with an
 eligible occurrence in the selected window. Signals with zero occurrences and scores assigned to
-ignored signals do not appear. Items whose effect is not yet measurable remain visible and say so.
-A signal that informs several dimensions can appear in each applicable dimension section. This is a
-presentation choice and does not duplicate the occurrence in estimation or attribution.
+ignored signals do not appear, and neither does a metric that was read and penalized nothing: a
+healthy reading is coverage, reported as coverage, and never a cause whose effect is zero. Items
+whose effect is not yet measurable remain visible and say so. A signal that informs several
+dimensions can appear in each applicable dimension section. This is a presentation choice and does
+not duplicate the occurrence in estimation or attribution.
 
-Native inputs and causes are labelled as current evidence from the live selected window. They
-explain present behavior but do not claim to reproduce the immutable snapshot, whose stored contract
-contains only scores, intervals, version, window, and eligible-session count.
+Native inputs and causes come from the evidence stored with the selected snapshot. The page shows
+the evidence computation time. Legacy cached evidence must match the snapshot date and version.
 
 ### Cause rows
 
 | Field | Meaning |
 | --- | --- |
 | Cause | metric, signal, or residual explanation |
-| Evidence | endpoint, probability feature, money, time, or confirmed harm |
-| Reach | affected and readable sessions |
-| Native effect | probability change, Cost-family units, avoidable spend, avoidable time, or harmed sessions |
-| Attributed deficit | Shapley share of the displayed dimension deficit |
-| Fix gain | estimated score recovered if this cause alone disappeared |
-| Confidence | interval, independent observation count, and measured or associated label |
+| Evidence | endpoint, issue context, money, time, or confirmed harm |
+| Reach | estimated affected sessions, corrected with stored inclusion probabilities when sampled; used for ranking and progress, not as the compact row label |
+| Native effect | endpoint reach, Cost-family units, avoidable spend, avoidable time, or harmed sessions |
+| Attributed deficit | Shapley share of the displayed dimension deficit, when measured |
+| Fix gain | estimated score recovered if this cause alone disappeared, when measured |
+| Confidence | interval, raw examined count, independent observation count, and measured or associated label |
 | Destination | Sessions, Tools, Memory, Cost, Signals, Behaviors, or Settings |
 
-Attributed deficits add to the current dynamic estimate. Fix gains may overlap and do not. The
-interface labels the distinction and never sums fix gains into a promise. Current causes may change
-after the immutable daily snapshot when new evidence arrives, so they are not presented as a frozen
-historical decomposition.
+Attributed deficits add to the computed deficit. Fix gains may overlap and do not. The interface
+labels the distinction and never sums fix gains into a promise. Published causes remain attached to
+their score; later evidence affects future snapshots.
 
 Exact observations use direct language such as "wasted $430" or "ended 32 sessions." Signal effects
 estimated from matched sessions use "associated with" and show their interval.
@@ -112,7 +128,7 @@ Agent Score   69 / 100      interval 2.4      7 days      1,240 sessions      v1
    36   Reliability    95.0% one-session success; 36% chance of 20 in a row
    84   Cost           Spend 91 · Context 72 · Tools 76 · Memory 94 · Recovery 88
    72   Speed          28 of 100 critical-path hours estimated avoidable
-   90   Safety         1 confirmed failure in 10,000 examined sessions
+   90   Safety         1 confirmed failure in 1,000 examined sessions
 ```
 
 The composite is:
@@ -166,35 +182,46 @@ expanded view.
 ### Outcome example
 
 ```text
-78   Outcome           mean calibrated P(success) = 0.78
-     890 analyzed sessions, covering 72% of eligible traffic
+78   Outcome           selection-corrected success rate = 0.78
+     890 examined sessions, covering 72% of eligible traffic
 
-Cause                                      Reach          Attributed   Fix gain
-Users corrected or abandoned               204 sessions      -9 pts      +7
-Refund-flow loop signal                     190 sessions      -7 pts      +5
-No usable final output                       36 sessions      -4 pts      +4
-Other calibrated evidence                                  -2 pts       -
+Issue                                      Observed failed sessions
+Users corrected or abandoned                         73 sessions
+Refund-flow loop signal                              68 sessions
+No usable final output                               36 sessions
 ```
 
-The cause rows explain the model's estimate. They do not claim that every session with a weak signal
-failed.
+The score comes from task-outcome judgments. Issue rows explain where failures concentrate without
+claiming that every affected session failed or that removing one issue guarantees a fixed point
+gain. The compact value is the raw number of observed failed sessions. Selection-corrected reach and
+failed reach still use stored inclusion probabilities for ranking and progress, but are not shown as
+the row's session count.
+
+Each issue uses the inclusion probability of the reader that produced that issue. Direct telemetry
+findings and stored conversation moments have probability one; they do not inherit the task-outcome
+judge's sampling rate. The issue and endpoint probabilities multiply only when they are genuinely
+independent draws. A signal discovered from the endpoint verdict shares that draw and applies it once.
+Conversation moments aggregate by their semantic kind set rather than by occurrence id.
 
 ### Safety example
 
 ```text
-90   Safety            q = 1 / 10,000       100 * (1 - q)^1000 = 90.5
+90   Safety            q = 1 / 1,000        100 * (1 - q)^100 = 90.5
      interval 56 to 99
 
 Confirmed harm
-Assistant disclosed personal data            1 session      -10 pts
+Issue                                                    Sessions
+Assistant disclosed personal data                      1 session
 
 Exposure only
-Injection attempts received                 340 sessions
-Unsafe user content received                 82 sessions
+Issue                                                    Sessions
+Injection attempts received                          250 sessions
+Unsafe user content received                          60 sessions
 ```
 
 Safety always shows the wide interval created by rare events. Exposure counts remain outside the
-formula.
+formula. Harm and exposure estimates use stored inclusion probabilities for ranking and progress;
+the compact row value is the raw observed session count.
 
 ## Cause destinations
 
@@ -205,11 +232,22 @@ formula.
 | Memory | repeated searches, no-op writes, and reverted writes |
 | Cost | family health, cache opportunity, context use, pricing coverage, and recoverable spend |
 | Signals | recurring defects, examples, patterns, and associated effects |
-| Behaviors | Outcome evidence grouped by conversation topic |
-| Settings | flagger coverage, safety screening, and policy controls |
+| Behaviors | later Outcome grouping by conversation topic |
+| Settings | later flagger coverage and safety screening details |
 
 A signal row links to its signal page. That page already owns examples, lifecycle, dispatch, and
 resolution. The benchmark page ranks the consequence and does not duplicate the workflow.
+
+The Sessions destination has no page keyed by a finding kind, because a terminal failure or an
+Outcome issue is not a filterable session property. Rows that lead there carry a capped sample of
+the session ids they were built from and open the Sessions list filtered to exactly those, with the
+filter panel open so the list reads as a sample of the row's reach rather than all of it. A row that
+kept no example sessions links nowhere, which stays the honest default.
+
+The compact evidence list always renders the raw observed count as `10 sessions`. Estimated reach
+still determines ranking and relative progress, but is not printed beside the row. The link's
+accessible label names the number of example sessions it opens, which may be capped below the
+observed count.
 
 ## Recommendations
 
@@ -256,6 +294,10 @@ dimension's coverage or confidence gate fails. It still shows:
 Each dimension lists the observations available so far and the exact condition blocking publication.
 No candidate or partial dimension number is shown.
 
+A selected date with a published snapshot shows the score evolution graph. A selected date without a
+snapshot shows "Requirements for this date" and that UTC date. Missing evidence has an explicit
+unavailable state; requirements from another date are never substituted.
+
 Modeled effect and fix-gain ranking wait for enough evidence. Exact money and time observations do
 not.
 
@@ -269,7 +311,8 @@ The daily chart shows the composite and each dimension as separate series. It ma
 - dates without a published score as gaps.
 
 The point tooltip shows the stored point estimate, interval, scoring version, window length, and
-eligible-session count. Historical causes and native estimator inputs are not stored in snapshots.
+eligible-session count. Historical causes and native estimator values are retained in the stored
+explanation.
 
 ## Statements the page must avoid
 

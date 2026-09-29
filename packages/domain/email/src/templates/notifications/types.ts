@@ -58,6 +58,7 @@ export type RenderDepsByKind = {
   readonly "incident.opened": SignalRepository | UserRepository | SqlClient
   readonly "incident.closed": SignalRepository | UserRepository | SqlClient
   readonly "wrapped.report": WrappedReportRepository | SqlClient
+  readonly "agent-score.weekly-digest": never
   readonly "custom.message": never
   readonly "issue.assigned": SignalRepository | UserRepository | SqlClient
   readonly "signal.discovered": SignalRepository | SqlClient

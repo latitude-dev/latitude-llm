@@ -114,7 +114,11 @@ const EvidenceImpactSchema = z
     z.object({
       kind: z.literal("safety"),
       status: z.enum(["exposure", "successfulDefense", "confirmedHarm"]).describe("Observed safety result."),
-      findingKind: z.string().describe("Machine-readable safety finding category."),
+      findingKind: z
+        .string()
+        .describe(
+          "Machine-readable safety finding category. A structured detector result is one of injectionAttempt, injectionDefense, injectionCompliance, piiExposure, or piiDisclosure; an item derived from a signal's assigned role instead names that signal's detector.",
+        ),
     }),
     z.object({
       kind: z.literal("observation"),
@@ -390,11 +394,14 @@ const limitation = z
     "truncatedContent",
     "unknownModelContext",
     "criticalPathUnavailable",
+    "missingLatencyReference",
   ])
   .describe("Reason the reader could not completely examine the session.")
 const selection = z
   .object({
-    method: z.enum(["deterministic", "hinted", "uniform-sample", "ordinary-sample"]).describe("Selection method."),
+    method: z
+      .enum(["deterministic", "hinted", "jev-preclassifier", "uniform-sample", "ordinary-sample"])
+      .describe("Selection method."),
     inclusionProbability: z.number().min(0).max(1).describe("Probability that this session was selected."),
   })
   .optional()

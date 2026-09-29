@@ -20,11 +20,19 @@ class Experiment(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this experiment."),
     ]
+    """
+    Organization that owns this experiment.
+    """
+
     project_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectId"),
         pydantic.Field(alias="projectId", description="Project this experiment belongs to."),
     ]
+    """
+    Project this experiment belongs to.
+    """
+
     slug: str = pydantic.Field()
     """
     URL-safe slug derived from `name`. Unique within the project.
@@ -50,10 +58,17 @@ class Experiment(UniversalBaseModel):
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
     ]
+    """
+    ISO-8601 timestamp of creation.
+    """
+
     updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="updatedAt"),
         pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last update."),
     ]
+    """
+    ISO-8601 timestamp of the last update.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
