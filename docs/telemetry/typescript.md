@@ -4,14 +4,17 @@ description: Instrument TypeScript and JavaScript apps with Latitude Telemetry.
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # TypeScript SDK
 
-Use `@latitude-data/telemetry` to send LLM traces from TypeScript and JavaScript applications to Latitude. The SDK is built on OpenTelemetry and can attach to an existing tracing setup when your app already uses one.
+Use `@latitude-data/telemetry` to send LLM traces from TypeScript and JavaScript applications to Latitude. The SDK is built on OpenTelemetry and can attach to an existing tracing setup when your app already uses one. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 <SkillsCallout />
 
 ## Installation
+
+You need a Latitude API key and a project slug. No account yet? Your agent can create a temporary one with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 ```bash
 npm install @latitude-data/telemetry openai
@@ -46,6 +49,10 @@ await latitude.shutdown()
 ```
 
 `new Latitude()` returns immediately. Await `latitude.ready` before creating LLM clients or making calls.
+
+## See what was captured
+
+<FirstArtifact />
 
 ## Add context with `capture()`
 

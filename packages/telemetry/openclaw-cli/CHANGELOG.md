@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-09
+
+Lockstep release with `@latitude-data/openclaw-telemetry` 0.1.0.
+
+### Fixed
+
+- **Install works on OpenClaw 2026.9.** OpenClaw now requires explicit capability consent for every non-bundled plugin, and `openclaw plugins install` without `--accept-capabilities` aborted with `requires capability consent`. The installer passes the flag; running `npx` is the consent.
+
+### Added
+
+- `--runtime-spec=<spec>` installs that spec instead of the pinned npm version (for example `npm-pack:/path/to/plugin.tgz` for a pre-release build) and skips the npm registry lockstep check.
+
+### Changed
+
+- Minimum OpenClaw version is 2026.8.1, matching the runtime.
+- `RUNTIME_VERSION` is 0.1.0.
+
 ## [0.0.9] - 2026-06-18
 
 Lockstep release with `@latitude-data/openclaw-telemetry` 0.0.9. `RUNTIME_VERSION` is bumped to `0.0.9` so `latitude-openclaw install` pins to the runtime that supports local custom attribute redaction.

@@ -1,4 +1,4 @@
-import type { ScoreAnalyticsOptions, ScoreAnalyticsRepositoryShape } from "@domain/scores"
+import type { Score, ScoreAnalyticsOptions, ScoreAnalyticsRepositoryShape } from "@domain/scores"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { type ChSqlClient, OrganizationId, ProjectId, type ScoreId, SessionId, SignalId, TraceId } from "@domain/shared"
 import { setupTestClickHouse } from "@platform/testkit"
@@ -42,6 +42,25 @@ function setupFixture() {
     },
     insertSpans: async (rows: SpanRow[]) => {
       await ch.client.insert({ table: "spans", values: rows, format: "JSONEachRow" })
+    },
+    readScoreProvenance: async (id: ScoreId) => {
+      const result = await ch.client.query({
+        query: `SELECT flagger_slug, scoring_artifact_version, flagger_finding_key, flagger_path, flagger_finding_kind, flagger_bundle_key
+          FROM scores
+          WHERE organization_id = {organizationId:String} AND id = {id:FixedString(24)}
+          LIMIT 1`,
+        query_params: { organizationId: ORG_ID, id },
+        format: "JSONEachRow",
+      })
+      const rows = await result.json<{
+        flagger_slug: string | null
+        scoring_artifact_version: string | null
+        flagger_finding_key: string | null
+        flagger_path: string | null
+        flagger_finding_kind: string | null
+        flagger_bundle_key: string | null
+      }>()
+      return rows[0]
     },
   }
 }
@@ -166,6 +185,142 @@ describe("ScoreAnalyticsRepository", () => {
       await fixture.insertScores([makeScoreRow({ id })])
       const exists = await fixture.runCh(fixture.repo.existsById(id as ScoreId))
       expect(exists).toBe(true)
+    })
+
+    it("dual-writes bounded flagger provenance from new system annotations", async () => {
+      const id = "ffffffffffffffffffffffff" as ScoreId
+      const now = new Date("2026-09-07T10:00:00.000Z")
+      const score = {
+        id,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionId: SessionId("session-provenance"),
+        traceId: TraceId("t".repeat(32)),
+        spanId: null,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        simulationId: null,
+        signalId: null,
+        value: 0,
+        passed: false,
+        feedback: "The deterministic reader found an unusable response.",
+        error: null,
+        errored: false,
+        duration: 0,
+        tokens: 0,
+        cost: 0,
+        draftedAt: null,
+        annotatorId: null,
+        metadata: {
+          rawFeedback: "The deterministic reader found an unusable response.",
+          flaggerSlug: "empty-response",
+          flaggerFindingKey: "a".repeat(64),
+          flaggerPath: "deterministic",
+          flaggerFindingKind: "blank",
+          flaggerBundleKey: "empty-response:blank",
+        },
+        createdAt: now,
+        updatedAt: now,
+      } satisfies Score
+
+      await fixture.runCh(fixture.repo.insert(score))
+
+      expect(await fixture.readScoreProvenance(id)).toEqual({
+        flagger_slug: "empty-response",
+        scoring_artifact_version: null,
+        flagger_finding_key: "a".repeat(64),
+        flagger_path: "deterministic",
+        flagger_finding_kind: "blank",
+        flagger_bundle_key: "empty-response:blank",
+      })
+    })
+
+    it("leaves provenance null for readable legacy flagger annotations", async () => {
+      const id = "llllllllllllllllllllllll" as ScoreId
+      const now = new Date("2026-09-07T10:00:00.000Z")
+      const score = {
+        id,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionId: SessionId("legacy-session"),
+        traceId: TraceId("t".repeat(32)),
+        spanId: null,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        simulationId: null,
+        signalId: null,
+        value: 0,
+        passed: false,
+        feedback: "Legacy flagger annotation.",
+        error: null,
+        errored: false,
+        duration: 0,
+        tokens: 0,
+        cost: 0,
+        draftedAt: null,
+        annotatorId: null,
+        metadata: { rawFeedback: "Legacy flagger annotation.", flaggerSlug: "empty-response" },
+        createdAt: now,
+        updatedAt: now,
+      } satisfies Score
+
+      await fixture.runCh(fixture.repo.insert(score))
+
+      expect(await fixture.readScoreProvenance(id)).toEqual({
+        flagger_slug: "empty-response",
+        scoring_artifact_version: null,
+        flagger_finding_key: null,
+        flagger_path: null,
+        flagger_finding_kind: null,
+        flagger_bundle_key: null,
+      })
+    })
+
+    it("projects the structured Safety finding kind so coverage queries need no metadata parse", async () => {
+      const id = "ssssssssssssssssssssssss" as ScoreId
+      const now = new Date("2026-09-11T10:00:00.000Z")
+      const score = {
+        id,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionId: SessionId("safety-session"),
+        traceId: TraceId("t".repeat(32)),
+        spanId: null,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        simulationId: null,
+        signalId: null,
+        value: 0,
+        passed: false,
+        feedback: "The agent printed its hidden system prompt.",
+        error: null,
+        errored: false,
+        duration: 0,
+        tokens: 0,
+        cost: 0,
+        draftedAt: null,
+        annotatorId: null,
+        metadata: {
+          rawFeedback: "The agent printed its hidden system prompt.",
+          flaggerSlug: "jailbreaking",
+          flaggerPath: "sampled",
+          scoringArtifactVersion: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          safetyFindingKind: "injectionCompliance",
+        },
+        createdAt: now,
+        updatedAt: now,
+      } satisfies Score
+
+      await fixture.runCh(fixture.repo.insert(score))
+
+      expect(await fixture.readScoreProvenance(id)).toEqual({
+        flagger_slug: "jailbreaking",
+        scoring_artifact_version: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+        flagger_finding_key: null,
+        flagger_path: "sampled",
+        flagger_finding_kind: "injectionCompliance",
+        flagger_bundle_key: null,
+      })
     })
   })
 

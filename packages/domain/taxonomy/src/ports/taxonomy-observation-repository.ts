@@ -39,7 +39,8 @@ export interface ReassignTaxonomyObservationInput {
 
 export interface ReassignTaxonomyObservationByIdInput {
   readonly observationId: string
-  readonly assignedClusterId: TaxonomyClusterId
+  /** `null` with a `noise` method clears the assignment: seen, belongs nowhere. */
+  readonly assignedClusterId: TaxonomyClusterId | null
   readonly assignmentMethod: TaxonomyMomentObservation["assignmentMethod"]
   readonly assignmentConfidence: number
   readonly reassignmentRunId: TaxonomyRunId

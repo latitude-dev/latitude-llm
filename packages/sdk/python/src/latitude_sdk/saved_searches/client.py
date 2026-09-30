@@ -40,7 +40,7 @@ class SavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -79,7 +79,7 @@ class SavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         name : str
             Human-readable name. Used to derive the slug.
@@ -124,7 +124,7 @@ class SavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         search_slug : str
             Saved-search slug (human-readable identifier within the project).
@@ -161,7 +161,7 @@ class SavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         search_slug : str
             Saved-search slug (human-readable identifier within the project).
@@ -204,7 +204,7 @@ class SavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         search_slug : str
             Saved-search slug (human-readable identifier within the project).
@@ -260,7 +260,7 @@ class SavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         search_slug : str
             Saved-search slug (human-readable identifier within the project).
@@ -333,7 +333,7 @@ class AsyncSavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -380,7 +380,7 @@ class AsyncSavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         name : str
             Human-readable name. Used to derive the slug.
@@ -433,7 +433,7 @@ class AsyncSavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         search_slug : str
             Saved-search slug (human-readable identifier within the project).
@@ -478,7 +478,7 @@ class AsyncSavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         search_slug : str
             Saved-search slug (human-readable identifier within the project).
@@ -529,7 +529,7 @@ class AsyncSavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         search_slug : str
             Saved-search slug (human-readable identifier within the project).
@@ -593,7 +593,7 @@ class AsyncSavedSearchesClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         search_slug : str
             Saved-search slug (human-readable identifier within the project).

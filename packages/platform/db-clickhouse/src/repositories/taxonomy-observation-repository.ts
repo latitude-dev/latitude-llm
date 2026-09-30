@@ -279,7 +279,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                     organizationId: organizationId as string,
                     projectId: projectId as string,
                     observationIds: group.map((assignment) => assignment.observationId),
-                    assignedClusterIds: group.map((assignment) => assignment.assignedClusterId as string),
+                    assignedClusterIds: group.map((assignment) => (assignment.assignedClusterId as string) ?? ""),
                     assignmentConfidences: group.map((assignment) => assignment.assignmentConfidence),
                     assignmentMethod: first.assignmentMethod,
                     reassignmentRunId: first.reassignmentRunId as string,

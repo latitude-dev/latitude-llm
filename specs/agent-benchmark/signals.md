@@ -6,7 +6,7 @@
 
 A signal is Latitude's unit for a recurring defect. It has a name, description, example sessions,
 cost impact, trend, and lifecycle. The Agent Score uses signals as evidence about outcomes, terminal
-failure, resource waste, or confirmed harm.
+failure, cost efficiency, speed efficiency, or confirmed harm.
 
 A signal has no point budget and its existence does not lower a score. The effect comes from the
 sessions it touches and the consequence measured on those sessions.
@@ -45,10 +45,10 @@ model classification and static fallback are unavailable or empty all use an emp
 
 | Role | How occurrences are used |
 | --- | --- |
-| `taskOutcome` | a feature in the calibrated per-session Task Success model |
+| `taskOutcome` | an Outcome issue linked to examined task-outcome results where possible |
 | `completionOutcome` | informs the usable or terminal completion result established per occurrence |
 | `operationalIncident` | records an incident whose terminal or recovered result is decided per occurrence |
-| `spendEfficiency` | candidate explanation for incremental spend after deterministic waste is accounted for |
+| `spendEfficiency` | persisted compatibility name for a candidate Cost-family explanation after deterministic evidence is accounted for |
 | `criticalPathEfficiency` | candidate explanation for incremental critical-path time after deterministic waste is accounted for |
 | `confirmedHarm` | enters Safety only when the finding confirms agent-produced harm |
 | `exposure` | context on Safety; never enters the failure numerator |
@@ -85,7 +85,7 @@ When model generation fails, flagger-derived signals can use this static fallbac
 
 | Flagger | Evidence roles |
 | --- | --- |
-| `task-success` | Outcome `taskOutcome` for failed scores only |
+| `task-failure` | Outcome `taskOutcome` for failed scores only |
 | `tool-call-errors` | Reliability `operationalIncident`; Cost `spendEfficiency`; Speed `criticalPathEfficiency` |
 | `output-schema-validation` | Outcome `taskOutcome`; Reliability `completionOutcome` |
 | `empty-response` | Outcome `taskOutcome`; Reliability `completionOutcome` |
@@ -151,13 +151,12 @@ native quantity.
 
 ### Outcome
 
-Signal membership is one feature in the calibrated Task Success model. Signals are fit jointly with
-moments, final-output evidence, and other signal memberships. A newly promoted signal starts from a
-hierarchical prior based on its flagger and evidence role. Its effect moves toward its own observed
-association as sampled Task Success verdicts accumulate.
+Outcome signals explain recurring issues. The project cause reader reports each signal's affected
+sessions and its overlap with compatible examined task-outcome failures. Several signals on one
+session still contribute one the task-failure judge result to the project estimator.
 
-The model reports an associated change in task-success probability. It does not call that change
-causal unless the signal definition itself establishes the endpoint.
+Signal occurrence does not apply a separate point deduction. A signal without enough examined
+overlap remains visible with reach and examples, but without an Outcome effect claim.
 
 ### Reliability
 
@@ -170,14 +169,25 @@ terminal failures but cannot create new ones.
 
 ### Cost and Speed
 
-The estimator first computes exact resource waste from deterministic metrics whose avoidability is
-proven. A deterministic repetition detector without redundancy proof is still modeled evidence. The
-estimator then compares signal-positive sessions with matched signal-negative sessions to estimate
-residual incremental spend or critical-path time.
+Cost signals do not need to convert to money. The estimator first links each occurrence to
+deterministic source atoms and their resolved Cost family. A linked signal explains the existing
+family penalty and adds no second penalty. `spendEfficiency` remains the persisted PR 1 role name so
+existing signal JSON does not require migration; it means the general Cost estimator channel here.
+
+An eligible unlinked Cost signal can enter a jointly estimated residual only when comparable clean
+sessions support an association with one or more Cost-family outcomes. The estimator assigns the
+resolved family at read time, groups correlated signals, and applies the versioned residual cap. It
+must not turn signal count, model confidence, or prose severity into points. A deterministic
+repetition detector without redundancy proof is still modeled evidence.
+
+Speed retains the stricter resource counterfactual. After exact avoidable critical-path time is
+resolved, the estimator can compare signal-positive sessions with matched signal-negative sessions
+to estimate residual incremental critical-path time.
 
 Matching controls for behavior cluster, provider, model, input and output size, toolset, streaming
-mode, and other stable workload fields when available. Several signals are fit together. The session
-counterfactual is capped by actual spend and time.
+mode, and other stable workload fields when available. Several signals are fit together. Cost family
+effects are capped by that family's eligible units; the Speed counterfactual is capped by observed
+critical-path time.
 
 A weak comparison shrinks the signal effect toward zero and widens its interval. A signal without a
 credible clean comparison appears on the page with "effect not yet measured" rather than an invented
@@ -204,10 +214,11 @@ Every logical screening decision stores:
 - inclusion probability;
 - finding kind and conditional fields when matched.
 
-Task Success uses the same configurable sampling and hint path as other flaggers. Outcome corrects
+the task-failure judge uses the same configurable sampling and hint path as other flaggers. Outcome corrects
 its verdicts with stored inclusion probabilities. Safety selects a complete detector suite per
 session. Other sampled observations use inverse-probability weights. A decision without a known
-inclusion probability is usable for an example or cause count, but not for a score.
+inclusion probability is usable for an example or raw coverage count, but not for a score or ranked
+issue estimate.
 
 Readers use only the latest analysis generation at the calculation cutoff and collapse its
 append-only decision revisions by stable id. Superseded generations do not multiply occurrence or
@@ -228,15 +239,11 @@ The following invariants apply:
 The joint estimator groups near-duplicate signals before attribution. The dimension score is based on
 the session estimand, not on the number or identity of clusters.
 
-## Promotion evidence and scoring evidence
+## Promotion evidence and issue evidence
 
-Sessions used to discover and promote a signal cannot be the only sessions used to estimate its
-effect. That would select the cluster for looking bad and then score the same evidence as an unbiased
-sample.
-
-The estimator uses post-promotion observations or cross-fitting. In cross-fitting, each session is
-scored with signal-effect parameters fit without that session's fold. These facts remain current
-estimator diagnostics and are not stored in daily score snapshots.
+Sessions used to discover and promote a signal can establish its examples and reach. They cannot
+establish an unbiased relationship with the task-failure judge by themselves. Outcome issue rows report
+examined failure overlap only when compatible the task-failure judge decisions cover the signal's sessions.
 
 Historical occurrences without measurable selection remain examples and counts until a full score
 window of usable decisions accumulates.

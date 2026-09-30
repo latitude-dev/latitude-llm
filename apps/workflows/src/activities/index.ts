@@ -1,4 +1,8 @@
 export {
+  type SnapshotAgentScoreActivityInput,
+  snapshotAgentScoreActivity,
+} from "./agent-score-activities.ts"
+export {
   type AnalyzeSessionActivityInput,
   type AnalyzeSessionActivityResult,
   analyzeSessionActivity,
@@ -37,8 +41,12 @@ export {
   type DraftSessionFlaggerAnnotationActivityInput,
   draftSessionFlaggerAnnotation,
   type SaveSessionFlaggerAnnotationActivityInput,
+  type SaveSessionFlaggerSafetyFindingActivityInput,
+  type SaveSessionFlaggerVerdictActivityInput,
   type ScreenSessionFlaggersActivityInput,
   saveSessionFlaggerAnnotation,
+  saveSessionFlaggerSafetyFinding,
+  saveSessionFlaggerVerdict,
   screenSessionFlaggers,
 } from "./flagger-session-activities.ts"
 export { buildOptimizationDedupeKey, scheduleEvaluationOptimization } from "./schedule-evaluation-optimization.ts"

@@ -9,6 +9,7 @@ import {
   EyeOffIcon,
   Fingerprint,
   FlaskConical,
+  GaugeIcon,
   ImportIcon,
   Key,
   type LucideIcon,
@@ -43,6 +44,15 @@ interface ProjectSection {
 }
 
 const PROJECT_SECTIONS: readonly ProjectSection[] = [
+  {
+    key: "agent-score",
+    label: "Agent Score",
+    icon: GaugeIcon,
+    group: "observe",
+    path: (slug) => `/projects/${slug}/agent-score`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/agent-score`),
+    featureFlag: "agentScore",
+  },
   {
     key: "sessions",
     label: "Sessions",

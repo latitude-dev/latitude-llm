@@ -113,18 +113,19 @@ Relationship fields:
 
 All score producers reuse one canonical Postgres-first write path:
 
-- public machine-facing score ingestion uses `POST /v1/organizations/:organizationId/projects/:projectId/scores`
+- public machine-facing score ingestion uses `POST /v1/projects/:projectSlug/scores`
 - default `/scores` uploads create `source = "custom"` rows and support arbitrary custom metadata
 - clients that upload locally executed Latitude evaluation results reuse the same `/scores` route with `_evaluation: true`, evaluation-score metadata, and the evaluation CUID as `source_id`
 - custom scores written through `/scores` always stay unowned at write time and use signal discovery when they are eligible
 - evaluation scores written through `/scores` always stay unowned at write time; later centralized signal handling may resolve an already linked evaluation signal before similarity search starts
 - internal live evaluation execution writes passed monitor results unowned, writes failed non-errored signal-linked monitor results with `signalId = evaluation.signalId` immediately, and writes errored monitor results as unowned immutable evaluation scores with `error != null`
 - non-draft evaluation scores with a `trace_id` are unique per `(organization_id, project_id, source_id, trace_id)` in Postgres, so canonical evaluation persistence stays idempotent even when concurrent workers race past an earlier duplicate precheck
-- annotation ingestion stays on `POST /v1/organizations/:organizationId/projects/:projectId/annotations` even though annotations still persist canonical score rows
+- annotation creation stays on `POST /v1/projects/:projectSlug/annotations` even though annotations still persist canonical score rows
+- API-created annotations use their generated score id for direct GET, PATCH, and DELETE operations; PATCH retains that id while refreshing analytics and downstream signal processing
 - internal evaluation and simulation writers reuse the same score-validation and persistence path rather than maintaining a second storage model
 - source-specific metadata is validated exactly before persistence, so evaluation, annotation, and custom writers cannot drift into incompatible payload shapes
 - instrumented and uninstrumented writes both use the same canonical row shape, with `session_id`, `trace_id`, and `span_id` remaining optional
-- draft updates rewrite the same canonical Postgres row in place while `draftedAt` is still set; once a score is published, later writes must fail instead of mutating the immutable row
+- draft updates rewrite the same canonical Postgres row in place while `draftedAt` is still set; published scores are immutable except for the explicit API-annotation update use case, which retains the score id and refreshes its derived state
 
 ## Metadata
 
@@ -132,7 +133,20 @@ Source-specific metadata stays intentionally lightweight:
 
 - evaluation scores store `evaluationHash`
 - annotation scores store raw or drafted feedback plus the minimal GenAI anchor fields needed to reopen either the whole-conversation annotation or the exact selected message/text range
-- flagger-authored annotation rows (`sourceId: "SYSTEM"`) add `flaggerSlug`, the content anchor `contentHash`, and `flaggerTraceId` — the Latitude trace of the generation that made the call, so a detection can be traced back to the decision behind it and graded (see [`./flaggers.md`](./flaggers.md#grading-a-flaggers-own-decisions)). `flaggerTraceId` is absent on deterministic detections, cached generations, and rows predating it.
+- flagger-authored annotation rows (`sourceId: "SYSTEM"`) add `flaggerSlug`, the content anchor
+  `contentHash`, and `flaggerTraceId` — the Latitude trace of the generation that made the call, so a
+  detection can be traced back to the decision behind it and graded (see
+  [`./flaggers.md`](./flaggers.md#grading-a-flaggers-own-decisions)). New rows also identify the
+  `flaggerPath` as `deterministic` or `sampled`: deterministic discovery rows link to the calculated
+  source fact with `flaggerFindingKey`, while sampled model results identify their compatible prompt,
+  judge configuration, and result schema with `scoringArtifactVersion`. All four fields are optional
+  so rows predating structured provenance remain readable. `flaggerTraceId` is absent on deterministic
+  detections, cached generations, and rows predating it. A deterministic score stores only the key of
+  the primary finding selected by the strategy; the full finding set is recalculated from session
+  telemetry when the assessment report is resolved. A sampled binary flagger verdict uses the score's
+  existing `passed`, `value`, and `feedback` fields and records `flagger-classification-v1` as its
+  current scoring artifact version. Change that version whenever the classifier prompt contract,
+  supported judge configuration, or result schema changes.
 - custom scores store arbitrary user-defined metadata
 
 ### Shareable conversation anchors
@@ -142,6 +156,14 @@ Anchored annotation scores (message-level or part-level) can deep-link into the 
 Opening a session from a signal occurrence uses the same mechanism: the session route carries `scoreId` for the score that recorded the occurrence there, so the first view lands on the evidence message rather than the session header. See [`./annotations.md`](./annotations.md) and [`./conversation-timeline.md`](./conversation-timeline.md).
 
 The metadata field is not intended for heavy analytical querying.
+
+ClickHouse dual-writes only `flagger_slug`, `scoring_artifact_version`, `flagger_finding_key`, and
+`flagger_path` from new SYSTEM annotation scores. Those columns are nullable so rows written before
+the provenance contract remain explicitly unknown. Detailed deterministic finding fields stay in
+their source telemetry and are recalculated by the assessment reader. `readFlaggerScoreProvenance`
+returns `compatible` only for a complete deterministic `(path, finding key)` tuple or sampled `(path,
+artifact version)` tuple. Historical and partial tuples remain `legacy` raw evidence; no Postgres or
+ClickHouse backfill is performed.
 
 ## Postgres Indexing
 

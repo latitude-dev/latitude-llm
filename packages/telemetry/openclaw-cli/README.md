@@ -1,19 +1,12 @@
 # @latitude-data/openclaw-telemetry-cli
 
-> [!WARNING]
-> **Deprecated.** This installs the deprecated `@latitude-data/openclaw-telemetry`
-> plugin. Use OpenClaw's official [`@openclaw/diagnostics-otel`](https://docs.openclaw.ai/gateway/opentelemetry)
-> exporter pointed at Latitude instead — setup at
-> [Latitude docs → OpenClaw telemetry](https://docs.latitude.so/telemetry/openclaw).
-> No longer maintained.
-
 One-shot installer for the [`@latitude-data/openclaw-telemetry`](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw#readme) OpenClaw plugin. Wraps `openclaw plugins install` + the manual `openclaw config set` flow into a single `npx -y` command, with TTY prompts, CI flags, dry-run, custom config dir, upgrade detection, and the gateway restart.
 
 For details on the plugin runtime itself — what it sends, the span tree, and the manual install flow — see the [runtime README](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw#readme).
 
 ## Requirements
 
-- **OpenClaw 2026.4.25 or newer** on PATH.
+- **OpenClaw 2026.8.1 or newer** on PATH.
 - A **Latitude API key** from `https://console.latitude.so/projects/<your-slug>/settings/keys` and the matching **project slug**.
 
 ## Install
@@ -21,7 +14,7 @@ For details on the plugin runtime itself — what it sends, the span tree, and t
 Interactive (recommended for first-time setup):
 
 ```bash
-npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 install
+npx -y @latitude-data/openclaw-telemetry-cli@0.1.0 install
 ```
 
 The CLI prompts for your API key and project slug, installs the plugin, writes the config, validates it, and offers to restart the gateway.
@@ -29,7 +22,7 @@ The CLI prompts for your API key and project slug, installs the plugin, writes t
 Non-interactive / CI:
 
 ```bash
-npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 install \
+npx -y @latitude-data/openclaw-telemetry-cli@0.1.0 install \
   --api-key="$LATITUDE_API_KEY" \
   --project=my-project \
   --yes \
@@ -42,12 +35,12 @@ npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 install \
 
 In order, on every install:
 
-1. **Verifies your OpenClaw version** (`openclaw --version` ≥ 2026.4.25). Aborts with an upgrade message on older versions.
-2. **Verifies the runtime contract** — that `@latitude-data/openclaw-telemetry@0.0.9` exists on npm. (Catches half-published releases.)
-3. **Detects any prior install** via `<configDir>/plugins/installs.json`. Renders `Upgrading 0.0.8 → 0.0.9` (or `Re-applying 0.0.9 (idempotent)`) if found.
+1. **Verifies your OpenClaw version** (`openclaw --version` ≥ 2026.8.1). Aborts with an upgrade message on older versions.
+2. **Verifies the runtime contract** — that `@latitude-data/openclaw-telemetry@0.1.0` exists on npm. (Catches half-published releases.)
+3. **Detects any prior install** via `<configDir>/plugins/installs.json`. Renders `Upgrading 0.0.8 → 0.1.0` (or `Re-applying 0.1.0 (idempotent)`) if found.
 4. **Prompts for your API key and project slug** — interactive only; flags / `--yes` skip the prompts.
 5. **Backs up `openclaw.json`** to `openclaw.json.latitude-bak` before any change.
-6. **Runs `openclaw plugins install @latitude-data/openclaw-telemetry@0.0.9 --force`** — npm fetch, security scan, extension placement, install record, disabled `plugins.entries[id]`.
+6. **Runs `openclaw plugins install @latitude-data/openclaw-telemetry@0.1.0 --force --accept-capabilities`** — npm fetch, extension placement, install record, capability consent, disabled `plugins.entries[id]`. Running the installer is the consent OpenClaw asks for.
 7. **Writes the plugin config** atomically (temp + rename): `apiKey`, `project`, `baseUrl` (only if `--staging` / `--dev`), `config.allowConversationAccess` AND `hooks.allowConversationAccess` (always coupled — both `true` by default; `--no-content` to emit structural-only telemetry).
 8. **Adds the plugin id to `plugins.allow`** to silence OpenClaw's "untracked code" warning. Pass `--no-trust` to opt out.
 9. **Validates** the result with `openclaw config validate --json`. If it fails, restores the backup and aborts with the validator's message.
@@ -64,6 +57,7 @@ In order, on every install:
 | `--no-content` | Disable conversation capture (still emits structural-only telemetry — timing, tokens, ids). Mirrored into both `config.allowConversationAccess` and `hooks.allowConversationAccess`. |
 | `--allow-conversation` | Force conversation capture on (overrides existing config). |
 | `--no-trust` | Skip auto-adding the plugin id to `plugins.allow`. |
+| `--runtime-spec=<spec>` | Install this spec instead of the pinned npm version, e.g. `npm-pack:/path/to/plugin.tgz` for a pre-release build. Skips the npm registry lockstep check. |
 | `--openclaw-dir=<path>` | Override the OpenClaw config directory. See [Custom config directory](#custom-config-directory). |
 | `--dry-run` | Preview every change without touching the filesystem or spawning subprocesses. See [Dry run](#dry-run). |
 | `--restart` | Always restart the gateway, even non-TTY. CI escape hatch for "do everything". |
@@ -79,7 +73,7 @@ In order, on every install:
 Preview every change without touching the filesystem or spawning subprocesses:
 
 ```bash
-npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 install --dry-run \
+npx -y @latitude-data/openclaw-telemetry-cli@0.1.0 install --dry-run \
   --api-key=lat_xxx --project=my-project
 ```
 
@@ -101,7 +95,7 @@ The resolved path is printed at install start. The CLI passes `OPENCLAW_HOME=<re
 ### Structural-only telemetry
 
 ```bash
-npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 install --no-content \
+npx -y @latitude-data/openclaw-telemetry-cli@0.1.0 install --no-content \
   --api-key=lat_xxx --project=my-project
 ```
 
@@ -111,11 +105,11 @@ The plugin still emits the full span tree — timings, token usage, model name, 
 
 ```bash
 # Staging
-npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 install --staging --yes \
+npx -y @latitude-data/openclaw-telemetry-cli@0.1.0 install --staging --yes \
   --api-key=lat_xxx --project=my-project
 
 # Local dev
-npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 install --dev --yes \
+npx -y @latitude-data/openclaw-telemetry-cli@0.1.0 install --dev --yes \
   --api-key=lat_xxx --project=my-project
 ```
 
@@ -124,7 +118,7 @@ npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 install --dev --yes \
 ## Uninstall
 
 ```bash
-npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 uninstall
+npx -y @latitude-data/openclaw-telemetry-cli@0.1.0 uninstall
 ```
 
 The uninstall flow:
@@ -139,7 +133,7 @@ The backup at `openclaw.json.latitude-bak` is kept after uninstall — delete it
 
 ## Lockstep policy
 
-This CLI installs **exactly** `@latitude-data/openclaw-telemetry@0.0.9` (pinned in source as `RUNTIME_VERSION`). Every CLI release is paired with a runtime release of the same version number; bumping the runtime requires bumping the CLI in the same commit and re-publishing both.
+This CLI installs **exactly** `@latitude-data/openclaw-telemetry@0.1.0` (pinned in source as `RUNTIME_VERSION`). Every CLI release is paired with a runtime release of the same version number; bumping the runtime requires bumping the CLI in the same commit and re-publishing both.
 
 If npm doesn't have the exact pinned version (half-published release), the CLI aborts with `Upgrade the CLI: npm install -g @latitude-data/openclaw-telemetry-cli@latest`.
 
@@ -147,7 +141,7 @@ Pinning to an exact version also satisfies OpenClaw's `Pin install specs to exac
 
 ## Why this is a separate package
 
-OpenClaw 2026.4.25+ runs an install-time security scan on `openclaw plugins install` (`plugins.code_safety`, looking for `dangerous-exec` / `env-harvesting` patterns). This CLI uses `child_process.spawn` to invoke OpenClaw — a `dangerous-exec` flag. Keeping the CLI in a **separate npm package** that's installed via `npx` / `npm install -g` rather than `openclaw plugins install` means the CLI never goes through OpenClaw's scanner. The runtime plugin ([`@latitude-data/openclaw-telemetry`](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw)) is installed by this CLI on the operator's behalf and is itself scanner-clean (no `child_process`, no `node:fs` runtime reads).
+OpenClaw scans plugin packages on `openclaw plugins install` for patterns such as `dangerous-exec` and `env-harvesting`, and this CLI uses `child_process.spawn` to invoke OpenClaw. Keeping the CLI in a **separate npm package** that's installed via `npx` / `npm install -g` rather than `openclaw plugins install` keeps the installer out of that scan and out of the plugin's capability surface. The runtime plugin ([`@latitude-data/openclaw-telemetry`](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw)) is installed by this CLI on the operator's behalf and spawns nothing.
 
 See the [runtime CHANGELOG](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/openclaw/CHANGELOG.md) for the wider history of the split.
 

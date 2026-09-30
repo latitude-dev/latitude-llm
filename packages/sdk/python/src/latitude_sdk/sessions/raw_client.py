@@ -20,6 +20,7 @@ from ..types.error import Error
 from ..types.paginated_sessions import PaginatedSessions
 from ..types.paginated_traces import PaginatedTraces
 from ..types.session_analytics_response import SessionAnalyticsResponse
+from ..types.session_assessment import SessionAssessment
 from ..types.session_detail import SessionDetail
 from ..types.session_filter_set import SessionFilterSet
 from ..types.session_memory_changes import SessionMemoryChanges
@@ -58,7 +59,7 @@ class RawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -170,7 +171,7 @@ class RawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
@@ -256,7 +257,7 @@ class RawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -326,6 +327,96 @@ class RawSessionsClient:
             )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    def get_assessment(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        cursor: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SessionAssessment]:
+        """
+        Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        cursor : typing.Optional[str]
+            Opaque cursor returned by a previous assessment page. Omit for the first page.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SessionAssessment]
+            Session assessment page
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/sessions/{encode_path_param(session_id)}/assessment",
+            method="GET",
+            params={
+                "cursor": cursor,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SessionAssessment,
+                    parse_obj_as(
+                        type_=SessionAssessment,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
     def list_traces(
         self,
         project_slug: str,
@@ -343,7 +434,7 @@ class RawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -440,7 +531,7 @@ class RawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -524,7 +615,7 @@ class RawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -611,7 +702,7 @@ class RawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -701,7 +792,7 @@ class RawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -800,7 +891,7 @@ class AsyncRawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -912,7 +1003,7 @@ class AsyncRawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
@@ -998,7 +1089,7 @@ class AsyncRawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -1068,6 +1159,96 @@ class AsyncRawSessionsClient:
             )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    async def get_assessment(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        cursor: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SessionAssessment]:
+        """
+        Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        cursor : typing.Optional[str]
+            Opaque cursor returned by a previous assessment page. Omit for the first page.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SessionAssessment]
+            Session assessment page
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/sessions/{encode_path_param(session_id)}/assessment",
+            method="GET",
+            params={
+                "cursor": cursor,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SessionAssessment,
+                    parse_obj_as(
+                        type_=SessionAssessment,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
     async def list_traces(
         self,
         project_slug: str,
@@ -1085,7 +1266,7 @@ class AsyncRawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -1182,7 +1363,7 @@ class AsyncRawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -1266,7 +1447,7 @@ class AsyncRawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -1353,7 +1534,7 @@ class AsyncRawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -1443,7 +1624,7 @@ class AsyncRawSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.

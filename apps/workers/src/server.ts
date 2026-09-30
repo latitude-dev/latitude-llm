@@ -60,6 +60,8 @@ import {
   getWorkflowStarter,
 } from "./clients.ts"
 import { createAgentDispatchWorker } from "./workers/agent-dispatch.ts"
+import { createAgentScoreWorker } from "./workers/agent-score.ts"
+import { createAgentScoreDigestWorker } from "./workers/agent-score-digest.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
@@ -281,6 +283,17 @@ const bootstrap = async () => {
       postgresClient: ctx.postgresClient,
       clickhouseClient: ctx.clickhouseClient,
     })
+    createAgentScoreWorker({
+      consumer: ctx.consumer,
+      publisher: ctx.publisher,
+      clickhouseClient: ctx.clickhouseClient,
+      workflowStarter: ctx.workflowStarter,
+    })
+    createAgentScoreDigestWorker({
+      consumer: ctx.consumer,
+      publisher: ctx.publisher,
+      adminPostgresClient: getAdminPostgresClient(),
+    })
     createSandboxesWorker({
       consumer: ctx.consumer,
       adminPostgresClient: getAdminPostgresClient(),
@@ -309,6 +322,27 @@ const bootstrap = async () => {
           {},
           { key: "organization-cleanup:daily", pattern: "0 3 * * *", tz: "UTC" },
         )
+        .pipe(withTracing),
+    )
+
+    // Monday morning UTC, after that day's scoring sweep has had time to land, so a project that
+    // published today is digested with today's number rather than yesterday's.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "agent-score-digest",
+          "triggerWeeklyRun",
+          {},
+          { key: "agent-score-digest:weekly", pattern: "0 8 * * 1", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Early UTC, after the previous day has settled past the session-end debounce and before the
+    // working day generates the traffic the next window will cover.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable("agent-score", "sweep", {}, { key: "agent-score:daily", pattern: "0 4 * * *", tz: "UTC" })
         .pipe(withTracing),
     )
 
