@@ -7,7 +7,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
+exclude-newer = "2026-09-14T12:38:47.327563Z"
 exclude-newer-span = "P7D"
 
 [[package]]
@@ -156,7 +156,7 @@ wheels = [
 
 [[package]]
 name = "latitude-sdk"
-version = "9.13.0"
+version = "9.14.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

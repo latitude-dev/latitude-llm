@@ -23,6 +23,7 @@ const finding = (index: number): AssessmentFinding => ({
 
 const input: NormalizedSessionAssessmentInput = {
   hasReadableUserTask: true,
+  momentsAnalyzed: true,
   sessionId: SessionId("session-1"),
   observedMicrocents: 10,
   observedDurationNs: 20,

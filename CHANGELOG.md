@@ -2,6 +2,76 @@
 
 ## Unreleased
 
+## v0.3.118 - 2026-09-23
+
+### Agent Score
+
+- A generation on a model with no frozen latency reference no longer withholds the whole Agent Score. Sessions that ran through such a model are left out of Speed, which is computed from the remaining sessions as long as they still clear the complete critical-path floors (50 sessions and half of eligible sessions). Before this, one call to `gpt-5-mini`, `claude-sonnet-4-5` or any other model the calibrated reference lacks withheld every dimension for the whole window. When the excluded sessions are what take Speed below a floor, the readiness panel now names the unreferenced model instead of "Needs timing data". Scoring version moves to `agent-score-v8-provisional` (ref: #4721).
+
+### Integrations
+
+- One Slack workspace can now be connected to several Latitude organisations. Connecting a workspace that another organisation already uses no longer fails with a "workspace taken" error. Disconnecting skips the Slack-side token revoke while another organisation still shares the same long-lived bot token. A Postgres migration drops Slack from the unique vendor account index; GitHub and agent dispatch keep it (ref: #4719).
+
+## v0.3.117 - 2026-09-23
+
+### Agent Score
+
+- Added a weekly Agent Score digest, sent every Monday at 08:00 UTC by email, Slack and the in-app bell to members of organisations with Agent Score enabled. It covers each project that published a score during the week. The digest shows the score ring and trend as an image, the week's change and a per-dimension breakdown. A change that falls inside the confidence intervals is reported as steady, and no delta is shown when the scoring version or window changed during the week. Sample and showcase projects are skipped. Users can turn it off through a new `agent_score` notification preferences group. A Postgres migration adds a date index on `agent_score_snapshots` (ref: #4718).
+- Staff can send a project's digest on demand from the backoffice project actions. It uses the same eligibility rules as the weekly job (ref: #4718).
+
+### Integrations
+
+- Slack messages with image blocks are now reposted without the images when Slack cannot download them, instead of being rejected entirely. Before this, incident alerts with trend charts were dropped on deploys that Slack could not reach (ref: #4718).
+
+### Flaggers
+
+- Fixed flagger re-screening writing duplicate scores for the same finding on sessions with more than 200 system annotations. Anchor deduplication now queries directly instead of scanning a capped window (ref: #4607).
+
+## v0.3.116 - 2026-09-23
+
+### Agent Score
+
+- The vitality panel now has a camera action that renders the selected published score and its five dimensions as a shareable PNG, with a preview, Copy image and Download PNG. The image is generated in the browser, so no project data is uploaded. Its background follows the overall score band (red below 60, blue from 60 to 79, green from 80). Unpublished dates disable the action, and a generation failure offers a retry (ref: #4715).
+- Polished the Agent Score dashboard. The date navigator now uses the shared single-day `DateRangePicker`, keeps UTC dates and cannot advance past today. Displayed composite scores are floored to whole numbers, while stored scores keep their precision (ref: #4715).
+
+### CLI and SDKs
+
+- The CLI now supports named profiles, each with its own API key in the OS keyring, so production and sandbox keys can live side by side. Pick one per command with `-p`, per shell with `LATITUDE_PROFILE`, or by default with `latitude profiles use`. A profile can also carry a default project. A `LATITUDE_API_KEY` from the shell or `.env` still wins unless `-p` is passed. Ships as CLI 7.16.0, and the CLI docs now cover profiles, `.env` loading and the `--with-token` requirement on `auth login` (ref: #4716).
+
+## v0.3.115 - 2026-09-22
+
+### Agent Score
+
+- Conversation moments now degrade Outcome quality. A session where the user got what they came for after showing frustration, abandoning the conversation, being handed to a human, looping on clarification, or correcting the agent three or more times is scored as degraded rather than as a full success, at `0.75` of a clean session. The degraded share is measured only over sessions conversation analysis actually read, since it skips empty, too-short and non-conversation sessions on a rule that is deterministic on content and cannot be projected onto the rest. Below fifty analyzed sessions the component contributes nothing and Outcome is unchanged, so an analysis gap can never withhold the score. Each degrading kind appears under the dimension's "Affected by" list with the points it cost. Scoring version moves to `agent-score-v7-provisional` (ref: #4713).
+
+### Backoffice
+
+- The project page's Agent Score card now shows the vitality ring and the trend of published scores that the customer-facing page uses, replacing the headline number, per-dimension tiles and written-out cause list that repeated the same information in a slower form. The trend anchors on today rather than on the snapshot date, so a project that stopped publishing shows the trailing gap; unscored days stay absent rather than zero-filled, the chart says so when a range crosses scoring versions or window lengths, and a policy cap is called out on its own line (ref: #4711).
+- Staff can now seed Agent Score history for demo projects from a 30-day strip of sliders, so a freshly seeded demo has a trend instead of a single point. Nothing is recomputed: one composite is expanded into a full synthetic snapshot whose dimensions are renormalised to the requested score exactly, seeded rows carry no evidence rather than invented causes, days that already have a published score are locked and skipped by the unique index, and every date is bounded to the 30-day window ending today so a fabricated future row can never silently block a real run (ref: #4711).
+
+### CLI and SDKs
+
+- Project-scoped CLI commands now resolve the project slug from `LATITUDE_PROJECT_SLUG` instead of requiring `--project-slug` on every invocation. Resolution order is `--project-slug`, then `--global-project-slug`, then the environment variable; the twenty operations that are not project-scoped are unaffected. SDK method signatures do not change — only the CLI reads the variable (ref: #4714).
+- Bumped the Fern toolchain and regenerated the API clients, shipping CLI 7.15.0 and SDKs 9.15.0. The TypeScript SDK now redacts URLs in errors, and the Python SDK gains SSE reconnect handling and alias coercion. Linux CLI binaries vendor OpenSSL statically, so they keep depending only on glibc after the generator moved its TLS backend selection into per-target dependencies (ref: #4714).
+
+
+## v0.3.114 - 2026-09-21
+
+### Documentation
+
+- Documented that a sandbox organization is readable over the public REST API and the CLI using its own `lat_sandbox_` key, that a live key cannot see sandbox data, and that MCP cannot reach a sandbox at all because an OAuth token binds to an organization you are a member of and sandboxes have no membership rows. Corrected the claim that sandbox keys are created from inside the sandbox: there is one key per sandbox, surfaced under Sandbox configuration. Pinned the behavior with an API integration test (ref: #4707).
+
+## v0.3.113 - 2026-09-21
+
+### Annotations
+
+- The API now covers the full annotation lifecycle: `GET`, `PATCH`, and `DELETE` on `/projects/{projectSlug}/annotations/{annotationId}` read, update, and remove API-created annotations by their Latitude-generated identifier. Updates keep the original identifier, leave omitted fields untouched, retract the annotation from the signal it was previously attached to, and republish it to issue discovery and human-annotation scoring. Exposed as `annotations.get` / `update` / `delete` in the TypeScript and Python SDKs (9.14.0) and as `latitude annotations get|update|delete` in the CLI (7.14.0) (ref: #4704).
+- Score analytics are now rebuilt from the stored score after an annotation changes, so a retried update no longer duplicates analytics rows, and analytics belonging to a score that is still mutable are dropped instead of left stale (ref: #4704).
+
+### Flaggers
+
+- The Jev preclassifier gate is now a Pulumi setting and is turned on in production, so organization feature flags drive its rollout (ref: e2460d7e).
+
 ## v0.3.112 - 2026-09-21
 
 ### Agent Score

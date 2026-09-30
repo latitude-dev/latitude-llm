@@ -79,6 +79,44 @@ export const costCoverageFloorsSchema = z.object({
 })
 export type CostCoverageFloors = z.infer<typeof costCoverageFloorsSchema>
 
+/**
+ * One conversation-moment kind that marks a session's outcome as degraded.
+ *
+ * Declared here rather than per project: the kinds are a fixed taxonomy from a classifier that runs
+ * on everything, so every project is measured against identical criteria and no project can move
+ * its own score by promoting or withholding a detector.
+ *
+ * `minConfidence` sits above the classifier's storage floor. Storing a label and letting it move a
+ * headline number are different bars. `minOccurrences` is what keeps ordinary conversation out: one
+ * user correction is normal, three is a quality deficit.
+ */
+const momentDegradationRuleSchema = z.object({
+  kind: z.string().min(1),
+  minConfidence: unitFractionSchema,
+  minOccurrences: z.number().int().positive(),
+})
+export type MomentDegradationRule = z.infer<typeof momentDegradationRuleSchema>
+
+const outcomeDegradationSchema = z.object({
+  /**
+   * How much of a clean session's value a degraded one delivered.
+   *
+   * An exchange rate, not a display constant: at `0.75`, four degraded sessions cost what one
+   * failed session costs. A degraded session did deliver what the user came for, so it belongs much
+   * closer to success than to failure.
+   */
+  degradedWeight: unitFractionSchema,
+  /**
+   * Judged, analyzed sessions required before degradation participates at all.
+   *
+   * Below it the component contributes nothing and Outcome is exactly today's rate. It must never
+   * withhold the dimension: the publication gate withholds all five when one fails, so a
+   * conversation-analysis gap would otherwise blank the whole Agent Score.
+   */
+  minAnalyzedSessions: z.number().int().nonnegative(),
+  rules: z.array(momentDegradationRuleSchema),
+})
+
 export const dimensionCoverageFloorsSchema = z.object({
   outcome: outcomeCoverageFloorsSchema,
   reliability: reliabilityCoverageFloorsSchema,
@@ -122,6 +160,7 @@ export const agentScoreArtifactSchema = z
     }),
     window: scoreWindowSettingsSchema,
     dimensionFloors: dimensionCoverageFloorsSchema,
+    outcomeDegradation: outcomeDegradationSchema,
     costArtifactVersion: z.string().min(1),
     costCatalogVersion: z.string().min(1),
     latencyArtifactVersion: z.string().min(1),

@@ -209,6 +209,28 @@ describe("upsertFlaggerAnnotationScore anchor dedup", () => {
     expect(reworded.status).toBe("written")
     expect(scores.size).toBe(2)
   })
+
+  it("dedups an anchor beyond the historical 200-row scan window", async () => {
+    const { upsert, scores } = makeHarness()
+
+    const first = await upsert({ feedback: "Original finding.", contentHash: ANCHOR_A })
+    const anchorScore = scores.get(first.scoreId)
+    if (!anchorScore) throw new Error("missing anchor score")
+    scores.set(first.scoreId, { ...anchorScore, createdAt: new Date("2020-01-01T00:00:00.000Z") })
+
+    for (let index = 0; index < 200; index++) {
+      await upsert({
+        feedback: `Filler finding ${index}.`,
+        contentHash: `${(index + 1).toString(16).padStart(64, "0")}`,
+      })
+    }
+
+    expect(scores.size).toBe(201)
+
+    const rerun = await upsert({ feedback: "Re-worded duplicate.", contentHash: ANCHOR_A })
+    expect(rerun).toEqual({ status: "existing", scoreId: first.scoreId })
+    expect(scores.size).toBe(201)
+  })
 })
 
 describe("upsertFlaggerVerdictScore", () => {
@@ -362,6 +384,56 @@ describe("upsertSafetyFindingScore", () => {
 
     expect(rerun).toEqual({ status: "existing", scoreId: first.scoreId })
     expect(scores.size).toBe(1)
+    expect([...scores.values()][0]?.metadata).toMatchObject({ analysisHash: GENERATION_B })
+  })
+
+  it("refreshes confirmed-harm provenance on re-screen so Safety window readers can join it", async () => {
+    const { upsertSafetyFinding, scores } = makeHarness()
+
+    await upsertSafetyFinding({
+      safetyFindingKind: "injectionCompliance",
+      feedback: "The agent printed it.",
+      analysisHash: GENERATION_A,
+    })
+    await upsertSafetyFinding({
+      safetyFindingKind: "injectionCompliance",
+      feedback: "The agent still prints it.",
+      analysisHash: GENERATION_B,
+    })
+
+    expect(scores.size).toBe(1)
+    expect([...scores.values()][0]?.metadata).toMatchObject({ analysisHash: GENERATION_B })
+  })
+
+  it("dedups a safety finding beyond the historical 200-row scan window", async () => {
+    const { upsert, upsertSafetyFinding, scores } = makeHarness()
+
+    const first = await upsertSafetyFinding({
+      safetyFindingKind: "injectionAttempt",
+      feedback: "An override was attempted.",
+      analysisHash: GENERATION_A,
+    })
+    const findingScore = scores.get(first.scoreId)
+    if (!findingScore) throw new Error("missing safety finding score")
+    scores.set(first.scoreId, { ...findingScore, createdAt: new Date("2020-01-01T00:00:00.000Z") })
+
+    for (let index = 0; index < 200; index++) {
+      await upsert({
+        feedback: `Filler finding ${index}.`,
+        flaggerSlug: "jailbreaking",
+        contentHash: `${(index + 1).toString(16).padStart(64, "0")}`,
+      })
+    }
+
+    expect(scores.size).toBe(201)
+
+    const rerun = await upsertSafetyFinding({
+      safetyFindingKind: "injectionAttempt",
+      feedback: "The same override, re-worded.",
+      analysisHash: GENERATION_B,
+    })
+    expect(rerun).toEqual({ status: "existing", scoreId: first.scoreId })
+    expect(scores.size).toBe(201)
   })
 
   it("records an escalation from an attempt to a confirmed compliance", async () => {

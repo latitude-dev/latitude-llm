@@ -1,3 +1,4 @@
+import { agentScoreWeeklyDigestRenderer } from "./agent-score-weekly-digest/index.tsx"
 import { billingLimitReachedRenderer } from "./billing-limit-reached/index.tsx"
 import { customMessageRenderer } from "./custom-message/index.tsx"
 import { destinationQuarantinedRenderer } from "./destination-quarantined/index.tsx"
@@ -21,6 +22,7 @@ export const NOTIFICATION_EMAIL_RENDERERS: NotificationEmailRendererRegistry = {
   "incident.opened": incidentOpenedRenderer,
   "incident.closed": incidentClosedRenderer,
   "wrapped.report": wrappedReportRenderer,
+  "agent-score.weekly-digest": agentScoreWeeklyDigestRenderer,
   "custom.message": customMessageRenderer,
   "issue.assigned": signalAssignedRenderer,
   "signal.discovered": signalDiscoveredRenderer,

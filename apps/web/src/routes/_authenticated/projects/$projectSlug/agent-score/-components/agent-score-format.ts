@@ -3,6 +3,8 @@ export type ScoreDimensionKey = (typeof SCORE_DIMENSION_ORDER)[number]
 
 export const formatScore = (value: number): string => value.toFixed(0)
 
+export { formatTotalScore } from "@domain/shared"
+
 export const formatCount = (value: number): string => value.toLocaleString()
 
 export const formatPercent = (value: number, digits = 1): string => `${(value * 100).toFixed(digits)}%`

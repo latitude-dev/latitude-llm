@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+
 import { ProjectId } from "@domain/shared"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
@@ -27,7 +28,7 @@ vi.mock("@repo/ui", async (importOriginal) => ({
   Chart: ({ ariaLabel }: { ariaLabel: string }) => <div role="img" aria-label={ariaLabel} />,
 }))
 
-const project = { id: ProjectId("p".repeat(24)), slug: "test-project" }
+const project = { id: ProjectId("p".repeat(24)), slug: "test-project", name: "Test project" }
 const weights = { outcome: 0.35, reliability: 0.25, cost: 0.15, speed: 0.15, safety: 0.1 }
 const interval = { lower: 60, upper: 80 }
 const snapshot: AgentScoreRecord = {
@@ -98,13 +99,13 @@ describe("AgentScorePage date selection", () => {
 
     await screen.findByText("Computing Agent Score")
     expect(screen.getByText("This can take several minutes. You can leave this page and return later.")).toBeDefined()
-    expect(screen.getByText("Score evolution")).toBeDefined()
+    expect(screen.getByRole("img", { name: "Agent vitality over the last 7 days" })).toBeDefined()
     expect((screen.getByRole("button", { name: "Refresh" }) as HTMLButtonElement).disabled).toBe(true)
   })
 
   it("reloads displayed data when refresh does not enqueue a workflow", async () => {
     renderPage()
-    await screen.findByText("Score evolution")
+    await screen.findByRole("img", { name: "Agent vitality over the last 7 days" })
     const scoreCalls = vi.mocked(getProjectAgentScore).mock.calls.length
     const historyCalls = vi.mocked(getProjectAgentScoreHistory).mock.calls.length
     const explanationCalls = vi.mocked(getProjectAgentScoreExplanation).mock.calls.length
@@ -118,9 +119,11 @@ describe("AgentScorePage date selection", () => {
 
   it("shows the latest published date and its trend when today has no score", async () => {
     renderPage()
-    await screen.findByText("Score evolution")
-    expect((screen.getByLabelText("Score date (UTC)") as HTMLInputElement).value).toBe(snapshot.date)
+    await screen.findByRole("img", { name: "Agent vitality over the last 7 days" })
+    expect(screen.getByRole("button", { name: "Score date (UTC)" }).textContent).toBe("Sep 19, 2026")
     expect(screen.queryByText("Requirements for this date")).toBeNull()
+    fireEvent.click(screen.getByRole("tab", { name: "30d" }))
+    expect(screen.getByRole("img", { name: "Agent vitality over the last 30 days" })).toBeDefined()
     expect(getProjectAgentScoreHistory).toHaveBeenCalledWith({ data: { projectId: project.id, date: snapshot.date } })
     expect(getProjectAgentScoreExplanation).toHaveBeenCalledWith({
       data: { projectId: project.id, date: snapshot.date },
@@ -129,7 +132,7 @@ describe("AgentScorePage date selection", () => {
 
   it("does not keep the old score visible while an unscored date loads", async () => {
     renderPage()
-    await screen.findByText("Score evolution")
+    await screen.findByRole("img", { name: "Agent vitality over the last 7 days" })
     let finish: (() => void) | undefined
     vi.mocked(getProjectAgentScore).mockImplementationOnce(
       () =>
@@ -139,11 +142,11 @@ describe("AgentScorePage date selection", () => {
     )
     fireEvent.click(screen.getByRole("button", { name: "Previous day" }))
     await screen.findByLabelText("Loading Agent Score")
-    expect(screen.queryByText("Score evolution")).toBeNull()
+    expect(screen.queryByRole("img", { name: "Agent vitality over the last 7 days" })).toBeNull()
     await waitFor(() => expect(finish).toBeDefined())
     finish?.()
     await screen.findByText("No score was published for this date.")
-    expect((screen.getByLabelText("Score date (UTC)") as HTMLInputElement).value).toBe("2026-09-18")
+    expect(screen.getByRole("button", { name: "Score date (UTC)" }).textContent).toBe("Sep 18, 2026")
     expect(getProjectAgentScoreExplanation).toHaveBeenCalledWith({
       data: { projectId: project.id, date: "2026-09-18" },
     })
@@ -161,7 +164,9 @@ describe("AgentScorePage date selection", () => {
     vi.mocked(getProjectAgentScoreHistory).mockResolvedValue([])
     renderPage()
     await screen.findByText("No score was published for this date.")
-    expect((screen.getByLabelText("Score date (UTC)") as HTMLInputElement).value).toBe(today)
-    expect(screen.getByText("Requirements for this date")).toBeDefined()
+    expect(screen.getByRole("button", { name: "Score date (UTC)" }).textContent).toBe(
+      new Date(`${today}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    )
+    expect(await screen.findByText("Requirements for this date")).toBeDefined()
   })
 })

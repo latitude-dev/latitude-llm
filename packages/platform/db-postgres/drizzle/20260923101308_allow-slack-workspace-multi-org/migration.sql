@@ -1,0 +1,2 @@
+DROP INDEX "latitude"."integrations_active_kind_vendor_account_idx";--> statement-breakpoint
+CREATE UNIQUE INDEX "integrations_active_kind_vendor_account_idx" ON "latitude"."integrations" ("kind","vendor_account_id") WHERE "revoked_at" IS NULL AND "kind" <> 'slack';

@@ -33,7 +33,11 @@ const toDomain = (row: Row): AgentScoreSnapshot => ({
   createdAt: row.createdAt,
 })
 
-const toInsertRow = (snapshot: AgentScoreSnapshot) => ({
+/**
+ * Includes the snapshot's own `organizationId`; the write below overrides it with the connection
+ * scope. `AdminAgentScoreHistoryRepositoryLive` is the one caller that keeps it — see its header.
+ */
+export const toAgentScoreSnapshotInsertRow = (snapshot: AgentScoreSnapshot) => ({
   organizationId: snapshot.organizationId,
   projectId: snapshot.projectId,
   date: snapshot.date,
@@ -72,7 +76,7 @@ export const AgentScoreSnapshotRepositoryLive = Layer.succeed(AgentScoreSnapshot
       const inserted = yield* sqlClient.query((db, organizationId) =>
         db
           .insert(agentScoreSnapshots)
-          .values({ ...toInsertRow(snapshot), organizationId })
+          .values({ ...toAgentScoreSnapshotInsertRow(snapshot), organizationId })
           .onConflictDoNothing({
             target: [agentScoreSnapshots.organizationId, agentScoreSnapshots.projectId, agentScoreSnapshots.date],
           })

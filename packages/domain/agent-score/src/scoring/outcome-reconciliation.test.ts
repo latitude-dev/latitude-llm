@@ -110,11 +110,13 @@ const momentFinding: AssessmentFinding = {
   independentHumanEvidence: false,
   kind: "moment",
   momentKinds: ["user_correction"],
+  momentLabels: ["user_correction"].map((kind: string) => ({ kind, confidence: 1 })),
 }
 
 const assessmentInput: NormalizedSessionAssessmentInput = {
   sessionId: SESSION_ID,
   hasReadableUserTask: true,
+  momentsAnalyzed: true,
   observedMicrocents: 0,
   observedDurationNs: 0,
   findings: [verdictFinding, momentFinding],
@@ -175,6 +177,7 @@ describe("one judged session across every Outcome layer", () => {
     const observations = readOutcomeIssueObservations({
       items: resolveSessionAssessmentItemsWithChronology(assessmentInput.findings),
       eligibleSignalIds: new Set(),
+      momentsAnalyzed: assessmentInput.momentsAnalyzed,
     })
 
     const issueSession: IssueSession = {
@@ -183,7 +186,10 @@ describe("one judged session across every Outcome layer", () => {
       endpointInclusionProbability: INCLUSION_PROBABILITY,
       observations,
     }
-    const rows = buildIssueRows({ sessions: [issueSession] })
+    const rows = buildIssueRows({
+      sessions: [issueSession],
+      basisSessionCounts: { eligible: 1, analyzed: 1 },
+    })
 
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({
@@ -193,6 +199,9 @@ describe("one judged session across every Outcome layer", () => {
       estimatedReach: 1,
       estimatedAdverseReach: 1 / INCLUSION_PROBABILITY,
       ranked: true,
+      // The moment is certain on a session analysis read, but only among the sessions it read.
+      basis: "analyzed",
+      basisSessionCount: 1,
     })
     expect(rows.some((row) => row.issueKey === verdictItem?.groupKey)).toBe(false)
   })

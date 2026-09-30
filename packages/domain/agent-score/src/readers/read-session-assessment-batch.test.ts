@@ -259,6 +259,7 @@ describe("readSessionAssessmentBatch", () => {
     const ttft = assessment?.readers.find((reader) => reader.readerId === "spans.ttft")
     expect(ttft).toMatchObject({ applicable: true, totalCount: 1, readableCount: 1 })
     expect(ttft?.limitation).toBeUndefined()
+    expect(assessment?.costEvidence?.unreferencedLatencyModels).toEqual([])
   })
 
   it("keeps normalized facts and resolved semantics byte-identical between single and bulk reads", async () => {

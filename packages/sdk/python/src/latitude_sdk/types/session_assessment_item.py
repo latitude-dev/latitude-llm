@@ -26,6 +26,10 @@ class SessionAssessmentItem(UniversalBaseModel):
         FieldMetadata(alias="evidenceKey"),
         pydantic.Field(alias="evidenceKey", description="Stable identity of the underlying fact across recomputation."),
     ]
+    """
+    Stable identity of the underlying fact across recomputation.
+    """
+
     group_key: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="groupKey"),
@@ -33,6 +37,10 @@ class SessionAssessmentItem(UniversalBaseModel):
             alias="groupKey", description="Stable identity used to group equivalent findings and linked judgments."
         ),
     ]
+    """
+    Stable identity used to group equivalent findings and linked judgments.
+    """
+
     label: str = pydantic.Field()
     """
     Short human-readable explanation of the evidence.
@@ -52,6 +60,10 @@ class SessionAssessmentItem(UniversalBaseModel):
             description="ISO-8601 timestamp for when the evidence occurred, when telemetry provides one.",
         ),
     ]
+    """
+    ISO-8601 timestamp for when the evidence occurred, when telemetry provides one.
+    """
+
     source: SessionAssessmentItemSource = pydantic.Field()
     """
     Source that identified the fact.
@@ -67,6 +79,10 @@ class SessionAssessmentItem(UniversalBaseModel):
         FieldMetadata(alias="impactLevel"),
         pydantic.Field(alias="impactLevel", description="Coarse impact level for ordering and display."),
     ]
+    """
+    Coarse impact level for ordering and display.
+    """
+
     metric_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="metricId"),
@@ -76,16 +92,28 @@ class SessionAssessmentItem(UniversalBaseModel):
             description="Canonical metric identifier when the item has benchmark semantics.",
         ),
     ]
+    """
+    Canonical metric identifier when the item has benchmark semantics.
+    """
+
     signal_ids: typing_extensions.Annotated[
         typing.List[str],
         FieldMetadata(alias="signalIds"),
         pydantic.Field(alias="signalIds", description="Signals linked to the same underlying fact."),
     ]
+    """
+    Signals linked to the same underlying fact.
+    """
+
     score_ids: typing_extensions.Annotated[
         typing.List[str],
         FieldMetadata(alias="scoreIds"),
         pydantic.Field(alias="scoreIds", description="Scores linked to the same underlying fact."),
     ]
+    """
+    Scores linked to the same underlying fact.
+    """
+
     occurrence_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="occurrenceCount"),
@@ -93,6 +121,10 @@ class SessionAssessmentItem(UniversalBaseModel):
             alias="occurrenceCount", description="Number of equivalent occurrences represented by this item."
         ),
     ]
+    """
+    Number of equivalent occurrences represented by this item.
+    """
+
     effects: typing.List[SessionAssessmentDimensionEffect] = pydantic.Field()
     """
     Dimension-specific interpretations of this evidence.

@@ -23,9 +23,8 @@ export const syncScoreAnalyticsUseCase = Effect.fn("scores.syncScoreAnalytics")(
     return
   }
 
-  const alreadyStoredInAnalytics = yield* analyticsRepository.existsById(score.id)
-  if (alreadyStoredInAnalytics) {
-    return
+  if (yield* analyticsRepository.existsById(score.id)) {
+    yield* analyticsRepository.delete(score.id)
   }
 
   yield* analyticsRepository.insert(score)

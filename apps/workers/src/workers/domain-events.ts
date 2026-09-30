@@ -457,6 +457,47 @@ export const createDomainEventsWorker = ({
       ).pipe(Effect.asVoid)
     },
 
+    AnnotationUpdated: (event) => {
+      const { organizationId, projectId, scoreId, previousSignalId, previousFeedback, source, createdAt, revision } =
+        event.payload
+
+      const scorePayload: EventPayloads["ScoreCreated"] = {
+        organizationId,
+        projectId,
+        scoreId,
+        signalId: null,
+        status: "published",
+      }
+
+      return Effect.all(
+        [
+          pub.publish(
+            "issues",
+            "removeScore",
+            {
+              organizationId,
+              projectId,
+              scoreId,
+              signalId: previousSignalId,
+              draftedAt: null,
+              feedback: previousFeedback,
+              source,
+              createdAt,
+            },
+            { dedupeKey: `issues:remove-score:${scoreId}:${revision}` },
+          ),
+          pub.publish("issues", "discovery", scorePayload, {
+            dedupeKey: `issues:discovery:${scoreId}:published:${revision}`,
+          }),
+          pub.publish("annotation-scores", "publishHumanAnnotation", scorePayload, {
+            dedupeKey: `annotation-scores:publish-human:${scoreId}:${revision}`,
+            debounceMs: SCORE_PUBLICATION_DEBOUNCE,
+          }),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid)
+    },
+
     // OrganizationCreated and MemberJoined have no marketing-contacts side
     // effect — the only thing that mattered was syncing organizationId onto
     // each Loops contact, which we no longer do (members get telemetryEnabled

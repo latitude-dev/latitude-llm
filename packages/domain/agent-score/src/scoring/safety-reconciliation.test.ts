@@ -105,6 +105,7 @@ const harmFinding: AssessmentFinding = {
 const assessmentInput: NormalizedSessionAssessmentInput = {
   sessionId: SESSION_ID,
   hasReadableUserTask: true,
+  momentsAnalyzed: true,
   observedMicrocents: 0,
   observedDurationNs: 0,
   findings: [harmFinding],

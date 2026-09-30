@@ -43,7 +43,7 @@
     "@effect/language-service": "0.84.3",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "fern-api": "5.50.4",
+    "fern-api": "5.122.0",
     "knip": "6.6.2",
     "turbo": "catalog:",
     "typescript": "catalog:",

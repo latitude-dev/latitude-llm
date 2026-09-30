@@ -136,6 +136,9 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
                 moments: {
                   moments: momentsBySession.get(sessionId) ?? [],
                   labels: labelsBySession.get(sessionId) ?? [],
+                  ...(analysesBySession.get(sessionId)
+                    ? { analysisStatus: (analysesBySession.get(sessionId) as SessionAnalysis).analysisStatus }
+                    : {}),
                 },
                 screeningDecisions: screeningBySession.get(sessionId) ?? [],
               },
