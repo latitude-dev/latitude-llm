@@ -22,12 +22,12 @@ import {
   runBackfillWindowUseCase,
   runDestinationSyncUseCase,
   SpansSourceReadersLive,
+  spanUrlBuilder,
   sweepDestinationsUseCase,
 } from "@domain/destinations"
 import { ProjectRepository } from "@domain/projects"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { DestinationId, OrganizationId, ProjectId } from "@domain/shared"
-import type { SpanDetail } from "@domain/spans"
 import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import { createPosthogDeliverer, POSTHOG_EVENT_MAX_BYTES } from "@platform/data-destinations"
 import { type ClickHouseClient, SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -105,12 +105,6 @@ const resolveDevSafetyLagMs = (): number | undefined => {
   if (isProduction) return undefined
   return Effect.runSync(parseEnvOptional("LAT_DEV_DESTINATIONS_SAFETY_LAG_MS", "number"))
 }
-
-/** Best-effort cross-link back into Latitude; the project slug is the run's anchor (falls back to project id). */
-const spanUrlBuilder =
-  (webUrl: string, projectSlug: string) =>
-  (span: SpanDetail): string =>
-    `${webUrl}/projects/${projectSlug}?traceId=${encodeURIComponent(span.traceId)}&spanId=${encodeURIComponent(span.spanId)}`
 
 /** Sanitized to status + our taxonomy; delivery errors never carry upstream response bodies. */
 const finalFailureMessage = (error: Error): string => {

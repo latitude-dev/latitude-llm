@@ -17,6 +17,7 @@ Biome config (`biome.json`) is the source of truth:
 - Semicolons: as needed
 - Ignore generated/output paths: `dist/**`, `coverage/**`, `.turbo/**`, `node_modules/**`, `**/*.gen.ts`, `**/models.dev.json`
 - Prefer package-local formatting: `pnpm --filter @app/api format`
+- Cognitive complexity (`complexity/noExcessiveCognitiveComplexity`) is enabled at max **15**. Keep new and edited functions at or under that score — split nested conditionals, loops, and branches into named helpers rather than silencing the rule. Existing hotspots are warn-only until they are refactored; do not add complexity to them.
 
 ## Imports
 

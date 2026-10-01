@@ -316,6 +316,16 @@ export interface EventPayloads {
     readonly source: string
     readonly createdAt: string
   }
+  AnnotationUpdated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly scoreId: string
+    readonly previousSignalId: string | null
+    readonly previousFeedback: string
+    readonly source: string
+    readonly createdAt: string
+    readonly revision: string
+  }
   OrganizationCreated: {
     readonly organizationId: string
     readonly actorUserId: string

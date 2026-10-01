@@ -18,6 +18,8 @@ install options:
   --no-content          Skip raw prompt/response/tool I/O capture
   --allow-conversation  Force conversation capture on (overrides existing config)
   --no-trust            Skip adding plugin id to plugins.allow
+  --runtime-spec=<spec> Install this spec instead of the pinned npm version
+                        (e.g. npm-pack:/path/to/plugin.tgz for a pre-release build)
   --openclaw-dir=<path> Override OpenClaw config dir (default: $OPENCLAW_HOME, ./openclaw.json,
                         or ~/.openclaw — see resolution order in README)
   --dry-run             Show the diff against current openclaw.json and exit (no writes)

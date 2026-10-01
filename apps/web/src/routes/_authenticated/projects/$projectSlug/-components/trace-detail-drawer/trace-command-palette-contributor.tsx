@@ -7,6 +7,7 @@ import { useCurrentProject } from "../../../../../../components/command-palette/
 import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
 import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import type { TraceDetailTabId } from "../trace-detail-drawer.tsx"
+import { UserSessionsPaletteContributor } from "../user-sessions-link.tsx"
 
 /**
  * Headless: builds the open trace's contextual palette commands (tab navigation
@@ -142,5 +143,5 @@ export function TraceCommandPaletteContributor({
   }, [traceId, traceRecord, project, navigate, onGoToTab, toast])
 
   useRegisterCommands(commands)
-  return null
+  return <UserSessionsPaletteContributor userId={traceRecord?.userId} />
 }

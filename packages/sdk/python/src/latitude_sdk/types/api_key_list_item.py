@@ -19,6 +19,10 @@ class ApiKeyListItem(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this API key."),
     ]
+    """
+    Organization that owns this API key.
+    """
+
     name: str = pydantic.Field()
     """
     Human-readable name.
@@ -38,6 +42,10 @@ class ApiKeyListItem(UniversalBaseModel):
             description="ISO-8601 timestamp of the most recent successful authentication. `null` until first use.",
         ),
     ]
+    """
+    ISO-8601 timestamp of the most recent successful authentication. `null` until first use.
+    """
+
     deleted_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="deletedAt"),
@@ -47,15 +55,26 @@ class ApiKeyListItem(UniversalBaseModel):
             description="ISO-8601 timestamp at which the key was revoked. `null` while the key is active.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the key was revoked. `null` while the key is active.
+    """
+
     created_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
     ]
+    """
+    ISO-8601 timestamp of creation.
+    """
+
     updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="updatedAt"),
         pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last metadata update."),
     ]
+    """
+    ISO-8601 timestamp of the last metadata update.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

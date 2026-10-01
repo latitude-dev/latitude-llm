@@ -18,10 +18,17 @@ class ResolvedRange(UniversalBaseModel):
         FieldMetadata(alias="fromIso"),
         pydantic.Field(alias="fromIso", description="ISO-8601 start of the resolved window."),
     ]
+    """
+    ISO-8601 start of the resolved window.
+    """
+
     to_iso: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="toIso"),
         pydantic.Field(alias="toIso", description="ISO-8601 end of the resolved window."),
     ]
+    """
+    ISO-8601 end of the resolved window.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -6,7 +6,7 @@ import type { OrganizationId } from "../id.ts"
 export const createFakeChSqlClient = (overrides?: Partial<ChSqlClientShape>): ChSqlClientShape => ({
   organizationId: "fake-org" as OrganizationId,
   transaction: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
-  query: <T>(_fn: (client: unknown, organizationId: OrganizationId) => Promise<T>) =>
+  query: <T>(_fn: (client: unknown, organizationId: OrganizationId, signal: AbortSignal) => Promise<T>) =>
     Effect.tryPromise({
       try: () => Promise.resolve([] as unknown as T),
       catch: (error) => toRepositoryError(error, "query"),

@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-09
+
+Rewrite against OpenClaw 2026.8+ and Latitude's current span contract. Lockstep release with `@latitude-data/openclaw-telemetry-cli` 0.1.0. Requires OpenClaw **2026.8.1 or newer**.
+
+### Fixed
+
+- **The plugin emits again on OpenClaw 2026.8.1+.** Upstream removed the `before_agent_start` hook (replaced by `before_model_resolve` / `before_prompt_build` / `agent_turn_prepare`), and 0.0.9 opened its root span only there, so on current OpenClaw every later hook found no run in flight and nothing was ever exported; the gateway log only showed `unknown typed hook "before_agent_start" ignored`. The root now opens lazily on the first hook that carries a run id (`llm_input` in practice), and the run's true start is back-dated from `agent_end.durationMs`.
+- **Tokens, cost, conversation and tools reach Latitude's rollups.** Spans carry `gen_ai.operation.name` (`invoke_agent` / `chat` / `execute_tool` / memory operations). Since June, Latitude's trace and session rollups only count spans classified as generations or tool calls, so 0.0.9's unclassified `agent` / `model_call` / `tool_call:*` spans would have shown a trace with no tokens, no cost, no messages and no tools even once traces flowed.
+- **Finalization no longer races `llm_output`.** OpenClaw fires `agent_end` before `llm_output` with awaits in between, so the microtask deferral in 0.0.7 was not enough. The run ships once both have arrived, or after a short grace period when `llm_output` never comes.
+- **Compaction and subagent hooks are keyed by session.** Both stopped carrying the parent run id upstream; they now resolve the open run through the session key (`requesterSessionKey` for subagents).
+- **Diagnostics land in the gateway log.** Output goes through OpenClaw's `api.logger` instead of raw stderr, which the gateway never captured.
+
+### Added
+
+- **Per-call usage, cost and output.** Each `llm_request` span takes its tokens (input, output, cache read/write, reasoning), OpenClaw's own cost (`gen_ai.usage.cost`, catalog or provider-billed), response id, finish reason, output message and the exact input transcript from the assistant message it produced, matched by timestamp against the `model_call_started` / `model_call_ended` window. Harnesses that never fire the per-call hooks get `llm_request` spans synthesized from the transcript instead.
+- **Time to first token** (`gen_ai.server.time_to_first_token`) from `model_call_ended.timeToFirstByteMs`, plus `gen_ai.request.stream`.
+- **Tool definitions** (`gen_ai.tool.definitions`) from `llm_input.tools`, the post-policy tool list offered to the model, so the Tools page knows what the agent is equipped with. `config.toolDefinitions=false` opts out.
+- **End-user identity.** `user.id` is the sender of a user-triggered turn; the display name and handle come from `message_received` or from the `⟦openclaw:ctx⟧` block channels prefix to the prompt, as `openclaw.sender.*` metadata. OpenClaw's injected `[openclaw.runtime-context]` message is exported with role `system` so a turn does not render as two user messages.
+- **Memory.** OpenClaw's built-in memory (`MEMORY.md`, `USER.md`, `memory/*.md`) surfaces as OTEL GenAI memory operations under the store `openclaw/<agentId>`: the snapshot injected at session start is one `search_memory` per session, `memory_search` / `memory_get` calls are reads, and `write` / `edit` calls on a memory file are `upsert_memory` (or `delete_memory` when the file is emptied) carrying the full new body. Switches: `config.memory`, `config.memoryContent`.
+- **Cron runs** are tagged `cron:<jobId>` with the job id and name in metadata, derived from the isolated session key or the latest `cron_changed` start for the agent.
+- **Subagents** nest under the `sessions_spawn` tool call that created them: a `subagent` span spanning spawn to ended, with the child run's whole `interaction` tree underneath, in the parent's trace and session. Child spans carry the label as `gen_ai.agent.name` and keep their own session id under `openclaw.session.id`.
+- **Compactions are model calls.** A compaction span is a `chat` span whose input is the messages being compacted and whose output is the summary that replaced them (read from OpenClaw's transcript store, which persists it before `after_compaction` fires), with the before/after message and token counts; the summarizer fires no per-call hooks, so `openclaw.usage.state=unreported`. A compaction outside a run (`sessions.compact`) ships as its own trace whose root is named `compaction`, so it is filterable by name and never mistaken for a user turn.
+- **Derived tags and metadata:** `openclaw`, the channel, the agent id, `cron:<job>` and `subagent:<agent>` tags; `openclaw.*` metadata (run, session, channel, trigger, model, sender, plugin version). Operators add their own with `config.tags` / `config.metadata`, and `config.serviceName` sets the OTLP service name.
+- **Transport retries.** `429`, `5xx` and network errors retry with backoff honouring `Retry-After` (capped at 30 s, since exports are sequential); other `4xx` are final so no span is ever sent twice. `gateway_stop` flushes the queue.
+- **Per-attribute content budget** (`config.maxContentChars`, default 256 KiB). Strings are truncated from the middle without splitting a surrogate pair; message lists, tool definitions and memory records stay valid JSON by truncating the strings inside them first and then dropping whole items from the middle (a message list gets a `system` marker saying how many were omitted).
+- **Transcript dialect.** The message normalizer understands OpenClaw's own transcript (`toolCall` blocks, `toolResult` messages, `thinking` blocks, base64 images, custom runtime notes) and the `toolResult` blocks the Codex harness nests inside tool results.
+- **Codex harness support.** OpenClaw's Codex app-server harness (ChatGPT OAuth models) passes plugins an empty history, a per-turn transcript, usage only on the turn's final message and no per-call hooks. The plugin rebuilds the session conversation from the turns it has seen and, on a cold start, from OpenClaw's transcript store (the per-agent `openclaw-agent.sqlite` on 2026.9+, read through `node:sqlite`, or the older `sessions/<id>.jsonl` file), prepending it to every input so the trace and session views read as one conversation (`openclaw.history.source` says where it came from); it synthesizes `llm_request` spans from the transcript, puts the attempt aggregate on the last call when no message carried usage, takes time to first token from the first streamed delta of the agent event stream (`openclaw.ttft.source=stream`), prepends streamed reasoning to a call's output when its transcript message carries none (`openclaw.reasoning.source=stream`), records memory writes made through Codex's `apply_patch`, and labels the result-announcement runs `interaction.kind=announce`.
+
+### Changed
+
+- **Span names follow the Latitude harness family:** `interaction`, `llm_request`, `tool_call:<name>`, `subagent`, `compaction`, plus memory operation names. Tool and memory spans are OTLP `CLIENT` spans.
+- Usage lives only on `llm_request` spans; the root carries counts (`openclaw.llm_calls`, `openclaw.tool_calls`) and the turn outcome.
+- Minimum OpenClaw version is 2026.8.1.
+
+### Removed
+
+- The `before_agent_start` subscription and the `agent` / `model_call` span names.
+
 ## [0.0.9] - 2026-06-18
 
 ### Added

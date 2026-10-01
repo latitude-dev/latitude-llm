@@ -31,10 +31,17 @@ class ImportRun(UniversalBaseModel):
         FieldMetadata(alias="startedAt"),
         pydantic.Field(alias="startedAt", description="ISO-8601 timestamp at which the page started."),
     ]
+    """
+    ISO-8601 timestamp at which the page started.
+    """
+
     finished_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="finishedAt"),
         pydantic.Field(alias="finishedAt", description="ISO-8601 timestamp at which the page ended."),
     ]
+    """
+    ISO-8601 timestamp at which the page ended.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

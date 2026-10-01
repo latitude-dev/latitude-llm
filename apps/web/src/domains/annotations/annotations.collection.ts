@@ -179,6 +179,7 @@ export function useCreateAnnotation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["annotations"] })
       void queryClient.invalidateQueries({ queryKey: ["scores"] })
+      void queryClient.invalidateQueries({ queryKey: ["session-assessment"] })
     },
   })
 }
@@ -191,6 +192,7 @@ export function useUpdateAnnotation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["annotations"] })
       void queryClient.invalidateQueries({ queryKey: ["scores"] })
+      void queryClient.invalidateQueries({ queryKey: ["session-assessment"] })
     },
   })
 }
@@ -203,6 +205,7 @@ export function useDeleteAnnotation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["annotations"] })
       void queryClient.invalidateQueries({ queryKey: ["scores"] })
+      void queryClient.invalidateQueries({ queryKey: ["session-assessment"] })
     },
   })
 }
@@ -249,6 +252,7 @@ export function useApproveSystemAnnotation() {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["annotations"] })
       void queryClient.invalidateQueries({ queryKey: ["scores"] })
+      void queryClient.invalidateQueries({ queryKey: ["session-assessment"] })
     },
   })
 }
@@ -289,6 +293,7 @@ export function useRejectSystemAnnotation() {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["annotations"] })
       void queryClient.invalidateQueries({ queryKey: ["scores"] })
+      void queryClient.invalidateQueries({ queryKey: ["session-assessment"] })
     },
   })
 }

@@ -24,6 +24,10 @@ class CreateEvaluationScoreBody(UniversalBaseModel):
             description="Simulation this score is tied to, if any. `null` (default) when not part of a simulation.",
         ),
     ]
+    """
+    Simulation this score is tied to, if any. `null` (default) when not part of a simulation.
+    """
+
     value: float = pydantic.Field()
     """
     Normalized score value in [0, 1]. Higher = better.
@@ -68,11 +72,19 @@ class CreateEvaluationScoreBody(UniversalBaseModel):
             description="Discriminator: `true` flags the body as an evaluation score (internal); `false`/omit for custom.",
         ),
     ]
+    """
+    Discriminator: `true` flags the body as an evaluation score (internal); `false`/omit for custom.
+    """
+
     source_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="sourceId"),
         pydantic.Field(alias="sourceId", description="CUID of the evaluation that produced this score."),
     ]
+    """
+    CUID of the evaluation that produced this score.
+    """
+
     metadata: EvaluationScoreMetadata
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -1,10 +1,59 @@
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { buildFlaggerSessionContext, computeFlaggerAnchorContentHash } from "./conversation.ts"
-import { assistant, assistantToolCall, makeSessionDetail, makeTrace, user } from "./flagger-strategies/test-helpers.ts"
+import {
+  assistantTurnHasOutputContent,
+  buildFlaggerSessionContext,
+  computeFlaggerAnchorContentHash,
+  findFinalCapturedAssistantTurn,
+} from "./conversation.ts"
+import {
+  assistant,
+  assistantReasoning,
+  assistantToolCall,
+  makeSessionDetail,
+  makeTrace,
+  user,
+} from "./flagger-strategies/test-helpers.ts"
 
 const hashOf = (conversation: Parameters<typeof computeFlaggerAnchorContentHash>[0], messageIndex?: number) =>
   Effect.runPromise(computeFlaggerAnchorContentHash(conversation, messageIndex))
+
+describe("assistantTurnHasOutputContent", () => {
+  it("accepts non-whitespace response text", () => {
+    expect(assistantTurnHasOutputContent(assistant(" Answer "))).toBe(true)
+  })
+
+  it("accepts a tool call without response text", () => {
+    expect(assistantTurnHasOutputContent(assistantToolCall("search", { q: "x" }))).toBe(true)
+  })
+
+  it("rejects blank response text", () => {
+    expect(assistantTurnHasOutputContent(assistant(" \n "))).toBe(false)
+  })
+
+  it("rejects reasoning without response text or a tool call", () => {
+    expect(assistantTurnHasOutputContent(assistantReasoning("Thinking"))).toBe(false)
+  })
+})
+
+describe("findFinalCapturedAssistantTurn", () => {
+  it("returns the last assistant turn from captured output", () => {
+    const first = assistant("first")
+    const final = assistant("")
+    const conversation = makeTrace([user("question"), first, final])
+
+    expect(findFinalCapturedAssistantTurn(conversation)).toEqual({ message: final, messageIndex: 2 })
+  })
+
+  it("does not treat assistant history as a captured output turn", () => {
+    const conversation = {
+      ...makeTrace([user("question"), assistant("historical answer")]),
+      outputMessages: [],
+    }
+
+    expect(findFinalCapturedAssistantTurn(conversation)).toBeNull()
+  })
+})
 
 describe("computeFlaggerAnchorContentHash", () => {
   it("is stable when the anchored message shifts index (append growth / compaction renumbering)", async () => {
