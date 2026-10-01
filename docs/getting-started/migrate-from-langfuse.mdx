@@ -1,0 +1,150 @@
+---
+title: Migrate from Langfuse
+description: "Move an LLM app from Langfuse to Latitude: every Langfuse concept mapped to its Latitude equivalent, the telemetry switch, and the built-in import that brings your trace history along."
+---
+
+Langfuse and Latitude solve the same problem from different angles. Langfuse gives engineers traces, scores and prompt management; Latitude watches your agent through OpenTelemetry and turns the traffic into sessions, users, scores and signals that the whole team works from. Both platforms speak OpenTelemetry, so the migration is mostly a matter of re-pointing telemetry — and Latitude has a built-in [Langfuse import](../telemetry/imports/langfuse) for the history you already collected.
+
+This guide maps each Langfuse concept to its Latitude equivalent, switches your live telemetry, imports your history, and covers what has to be rebuilt rather than moved.
+
+<Info>
+  The whole migration is three moves: point your telemetry at Latitude, run the
+  [Langfuse import](../telemetry/imports/langfuse) for history, and recreate your
+  evaluators as [signals](../signals/create). Nothing in your application's request path
+  changes — neither platform sits between you and your model provider.
+</Info>
+
+## Concept map
+
+Use this table as the checklist for your own migration.
+
+| Langfuse concept | Latitude equivalent | Notes |
+| --- | --- | --- |
+| Organization | Organization | API keys are organization-scoped (Settings, Keys) |
+| Project | Project | One project per agent or AI feature. The import targets one Latitude project per Langfuse project |
+| Trace | Trace | One trace per turn or request |
+| Observation (span, generation, event) | [Span](../observability/spans) | Generations become LLM spans with model, tokens, cost and messages |
+| Session (`sessionId`) | [Session](../observability/sessions) | Grouped automatically from `session_id` on `capture()` or the `session.id` span attribute |
+| User (`userId`) | [User](../observability/users) | Users get their own page with sessions, cost and signals |
+| Tags, metadata | Tags, metadata | Map directly, both live and in the import |
+| Score (numeric, categorical, boolean) | [Score](../scores/overview) | Every verdict in Latitude is a score; custom pipelines submit scores through `createScore` |
+| LLM-as-a-judge evaluator | [Signal](../signals/overview) with a judge evaluation | Created with `createSignal` (kind `judge`); failed scores group into signals |
+| Custom evaluation pipeline | [Custom scripts](../evaluations/custom-scripts) posting scores | Your code, any language, `createScore` at the end |
+| Annotation queue, human review | [Annotations](../annotations/overview) | Thumbs up or down with feedback on any trace; failed annotations feed signal discovery |
+| Dataset, dataset runs | [Dataset](../datasets/overview), replayed by your own runner | See [simulations](../test-and-fix/simulations) and [regression tests](../test-and-fix/regression-testing) |
+| Prompt management (versions, labels) | Prompts live in your code | Latitude has no prompt registry. Version prompts in git; put the version in trace metadata and a release tag |
+| Playground | Your local dev loop, plus a [Sandbox](../observability/features/sandbox) project | Sandbox keeps experiments out of production analytics |
+| Dashboards, metrics | Traces, Sessions, Users, Tools and Cost views | Plus [saved searches](../search/saved-searches) and [behaviors](../behaviours/overview) |
+| Alerts | [Monitors](../monitors/overview) | Fire on signals, saved searches, tools or raw traffic; notify in-app, by email or in Slack |
+
+Two structural differences worth internalizing before you start:
+
+- **Signals, not per-prompt evaluators.** In Langfuse you attach evaluators to traffic and read results per evaluator. In Latitude, every evaluation verdict is a score, and failed scores are grouped into named signals — recurring problems with example traces attached. Flaggers, annotations and custom scores feed the same discovery pipeline, so problems you never wrote an evaluator for still surface.
+- **No prompt registry.** Latitude deliberately leaves prompts in your codebase and your version control. If Langfuse prompt management is load-bearing for your team, plan the move to code first; the [releases and versioning](../observability/features/releases-versioning) page covers how versions stay visible in Latitude.
+
+## Switch the live telemetry
+
+### If you use the Langfuse SDK
+
+Replace the Langfuse wrapper (decorators, wrapped clients or callback handlers) with the Latitude telemetry SDK. Latitude instruments the provider SDK you already call — there is no wrapper class to thread through your code.
+
+```python
+# pip install latitude-telemetry
+import openai
+from openai import OpenAI
+
+from latitude_telemetry import Latitude, capture
+
+latitude = Latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations={"openai": openai},
+)
+
+client = OpenAI()
+
+capture(
+    "handle-user-request",
+    lambda: client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": user_message}],
+    ),
+    {
+        "user_id": user_id,        # was Langfuse user_id
+        "session_id": session_id,  # was Langfuse session_id
+        "tags": ["production"],
+        "metadata": {"request_id": request_id},
+    },
+)
+```
+
+The TypeScript setup is the same shape with `@latitude-data/telemetry`; see the [TypeScript SDK](../telemetry/typescript) and [Python SDK](../telemetry/python) pages. Carry your Langfuse `user_id` and `session_id` over as-is — the semantics (one session per conversation, one user per end user) match.
+
+### If you already export OTLP
+
+If your app sends OpenTelemetry directly — your own OTel SDK setup, or an OTLP exporter pointed at Langfuse — retarget the exporter at Latitude's ingest endpoint:
+
+```bash
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="https://ingest.latitude.so/v1/traces"
+export OTEL_EXPORTER_OTLP_TRACES_HEADERS="Authorization=Bearer YOUR_API_KEY,X-Latitude-Project=YOUR_PROJECT_SLUG"
+```
+
+Latitude ingests standard OTLP over HTTP and reads the [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) for model, tokens, cost and messages. Set `session.id` and `user.id` span attributes where you set Langfuse's session and user. The [OpenTelemetry exporter](../telemetry/otel-exporter) page has per-language examples, the Latitude-specific span attributes, and troubleshooting.
+
+### During the cutover
+
+Run both platforms in parallel for as long as you like: keep your existing Langfuse export and add Latitude as a second OTLP exporter, or let the Latitude SDK attach to your existing OpenTelemetry provider (it does this automatically when one is registered — see [existing observability stack](../telemetry/otel-exporter#existing-observability-stack)). Traces that arrive in Langfuse during the overlap can still be picked up by re-running the import later — imports are idempotent, so nothing duplicates.
+
+## Import your Langfuse history
+
+Latitude reads the observations in your Langfuse Cloud project and maps them to traces and spans, so you do not start from an empty project. The import runs from **Project settings → Imports** with your Langfuse public and secret keys; it only reads from Langfuse, and credentials are discarded when it finishes.
+
+Sessions, users, tags, metadata, messages, tool calls, token usage and cost all come through. Prompt references (`promptName`, `promptVersion`) land in span metadata. Imported traces are marked with `import.*` metadata naming Langfuse and the original ids, and go through the same pipeline as live traffic — grouped into sessions, embedded for search, evaluated by flaggers.
+
+Follow the [Langfuse import guide](../telemetry/imports/langfuse) for the steps, and the [imports overview](../telemetry/imports/overview) for limits, retries and billing. Two constraints to know up front:
+
+- The import reads from **Langfuse Cloud** (EU, US, Japan or HIPAA US). Self-hosted Langfuse is not supported yet.
+- **Scores and annotations do not import**, and neither do datasets, evaluator definitions or the prompt registry. Traces and spans move; judgments are rebuilt (next section).
+
+## Rebuild what does not import
+
+**Evaluators become signals.** For each Langfuse LLM-as-a-judge evaluator, create a signal with a judge evaluation: the criteria in plain language, plus filters scoping it to the right traffic (see [Create a signal](../signals/create)). Rule-style checks (valid JSON, output length, text match) use kind `rule`. Two behavioral differences: signals collect **forward from creation** — they do not scan imported history — and judge evaluations default to 10 percent sampling, so create signals before you cut traffic over, and raise sampling in the UI on low-volume projects.
+
+**Custom evaluation pipelines** keep running wherever they run today and post their verdicts with `createScore`; failing scores cluster into signals like any other failure. See [custom scripts](../evaluations/custom-scripts).
+
+**Datasets** move as data. Export each Langfuse dataset and insert the rows with `insertDatasetRows`, mapping inputs into `input` and the expected result into `expectedOutput` — the same pattern as the [V1 dataset import](./migrate-from-v1#bring-your-golden-dataset). You can also build datasets directly from your imported traces with [add traces to a dataset](../datasets/add-traces).
+
+**Dataset runs** have no hosted equivalent. Latitude hands the dataset to your own runner: replay it locally or in CI as [simulations](../test-and-fix/simulations) or [regression tests](../test-and-fix/regression-testing), tag the replays so they stay out of production cohorts, and post verdicts as scores. To compare a change on live traffic, use [Experiments](../experiments/overview), which compare two slices of real traffic (by tag, release, user or model) across every metric Latitude tracks.
+
+**Prompts** move into your codebase. Put the prompt version in trace metadata and a release tag so [Experiments](../experiments/overview) can compare versions; the [V1 migration guide](./migrate-from-v1#move-the-prompts-into-code) shows the pattern in full.
+
+## Differences to plan for
+
+- Latitude has **no prompt registry and no playground**. Prompts are code; iteration happens in your dev loop and a Sandbox project.
+- **Historical scores stay in Langfuse.** Only traces and spans import. If a score history matters for an audit, export it from Langfuse before you decommission.
+- **Signals collect forward.** Create them before generating the traffic you want judged.
+- **Experiments compare live traffic**, not dataset runs. Offline comparison is your runner plus scores.
+- Cost figures in Latitude are **estimates** computed from the usage and model information in telemetry; see [token and cost tracking](../observability/features/token-cost-tracking).
+
+## Why teams switch
+
+Reasons teams have given us, stated plainly so you can check them against your own situation:
+
+- **The whole team can work in it.** Product managers and domain experts review sessions, annotate traces, flag problems and curate expected outputs without writing code. In Langfuse these teams often stayed outside the tool and fed feedback back through engineers.
+- **Product-level answers, not just traces.** Sessions, users, behaviors and signal discovery answer "what is going wrong for whom, how often" rather than requiring someone to reason it out trace by trace.
+- **Feedback lives in one pipeline.** Annotations, flaggers, evaluations and custom scores all land as scores, cluster into signals, alert through monitors, and can [dispatch to a coding agent](../agent-dispatch/overview) with the evidence attached — rather than being spread across an evaluation tab, external spreadsheets and a ticket tracker.
+- **Cost visibility.** Teams told us their OpenAI cost accounting elsewhere missed processing tiers and cache discounts. Latitude estimates cost from the usage and model information in each span and the Cost view breaks down cache economics per model — verify the numbers against your own bill for your providers before relying on either tool's figures.
+
+## For regulated and EU teams
+
+Latitude is [MIT-licensed](https://github.com/latitude-dev/latitude-llm/blob/development/LICENSE) and [self-hostable](../deployment/overview) from a single Docker host to a Kubernetes cluster, so the same constraint that put you on self-hosted Langfuse is covered. Hosted Latitude stores and processes customer data in AWS eu-central-1 (Frankfurt); see [GDPR](../security/compliance/gdpr) for the current readiness status, and [PII redaction](../security/pii-redaction) for redaction controls — which apply to imported Langfuse traces exactly as they do to live ones.
+
+## Frequently asked
+
+**Do I lose my Langfuse history?** No. The [import](../telemetry/imports/langfuse) brings traces, sessions, users, tags, metadata, messages, token usage and cost into your Latitude project. Scores, annotations, datasets and prompts do not import; this guide covers rebuilding each.
+
+**Can I run both during the transition?** Yes. Both platforms consume OpenTelemetry, so a second exporter — or the Latitude SDK attached to your existing OTel provider — sends the same spans to both. Re-run the import at the end to backfill the overlap; imports are idempotent.
+
+**We self-host Langfuse. Can we import?** Not yet — the import reads from Langfuse Cloud regions only. Live telemetry from a self-hosted stack works fine: point your exporter at Latitude and history accumulates from cutover.
+
+**Where do prompts go?** Into your codebase. Latitude tracks prompt versions as trace metadata and release tags rather than hosting a registry; the [V1 migration guide](./migrate-from-v1#move-the-prompts-into-code) shows the pattern.
