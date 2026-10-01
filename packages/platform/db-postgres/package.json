@@ -15,7 +15,8 @@
   "scripts": {
     "pg:generate": "node --import tsx scripts/migration.ts auto",
     "pg:generate:custom": "node --import tsx scripts/migration.ts custom",
-    "pg:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
+    "pg:migrate": "node --import tsx scripts/migrate.ts",
+    "test:migrations:postgres": "vitest run --dir src/migrations migrate-postgres.integration.test.ts",
     "pg:push": "drizzle-kit push --config=drizzle.config.ts",
     "pg:check": "drizzle-kit check --config=drizzle.config.ts",
     "pg:studio": "drizzle-kit studio --config=drizzle.config.ts --port 3003",
