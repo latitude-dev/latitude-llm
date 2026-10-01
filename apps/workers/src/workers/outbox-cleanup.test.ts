@@ -1,4 +1,5 @@
 import { setupTestPostgres } from "@platform/db-postgres/testing"
+import { Schedule } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/test-queue-consumer.ts"
 import { createOutboxCleanupWorker } from "./outbox-cleanup.ts"
@@ -18,7 +19,11 @@ beforeEach(async () => {
 
 const createWorker = () => {
   const consumer = new TestQueueConsumer()
-  createOutboxCleanupWorker({ consumer, postgresClient: pg.adminPostgresClient })
+  createOutboxCleanupWorker({
+    consumer,
+    postgresClient: pg.adminPostgresClient,
+    retrySchedule: Schedule.spaced("0 millis"),
+  })
   return consumer
 }
 
@@ -65,7 +70,55 @@ describe("outbox cleanup worker", () => {
     )
   })
 
-  it("propagates database failures for BullMQ retry and succeeds after recovery", async () => {
+  it("recovers from transient failures within one task with a fresh cutoff per attempt", async () => {
+    const consumer = createWorker()
+    await insertEvents()
+    await pg.client.exec(`
+      CREATE SEQUENCE latitude.worker_outbox_cleanup_attempt;
+      CREATE FUNCTION latitude.fail_worker_outbox_cleanup() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF nextval('latitude.worker_outbox_cleanup_attempt') <= 2 THEN
+          RAISE EXCEPTION 'transient worker cleanup test failure';
+        END IF;
+        RETURN OLD;
+      END $$;
+      CREATE TRIGGER fail_worker_outbox_cleanup BEFORE DELETE ON latitude.outbox_events
+      FOR EACH ROW EXECUTE FUNCTION latitude.fail_worker_outbox_cleanup();
+    `)
+    const now = new Date()
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(now)
+    logger.error
+      .mockImplementationOnce(() => vi.setSystemTime(now.getTime() + 1000))
+      .mockImplementationOnce(() => vi.setSystemTime(now.getTime() + 2000))
+    try {
+      await consumer.dispatchTask("outbox-cleanup", "run", {})
+      expect(logger.error).toHaveBeenCalledTimes(2)
+      const cutoff = (offset: number) => new Date(now.getTime() + offset - 7 * 24 * 60 * 60 * 1000).toISOString()
+      for (const [index, offset] of [0, 1000].entries()) {
+        expect(logger.error).toHaveBeenNthCalledWith(
+          index + 1,
+          "Outbox cleanup failed",
+          expect.objectContaining({ cutoff: cutoff(offset), deletedCount: 0, batchCount: 0, error: expect.anything() }),
+        )
+      }
+      expect(logger.info).toHaveBeenCalledTimes(1)
+      expect(logger.info).toHaveBeenLastCalledWith(
+        "Outbox cleanup completed",
+        expect.objectContaining({ cutoff: cutoff(2000), deletedCount: 1, batchCount: 1, limitReached: false }),
+      )
+      expect(await remainingIds()).toEqual(["null", "pending", "recent"])
+    } finally {
+      vi.useRealTimers()
+      await pg.client.exec(`
+        DROP TRIGGER fail_worker_outbox_cleanup ON latitude.outbox_events;
+        DROP FUNCTION latitude.fail_worker_outbox_cleanup();
+        DROP SEQUENCE latitude.worker_outbox_cleanup_attempt;
+      `)
+    }
+  })
+
+  it("logs all three failed attempts and propagates the terminal failure", async () => {
     const consumer = createWorker()
     await insertEvents()
     await pg.client.exec(`
@@ -76,6 +129,8 @@ describe("outbox cleanup worker", () => {
     `)
     try {
       await expect(consumer.dispatchTask("outbox-cleanup", "run", {})).rejects.toThrow()
+      expect(logger.error).toHaveBeenCalledTimes(3)
+      expect(logger.info).not.toHaveBeenCalled()
       expect(logger.error).toHaveBeenLastCalledWith(
         "Outbox cleanup failed",
         expect.objectContaining({

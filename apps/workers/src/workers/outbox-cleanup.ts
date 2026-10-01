@@ -6,13 +6,16 @@ import {
   type PostgresClient,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
-import { Effect } from "effect"
+import { Effect, Schedule } from "effect"
 
 const logger = createLogger("outbox-cleanup")
+const OUTBOX_CLEANUP_MAX_ATTEMPTS = 3
+const OUTBOX_CLEANUP_RETRY_SCHEDULE = Schedule.exponential("5 seconds")
 
 interface OutboxCleanupDeps {
   consumer: QueueConsumer
   postgresClient: PostgresClient
+  retrySchedule?: Schedule.Schedule<unknown, unknown>
 }
 
 const annotateCleanupResult = (result: OutboxCleanupResult) =>
@@ -24,7 +27,11 @@ const annotateCleanupResult = (result: OutboxCleanupResult) =>
     "outbox.cleanup.limitReached": result.limitReached,
   })
 
-export const createOutboxCleanupWorker = ({ consumer, postgresClient }: OutboxCleanupDeps) => {
+export const createOutboxCleanupWorker = ({
+  consumer,
+  postgresClient,
+  retrySchedule = OUTBOX_CLEANUP_RETRY_SCHEDULE,
+}: OutboxCleanupDeps) => {
   consumer.subscribe(
     "outbox-cleanup",
     {
@@ -43,6 +50,7 @@ export const createOutboxCleanupWorker = ({ consumer, postgresClient }: OutboxCl
                 })
               }),
             ),
+            Effect.retry(Schedule.both(retrySchedule, Schedule.recurs(OUTBOX_CLEANUP_MAX_ATTEMPTS - 1))),
           )
           yield* annotateCleanupResult(result)
           logger.info("Outbox cleanup completed", result)
