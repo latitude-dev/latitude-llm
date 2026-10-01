@@ -67,7 +67,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -166,7 +166,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         name : str
             Human-readable name. Used to derive the slug.
@@ -256,7 +256,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -335,7 +335,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -401,7 +401,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -502,7 +502,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -604,7 +604,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -700,7 +700,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -801,7 +801,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -928,7 +928,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -1029,7 +1029,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -1151,7 +1151,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -1241,7 +1241,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -1335,7 +1335,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -1404,7 +1404,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -1501,7 +1501,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -1595,7 +1595,7 @@ class RawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -1689,7 +1689,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -1788,7 +1788,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         name : str
             Human-readable name. Used to derive the slug.
@@ -1878,7 +1878,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -1957,7 +1957,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -2023,7 +2023,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -2124,7 +2124,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -2226,7 +2226,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -2322,7 +2322,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -2423,7 +2423,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -2550,7 +2550,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -2651,7 +2651,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -2773,7 +2773,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -2863,7 +2863,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -2957,7 +2957,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -3026,7 +3026,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -3123,7 +3123,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
@@ -3217,7 +3217,7 @@ class AsyncRawDatasetsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).

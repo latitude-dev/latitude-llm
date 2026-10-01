@@ -15,6 +15,10 @@ class MemoryStoreChange(UniversalBaseModel):
         FieldMetadata(alias="recordId"),
         pydantic.Field(alias="recordId", description="Record that changed between the two points."),
     ]
+    """
+    Record that changed between the two points.
+    """
+
     kind: MemoryStoreChangeKind = pydantic.Field()
     """
     How the record changed: `added` (only at `to`), `removed` (only at `from`), or `updated` (present at both with a different body).
@@ -25,11 +29,19 @@ class MemoryStoreChange(UniversalBaseModel):
         FieldMetadata(alias="tokensAdded"),
         pydantic.Field(alias="tokensAdded", description="Tokens inserted by this change."),
     ]
+    """
+    Tokens inserted by this change.
+    """
+
     tokens_removed: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensRemoved"),
         pydantic.Field(alias="tokensRemoved", description="Tokens deleted by this change."),
     ]
+    """
+    Tokens deleted by this change.
+    """
+
     degraded: bool = pydantic.Field()
     """
     `true` when a body was unavailable and token counts fall back to record-level estimates.

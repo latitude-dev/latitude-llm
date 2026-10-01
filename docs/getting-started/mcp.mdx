@@ -1,5 +1,5 @@
 ---
-title: MCP Server
+title: MCP
 description: Connect AI agents like Claude, Cursor, Codex, and Zed to your Latitude organization through the Latitude MCP server
 ---
 
@@ -18,6 +18,10 @@ To see or revoke connected agents at any time, go to your organization's **Setti
 <Info>
   Prefer a local binary? The [Latitude CLI](/getting-started/cli) exposes the same capabilities from your terminal.
 </Info>
+
+<Warning>
+  The MCP reaches your **live** organizations only. An OAuth token binds to an organization you're a member of, and [sandboxes](/observability/features/sandbox) aren't organizations you join — so they never appear in the consent screen. To let an agent investigate a sandbox trace, give it the [CLI](/getting-started/cli) with that sandbox's `lat_sandbox_` key instead.
+</Warning>
 
 ## Installation
 

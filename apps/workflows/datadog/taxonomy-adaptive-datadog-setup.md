@@ -41,10 +41,10 @@ spans-source dashboard for 15 days.
 
 Retention filters are evaluated **top-down**, and the first match makes the
 keep/drop decision — a broader filter above this one could sample the garden
-spans out before it runs. After running the script, make sure this filter sits
-**above** any broad `service:workflows` / catch-all filter (APM → Retention
-Filters, drag to reorder, or the `retention-filters-execution-order` API); the
-script can't set ordering.
+spans out before it runs. `setup-datadog.sh` asserts the order itself, promoting every
+taxonomy filter above the rest on each run, so this is not a manual step. It has to be
+re-asserted every run: recreating a filter by name gives it a new id at the bottom of
+the order.
 
 ## Durable history — span-based metrics (retained 15 months)
 

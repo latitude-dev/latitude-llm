@@ -14,6 +14,7 @@ import {
   NotificationId,
   type OrganizationId,
   type ProjectId,
+  type ProjectSettings,
   type RepositoryError,
   SettingsReader,
   SignalId,
@@ -24,6 +25,7 @@ import {
   buildHistogramBucketScaffold,
   DEFAULT_ESCALATION_SENSITIVITY_K,
   fillBuckets,
+  type Signal,
   type SignalPriority,
   SignalRepository,
 } from "@domain/signals"
@@ -76,7 +78,13 @@ export interface IncidentNotificationRequest {
 export type RequestIncidentNotificationsResult =
   | {
       readonly status: "skipped"
-      readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" | "signal-muted" | "signal-ignored"
+      readonly reason:
+        | "kind-disabled"
+        | "no-recipients"
+        | "monitor-muted"
+        | "signal-muted"
+        | "signal-ignored"
+        | "signal-resolved"
     }
   | { readonly status: "ok"; readonly requests: readonly IncidentNotificationRequest[] }
 
@@ -407,6 +415,75 @@ const notificationSeverity = (incident: SourcedIncident, triage: SignalTriageSna
   return meetsMinSeverity(triaged, incident.severity) ? triaged : incident.severity
 }
 
+type IncidentPayloadBase = {
+  readonly alertIncidentId: IncidentEventPayload["alertIncidentId"]
+  readonly sourceType: IncidentEventPayload["sourceType"]
+  readonly sourceId: IncidentEventPayload["sourceId"]
+  readonly incidentKind: IncidentEventPayload["incidentKind"]
+  readonly severity: AlertSeverity
+} & Partial<
+  Pick<IncidentOpenedPayload, "monitorId" | "monitorName" | "monitorSlug" | "condition" | "assigneeId" | "priority">
+>
+
+const buildPayloadBase = (input: {
+  readonly incident: SourcedIncident
+  readonly monitor: IncidentMonitorInfo | null
+  readonly triage: SignalTriageSnapshot | null
+  readonly severity: AlertSeverity
+}): IncidentPayloadBase => {
+  const { incident, monitor, triage, severity } = input
+  // Monitor attribution + condition, spread into every variant; empty on legacy incidents.
+  // Signal triage snapshot, spread into every variant (incl. closed — the
+  // recovery email still shows who owns the signal); absent for monitor
+  // sources and when the signal row vanished.
+  return {
+    alertIncidentId: incident.id,
+    sourceType: incident.sourceType,
+    sourceId: incident.sourceId,
+    incidentKind: notificationKeyForIncident(incident),
+    severity,
+    ...(monitor ? { monitorId: monitor.monitorId, monitorName: monitor.name, monitorSlug: monitor.slug } : {}),
+    ...(incident.condition !== null ? { condition: incident.condition } : {}),
+    ...(triage ? { assigneeId: triage.assigneeId, priority: triage.priority } : {}),
+  }
+}
+
+const buildEventPayload = (
+  base: IncidentPayloadBase,
+  tags: string[] | undefined,
+  sampleExcerpt: IncidentSampleExcerpt | undefined,
+): IncidentEventPayload => ({
+  ...base,
+  ...(tags ? { tags } : {}),
+  ...(sampleExcerpt ? { sampleExcerpt } : {}),
+})
+
+const buildOpenedPayload = (
+  base: IncidentPayloadBase,
+  extras: {
+    readonly trend: IncidentTrend | null
+    readonly tags: string[] | undefined
+    readonly breach: IncidentBreach | undefined
+    readonly sampleExcerpt: IncidentSampleExcerpt | undefined
+  },
+): IncidentOpenedPayload => ({
+  ...base,
+  ...(extras.trend ? { trend: extras.trend } : {}),
+  ...(extras.tags ? { tags: extras.tags } : {}),
+  ...(extras.breach ? { breach: extras.breach } : {}),
+  ...(extras.sampleExcerpt ? { sampleExcerpt: extras.sampleExcerpt } : {}),
+})
+
+const buildClosedPayload = (
+  base: IncidentPayloadBase,
+  trend: IncidentTrend | null,
+  incident: Incident,
+): IncidentClosedPayload => ({
+  ...base,
+  ...(trend ? { trend } : {}),
+  recovery: buildRecovery(incident),
+})
+
 const buildPayload = (input: {
   readonly incident: SourcedIncident
   readonly kind: IncidentNotificationKind
@@ -418,66 +495,122 @@ const buildPayload = (input: {
   readonly triage: SignalTriageSnapshot | null
 }): IncidentEventPayload | IncidentOpenedPayload | IncidentClosedPayload => {
   const { incident, kind, trend, triggerRatePerHour, tags, sampleExcerpt, monitor, triage } = input
-  const severity = notificationSeverity(incident, triage)
-  const base = {
-    alertIncidentId: incident.id,
-    sourceType: incident.sourceType,
-    sourceId: incident.sourceId,
-    incidentKind: notificationKeyForIncident(incident),
-    severity,
-  } as const
-  // Monitor attribution + condition, spread into every variant; empty on legacy incidents.
-  const attribution = {
-    ...(monitor ? { monitorId: monitor.monitorId, monitorName: monitor.name, monitorSlug: monitor.slug } : {}),
-    ...(incident.condition !== null ? { condition: incident.condition } : {}),
-  }
-  // Signal triage snapshot, spread into every variant (incl. closed — the
-  // recovery email still shows who owns the signal); absent for monitor
-  // sources and when the signal row vanished.
-  const triageFields = triage ? { assigneeId: triage.assigneeId, priority: triage.priority } : {}
-
+  const base = buildPayloadBase({
+    incident,
+    monitor,
+    triage,
+    severity: notificationSeverity(incident, triage),
+  })
   const mutableTags = tags ? [...tags] : undefined
-  if (kind === "incident.event") {
-    return {
-      alertIncidentId: base.alertIncidentId,
-      sourceType: base.sourceType,
-      sourceId: base.sourceId,
-      incidentKind: base.incidentKind,
-      severity: base.severity,
-      ...attribution,
-      ...triageFields,
-      ...(mutableTags ? { tags: mutableTags } : {}),
-      ...(sampleExcerpt ? { sampleExcerpt } : {}),
-    }
+  switch (kind) {
+    case "incident.event":
+      return buildEventPayload(base, mutableTags, sampleExcerpt)
+    case "incident.opened":
+      return buildOpenedPayload(base, {
+        trend,
+        tags: mutableTags,
+        breach: buildBreach(incident, triggerRatePerHour),
+        sampleExcerpt,
+      })
+    case "incident.closed":
+      return buildClosedPayload(base, trend, incident)
   }
-  // Sustained signal incidents carry a signal trend snapshot; monitor incidents
-  // render from their monitor attribution and condition.
-  if (kind === "incident.opened") {
-    const breach = buildBreach(incident, triggerRatePerHour)
-    return {
-      alertIncidentId: base.alertIncidentId,
-      sourceType: base.sourceType,
-      sourceId: base.sourceId,
-      incidentKind: base.incidentKind,
-      severity: base.severity,
-      ...attribution,
-      ...triageFields,
-      ...(trend ? { trend } : {}),
-      ...(mutableTags ? { tags: mutableTags } : {}),
-      ...(breach ? { breach } : {}),
-      ...(sampleExcerpt ? { sampleExcerpt } : {}),
+}
+
+type IncidentSourceSkipReason = "monitor-muted" | "signal-muted" | "signal-ignored" | "signal-resolved"
+
+const skipReasonForIncidentSignal = (signal: Signal | null): IncidentSourceSkipReason | null => {
+  if (signal?.mutedAt !== null && signal?.mutedAt !== undefined) return "signal-muted"
+  // Ignored signals normally never open incidents; this covers the race
+  // where an ignore lands between the incident opening and this fan-out.
+  if (signal?.ignoredAt !== null && signal?.ignoredAt !== undefined) return "signal-ignored"
+  // Same race for resolve: the manual close already suppressed the recovery
+  // notification, so a still-queued open must not ping for an archived signal.
+  if (signal?.resolvedAt !== null && signal?.resolvedAt !== undefined) return "signal-resolved"
+  return null
+}
+
+const loadIncidentSources = (incident: SourcedIncident) =>
+  Effect.gen(function* () {
+    const monitor =
+      incident.sourceType === "monitor"
+        ? yield* (yield* IncidentMonitorReader).findByMonitorId(incident.sourceId)
+        : null
+    if (monitor?.mutedAt !== null && monitor?.mutedAt !== undefined) {
+      return { status: "skipped", reason: "monitor-muted" } as const
     }
-  }
-  return {
-    alertIncidentId: base.alertIncidentId,
-    sourceType: base.sourceType,
-    sourceId: base.sourceId,
-    incidentKind: base.incidentKind,
-    severity: base.severity,
-    ...attribution,
-    ...triageFields,
-    ...(trend ? { trend } : {}),
-    recovery: buildRecovery(incident),
+    const signal =
+      incident.sourceType === "signal"
+        ? yield* (yield* SignalRepository)
+            .findById(SignalId(incident.sourceId))
+            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+        : null
+    const signalSkip = skipReasonForIncidentSignal(signal)
+    if (signalSkip !== null) {
+      return { status: "skipped", reason: signalSkip } as const
+    }
+    return { status: "ok", monitor, signal } as const
+  })
+
+const resolveEscalationSensitivity = (incident: SourcedIncident, projectSettings: ProjectSettings | null) => {
+  // Prefer the sensitivity snapshotted on the incident's condition (so the chart's
+  // threshold line matches what tripped it); fall back to project settings.
+  const snapshotSensitivity = incident.condition?.trigger === "escalating" ? incident.condition.sensitivity : undefined
+  return snapshotSensitivity ?? projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
+}
+
+const snapshotIncidentNotificationContext = (input: {
+  readonly incident: SourcedIncident
+  readonly kind: IncidentNotificationKind
+  readonly kShort: number
+}) => {
+  const { incident, kind, kShort } = input
+  // Trend / tags / sample-excerpt are all keyed on signal analytics; monitor incidents render
+  // from the kind + monitor attribution + condition.
+  // Closed kind also skips tags/excerpt: the recovery copy focuses on the descent.
+  const isSignalSource = incident.sourceType === "signal"
+  const wantsSourceContext = isSignalSource && kind !== "incident.closed"
+  return Effect.all(
+    [
+      isSignalSource ? snapshotTrend({ incident, kind, kShort }) : Effect.succeed(null),
+      isSignalSource && kind === "incident.opened" ? snapshotTriggerRatePerHour(incident) : Effect.succeed(null),
+      wantsSourceContext ? snapshotTags(incident) : Effect.succeed(undefined),
+      wantsSourceContext ? snapshotSampleExcerpt(incident) : Effect.succeed(undefined),
+      isSignalSource ? snapshotSignalTriage(incident) : Effect.succeed(null),
+    ],
+    { concurrency: "unbounded" as const },
+  )
+}
+
+const resolveIncidentRecipients = (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly assigneeId: string | null | undefined
+  readonly kind: IncidentNotificationKey
+}) =>
+  input.assigneeId
+    ? Effect.succeed([UserId(input.assigneeId)] as const)
+    : resolveRecipients({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        kind: input.kind,
+      })
+
+const idempotencyKeyForIncidentKind = (
+  kind: IncidentNotificationKind,
+  payload: IncidentEventPayload | IncidentOpenedPayload | IncidentClosedPayload,
+): string => {
+  // Per-kind switch preserves the discriminated-union narrowing
+  // `buildIdempotencyKey`'s input requires. A widening cast would
+  // silently lose exhaustiveness if a future kind keys off a
+  // different payload field.
+  switch (kind) {
+    case "incident.event":
+      return buildIdempotencyKey({ kind: "incident.event", payload: payload as IncidentEventPayload })
+    case "incident.opened":
+      return buildIdempotencyKey({ kind: "incident.opened", payload: payload as IncidentOpenedPayload })
+    case "incident.closed":
+      return buildIdempotencyKey({ kind: "incident.closed", payload: payload as IncidentClosedPayload })
   }
 }
 
@@ -499,35 +632,10 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     const incidentRepo = yield* IncidentRepository
     const incident = yield* incidentRepo.findById(AlertIncidentId(input.alertIncidentId))
 
-    const monitor =
-      incident.sourceType === "monitor"
-        ? yield* (yield* IncidentMonitorReader).findByMonitorId(incident.sourceId)
-        : null
-    if (monitor?.mutedAt !== null && monitor?.mutedAt !== undefined) {
-      yield* Effect.annotateCurrentSpan("skipped", "monitor-muted")
-      return { status: "skipped", reason: "monitor-muted" } as const
-    }
-    const signal =
-      incident.sourceType === "signal"
-        ? yield* (yield* SignalRepository)
-            .findById(SignalId(incident.sourceId))
-            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-        : null
-    if (signal?.mutedAt !== null && signal?.mutedAt !== undefined) {
-      yield* Effect.annotateCurrentSpan("skipped", "signal-muted")
-      return { status: "skipped", reason: "signal-muted" } as const
-    }
-    // Ignored signals normally never open incidents; this covers the race
-    // where an ignore lands between the incident opening and this fan-out.
-    if (signal?.ignoredAt !== null && signal?.ignoredAt !== undefined) {
-      yield* Effect.annotateCurrentSpan("skipped", "signal-ignored")
-      return { status: "skipped", reason: "signal-ignored" } as const
-    }
-    // Same race for resolve: the manual close already suppressed the recovery
-    // notification, so a still-queued open must not ping for an archived signal.
-    if (signal?.resolvedAt !== null && signal?.resolvedAt !== undefined) {
-      yield* Effect.annotateCurrentSpan("skipped", "signal-resolved")
-      return { status: "skipped", reason: "signal-resolved" } as const
+    const source = yield* loadIncidentSources(incident)
+    if (source.status === "skipped") {
+      yield* Effect.annotateCurrentSpan("skipped", source.reason)
+      return source
     }
 
     const notificationKind = resolveKind(incident, input.transition)
@@ -541,42 +649,19 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       return { status: "skipped", reason: "kind-disabled" } as const
     }
 
-    // Prefer the sensitivity snapshotted on the incident's condition (so the chart's
-    // threshold line matches what tripped it); fall back to project settings.
-    const snapshotSensitivity =
-      incident.condition?.trigger === "escalating" ? incident.condition.sensitivity : undefined
-    const kShort = snapshotSensitivity ?? projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
-    // Trend / tags / sample-excerpt are all keyed on signal analytics; monitor incidents render
-    // from the kind + monitor attribution + condition.
-    // Closed kind also skips tags/excerpt: the recovery copy focuses on the descent.
-    const isSignalSource = incident.sourceType === "signal"
-    const wantsSourceContext = isSignalSource && notificationKind !== "incident.closed"
-    const [trend, triggerRatePerHour, tags, sampleExcerpt, triage] = yield* Effect.all(
-      [
-        isSignalSource ? snapshotTrend({ incident, kind: notificationKind, kShort }) : Effect.succeed(null),
-        // Only the opened-side breach copy needs the fine-grained hourly rate (issue sources only).
-        isSignalSource && notificationKind === "incident.opened"
-          ? snapshotTriggerRatePerHour(incident)
-          : Effect.succeed(null),
-        wantsSourceContext ? snapshotTags(incident) : Effect.succeed(undefined),
-        wantsSourceContext ? snapshotSampleExcerpt(incident) : Effect.succeed(undefined),
-        isSignalSource ? snapshotSignalTriage(incident) : Effect.succeed(null),
-      ],
-      { concurrency: "unbounded" },
-    )
+    const [trend, triggerRatePerHour, tags, sampleExcerpt, triage] = yield* snapshotIncidentNotificationContext({
+      incident,
+      kind: notificationKind,
+      kShort: resolveEscalationSensitivity(incident, projectSettings),
+    })
 
-    const hasSignalAssignee = Boolean(signal?.assigneeId)
-    let recipients: readonly UserId[]
-    if (signal?.assigneeId) {
-      recipients = [UserId(signal.assigneeId)]
-    } else {
-      recipients = yield* resolveRecipients({
-        organizationId: incident.organizationId,
-        projectId: incident.projectId,
-        kind: incidentNotificationKey,
-      })
-    }
-
+    const hasSignalAssignee = Boolean(source.signal?.assigneeId)
+    const recipients = yield* resolveIncidentRecipients({
+      organizationId: incident.organizationId,
+      projectId: incident.projectId,
+      assigneeId: source.signal?.assigneeId,
+      kind: incidentNotificationKey,
+    })
     if (recipients.length === 0) {
       return { status: "skipped", reason: "no-recipients" } as const
     }
@@ -588,23 +673,10 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       triggerRatePerHour,
       tags,
       sampleExcerpt,
-      monitor,
+      monitor: source.monitor,
       triage,
     })
-    // Per-kind switch preserves the discriminated-union narrowing
-    // `buildIdempotencyKey`'s input requires. A widening cast would
-    // silently lose exhaustiveness if a future kind keys off a
-    // different payload field.
-    const idempotencyKey: string = (() => {
-      switch (notificationKind) {
-        case "incident.event":
-          return buildIdempotencyKey({ kind: "incident.event", payload: payload as IncidentEventPayload })
-        case "incident.opened":
-          return buildIdempotencyKey({ kind: "incident.opened", payload: payload as IncidentOpenedPayload })
-        case "incident.closed":
-          return buildIdempotencyKey({ kind: "incident.closed", payload: payload as IncidentClosedPayload })
-      }
-    })()
+    const idempotencyKey = idempotencyKeyForIncidentKind(notificationKind, payload)
 
     const requests: IncidentNotificationRequest[] = recipients.map((userId) => ({
       organizationId: incident.organizationId,

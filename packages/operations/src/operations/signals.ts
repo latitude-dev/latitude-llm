@@ -19,11 +19,13 @@ import {
   getSignalAnalyticsUseCase,
   getSignalDetailsUseCase,
   getSignalTrendUseCase,
+  type ListSignalsResult,
   listSignalsUseCase,
   listSignalTracesUseCase,
   SIGNAL_FEEDBACK_MAX_LENGTH,
   SIGNAL_PRIORITIES,
   type SignalLifecycleCommand,
+  type SignalLifecycleCommandItem,
   SignalRepository,
   submitSignalFeedbackUseCase,
   updateSignalUseCase,
@@ -176,6 +178,16 @@ const LifecycleResponseSchema = z
   })
   .openapi("SignalsLifecycleResponse")
 
+const toLifecycleItem = (item: SignalLifecycleCommandItem) => ({
+  signalId: item.signalId,
+  resolvedAt: item.resolvedAt ? item.resolvedAt.toISOString() : null,
+  ignoredAt: item.ignoredAt ? item.ignoredAt.toISOString() : null,
+  regressedAt: item.regressedAt ? item.regressedAt.toISOString() : null,
+  mutedAt: item.mutedAt ? item.mutedAt.toISOString() : null,
+  updatedAt: item.updatedAt.toISOString(),
+  changed: item.changed,
+})
+
 const signalsPath = "/projects/:projectSlug/signals"
 
 const signalEndpoint = defineOperation<OrganizationScopedEnv>(signalsPath)
@@ -232,15 +244,7 @@ const buildLifecycleEndpoint = ({
         return {
           status: 200,
           body: {
-            items: result.items.map((item) => ({
-              signalId: item.signalId,
-              resolvedAt: item.resolvedAt ? item.resolvedAt.toISOString() : null,
-              ignoredAt: item.ignoredAt ? item.ignoredAt.toISOString() : null,
-              regressedAt: item.regressedAt ? item.regressedAt.toISOString() : null,
-              mutedAt: item.mutedAt ? item.mutedAt.toISOString() : null,
-              updatedAt: item.updatedAt.toISOString(),
-              changed: item.changed,
-            })),
+            items: result.items.map(toLifecycleItem),
           },
         } as const
       }).pipe(
@@ -355,6 +359,43 @@ const ListSignalsQuerySchema = PaginatedQueryParamsSchema.extend({
   toIso: z.iso.datetime().optional().describe("Upper bound (inclusive) of the time window. Defaults to now."),
 })
 
+const decodeListSignalsOffset = (cursor: string | undefined) =>
+  Effect.gen(function* () {
+    if (!cursor) return 0
+    const decoded = decodeSignalOffsetCursor(cursor)
+    if (decoded === null) {
+      return yield* new BadRequestError({ message: "Invalid `cursor` value." })
+    }
+    return decoded
+  })
+
+const listSignalsTimeRange = (query: Pick<z.infer<typeof ListSignalsQuerySchema>, "fromIso" | "toIso">) =>
+  query.fromIso || query.toIso
+    ? {
+        ...(query.fromIso ? { from: new Date(query.fromIso) } : {}),
+        ...(query.toIso ? { to: new Date(query.toIso) } : {}),
+      }
+    : undefined
+
+const embedSignalSearchIfPresent = (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: string
+  readonly query: string | undefined
+}) =>
+  input.query
+    ? embedSignalSearchQueryUseCase({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        query: input.query,
+      })
+    : Effect.succeed(undefined)
+
+const toListSignalsBody = (result: ListSignalsResult, offset: number, organizationId: string) => ({
+  items: result.items.map((item) => toSignalResponse(item, organizationId)),
+  nextCursor: result.hasMore ? encodeSignalOffsetCursor(offset + result.items.length) : null,
+  hasMore: result.hasMore,
+})
+
 const listSignals = signalEndpoint({
   route: createRoute({
     method: "get",
@@ -377,34 +418,16 @@ const listSignals = signalEndpoint({
       const { projectSlug } = input.params
       const query = input.query
       const orgId = OrganizationId(ctx.organization.id as string)
-
-      let offset = 0
-      if (query.cursor) {
-        const decoded = decodeSignalOffsetCursor(query.cursor)
-        if (decoded === null) {
-          return yield* new BadRequestError({ message: "Invalid `cursor` value." })
-        }
-        offset = decoded
-      }
+      const offset = yield* decodeListSignalsOffset(query.cursor)
 
       const projectRepo = yield* ProjectRepository
       const project = yield* projectRepo.findBySlug(projectSlug)
-
-      const timeRange =
-        query.fromIso || query.toIso
-          ? {
-              ...(query.fromIso ? { from: new Date(query.fromIso) } : {}),
-              ...(query.toIso ? { to: new Date(query.toIso) } : {}),
-            }
-          : undefined
-
-      const search = query.query
-        ? yield* embedSignalSearchQueryUseCase({
-            organizationId: orgId,
-            projectId: project.id,
-            query: query.query,
-          })
-        : undefined
+      const timeRange = listSignalsTimeRange(query)
+      const search = yield* embedSignalSearchIfPresent({
+        organizationId: orgId,
+        projectId: project.id,
+        query: query.query,
+      })
 
       const result = yield* listSignalsUseCase({
         organizationId: orgId,
@@ -418,11 +441,7 @@ const listSignals = signalEndpoint({
       })
       return {
         status: 200,
-        body: {
-          items: result.items.map((item) => toSignalResponse(item, ctx.organization.id as string)),
-          nextCursor: result.hasMore ? encodeSignalOffsetCursor(offset + result.items.length) : null,
-          hasMore: result.hasMore,
-        },
+        body: toListSignalsBody(result, offset, ctx.organization.id as string),
       } as const
     }).pipe(
       withPostgres(

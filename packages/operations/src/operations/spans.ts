@@ -2,8 +2,10 @@ import { ProjectRepository } from "@domain/projects"
 import { OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
 import {
   type SpanListCursor,
+  type SpanListOptions,
   type SpanListOrderDirection,
   type SpanListOrderField,
+  type SpanListPage,
   SpanRepository,
 } from "@domain/spans"
 import { createRoute, z } from "@hono/zod-openapi"
@@ -110,6 +112,59 @@ const QuerySpansResponseSchema = z
   })
   .openapi("QuerySpans")
 
+type QuerySpansBody = z.infer<typeof QuerySpansBodySchema>
+type QuerySpansOrderBy = { readonly field: SpanListOrderField; readonly direction: SpanListOrderDirection }
+
+const invalidCursorResponse = { status: 400, body: { error: "Invalid `cursor` value." } } as const
+const cursorOrderMismatchResponse = {
+  status: 400,
+  body: { error: "`cursor` does not match `orderBy`; restart pagination without the cursor." },
+} as const
+const invalidRangeResponse = {
+  status: 400,
+  body: { error: "`range.fromIso` must be strictly before `range.toIso`." },
+} as const
+
+const parseQuerySpansCursor = (
+  raw: string | undefined,
+  orderBy: QuerySpansOrderBy,
+):
+  | { ok: true; cursor: SpanListCursor | undefined }
+  | { ok: false; response: typeof invalidCursorResponse | typeof cursorOrderMismatchResponse } => {
+  if (!raw) return { ok: true, cursor: undefined }
+  const decoded = decodeSpanListCursor(raw)
+  if (decoded === null) return { ok: false, response: invalidCursorResponse }
+  // The cursor is pinned to the ordering it was minted under; replaying it
+  // under a different `orderBy` would page incoherently.
+  if (decoded.field !== orderBy.field || decoded.direction !== orderBy.direction) {
+    return { ok: false, response: cursorOrderMismatchResponse }
+  }
+  return { ok: true, cursor: decoded }
+}
+
+const isInvalidSpanQueryRange = (range: QuerySpansBody["range"]): boolean =>
+  Boolean(range && new Date(range.fromIso).getTime() >= new Date(range.toIso).getTime())
+
+const querySpansListOptions = (input: {
+  readonly limit: number
+  readonly orderBy: QuerySpansOrderBy
+  readonly cursor: SpanListCursor | undefined
+  readonly filters: QuerySpansBody["filters"]
+  readonly range: QuerySpansBody["range"]
+}): SpanListOptions => ({
+  limit: input.limit,
+  orderBy: input.orderBy,
+  ...(input.cursor ? { cursor: input.cursor } : {}),
+  ...(input.filters ? { filters: input.filters } : {}),
+  ...(input.range ? { startTimeFrom: new Date(input.range.fromIso), startTimeTo: new Date(input.range.toIso) } : {}),
+})
+
+const toQuerySpansPage = (page: SpanListPage) => ({
+  items: page.items.map(toSpanResponse),
+  nextCursor: page.nextCursor ? encodeSpanListCursor(page.nextCursor) : null,
+  hasMore: page.nextCursor !== null,
+})
+
 // A cross-trace span list is a POST so `filters` is a typed object in the body
 // (visible in the generated SDK/MCP schema) rather than a URL-encoded JSON string.
 const querySpans = spanEndpoint({
@@ -133,26 +188,10 @@ const querySpans = spanEndpoint({
     Effect.gen(function* () {
       const { projectSlug } = input.params
       const body = input.body
-
       const orderBy = body.orderBy ?? { field: "startTime" as const, direction: "desc" as const }
-
-      let cursor: SpanListCursor | undefined
-      if (body.cursor) {
-        const decoded = decodeSpanListCursor(body.cursor)
-        if (decoded === null) return { status: 400, body: { error: "Invalid `cursor` value." } } as const
-        // The cursor is pinned to the ordering it was minted under; replaying it
-        // under a different `orderBy` would page incoherently.
-        if (decoded.field !== orderBy.field || decoded.direction !== orderBy.direction) {
-          return {
-            status: 400,
-            body: { error: "`cursor` does not match `orderBy`; restart pagination without the cursor." },
-          } as const
-        }
-        cursor = decoded
-      }
-      if (body.range && new Date(body.range.fromIso).getTime() >= new Date(body.range.toIso).getTime()) {
-        return { status: 400, body: { error: "`range.fromIso` must be strictly before `range.toIso`." } } as const
-      }
+      const parsedCursor = parseQuerySpansCursor(body.cursor, orderBy)
+      if (!parsedCursor.ok) return parsedCursor.response
+      if (isInvalidSpanQueryRange(body.range)) return invalidRangeResponse
 
       const projectRepo = yield* ProjectRepository
       const project = yield* projectRepo.findBySlug(projectSlug)
@@ -161,24 +200,18 @@ const querySpans = spanEndpoint({
       const page = yield* spanRepo.listByProjectId({
         organizationId: OrganizationId(ctx.organization.id as string),
         projectId: ProjectId(project.id as string),
-        options: {
+        options: querySpansListOptions({
           limit: body.limit,
           orderBy,
-          ...(cursor ? { cursor } : {}),
-          ...(body.filters ? { filters: body.filters } : {}),
-          ...(body.range
-            ? { startTimeFrom: new Date(body.range.fromIso), startTimeTo: new Date(body.range.toIso) }
-            : {}),
-        },
+          cursor: parsedCursor.cursor,
+          filters: body.filters,
+          range: body.range,
+        }),
       })
 
       return {
         status: 200,
-        body: {
-          items: page.items.map(toSpanResponse),
-          nextCursor: page.nextCursor ? encodeSpanListCursor(page.nextCursor) : null,
-          hasMore: page.nextCursor !== null,
-        },
+        body: toQuerySpansPage(page),
       } as const
     }).pipe(
       withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),

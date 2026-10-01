@@ -8,7 +8,6 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { SlackIntegration } from "../entities/slack-integration.ts"
-import type { SlackIntegrationConflictError } from "../errors.ts"
 import { SlackIntegrationRepository } from "../ports/slack-integration-repository.ts"
 
 export interface InstallSlackIntegrationInput {
@@ -24,20 +23,15 @@ export interface InstallSlackIntegrationInput {
   readonly installedByUserId: UserId
 }
 
-export type InstallSlackIntegrationError =
-  | RepositoryError
-  | SlackIntegrationConflictError
-  | ConcurrentSqlTransactionError
+export type InstallSlackIntegrationError = RepositoryError | ConcurrentSqlTransactionError
 
 /**
  * Installs (or re-installs) a Slack workspace for the current
  * organization. Same-org reinstall is supported: the existing active
  * integration is soft-revoked first so the partial unique
  * `(organization_id, kind) WHERE revoked_at IS NULL` index keeps
- * holding. Cross-organization conflicts (another org already owns the
- * workspace) surface as {@link SlackIntegrationConflictError} from the
- * repository's `save` via the `(kind, vendor_account_id)` partial
- * unique index.
+ * holding. The same workspace may also be connected to other
+ * organizations; each install keeps its own tokens and routes.
  *
  * The use case opens a single `SqlClient.transaction` so the revoke +
  * the two-row insert (`integrations` parent + `slack_integration_details`)

@@ -3,9 +3,12 @@ title: OpenTelemetry Exporter (OTEL)
 description: Connect any OpenTelemetry-instrumented application to Latitude, regardless of language or framework.
 ---
 
+import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
+
 # Connect with Any OpenTelemetry Exporter
 
-Latitude's ingestion endpoint speaks standard **OTLP over HTTP**. 
+Latitude's ingestion endpoint speaks standard **OTLP over HTTP**. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 If your language has an OpenTelemetry SDK (Go, Java, Ruby, Rust, .NET, Elixir, PHP, etc.), you can send traces to Latitude without a Latitude-specific library.
 
@@ -13,9 +16,11 @@ If your language has an OpenTelemetry SDK (Go, Java, Ruby, Rust, .NET, Elixir, P
   Using **TypeScript** or **Python**? The dedicated SDKs handle all of this for you with a single function call. See the [TypeScript SDK](/telemetry/typescript) or [Python SDK](/telemetry/python) instead.
 </Info>
 
+<SkillsCallout />
+
 ## Prerequisites
 
-1. A **Latitude API key** — generate one from your project settings in the Latitude dashboard.
+1. A **Latitude API key** — generate one from your project settings in the Latitude dashboard, or let your agent create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup.
 2. Your **project slug** — visible in the project settings or URL.
 
 ## Endpoint and Headers
@@ -67,6 +72,10 @@ curl -X POST https://ingest.latitude.so/v1/traces \
 ```
 
 A `202` response with `{}` means the endpoint accepted your payload.
+
+## See what was captured
+
+<FirstArtifact />
 
 ## Language Examples
 

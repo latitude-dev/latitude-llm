@@ -168,7 +168,10 @@ the signal-generation agent (`AIAgent` bypasses `withAIMetering`; needs metering
 the agent service itself), and eval/signal previews (free by design for now).
 
 Scope idempotency keys are `{action}:{organizationId}:{...keyParts}:{sequence}` with the
-sequence assigned in call order. Retries of an operation whose calls replay
+sequence assigned in call order. The first key part is a `BillingMeteringLabel`
+(`@domain/billing/src/usage-breakdown.ts`), and `BILLING_METERING_LABEL_CATEGORIES`
+maps every label to the product area shown in the usage breakdown, so a new charge
+point must register its label there before it can compile. Retries of an operation whose calls replay
 deterministically (Temporal activities are keyed by run id + activity id) reproduce the
 same keys and dedupe; runs whose call order is not deterministic (GEPA's parallel judge
 fan-out) rely on the 24h AI cache to make retried calls free instead.
@@ -180,7 +183,7 @@ Canonical charge points:
 - live evaluations: `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts` — every scan records the baseline `eval-scan` credit after execution; `llm()`-capable scripts authorize one `llm-call` (the larger estimate) and meter each generation and query embed on top under a `live-eval` scope
 - evaluation alignment and GEPA optimization: `apps/workflows/src/activities/evaluation-alignment-activities.ts` and `evaluation-optimization-activities.ts`, metered per call under per-activity scopes
 - session analysis: `apps/workflows/src/activities/analyze-session-activities.ts` (`analyzeSessionActivity`), metered under a `session-analysis` activity scope
-- signal discovery, refresh, and taxonomy naming: `signal-discovery-activities.ts` (`signal-create`, `signal-assign`), `apps/workers/src/workers/signals.ts` refresh handler (`signal-refresh`), `taxonomy-naming-activities.ts` (`taxonomy-name`, on all three branches: topic, custom-behavior, and facet)
+- signal discovery, promotion, refresh, and taxonomy naming: `signal-discovery-activities.ts` (`signal-assign`), `apps/workers/src/workers/signals.ts` promotion and refresh handlers (`signal-promotion`, `signal-refresh`), `taxonomy-naming-activities.ts` (`taxonomy-name`, on all three branches: topic, custom-behavior, and facet)
 - facet projection extraction: `taxonomy-gardening-activities.ts` (`taxonomy-facet-extract`) — one generation per sampled session, the taxonomy's heaviest AI spend. Extraction runs `FACET_EXTRACTION_CONCURRENCY` calls at a time, so its keys are not order-stable across retries; that undercharges the unflushed tail (a reused key dedupes to "already charged") rather than double-charging it, and work already cached in `taxonomy_facet_projections` is skipped instead of re-extracted
 - annotation publication enrichment: `annotation-publication-activities.ts` (`annotation-enrich`)
 
@@ -297,6 +300,10 @@ That surface shows:
 - optional Pro spending-limit controls and remaining headroom
 - self-serve upgrade or billing-portal entry when applicable
 - enterprise/manual contract state when applicable
+
+The project sidebar's usage counter opens a popover with the current period's usage breakdown. `getBillingUsageBreakdownUseCase` groups the ledger by project and category through `BillingUsageEventRepository.summarizeByPeriod`: trace rows are `traces`, eval-scan rows are `signals` (evaluations bill under the signals they serve), and AI rows are classified by the metering label in their idempotency key (`billingUsageCategoryFor`); session analysis lands in `behaviors`. Unknown labels land in `other`, and so does any gap between the ledger sum and `consumed_credits`, so the list always adds up to the headline counter. The breakdown reads the ledger directly on open (one grouped scan of the org's current partition), which is why it is only fetched while the popover is open and cached client-side for `30` seconds.
+
+The same numbers are public through `GET /v1/usage` (`getUsage` in `@repo/operations`, so also the `getUsage` MCP tool, `client.usage.get` in both SDKs, and `latitude usage get`): plan, period bounds, the credit position from `getBillingOverviewUseCase`, and the category and project splits. `GET /v1/projects/{projectSlug}/usage` (`getProjectUsage`, `client.projects.usage`, `latitude projects usage`) returns one project's slice of the same breakdown. The web's overview server function and the operation share those two use-cases; only project-name resolution differs (the projects collection in the web, `ProjectRepository.listIncludingDeleted` in the API).
 
 Staff-facing billing support lives in backoffice organization detail.
 

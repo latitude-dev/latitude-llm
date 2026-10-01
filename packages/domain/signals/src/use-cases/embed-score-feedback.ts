@@ -2,6 +2,7 @@ import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import { ScoreRepository } from "@domain/scores"
 import { ScoreId } from "@domain/shared"
 import { Effect } from "effect"
+import { bundleKeyFromScore } from "../bundle-key.ts"
 import { ScoreNotFoundForDiscoveryError } from "../errors.ts"
 import { normalizeEmbedding } from "../helpers.ts"
 
@@ -17,6 +18,7 @@ export interface EmbeddedScoreFeedback {
   readonly normalizedEmbedding: number[]
   readonly rawFeedback?: string
   readonly rawNormalizedEmbedding?: number[]
+  readonly bundleKey?: string
 }
 
 export const embedScoreFeedbackUseCase = Effect.fn("issues.embedScoreFeedback")(function* (
@@ -58,6 +60,8 @@ export const embedScoreFeedbackUseCase = Effect.fn("issues.embedScoreFeedback")(
   const shouldEmbedRawFeedback = rawFeedback.length > 0 && rawFeedback !== score.feedback.trim()
   const rawEmbedding = shouldEmbedRawFeedback ? yield* embed(rawFeedback, "raw") : undefined
 
+  const bundleKey = bundleKeyFromScore(score)
+
   return {
     scoreId: score.id,
     feedback: score.feedback,
@@ -68,5 +72,6 @@ export const embedScoreFeedbackUseCase = Effect.fn("issues.embedScoreFeedback")(
           rawNormalizedEmbedding: normalizeEmbedding(rawEmbedding.embedding),
         }
       : {}),
+    ...(bundleKey !== null ? { bundleKey } : {}),
   } satisfies EmbeddedScoreFeedback
 })

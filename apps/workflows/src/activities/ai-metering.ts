@@ -1,5 +1,7 @@
 import {
   authorizeBillableAction,
+  type BillingMeteringKeyParts,
+  type BillingMeteringLabel,
   buildBillingIdempotencyKey,
   makeAIMeteringScope,
   provideAIMeteringScope,
@@ -32,7 +34,7 @@ export const billingMeteringRepositoriesLive = Layer.mergeAll(
  * fallback covers direct invocation outside a Temporal context (tests) where retry
  * semantics don't exist.
  */
-export const activityMeteringKeyParts = (label: string): readonly string[] => {
+export const activityMeteringKeyParts = (label: BillingMeteringLabel): BillingMeteringKeyParts => {
   try {
     const info = ActivityContext.current().info
     const runId = info.workflowExecution?.runId
@@ -51,7 +53,7 @@ export const activityMeteringKeyParts = (label: string): readonly string[] => {
  * fast instead of burning Temporal retries against a billing state that won't change.
  */
 export const withActivityAIMetering =
-  (input: { readonly organizationId: string; readonly projectId: string; readonly label: string }) =>
+  (input: { readonly organizationId: string; readonly projectId: string; readonly label: BillingMeteringLabel }) =>
   <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     Effect.gen(function* () {
       const organizationId = OrganizationId(input.organizationId)

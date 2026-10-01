@@ -58,6 +58,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   filters: null,
   assigneeId: null,
   priority: null,
+  bundleKey: null,
   centroid: null,
   clusteredAt: null,
   // User-created signals are born promoted.

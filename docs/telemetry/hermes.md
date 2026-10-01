@@ -1,16 +1,21 @@
+import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
+
 # Hermes telemetry
 
-Stream [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Research's open-source agent harness) runs into Latitude as traces. After setup, each Hermes turn appears in your project's **Traces** view with user prompts, model turns, tool calls and results, the tools the agent was offered, memory reads and writes, delegated subagents, token usage, cost, timing, and the real system prompt that reached the model.
+Stream [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Research's open-source agent harness) runs into Latitude as traces. After setup, each Hermes turn appears in your project's **Traces** view with user prompts, model turns, tool calls and results, the tools the agent was offered, memory reads and writes, delegated subagents, token usage, cost, timing, and the real system prompt that reached the model. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
+
+<SkillsCallout />
 
 ## Prerequisites
 
-- A [Latitude account](https://console.latitude.so/login) with a project
+- A [Latitude account](https://console.latitude.so/login) with a project, or none yet: your agent can create a temporary one with the [`latitude-setup` skill](/getting-started/skills), no signup, and fill in the values below
 - Hermes Agent installed locally
 - `pip` (Hermes already runs on Python — the plugin uses only the standard library plus `certifi`, which Hermes already ships)
 
 ## Install
 
-1. In Latitude, copy your project slug from the project sidebar.
+1. In Latitude, copy your project slug from the project sidebar (or let the `latitude-setup` skill create a temporary account and project for you).
 2. Create or copy an API key from **Settings → API Keys**.
 3. Install the plugin:
 
@@ -160,6 +165,10 @@ Run Hermes and send a message to your agent, then open your Latitude project and
 
 If nothing arrives, set `LATITUDE_DEBUG=true` in `~/.hermes/.env` and run again to see the plugin's logging: it logs every export with its HTTP status. (`hermes plugins list` does **not** show pip-installed plugins — see the install note — so it can't be used to confirm the plugin is loaded.)
 
+## See what was captured
+
+<FirstArtifact />
+
 ## Structural-only telemetry
 
 If you want trace structure without prompt, response, or tool content, set:
@@ -168,7 +177,7 @@ If you want trace structure without prompt, response, or tool content, set:
 LATITUDE_NO_CONTENT=true
 ```
 
-Structural-only traces still include timing, model, token usage, and run structure. Message content, tool input/output and memory bodies are omitted. For finer control — keeping content but masking one attribute — see [Privacy](#privacy).
+Structural-only traces still include timing, model, token usage, and run structure. Message content, tool input/output, memory bodies and provider error messages are omitted. For finer control — keeping content but masking one attribute — see [Privacy](#privacy).
 
 ## Disable or uninstall
 
@@ -357,7 +366,7 @@ By default Latitude receives what it needs to reconstruct a Hermes run: prompts,
 
 **Keeping a specific attribute local.** `LATITUDE_HERMES_REDACT_ATTRIBUTES` replaces the whole value of any attribute you name — for example `gen_ai.memory.records,gen_ai.tool.call.result`, or a pattern like `/^gen_ai\.tool\.call\./`. The attribute is still sent, with its value masked, so you can see what the plugin exported.
 
-**Structure only.** `LATITUDE_NO_CONTENT=true` drops every content-bearing attribute: you keep timing, model, token usage and run structure, and lose prompts, responses, tool I/O and memory bodies.
+**Structure only.** `LATITUDE_NO_CONTENT=true` drops every content-bearing attribute: you keep timing, model, token usage and run structure, and lose prompts, responses, tool I/O and memory bodies. Error text counts as content, because a provider often quotes the request it rejected — a failed call reports its status code and error type, not the provider's message.
 
 Telemetry runs for each turn until disabled or uninstalled. Disable it before working with material you do not want sent to Latitude.
 

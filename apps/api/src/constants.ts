@@ -18,6 +18,17 @@ export const API_SECURITY_SCHEME = {
   "x-fern-bearer": { name: "apiKey", env: "LATITUDE_API_KEY" },
 } as const
 
+export const API_GLOBAL_PARAMETERS = [
+  {
+    name: "projectSlug",
+    in: "path",
+    target: "projectSlug",
+    env: "LATITUDE_PROJECT_SLUG",
+    apply: "explicit",
+    docs: "Optional project slug used globally by project-scoped commands when `--project-slug` is omitted.",
+  },
+] as const
+
 export const MCP_INFO = {
   name: "Latitude",
   title: "Latitude",
@@ -29,8 +40,11 @@ export const MCP_INFO = {
     { src: "https://framerusercontent.com/images/fPQsqC1Gx3CiQElnbBSmbQVYcA.png", theme: "light" },
     { src: "https://framerusercontent.com/images/l5c1DNVxQ3iAvTDihvg9pFw2l2k.png", theme: "dark" },
   ],
-  instructions:
-    "All Latitude MCP methods have descriptions and input/output schemas. For any doubt visit the Latitude documentation: https://docs.latitude.so/llms.txt",
+  instructions: [
+    "All Latitude MCP methods have descriptions and input/output schemas; read a tool's schema before calling it. For any doubt visit the Latitude documentation: https://docs.latitude.so/llms.txt",
+    "Artifacts: you can turn this data into a self-contained HTML report or a refreshable KPI dashboard for the user. When the user asks for a report, a dashboard, or how their agent is doing, offer to build one: https://docs.latitude.so/more/artifacts.md",
+    "Skills: Latitude publishes agent skills for setup, telemetry, the CLI, migration and Artifacts: https://docs.latitude.so/getting-started/skills.md",
+  ].join("\n\n"),
 } as McpInfo & {
   instructions: string
 }

@@ -1,6 +1,7 @@
 import type { TraceDetail } from "@domain/spans"
 import { describe, expect, it } from "vitest"
 import {
+  collectToolCallErrorFindings,
   detectEmptyResponseFlagger,
   detectOutputSchemaValidationFlagger,
   detectToolCallErrorsFlagger,
@@ -8,8 +9,8 @@ import {
 
 type TraceMessage = TraceDetail["allMessages"][number]
 
-function makeTrace(allMessages: TraceDetail["allMessages"]): Pick<TraceDetail, "allMessages"> {
-  return { allMessages }
+function makeTrace(allMessages: TraceDetail["allMessages"]): Pick<TraceDetail, "allMessages" | "outputMessages"> {
+  return { allMessages, outputMessages: allMessages }
 }
 
 function assistantToolCall(id: string, name = "get_weather", argumentsValue: unknown = { city: "BCN" }): TraceMessage {
@@ -27,7 +28,7 @@ function toolResponse(id: string, response: unknown): TraceMessage {
 }
 
 function makeAssistantTrace(allMessages: TraceDetail["allMessages"]): TraceDetail {
-  return { allMessages } as TraceDetail
+  return { allMessages, outputMessages: allMessages } as TraceDetail
 }
 
 function assistantText(content: string): TraceDetail["outputMessages"][number] {
@@ -38,9 +39,10 @@ function assistantText(content: string): TraceDetail["outputMessages"][number] {
 }
 
 describe("detectToolCallErrorsFlagger", () => {
-  // An agent that runs hundreds of tools errors constantly and works through it;
-  // the user never sees those, so they must not become signals.
-  it("ignores an error the agent worked through", () => {
+  // A broken integration the agent retried past is still broken, and its owner is
+  // the only one who can fix it. Volume is handled by bundling every occurrence
+  // onto one issue, not by never reporting it.
+  it("flags an error the agent worked through", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([
         assistantToolCall("call-1"),
@@ -50,7 +52,38 @@ describe("detectToolCallErrorsFlagger", () => {
       ]),
     )
 
-    expect(result.matched).toBe(false)
+    expect(result.matched).toBe(true)
+    if (result.matched) expect(result.feedback).toBe('Tool "get_weather" returned error: rate limited')
+  })
+
+  it("prefers the defect the run never worked through over an earlier recovered one", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-1"),
+        toolResponse("call-1", { ok: false, error: "rate limited" }),
+        assistantToolCall("call-2"),
+        toolResponse("call-2", { ok: true, temperature: 21 }),
+        assistantToolCall("call-3"),
+        toolResponse("call-3", { ok: false, error: "connection refused" }),
+      ]),
+    )
+
+    expect(result.matched).toBe(true)
+    if (result.matched) expect(result.feedback).toBe('Tool "get_weather" returned error: connection refused')
+  })
+
+  it("records recovery on the finding even when it is the one selected", () => {
+    const findings = collectToolCallErrorFindings(
+      makeTrace([
+        assistantToolCall("call-1"),
+        toolResponse("call-1", { ok: false, error: "rate limited" }),
+        assistantToolCall("call-2"),
+        toolResponse("call-2", { ok: true, temperature: 21 }),
+      ]),
+    )
+
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({ kind: "error", recovered: true, terminal: false })
   })
 
   it("flags an error the run never recovered from", () => {
@@ -189,7 +222,7 @@ describe("detectToolCallErrorsFlagger", () => {
     }
   })
 
-  it("does not match expected tool 4xx responses", () => {
+  it("matches an undeclared tool 4xx response", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([
         assistantToolCall("call-grep", "grep"),
@@ -197,7 +230,28 @@ describe("detectToolCallErrorsFlagger", () => {
       ]),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result.matched).toBe(true)
+  })
+
+  it("exempts a 4xx only for the tool whose caller declared it", () => {
+    const conversation = makeTrace([
+      assistantToolCall("call-grep", "grep"),
+      toolResponse("call-grep", { ok: false, statusCode: 404, error: "No matches found" }),
+    ])
+
+    expect(
+      collectToolCallErrorFindings(conversation, {
+        byToolName: new Map([["grep", new Set([404])]]),
+        anyTool: new Set(),
+      }),
+    ).toEqual([])
+    expect(
+      collectToolCallErrorFindings(conversation, {
+        byToolName: new Map([["search_docs", new Set([404])]]),
+        anyTool: new Set(),
+      }).map((finding) => finding.kind),
+    ).toEqual(["error"])
+    expect(collectToolCallErrorFindings(conversation, { byToolName: new Map(), anyTool: new Set([404]) })).toEqual([])
   })
 
   it("still matches tool 5xx responses", () => {
@@ -443,17 +497,22 @@ describe("malformed message parts", () => {
   })
 
   it("detectEmptyResponseFlagger skips messages without iterable parts", () => {
+    const messages = [
+      { role: "user", parts: null } as unknown as TraceMessage,
+      { role: "assistant" } as unknown as TraceMessage,
+      assistantText("done"),
+    ]
     expect(() =>
-      detectEmptyResponseFlagger(
-        makeAssistantTrace([
-          { role: "user", parts: null } as unknown as TraceMessage,
-          { role: "assistant" } as unknown as TraceMessage,
-          assistantText("done"),
-        ]),
-      ),
+      detectEmptyResponseFlagger({ ...makeAssistantTrace(messages), outputMessages: messages }),
     ).not.toThrow()
-    expect(detectEmptyResponseFlagger(makeAssistantTrace([{ role: "assistant" } as unknown as TraceMessage]))).toEqual({
+    expect(
+      detectEmptyResponseFlagger({
+        ...makeAssistantTrace([{ role: "assistant" } as unknown as TraceMessage]),
+        outputMessages: [{ role: "assistant" } as unknown as TraceMessage],
+      }),
+    ).toEqual({
       matched: true,
+      findingKind: "blank",
       feedback: "Assistant response was empty or whitespace only",
       messageIndex: 0,
     })

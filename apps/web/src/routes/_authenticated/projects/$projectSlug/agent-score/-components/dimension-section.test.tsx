@@ -1,0 +1,86 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { afterEach, describe, expect, it } from "vitest"
+import { parseFilters } from "../../-components/trace-page-state.ts"
+import { DimensionSection, DimensionSectionSkeleton, exampleSessionsSearch } from "./dimension-section.tsx"
+
+afterEach(cleanup)
+
+const row = {
+  id: "failure",
+  label: "Terminal provider failure",
+  description: "Observed across 24 sessions",
+  value: "24 sessions",
+  progress: 0.6,
+  tone: "negative" as const,
+  details: [{ label: "Scoring window", value: "Last 7 days" }],
+}
+
+const healthy = {
+  ...row,
+  id: "coverage",
+  label: "Completion reader",
+  value: "100%",
+  tone: "positive" as const,
+}
+
+const summary = {
+  id: "coverage-summary",
+  label: "Readable completion outcomes",
+  value: "84%",
+  progress: 0.16,
+  tone: "neutral" as const,
+}
+
+describe("DimensionSection", () => {
+  it("keeps the ring and text layout visible while loading", () => {
+    render(<DimensionSectionSkeleton />)
+
+    expect(screen.getByLabelText("Loading score dimension").getAttribute("aria-busy")).toBe("true")
+  })
+
+  it("opens effects, keeps healthy evidence collapsed, and toggles both levels", () => {
+    render(
+      <DimensionSection
+        id="outcome"
+        title="Outcome quality"
+        description="Did users accomplish what they came for?"
+        score={20}
+        projectSlug="project-one"
+        affected={[row]}
+        healthy={[healthy]}
+        coverage={[summary]}
+      />,
+    )
+
+    expect(screen.getByText("Terminal provider failure")).toBeDefined()
+    expect(screen.queryByText("Readable completion outcomes")).toBeNull()
+    expect(screen.queryByText("Completion reader")).toBeNull()
+    expect(screen.queryByRole("button", { name: "Readable completion outcomes" })).toBeNull()
+
+    expect(screen.queryByRole("button", { name: "Terminal provider failure" })).toBeNull()
+    expect(screen.queryByText("Observed across 24 sessions")).toBeNull()
+    expect(screen.queryByText("Observed but not scored")).toBeNull()
+    expect(screen.queryByText("Data coverage")).toBeNull()
+
+    fireEvent.click(screen.getByRole("button", { name: /Healthy, show/i }))
+    expect(screen.getByText("Completion reader")).toBeDefined()
+
+    expect(screen.getByText("Readable completion outcomes")).toBeDefined()
+
+    fireEvent.click(screen.getByRole("button", { name: /Collapse Outcome quality/ }))
+    expect(screen.queryByText("Terminal provider failure")).toBeNull()
+    expect(screen.queryByRole("button", { name: /Healthy/ })).toBeNull()
+  })
+})
+
+describe("exampleSessionsSearch", () => {
+  it("builds a filter the sessions list accepts, so the row lands on those sessions", () => {
+    const search = exampleSessionsSearch(["session-a", "session-b"])
+
+    expect(search.tab).toBe("sessions")
+    expect(parseFilters(search.filters)).toEqual({
+      sessionId: [{ op: "in", value: ["session-a", "session-b"] }],
+    })
+  })
+})

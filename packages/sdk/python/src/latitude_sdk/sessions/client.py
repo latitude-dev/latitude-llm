@@ -8,6 +8,7 @@ from ..core.request_options import RequestOptions
 from ..types.paginated_sessions import PaginatedSessions
 from ..types.paginated_traces import PaginatedTraces
 from ..types.session_analytics_response import SessionAnalyticsResponse
+from ..types.session_assessment import SessionAssessment
 from ..types.session_detail import SessionDetail
 from ..types.session_filter_set import SessionFilterSet
 from ..types.session_memory_changes import SessionMemoryChanges
@@ -57,7 +58,7 @@ class SessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -121,7 +122,7 @@ class SessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
@@ -162,7 +163,7 @@ class SessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -190,6 +191,53 @@ class SessionsClient:
         _response = self._raw_client.get(project_slug, session_id, request_options=request_options)
         return _response.data
 
+    def get_assessment(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        cursor: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SessionAssessment:
+        """
+        Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        cursor : typing.Optional[str]
+            Opaque cursor returned by a previous assessment page. Omit for the first page.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SessionAssessment
+            Session assessment page
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.sessions.get_assessment(
+            project_slug="projectSlug",
+            session_id="sessionId",
+        )
+        """
+        _response = self._raw_client.get_assessment(
+            project_slug, session_id, cursor=cursor, request_options=request_options
+        )
+        return _response.data
+
     def list_traces(
         self,
         project_slug: str,
@@ -207,7 +255,7 @@ class SessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -264,7 +312,7 @@ class SessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -306,7 +354,7 @@ class SessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -352,7 +400,7 @@ class SessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -399,7 +447,7 @@ class SessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -466,7 +514,7 @@ class AsyncSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -538,7 +586,7 @@ class AsyncSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
@@ -587,7 +635,7 @@ class AsyncSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -623,6 +671,61 @@ class AsyncSessionsClient:
         _response = await self._raw_client.get(project_slug, session_id, request_options=request_options)
         return _response.data
 
+    async def get_assessment(
+        self,
+        project_slug: str,
+        session_id: str,
+        *,
+        cursor: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SessionAssessment:
+        """
+        Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+
+        session_id : str
+            Session identifier lifted from instrumentation. Up to 128 characters.
+
+        cursor : typing.Optional[str]
+            Opaque cursor returned by a previous assessment page. Omit for the first page.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SessionAssessment
+            Session assessment page
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.sessions.get_assessment(
+                project_slug="projectSlug",
+                session_id="sessionId",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.get_assessment(
+            project_slug, session_id, cursor=cursor, request_options=request_options
+        )
+        return _response.data
+
     async def list_traces(
         self,
         project_slug: str,
@@ -640,7 +743,7 @@ class AsyncSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -705,7 +808,7 @@ class AsyncSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -755,7 +858,7 @@ class AsyncSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -811,7 +914,7 @@ class AsyncSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
@@ -866,7 +969,7 @@ class AsyncSessionsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         session_id : str
             Session identifier lifted from instrumentation. Up to 128 characters.
