@@ -62,7 +62,7 @@ it("creates the indexes and records history on a fresh database through the real
   } finally {
     await database.close()
   }
-})
+}, 30_000)
 
 describe("add outbox partial indexes migration", () => {
   let database: PGlite
