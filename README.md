@@ -187,7 +187,7 @@ Contributions are welcome. Read the [Contributing Guide](CONTRIBUTING.md) to get
 
 ## 🔗 Links
 
-- [Home page](https://latitude.so/v2/?utm_source=github_readme)
+- [Home page](https://latitude.so/?utm_source=github_readme)
 - [Documentation](https://docs.latitude.so/)
 - [Changelog](https://latitude.so/changelog)
 - [Slack community](https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw)
