@@ -33,5 +33,6 @@ export namespace UpdateProjectBody {
         "output-schema-validation"?: boolean | undefined;
         "empty-response"?: boolean | undefined;
         "low-cache-hit-rate"?: boolean | undefined;
+        "task-failure"?: boolean | undefined;
     }
 }

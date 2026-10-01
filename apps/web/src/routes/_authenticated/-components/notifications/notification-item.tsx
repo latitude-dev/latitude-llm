@@ -1,6 +1,7 @@
 import type { NotificationKind } from "@domain/notifications"
 import type { ComponentType } from "react"
 import type { NotificationRecord } from "../../../../domains/notifications/notifications.functions.ts"
+import { AgentScoreWeeklyDigestNotification } from "./renderers/agent-score-weekly-digest-notification.tsx"
 import { BillingLimitReachedNotification } from "./renderers/billing-limit-reached-notification.tsx"
 import { CustomMessageNotification } from "./renderers/custom-message-notification.tsx"
 import { DestinationQuarantinedNotification } from "./renderers/destination-quarantined-notification.tsx"
@@ -16,6 +17,7 @@ const RENDERERS: Record<NotificationKind, ComponentType<{ readonly notification:
   "incident.opened": IncidentNotification,
   "incident.closed": IncidentNotification,
   "wrapped.report": WrappedReportNotification,
+  "agent-score.weekly-digest": AgentScoreWeeklyDigestNotification,
   "custom.message": CustomMessageNotification,
   "issue.assigned": SignalAssignedNotification,
   "signal.discovered": SignalDiscoveredNotification,

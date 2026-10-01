@@ -44,6 +44,7 @@ import { Route as BackofficeProjectsProjectIdRouteImport } from './routes/backof
 import { Route as BackofficeOrganizationsOrganizationIdRouteImport } from './routes/backoffice/organizations/$organizationId'
 import { Route as ApiObservabilityTestErrorRouteImport } from './routes/api/observability-test/error'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiAgentScoreRingDotpngRouteImport } from './routes/api/agent-score/ring[.]png'
 import { Route as AuthenticatedSettingsSectionRouteImport } from './routes/_authenticated/settings/$section'
 import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_authenticated/projects/$projectSlug'
 import { Route as Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport } from './routes/[.well-known]/openid-configuration/$'
@@ -72,6 +73,7 @@ import { Route as AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport } fro
 import { Route as AuthenticatedProjectsProjectSlugCustomBehavioursIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/custom-behaviours/index'
 import { Route as AuthenticatedProjectsProjectSlugCostIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/cost/index'
 import { Route as AuthenticatedProjectsProjectSlugBehavioursIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/index'
+import { Route as AuthenticatedProjectsProjectSlugAgentScoreIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/agent-score/index'
 import { Route as AuthenticatedProjectsProjectSlugSettingsSsoRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/sso'
 import { Route as AuthenticatedProjectsProjectSlugSettingsSignalsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/signals'
 import { Route as AuthenticatedProjectsProjectSlugSettingsPrivacyRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/privacy'
@@ -294,6 +296,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentScoreRingDotpngRoute = ApiAgentScoreRingDotpngRouteImport.update({
+  id: '/api/agent-score/ring.png',
+  path: '/api/agent-score/ring.png',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSettingsSectionRoute =
   AuthenticatedSettingsSectionRouteImport.update({
     id: '/settings/$section',
@@ -456,6 +463,12 @@ const AuthenticatedProjectsProjectSlugBehavioursIndexRoute =
   AuthenticatedProjectsProjectSlugBehavioursIndexRouteImport.update({
     id: '/behaviours/',
     path: '/behaviours/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugAgentScoreIndexRoute =
+  AuthenticatedProjectsProjectSlugAgentScoreIndexRouteImport.update({
+    id: '/agent-score/',
+    path: '/agent-score/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
 const AuthenticatedProjectsProjectSlugSettingsSsoRoute =
@@ -703,6 +716,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
   '/settings/$section': typeof AuthenticatedSettingsSectionRoute
+  '/api/agent-score/ring.png': typeof ApiAgentScoreRingDotpngRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
@@ -743,6 +757,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/settings/privacy': typeof AuthenticatedProjectsProjectSlugSettingsPrivacyRoute
   '/projects/$projectSlug/settings/signals': typeof AuthenticatedProjectsProjectSlugSettingsSignalsRoute
   '/projects/$projectSlug/settings/sso': typeof AuthenticatedProjectsProjectSlugSettingsSsoRoute
+  '/projects/$projectSlug/agent-score/': typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRoute
   '/projects/$projectSlug/behaviours/': typeof AuthenticatedProjectsProjectSlugBehavioursIndexRoute
   '/projects/$projectSlug/cost/': typeof AuthenticatedProjectsProjectSlugCostIndexRoute
   '/projects/$projectSlug/custom-behaviours/': typeof AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute
@@ -797,6 +812,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
   '/settings/$section': typeof AuthenticatedSettingsSectionRoute
+  '/api/agent-score/ring.png': typeof ApiAgentScoreRingDotpngRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
@@ -836,6 +852,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/settings/privacy': typeof AuthenticatedProjectsProjectSlugSettingsPrivacyRoute
   '/projects/$projectSlug/settings/signals': typeof AuthenticatedProjectsProjectSlugSettingsSignalsRoute
   '/projects/$projectSlug/settings/sso': typeof AuthenticatedProjectsProjectSlugSettingsSsoRoute
+  '/projects/$projectSlug/agent-score': typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRoute
   '/projects/$projectSlug/behaviours': typeof AuthenticatedProjectsProjectSlugBehavioursIndexRoute
   '/projects/$projectSlug/cost': typeof AuthenticatedProjectsProjectSlugCostIndexRoute
   '/projects/$projectSlug/custom-behaviours': typeof AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute
@@ -895,6 +912,7 @@ export interface FileRoutesById {
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
   '/_authenticated/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
   '/_authenticated/settings/$section': typeof AuthenticatedSettingsSectionRoute
+  '/api/agent-score/ring.png': typeof ApiAgentScoreRingDotpngRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
@@ -935,6 +953,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/settings/privacy': typeof AuthenticatedProjectsProjectSlugSettingsPrivacyRoute
   '/_authenticated/projects/$projectSlug/settings/signals': typeof AuthenticatedProjectsProjectSlugSettingsSignalsRoute
   '/_authenticated/projects/$projectSlug/settings/sso': typeof AuthenticatedProjectsProjectSlugSettingsSsoRoute
+  '/_authenticated/projects/$projectSlug/agent-score/': typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRoute
   '/_authenticated/projects/$projectSlug/behaviours/': typeof AuthenticatedProjectsProjectSlugBehavioursIndexRoute
   '/_authenticated/projects/$projectSlug/cost/': typeof AuthenticatedProjectsProjectSlugCostIndexRoute
   '/_authenticated/projects/$projectSlug/custom-behaviours/': typeof AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute
@@ -994,6 +1013,7 @@ export interface FileRouteTypes {
     | '/.well-known/openid-configuration/$'
     | '/projects/$projectSlug'
     | '/settings/$section'
+    | '/api/agent-score/ring.png'
     | '/api/auth/$'
     | '/api/observability-test/error'
     | '/backoffice/organizations/$organizationId'
@@ -1034,6 +1054,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings/privacy'
     | '/projects/$projectSlug/settings/signals'
     | '/projects/$projectSlug/settings/sso'
+    | '/projects/$projectSlug/agent-score/'
     | '/projects/$projectSlug/behaviours/'
     | '/projects/$projectSlug/cost/'
     | '/projects/$projectSlug/custom-behaviours/'
@@ -1088,6 +1109,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
     | '/settings/$section'
+    | '/api/agent-score/ring.png'
     | '/api/auth/$'
     | '/api/observability-test/error'
     | '/backoffice/organizations/$organizationId'
@@ -1127,6 +1149,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings/privacy'
     | '/projects/$projectSlug/settings/signals'
     | '/projects/$projectSlug/settings/sso'
+    | '/projects/$projectSlug/agent-score'
     | '/projects/$projectSlug/behaviours'
     | '/projects/$projectSlug/cost'
     | '/projects/$projectSlug/custom-behaviours'
@@ -1185,6 +1208,7 @@ export interface FileRouteTypes {
     | '/.well-known/openid-configuration/$'
     | '/_authenticated/projects/$projectSlug'
     | '/_authenticated/settings/$section'
+    | '/api/agent-score/ring.png'
     | '/api/auth/$'
     | '/api/observability-test/error'
     | '/backoffice/organizations/$organizationId'
@@ -1225,6 +1249,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/settings/privacy'
     | '/_authenticated/projects/$projectSlug/settings/signals'
     | '/_authenticated/projects/$projectSlug/settings/sso'
+    | '/_authenticated/projects/$projectSlug/agent-score/'
     | '/_authenticated/projects/$projectSlug/behaviours/'
     | '/_authenticated/projects/$projectSlug/cost/'
     | '/_authenticated/projects/$projectSlug/custom-behaviours/'
@@ -1276,6 +1301,7 @@ export interface RootRouteChildren {
   WrappedIdRoute: typeof WrappedIdRouteWithChildren
   ChooseOrganizationIndexRoute: typeof ChooseOrganizationIndexRoute
   WelcomeIndexRoute: typeof WelcomeIndexRoute
+  ApiAgentScoreRingDotpngRoute: typeof ApiAgentScoreRingDotpngRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiObservabilityTestErrorRoute: typeof ApiObservabilityTestErrorRoute
   IntegrationsGithubInstallRoute: typeof IntegrationsGithubInstallRoute
@@ -1535,6 +1561,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent-score/ring.png': {
+      id: '/api/agent-score/ring.png'
+      path: '/api/agent-score/ring.png'
+      fullPath: '/api/agent-score/ring.png'
+      preLoaderRoute: typeof ApiAgentScoreRingDotpngRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/settings/$section': {
       id: '/_authenticated/settings/$section'
       path: '/settings/$section'
@@ -1729,6 +1762,13 @@ declare module '@tanstack/react-router' {
       path: '/behaviours'
       fullPath: '/projects/$projectSlug/behaviours/'
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/agent-score/': {
+      id: '/_authenticated/projects/$projectSlug/agent-score/'
+      path: '/agent-score'
+      fullPath: '/projects/$projectSlug/agent-score/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
     '/_authenticated/projects/$projectSlug/settings/sso': {
@@ -2076,6 +2116,7 @@ interface AuthenticatedProjectsProjectSlugRouteChildren {
   AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   AuthenticatedProjectsProjectSlugMonitorsSearchRoute: typeof AuthenticatedProjectsProjectSlugMonitorsSearchRoute
   AuthenticatedProjectsProjectSlugMonitorsSignalsRoute: typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
+  AuthenticatedProjectsProjectSlugAgentScoreIndexRoute: typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRoute
   AuthenticatedProjectsProjectSlugBehavioursIndexRoute: typeof AuthenticatedProjectsProjectSlugBehavioursIndexRoute
   AuthenticatedProjectsProjectSlugCostIndexRoute: typeof AuthenticatedProjectsProjectSlugCostIndexRoute
   AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute: typeof AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute
@@ -2118,6 +2159,8 @@ const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjec
       AuthenticatedProjectsProjectSlugMonitorsSearchRoute,
     AuthenticatedProjectsProjectSlugMonitorsSignalsRoute:
       AuthenticatedProjectsProjectSlugMonitorsSignalsRoute,
+    AuthenticatedProjectsProjectSlugAgentScoreIndexRoute:
+      AuthenticatedProjectsProjectSlugAgentScoreIndexRoute,
     AuthenticatedProjectsProjectSlugBehavioursIndexRoute:
       AuthenticatedProjectsProjectSlugBehavioursIndexRoute,
     AuthenticatedProjectsProjectSlugCostIndexRoute:
@@ -2278,6 +2321,7 @@ const rootRouteChildren: RootRouteChildren = {
   WrappedIdRoute: WrappedIdRouteWithChildren,
   ChooseOrganizationIndexRoute: ChooseOrganizationIndexRoute,
   WelcomeIndexRoute: WelcomeIndexRoute,
+  ApiAgentScoreRingDotpngRoute: ApiAgentScoreRingDotpngRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiObservabilityTestErrorRoute: ApiObservabilityTestErrorRoute,
   IntegrationsGithubInstallRoute: IntegrationsGithubInstallRoute,

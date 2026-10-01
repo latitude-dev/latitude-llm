@@ -7,6 +7,7 @@ from ..core.request_options import RequestOptions
 from ..types.paginated_projects import PaginatedProjects
 from ..types.project import Project
 from ..types.project_settings_patch import ProjectSettingsPatch
+from ..types.project_usage_response import ProjectUsageResponse
 from .raw_client import AsyncRawProjectsClient, RawProjectsClient
 from .types.update_project_body_flaggers import UpdateProjectBodyFlaggers
 
@@ -93,7 +94,7 @@ class ProjectsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -124,7 +125,7 @@ class ProjectsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -162,7 +163,7 @@ class ProjectsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         name : typing.Optional[str]
             New human-readable name. Renaming never changes the slug.
@@ -194,6 +195,39 @@ class ProjectsClient:
         _response = self._raw_client.update(
             project_slug, name=name, settings=settings, flaggers=flaggers, request_options=request_options
         )
+        return _response.data
+
+    def usage(
+        self, project_slug: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> ProjectUsageResponse:
+        """
+        Returns the credits one project spent in the current billing period, broken down by product area.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ProjectUsageResponse
+            Current period usage for the project
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.projects.usage(
+            project_slug="projectSlug",
+        )
+        """
+        _response = self._raw_client.usage(project_slug, request_options=request_options)
         return _response.data
 
 
@@ -292,7 +326,7 @@ class AsyncProjectsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -331,7 +365,7 @@ class AsyncProjectsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -377,7 +411,7 @@ class AsyncProjectsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         name : typing.Optional[str]
             New human-readable name. Renaming never changes the slug.
@@ -417,4 +451,45 @@ class AsyncProjectsClient:
         _response = await self._raw_client.update(
             project_slug, name=name, settings=settings, flaggers=flaggers, request_options=request_options
         )
+        return _response.data
+
+    async def usage(
+        self, project_slug: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> ProjectUsageResponse:
+        """
+        Returns the credits one project spent in the current billing period, broken down by product area.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ProjectUsageResponse
+            Current period usage for the project
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.projects.usage(
+                project_slug="projectSlug",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.usage(project_slug, request_options=request_options)
         return _response.data

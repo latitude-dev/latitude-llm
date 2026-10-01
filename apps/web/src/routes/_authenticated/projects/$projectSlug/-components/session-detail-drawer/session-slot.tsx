@@ -15,6 +15,7 @@ import { AddTraceToDatasetAction } from "../add-trace-to-dataset-action.tsx"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
 import type { SpanTreeSelection } from "../trace-detail-drawer/tabs/spans-tab/span-tree/index.tsx"
 import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
+import { UserSessionsPaletteContributor } from "../user-sessions-link.tsx"
 import { ConversationTab } from "./conversation-tab.tsx"
 import { MetadataTab } from "./metadata-tab.tsx"
 import { ScoresTab } from "./scores-tab.tsx"
@@ -230,6 +231,7 @@ export function SessionSlot({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {!isSandbox && isActive && <UserSessionsPaletteContributor userId={session.userId} />}
       <div className="flex shrink-0 flex-col gap-5 border-b px-6 py-4">
         <div className="flex flex-col gap-1">
           <div className="flex flex-row items-center gap-2">
@@ -331,11 +333,15 @@ export function SessionSlot({
           <div className={effectiveActiveTab === "scores" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
             <ScoresTab
               projectId={projectId}
+              sessionId={session.sessionId}
               traceIds={traceIds}
               latestTraceId={latestTraceId}
               traceNumberById={traceNumberById}
               onOpenInConversation={onOpenInConversation}
               onOpenTrace={onOpenTrace}
+              onOpenSpan={navigateToSpan}
+              onOpenSignal={onOpenSignal}
+              onOpenConversation={() => onActiveTabChange("conversation")}
             />
           </div>
         )}

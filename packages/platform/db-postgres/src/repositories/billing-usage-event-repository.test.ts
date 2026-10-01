@@ -25,12 +25,15 @@ const makeEvent = (input: {
   readonly idempotencyKey: string
   readonly billingPeriodStart?: Date
   readonly billingPeriodEnd?: Date
+  readonly projectId?: ProjectId
+  readonly action?: BillingUsageEvent["action"]
+  readonly credits?: number
 }): BillingUsageEvent => ({
   id: input.id,
   organizationId: ORGANIZATION_ID,
-  projectId: PROJECT_ID,
-  action: "trace",
-  credits: 1,
+  projectId: input.projectId ?? PROJECT_ID,
+  action: input.action ?? "trace",
+  credits: input.credits ?? 1,
   idempotencyKey: input.idempotencyKey,
   traceId: TraceId(input.id.padEnd(32, "0").slice(0, 32)),
   metadata: undefined,
@@ -165,5 +168,67 @@ describe("BillingUsageEventRepositoryLive", () => {
 
     expect(results).toEqual([true, true])
     expect(await pg.db.select().from(billingUsageEvents)).toHaveLength(2)
+  })
+  it("summarizes a period's credits per project, action, and metering label", async () => {
+    const otherProject = ProjectId("q".repeat(24))
+    const events = [
+      makeEvent({ id: "a".repeat(24), idempotencyKey: "trace:org:project:a" }),
+      makeEvent({ id: "b".repeat(24), idempotencyKey: "trace:org:project:b" }),
+      makeEvent({ id: "c".repeat(24), idempotencyKey: "eval-scan:org:eval:c", action: "eval-scan" }),
+      makeEvent({
+        id: "d".repeat(24),
+        idempotencyKey: "llm-call:org:live-eval:eval:d:0",
+        action: "llm-call",
+        credits: 4,
+      }),
+      makeEvent({
+        id: "e".repeat(24),
+        idempotencyKey: "llm-call:org:live-eval:eval:d:1",
+        action: "llm-call",
+        credits: 6,
+      }),
+      makeEvent({
+        id: "f".repeat(24),
+        idempotencyKey: "semantic-query:org:live-eval:eval:d:2",
+        action: "semantic-query",
+        credits: 1,
+      }),
+      makeEvent({
+        id: "g".repeat(24),
+        idempotencyKey: "llm-call:org:signal-refresh:sig:g:0",
+        action: "llm-call",
+        credits: 9,
+        projectId: otherProject,
+      }),
+      makeEvent({
+        id: "h".repeat(24),
+        idempotencyKey: "trace:org:project:h",
+        billingPeriodStart: NEXT_PERIOD_START,
+        billingPeriodEnd: NEXT_PERIOD_END,
+      }),
+    ]
+
+    const rows = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* BillingUsageEventRepository
+        yield* repo.insertMany(events)
+        return yield* repo.summarizeByPeriod({
+          organizationId: ORGANIZATION_ID,
+          periodStart: PERIOD_START,
+          periodEnd: PERIOD_END,
+        })
+      }),
+    )
+
+    expect(rows).toHaveLength(5)
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        { projectId: PROJECT_ID, action: "trace", meteringLabel: null, credits: 2 },
+        { projectId: PROJECT_ID, action: "eval-scan", meteringLabel: null, credits: 1 },
+        { projectId: PROJECT_ID, action: "llm-call", meteringLabel: "live-eval", credits: 10 },
+        { projectId: PROJECT_ID, action: "semantic-query", meteringLabel: "live-eval", credits: 1 },
+        { projectId: otherProject, action: "llm-call", meteringLabel: "signal-refresh", credits: 9 },
+      ]),
+    )
   })
 })

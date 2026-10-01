@@ -23,11 +23,19 @@ class Import(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this import."),
     ]
+    """
+    Organization that owns this import.
+    """
+
     project_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectId"),
         pydantic.Field(alias="projectId", description="Latitude project the traces are imported into."),
     ]
+    """
+    Latitude project the traces are imported into.
+    """
+
     source: ImportSource = pydantic.Field()
     """
     Observability platform the import reads from.
@@ -54,6 +62,10 @@ class Import(UniversalBaseModel):
             description="ISO-8601 timestamp at which cancellation was requested, or `null`.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which cancellation was requested, or `null`.
+    """
+
     started_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="startedAt"),
@@ -63,6 +75,10 @@ class Import(UniversalBaseModel):
             description="ISO-8601 timestamp at which a worker picked the import up, or `null`.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which a worker picked the import up, or `null`.
+    """
+
     finished_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="finishedAt"),
@@ -72,15 +88,26 @@ class Import(UniversalBaseModel):
             description="ISO-8601 timestamp at which the import ended, or `null` while in flight.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the import ended, or `null` while in flight.
+    """
+
     created_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
     ]
+    """
+    ISO-8601 timestamp of creation.
+    """
+
     updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="updatedAt"),
         pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last update."),
     ]
+    """
+    ISO-8601 timestamp of the last update.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -3,9 +3,14 @@ title: Strands Agents
 description: Connect your Strands Agents application to Latitude for observability.
 ---
 
+import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
+
+<SkillsCallout />
+
 ## Overview
 
-This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Strands Agents** — AWS's open-source AI agents SDK.
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Strands Agents** — AWS's open-source AI agents SDK. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 Strands Agents has first-class OpenTelemetry support built in (`strands-agents[otel]`). It emits standard `gen_ai.*` spans for every agent run, LLM call, and tool execution, so you can point Strands' OTLP exporter directly at Latitude's ingestion endpoint — no Latitude SDK required.
 
@@ -22,7 +27,7 @@ Strands Agents has first-class OpenTelemetry support built in (`strands-agents[o
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - A Python project that uses **Strands Agents** (`strands-agents`)
 
@@ -112,3 +117,7 @@ Once connected, traces appear automatically in Latitude:
 1. Open your **project** in the Latitude dashboard
 2. Each agent run shows the full hierarchy: agent → LLM calls → tool executions
 3. Token usage and latency are aggregated at every level
+
+## See what was captured
+
+<FirstArtifact />

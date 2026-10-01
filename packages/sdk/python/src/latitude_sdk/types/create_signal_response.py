@@ -24,5 +24,8 @@ class CreateSignalResponse(UniversalBaseModel):
         FieldMetadata(alias="evaluationId"),
         pydantic.Field(alias="evaluationId", description="Id of the signal's detector evaluation."),
     ]
+    """
+    Id of the signal's detector evaluation.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

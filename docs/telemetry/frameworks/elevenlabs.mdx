@@ -3,9 +3,14 @@ title: ElevenLabs Agents
 description: Connect your ElevenLabs voice agents to Latitude for LLM observability.
 ---
 
+import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
+
+<SkillsCallout />
+
 ## Overview
 
-This guide shows you how to get LLM observability for [**ElevenLabs Agents**](https://elevenlabs.io/docs/eleven-agents/overview) in Latitude.
+This guide shows you how to get LLM observability for [**ElevenLabs Agents**](https://elevenlabs.io/docs/eleven-agents/overview) in Latitude. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 ElevenLabs Agents is a fully hosted **voice platform**: speech-to-text, the LLM loop, and text-to-speech all run on ElevenLabs' infrastructure. ElevenLabs does not export STT or TTS traces to third parties — only the LLM step is observable, and only when you route it through infrastructure you control.
 
@@ -27,7 +32,7 @@ The way in is ElevenLabs' [**Custom LLM**](https://elevenlabs.io/docs/eleven-age
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - An **ElevenLabs agent** and an API key for an OpenAI-compatible LLM provider
 - A **publicly reachable URL** for your server (use a tunnel like ngrok during development)
@@ -254,3 +259,7 @@ Once connected, traces appear automatically in Latitude:
   [post-call webhooks](https://elevenlabs.io/docs/eleven-agents/workflows/post-call-webhooks)
   and Conversations API.
 </Note>
+
+## See what was captured
+
+<FirstArtifact />

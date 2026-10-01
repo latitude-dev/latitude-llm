@@ -3,8 +3,6 @@ title: Memory
 description: Watch how your agents' persistent memory evolves, with per-record history, diffs, and the trace behind every change.
 ---
 
-# Memory
-
 If your agents keep persistent memory, Latitude records every memory operation they run and treats each write like a commit. The **Memory** page shows the current contents of every store, the full history of each record, who read and wrote it, and a diff for every change, each one linked back to the session that caused it.
 
 <Frame>
@@ -24,13 +22,19 @@ Record bodies, diffs, and token counts appear when your instrumentation captures
 
 ## The Memory page
 
-The **Memory** page lists every store, one row per store, with its record count, total tokens, when it was last updated and last read, the number of sessions that wrote to it, and the number of distinct users who accessed it.
+The **Memory** page lists every store, one row per store, with its record count, write and read activity, and when it was last active.
 
 <Frame>
   <img src="/images/observability/memory-overview.png" alt="The Memory page listing every store with its record count, tokens, last updated and last read times, sessions, and users" />
 </Frame>
 
+A collapsible **Memory statistics** panel above the list charts memory activity over time, created, updated, and deleted records per bucket against records retrieved. The list itself carries health columns beyond the basics: a per-store **Trend** sparkline of writes, **Read:write** (records read for every record written), **Dead %** (the share of live records never read), and **Zero-hit %** (the share of searches that returned nothing), with more columns (total tokens, sessions, users, **Rewrites**, and **Net growth**) available from the column selector. A store that is written but never read, or searched but never hit, stands out at a glance.
+
 Open a store to browse it like a repository. The left sidebar shows its records as a tree, with record ids split on `/` to form folders, the center pane shows the selected record's current body, rendered as JSON when it parses as JSON, and the header lists the users who accessed the store, each linking to their user page.
+
+### Store dashboard
+
+Until you select a record, the store shows its **Dashboard**, store-level analytics grouped into four questions. **What's used** lists the most-read records and the cold storage nothing has touched in over a week. **What agents look for** lists the top search queries and the zero-hit queries whose latest search still returned nothing, which is where missing memory shows up. **Write health** counts thrash writes (repeats within a run), no-op rewrites that saved byte-identical content, and duplicate records, with a per-record table that also flags reverted records whose content went back to an earlier value. **Footprint** charts the store's total tokens over time, its largest records, and the size distribution of live records.
 
 ### Record activity
 
@@ -73,6 +77,10 @@ Memory operations are first-class spans. They get their own color in the trace w
 ## Memory on user pages
 
 Each end user's page includes a **Memory stores** section listing the stores that user read or wrote, with the last access time, each linking into the Memory page. It answers "whose sessions have been writing to this store" from either direction.
+
+## Memory over the API and MCP
+
+Your own tools and coding agents can read memory over the REST API, the MCP server, the SDKs, and the CLI: list stores, read a store's snapshot, read a record with its change history, fetch a change's diff, list a record's reads and users, and read a session's or trace's memory footprint. The analytics on this page, the statistics panel and the store dashboard, are not part of that surface. See the [API reference](../more/api-reference).
 
 ## Related
 

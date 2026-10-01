@@ -4,6 +4,7 @@ import type { BaseClientOptions, BaseRequestOptions } from "../../../../BaseClie
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "../../../../BaseClient.js";
 import { mergeHeaders } from "../../../../core/headers.js";
 import * as core from "../../../../core/index.js";
+import { mergeAdditionalBodyParameters } from "../../../../core/requestBody.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
@@ -25,13 +26,15 @@ export class SpansClient {
     /**
      * Returns a cursor-paginated page of spans across all traces in the project matching `filters` (and an optional time `range`). The span-grain, row-level complement to `queryAnalytics` with `stream: "spans"` (which returns aggregates): use this to drill from an aggregate into the individual spans behind it — e.g. every failing `search_docs` tool span, or the slowest embedding calls.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.QuerySpansBody} request
      * @param {SpansClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.spans.query("projectSlug")
@@ -67,7 +70,7 @@ export class SpansClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,

@@ -1,5 +1,9 @@
 import type { FlaggerConversation } from "../conversation.ts"
-import { detectOutputSchemaValidationFlagger } from "../helpers.ts"
+import {
+  buildMessageFlaggerFindingRead,
+  collectOutputSchemaDamageFindings,
+  detectOutputSchemaValidationFlagger,
+} from "../helpers.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
 /**
@@ -14,7 +18,7 @@ export const outputSchemaValidationStrategy: FlaggerStrategy = {
   },
 
   hasRequiredContext(conversation: FlaggerConversation): boolean {
-    return conversation.outputMessages.length > 0
+    return conversation.outputMessages.some((message) => message.role === "assistant")
   },
 
   detectDeterministically(conversation: FlaggerConversation): DetectionResult {
@@ -22,5 +26,22 @@ export const outputSchemaValidationStrategy: FlaggerStrategy = {
     return result.matched
       ? { kind: "matched", feedback: result.feedback, messageIndex: result.messageIndex }
       : { kind: "unmatched" }
+  },
+
+  readDeterministically({ scope, conversation }) {
+    return buildMessageFlaggerFindingRead({
+      scope,
+      conversation,
+      findings: collectOutputSchemaDamageFindings(conversation).map((finding) => ({
+        finding: {
+          flaggerSlug: "output-schema-validation" as const,
+          findingKind: finding.kind,
+          feedback: finding.feedback,
+          messageIndex: finding.messageIndex,
+          partIndex: finding.partIndex,
+          generationPosition: finding.generationPosition,
+        },
+      })),
+    })
   },
 }

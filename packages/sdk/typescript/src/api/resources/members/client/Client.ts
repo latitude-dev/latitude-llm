@@ -4,6 +4,7 @@ import type { BaseClientOptions, BaseRequestOptions } from "../../../../BaseClie
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "../../../../BaseClient.js";
 import { mergeHeaders } from "../../../../core/headers.js";
 import * as core from "../../../../core/index.js";
+import { mergeAdditionalBodyParameters } from "../../../../core/requestBody.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
@@ -30,6 +31,8 @@ export class MembersClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.members.list()
@@ -91,7 +94,7 @@ export class MembersClient {
     }
 
     /**
-     * Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
+     * Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user). Only organization owners and admins can invite members.
      *
      * @param {Latitude.InviteMemberBody} request
      * @param {MembersClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -99,6 +102,8 @@ export class MembersClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.members.invite({
@@ -134,7 +139,7 @@ export class MembersClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -178,6 +183,8 @@ export class MembersClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.members.get("memberId")
@@ -245,14 +252,17 @@ export class MembersClient {
     }
 
     /**
-     * Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.
+     * Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.
      *
      * @param {string} memberId - Membership identifier.
      * @param {Latitude.RemoveMembersRequest} request
      * @param {MembersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.ForbiddenError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.members.remove("memberId")
@@ -303,6 +313,8 @@ export class MembersClient {
                         _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
+                case 403:
+                    throw new Latitude.ForbiddenError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 404:
                     throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
@@ -327,6 +339,8 @@ export class MembersClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.members.update("memberId", {
@@ -364,7 +378,7 @@ export class MembersClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,

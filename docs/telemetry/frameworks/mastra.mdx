@@ -3,9 +3,14 @@ title: Mastra
 description: Connect your Mastra-powered application to Latitude for observability.
 ---
 
+import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
+
+<SkillsCallout />
+
 ## Overview
 
-This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Mastra**.
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Mastra**. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 Mastra has built-in observability support via `@mastra/observability` and `@mastra/otel-exporter`. It emits standard OpenTelemetry `gen_ai.*` spans, so you can point Mastra's OTel exporter directly at Latitude's OTLP ingestion endpoint — no Latitude SDK required.
 
@@ -22,7 +27,7 @@ Mastra has built-in observability support via `@mastra/observability` and `@mast
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - A Node.js project that uses **Mastra** (`@mastra/core`)
 
@@ -106,3 +111,7 @@ Once connected, traces appear automatically in Latitude:
 1. Open your **project** in the Latitude dashboard
 2. Each execution shows input/output messages, model, token usage, latency, and errors
 3. Mastra agent runs, tool executions, and workflow steps appear as child spans
+
+## See what was captured
+
+<FirstArtifact />

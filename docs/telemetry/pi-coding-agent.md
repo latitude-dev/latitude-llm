@@ -1,12 +1,17 @@
+import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
+
 # Pi coding agent telemetry
 
-Stream [pi coding agent](https://pi.dev) sessions into Latitude as traces with the first-party `@latitude-data/pi-telemetry` extension.
+Stream [pi coding agent](https://pi.dev) sessions into Latitude as traces with the first-party `@latitude-data/pi-telemetry` extension. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 After setup, pi prompts appear in your Latitude project's **Traces** view with model calls, prompts, responses, token usage, tool calls, and tool results.
 
+<SkillsCallout />
+
 ## Prerequisites
 
-- A [Latitude account](https://console.latitude.so/login) with a project
+- A [Latitude account](https://console.latitude.so/login) with a project, or none yet: your agent can create a temporary one with the [`latitude-setup` skill](/getting-started/skills), no signup, and fill in the values below
 - A Latitude API key from **Settings → API Keys**
 - Your Latitude project slug from the project sidebar
 - `pi` installed locally
@@ -42,6 +47,10 @@ A trace includes:
 - `tool_call:<name>` spans for tool executions
 - `gen_ai.input.messages` and `gen_ai.output.messages` for prompt/response reconstruction
 - `gen_ai.tool.call.arguments` and `gen_ai.tool.call.result` for tool I/O
+
+## See what was captured
+
+<FirstArtifact />
 
 ## Structural-only telemetry
 

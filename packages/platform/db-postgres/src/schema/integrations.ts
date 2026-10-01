@@ -9,7 +9,8 @@ import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } 
  *
  * The parent table owns the **lifecycle and the cross-vendor invariants**:
  * - one active integration per `(organization_id, kind)`
- * - one active claim per `(kind, vendor_account_id)` across all orgs
+ * - one active claim per `(kind, vendor_account_id)` across all orgs,
+ *   except Slack: one workspace may be connected to several orgs
  *
  * `vendor_account_id` is the integration's identifier in the vendor's
  * world — Slack's workspace `team_id`, Telegram's bot username,
@@ -44,7 +45,7 @@ export const integrations = latitudeSchema.table(
       .where(sql`${t.revokedAt} IS NULL`),
     uniqueIndex("integrations_active_kind_vendor_account_idx")
       .on(t.kind, t.vendorAccountId)
-      .where(sql`${t.revokedAt} IS NULL`),
+      .where(sql`${t.revokedAt} IS NULL AND ${t.kind} <> 'slack'`),
     index("integrations_kind_vendor_account_idx").on(t.kind, t.vendorAccountId),
   ],
 )
