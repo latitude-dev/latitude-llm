@@ -510,6 +510,46 @@ export const MemoryRepositoryLive = Layer.effect(
           .pipe(Effect.mapError((error) => toRepositoryError(error, "MemoryRepository.readSessionMemoryEvents")))
       })
 
+    const readMemoryEventsBySessionIds: MemoryRepositoryShape["readMemoryEventsBySessionIds"] = ({
+      organizationId,
+      projectId,
+      sessionIds,
+      endTimeTo,
+    }) =>
+      Effect.gen(function* () {
+        if (sessionIds.length === 0) return []
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              // Same dedup as readSessionMemoryEvents, batched over the window's sessions so a
+              // scoring run never issues one query per session.
+              query: `SELECT ${EVENT_COLUMNS}
+                      FROM (
+                        SELECT ${EVENT_COLUMNS}, ingested_at
+                        FROM memory_events
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND session_id IN {sessionIds:Array(String)}
+                          ${endTimeTo !== undefined ? "AND end_time <= {endTimeTo:DateTime64(6, 'UTC')}" : ""}
+                        ORDER BY trace_id, span_id, store_id, record_id, ingested_at DESC
+                        LIMIT 1 BY trace_id, span_id, store_id, record_id
+                      )
+                      ORDER BY end_time ASC, start_time ASC, ingested_at ASC, span_id ASC`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                sessionIds: Array.from(sessionIds) as string[],
+                ...(endTimeTo !== undefined ? { endTimeTo: formatCHDate(endTimeTo) } : {}),
+              },
+              format: "JSONEachRow",
+            })
+            const rows = await result.json<MemoryEventRow>()
+            return rows.map(toEvent(organizationId, projectId))
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "MemoryRepository.readMemoryEventsBySessionIds")))
+      })
+
     const readRecordVersions: MemoryRepositoryShape["readRecordVersions"] = ({
       organizationId,
       projectId,
@@ -782,6 +822,7 @@ export const MemoryRepositoryLive = Layer.effect(
       readLatestStoreWipes,
       readBlobs,
       readSessionMemoryEvents,
+      readMemoryEventsBySessionIds,
       readRecordVersions,
       readRecordReadEvents,
       listRecordUsers,

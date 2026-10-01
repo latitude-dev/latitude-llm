@@ -19,10 +19,17 @@ class AnalyticsQueryTracesRange(UniversalBaseModel):
         FieldMetadata(alias="fromIso"),
         pydantic.Field(alias="fromIso", description="Inclusive lower bound (ISO-8601)."),
     ]
+    """
+    Inclusive lower bound (ISO-8601).
+    """
+
     to_iso: typing_extensions.Annotated[
         dt.datetime,
         FieldMetadata(alias="toIso"),
         pydantic.Field(alias="toIso", description="Exclusive upper bound (ISO-8601). Must be after `fromIso`."),
     ]
+    """
+    Exclusive upper bound (ISO-8601). Must be after `fromIso`.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

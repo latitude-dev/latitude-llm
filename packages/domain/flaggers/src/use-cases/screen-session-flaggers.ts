@@ -9,7 +9,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import { type CryptoError, hash } from "@repo/utils"
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
 import { FLAGGER_SCREENING_ARTIFACT_VERSION, FLAGGER_SCREENING_RETENTION_DAYS } from "../constants.ts"
 import { computeFlaggerAnchorContentHash, type FlaggerSessionContext } from "../conversation.ts"
 import { flaggerSlugSchema } from "../entities/flagger.ts"
@@ -19,6 +19,8 @@ import type {
   FlaggerScreeningSelection,
   FlaggerScreeningSelectionReason,
 } from "../entities/flagger-screening-decision.ts"
+import { isSafetySuiteSlug, SAFETY_SUITE_KEY, SAFETY_SUITE_SLUGS } from "../entities/safety-suite.ts"
+import { flaggerBundleKey } from "../flagger-bundle-key.ts"
 import {
   type FlaggerStrategy,
   type FlaggerSuppressor,
@@ -34,6 +36,7 @@ import { FlaggerScreeningDecisionRepository } from "../ports/flagger-screening-d
 import { isReflagSuppressed, isUserCentricReflagInapplicable } from "../reflag.ts"
 import { loadFlaggerSessionContextUseCase } from "./classify-session-flagger.ts"
 import { type FlaggerCacheEntry, getProjectFlaggersUseCase } from "./get-project-flaggers.ts"
+import { runJevPreclassifierUseCase } from "./run-jev-preclassifier.ts"
 import { upsertFlaggerAnnotationScore } from "./upsert-flagger-annotation-score.ts"
 
 export interface ScreenSessionFlaggersInput {
@@ -44,7 +47,7 @@ export interface ScreenSessionFlaggersInput {
   readonly attempt: number
 }
 
-export type FlaggerClassificationReason = "hinted" | "sampled"
+export type FlaggerClassificationReason = "hinted" | "sampled" | "jev-preclassifier"
 
 export type CheckFlaggerLlmRateLimit = (args: {
   readonly organizationId: string
@@ -55,6 +58,13 @@ export type CheckFlaggerLlmRateLimit = (args: {
 
 export interface ScreenSessionFlaggersDeps {
   readonly checkRateLimit: CheckFlaggerLlmRateLimit
+  readonly jevPreclassifier?: {
+    readonly enabled: boolean
+    readonly workflowId: string
+    readonly workflowRunId: string
+    readonly activityId: string
+    readonly activityAttempt: number
+  }
 }
 
 export type SessionFlaggerDroppedReason =
@@ -65,6 +75,17 @@ export type SessionFlaggerDroppedReason =
   | "disabled"
   | "missing-flagger"
 
+/**
+ * How a session entered or missed a flagger's examined population, when the
+ * flagger's own sampling configuration is not the answer. A Safety suite member
+ * is selected by the suite's draw, so it records the suite's mechanism and
+ * probability rather than its own.
+ */
+export interface FlaggerSelectionEvidence {
+  readonly reason: FlaggerScreeningSelectionReason
+  readonly inclusionProbability: number
+}
+
 export type SessionFlaggerDecision =
   | { readonly slug: string; readonly action: "matched-issue" }
   | {
@@ -72,6 +93,7 @@ export type SessionFlaggerDecision =
       readonly action: "classify"
       readonly reason: FlaggerClassificationReason
       readonly hintKinds: readonly SessionHintKind[]
+      readonly selection?: FlaggerSelectionEvidence
     }
   | {
       readonly slug: string
@@ -79,6 +101,7 @@ export type SessionFlaggerDecision =
       readonly reason: SessionFlaggerDroppedReason
       readonly hinted?: boolean
       readonly hintKinds?: readonly SessionHintKind[]
+      readonly selection?: FlaggerSelectionEvidence
     }
   | { readonly slug: string; readonly action: "suppressed"; readonly suppressedBy: string }
   | { readonly slug: string; readonly action: "failed" }
@@ -90,7 +113,7 @@ export interface FlaggerClassificationRequest {
   readonly screeningSelection: FlaggerScreeningSelection
 }
 
-type PendingFlaggerClassificationRequest = Omit<FlaggerClassificationRequest, "screeningSelection">
+export type PendingFlaggerClassificationRequest = Omit<FlaggerClassificationRequest, "screeningSelection">
 
 export interface ScreenSessionFlaggersResult {
   readonly skipped?: "session-not-found" | "reflag-suppressed"
@@ -180,6 +203,15 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
 
   const classifications: PendingFlaggerClassificationRequest[] = []
 
+  const safetySuite = yield* resolveSafetySuiteSelection({
+    input,
+    context,
+    hints,
+    hasPositiveHints,
+    flaggerBySlug,
+    deps,
+  })
+
   const runOne = (slug: string, suppressorDecisions: ReadonlyMap<string, SessionFlaggerDecision>) =>
     screenOneStrategy({
       slug,
@@ -191,6 +223,7 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
       deps,
       suppressorDecisions,
       classifications,
+      safetySuite,
     }).pipe(
       Effect.catch((error) =>
         Effect.gen(function* () {
@@ -216,7 +249,32 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
     concurrency: "unbounded",
   })
 
-  const decisions = [...phase1Decisions, ...phase2Decisions]
+  const baselineDecisions = [...phase1Decisions, ...phase2Decisions]
+  const preclassifier = deps.jevPreclassifier
+  const preclassified =
+    preclassifier?.enabled === true
+      ? yield* runJevPreclassifierUseCase({
+          enabled: true,
+          ...input,
+          context,
+          decisions: baselineDecisions,
+          classifications,
+          flaggerBySlug,
+          hasPositiveHints,
+          checkRateLimit: deps.checkRateLimit,
+          workflowId: preclassifier.workflowId,
+          workflowRunId: preclassifier.workflowRunId,
+          activityId: preclassifier.activityId,
+          activityAttempt: preclassifier.activityAttempt,
+        }).pipe(
+          Effect.catchCause((cause) =>
+            Cause.hasInterruptsOnly(cause)
+              ? Effect.failCause(cause)
+              : Effect.succeed({ decisions: baselineDecisions, classifications }),
+          ),
+        )
+      : { decisions: baselineDecisions, classifications }
+  const decisions = preclassified.decisions
   const screeningDecisions = yield* Effect.forEach(decisions, (decision) =>
     buildInitialScreeningDecision({
       input,
@@ -227,7 +285,7 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
   const screeningDecisionRepository = yield* FlaggerScreeningDecisionRepository
   yield* screeningDecisionRepository.saveMany(screeningDecisions)
 
-  const classificationRequests = classifications.map((classification) => ({
+  const classificationRequests = preclassified.classifications.map((classification) => ({
     ...classification,
     screeningSelection: toSelection(findScreeningDecision(screeningDecisions, classification.flaggerSlug)),
   }))
@@ -241,6 +299,93 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
 })
 
 const EMPTY_MAP: ReadonlyMap<string, SessionFlaggerDecision> = new Map()
+
+/**
+ * The Safety suite's one selection for this session and analysis generation.
+ *
+ * Resolved before any member is screened, because both the draw and the rate
+ * limit have to answer once: a per-slug draw would make the joint examined
+ * population the product of two rates, and a per-slug limiter could admit one
+ * member and drop the other, spending a model call on a session the estimator
+ * must then discard as unexamined.
+ */
+interface SafetySuiteSelection {
+  readonly selected: boolean
+  readonly rateLimited: boolean
+  readonly hinted: boolean
+  readonly inclusionProbability: number
+}
+
+interface ResolveSafetySuiteSelectionInput {
+  readonly input: ScreenSessionFlaggersInput
+  readonly context: FlaggerSessionContext
+  readonly hints: readonly SessionHint[]
+  readonly hasPositiveHints: boolean
+  readonly flaggerBySlug: ReadonlyMap<string, FlaggerCacheEntry>
+  readonly deps: ScreenSessionFlaggersDeps
+}
+
+const isSafetySuiteMemberEligible = (slug: string, args: ResolveSafetySuiteSelectionInput): boolean => {
+  const strategy = getFlaggerStrategy(slug)
+  const flagger = args.flaggerBySlug.get(slug)
+  if (!strategy || !flagger?.enabled) return false
+  if (isUserCentricReflagInapplicable(args.context.conversation.tags, strategy.classifiesAssistantResponseOnly)) {
+    return false
+  }
+  return strategy.hasRequiredContext(args.context.conversation)
+}
+
+const resolveSafetySuiteSelection = (args: ResolveSafetySuiteSelectionInput) =>
+  Effect.gen(function* () {
+    const members = SAFETY_SUITE_SLUGS.filter((slug) => isSafetySuiteMemberEligible(slug, args))
+    if (members.length === 0) return null
+
+    // The lowest configured rate is the only one every member satisfies, so a
+    // project that turns one detector down turns the whole suite down with it.
+    const sampling = Math.min(...members.map((slug) => args.flaggerBySlug.get(slug)?.sampling ?? 0))
+    const hinted = members.some((slug) => {
+      const strategy = getFlaggerStrategy(slug)
+      if (!strategy) return false
+      return isHintedStrategy(strategy, args.hints, args.context, strategyHintKindsFired(strategy, args.hints))
+    })
+
+    if (!hinted) {
+      const sampled = yield* Effect.promise(() =>
+        deterministicSampling({
+          sampling,
+          keyParts: [
+            args.input.organizationId,
+            args.input.projectId,
+            SAFETY_SUITE_KEY,
+            args.input.sessionId,
+            args.input.analysisHash,
+          ],
+        }),
+      )
+      if (!sampled) {
+        return {
+          selected: false,
+          rateLimited: false,
+          hinted: false,
+          inclusionProbability: sampling / 100,
+        } satisfies SafetySuiteSelection
+      }
+    }
+
+    const allowed = yield* args.deps.checkRateLimit({
+      organizationId: args.input.organizationId,
+      flaggerSlug: SAFETY_SUITE_KEY,
+      reason: hinted ? "hinted" : "sampled",
+      hasPositiveHints: args.hasPositiveHints,
+    })
+
+    return {
+      selected: true,
+      rateLimited: !allowed,
+      hinted,
+      inclusionProbability: hinted ? 1 : sampling / 100,
+    } satisfies SafetySuiteSelection
+  })
 
 // A suppressor edge triggers on the suppressor's deterministic match, or on a
 // hinted outcome (started or rate-limited) — restricted to the edge's
@@ -271,6 +416,7 @@ interface ScreenOneStrategyInput {
   readonly deps: ScreenSessionFlaggersDeps
   readonly suppressorDecisions: ReadonlyMap<string, SessionFlaggerDecision>
   readonly classifications: PendingFlaggerClassificationRequest[]
+  readonly safetySuite: SafetySuiteSelection | null
 }
 
 const strategyHintKindsFired = (
@@ -353,12 +499,13 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
         : (read.findings[0] ?? null)
 
       if (finding) {
-        return yield* handleMatched(
-          args,
-          finding.feedback,
-          "messageIndex" in finding ? finding.messageIndex : undefined,
-          finding.findingKey,
-        )
+        const bundleKey = flaggerBundleKey(finding)
+        return yield* handleMatched(args, finding.feedback, {
+          ...("messageIndex" in finding ? { messageIndex: finding.messageIndex } : {}),
+          findingKey: finding.findingKey,
+          findingKind: finding.findingKind,
+          ...(bundleKey !== null ? { bundleKey } : {}),
+        })
       }
 
       return yield* handleUnmatched(args, flagger, strategy)
@@ -367,15 +514,25 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
     const result = strategy.detectDeterministically?.(args.context.conversation) ?? ({ kind: "unmatched" } as const)
 
     if (result.kind === "matched") {
-      return yield* handleMatched(args, result.feedback, result.messageIndex)
+      return yield* handleMatched(args, result.feedback, {
+        ...(result.messageIndex !== undefined ? { messageIndex: result.messageIndex } : {}),
+      })
     }
 
     return yield* handleUnmatched(args, flagger, strategy)
   })
 
-const handleMatched = (args: ScreenOneStrategyInput, feedback: string, messageIndex?: number, findingKey?: string) =>
+interface MatchedFindingProvenance {
+  readonly messageIndex?: number
+  readonly findingKey?: string
+  readonly findingKind?: string
+  readonly bundleKey?: string
+}
+
+const handleMatched = (args: ScreenOneStrategyInput, feedback: string, provenance: MatchedFindingProvenance) =>
   Effect.gen(function* () {
     const session = args.context.session
+    const messageIndex = provenance.messageIndex
     const contentHash = yield* computeFlaggerAnchorContentHash(args.context.conversation, messageIndex)
 
     yield* upsertFlaggerAnnotationScore({
@@ -387,7 +544,12 @@ const handleMatched = (args: ScreenOneStrategyInput, feedback: string, messageIn
       flaggerSlug: args.slug,
       messageIndex,
       contentHash,
-      ...(findingKey !== undefined ? { flaggerFindingKey: findingKey, flaggerPath: "deterministic" } : {}),
+      analysisHash: args.input.analysisHash,
+      ...(provenance.findingKey !== undefined
+        ? { flaggerFindingKey: provenance.findingKey, flaggerPath: "deterministic" as const }
+        : {}),
+      ...(provenance.bundleKey !== undefined ? { flaggerBundleKey: provenance.bundleKey } : {}),
+      ...(provenance.findingKind !== undefined ? { flaggerFindingKind: provenance.findingKind } : {}),
     })
 
     return { slug: args.slug, action: "matched-issue" } satisfies SessionFlaggerDecision
@@ -401,6 +563,10 @@ const handleUnmatched = (args: ScreenOneStrategyInput, flagger: FlaggerCacheEntr
 
     const fired = strategyHintKindsFired(strategy, args.hints)
     const hinted = isHintedStrategy(strategy, args.hints, args.context, fired)
+
+    if (isSafetySuiteSlug(args.slug) && args.safetySuite) {
+      return handleSafetySuiteMember(args, flagger, args.safetySuite, hinted, fired)
+    }
 
     if (!hinted) {
       const sampled = yield* Effect.promise(() =>
@@ -444,6 +610,48 @@ const handleUnmatched = (args: ScreenOneStrategyInput, flagger: FlaggerCacheEntr
     return { slug: args.slug, action: "classify", reason, hintKinds: fired } satisfies SessionFlaggerDecision
   })
 
+/**
+ * Applies the suite's one selection to one of its members.
+ *
+ * Whether this member was hinted stays its own: a session hinted only for
+ * personal data must not make the jailbreaking decision look injection-hinted,
+ * because that is what mutes the refusal detector. A member the suite carried
+ * along was still examined with certainty, which is what `uniform-sample`
+ * means, so it records that rather than an ordinary sample it never drew.
+ */
+const handleSafetySuiteMember = (
+  args: ScreenOneStrategyInput,
+  flagger: FlaggerCacheEntry,
+  suite: SafetySuiteSelection,
+  hinted: boolean,
+  fired: readonly SessionHintKind[],
+): SessionFlaggerDecision => {
+  const selection: FlaggerSelectionEvidence = {
+    reason: hinted ? "hinted" : suite.hinted ? "uniform-sample" : "ordinary-sample",
+    inclusionProbability: suite.inclusionProbability,
+  }
+
+  if (!suite.selected) {
+    return { slug: args.slug, action: "dropped", reason: "sampled-out", selection }
+  }
+
+  if (suite.rateLimited) {
+    return {
+      slug: args.slug,
+      action: "dropped",
+      reason: "rate-limited",
+      hinted,
+      ...(hinted ? { hintKinds: fired } : {}),
+      selection: { ...selection, reason: "rate-limited" },
+    }
+  }
+
+  const reason: FlaggerClassificationReason = hinted ? "hinted" : "sampled"
+  args.classifications.push({ flaggerId: flagger.flaggerId, flaggerSlug: args.slug, reason })
+
+  return { slug: args.slug, action: "classify", reason, hintKinds: fired, selection }
+}
+
 interface BuildInitialScreeningDecisionInput {
   readonly input: ScreenSessionFlaggersInput
   readonly decision: SessionFlaggerDecision
@@ -451,8 +659,6 @@ interface BuildInitialScreeningDecisionInput {
 }
 
 const toSelection = ({
-  attempt: _attempt,
-  version: _version,
   outcome: _outcome,
   createdAt: _createdAt,
   ...selection
@@ -462,6 +668,22 @@ const findScreeningDecision = (decisions: readonly FlaggerScreeningDecision[], f
   const decision = decisions.find((candidate) => candidate.flaggerSlug === flaggerSlug)
   if (!decision) throw new Error(`Missing screening decision for ${flaggerSlug}`)
   return decision
+}
+
+const classificationSelectionReason = (
+  decision: Extract<SessionFlaggerDecision, { readonly action: "classify" }>,
+): FlaggerScreeningSelectionReason => {
+  if (decision.selection?.reason) return decision.selection.reason
+  if (decision.reason === "hinted") return "hinted"
+  return decision.reason === "jev-preclassifier" ? "jev-preclassifier" : "ordinary-sample"
+}
+
+const classificationInclusionProbability = (
+  decision: Extract<SessionFlaggerDecision, { readonly action: "classify" }>,
+  flagger: FlaggerCacheEntry | null,
+): number => {
+  if (decision.selection?.inclusionProbability !== undefined) return decision.selection.inclusionProbability
+  return decision.reason === "sampled" ? (flagger?.sampling ?? 0) / 100 : 1
 }
 
 const selectionFacts = (
@@ -480,8 +702,8 @@ const selectionFacts = (
   if (decision.action === "classify") {
     return {
       selected: true,
-      reason: decision.reason === "hinted" ? "hinted" : "ordinary-sample",
-      inclusionProbability: decision.reason === "hinted" ? 1 : (flagger?.sampling ?? 0) / 100,
+      reason: classificationSelectionReason(decision),
+      inclusionProbability: classificationInclusionProbability(decision, flagger),
       hintKinds: decision.hintKinds,
     }
   }
@@ -494,8 +716,8 @@ const selectionFacts = (
   if (decision.reason === "sampled-out") {
     return {
       selected: false,
-      reason: "ordinary-sample",
-      inclusionProbability: (flagger?.sampling ?? 0) / 100,
+      reason: decision.selection?.reason ?? "ordinary-sample",
+      inclusionProbability: decision.selection?.inclusionProbability ?? (flagger?.sampling ?? 0) / 100,
       hintKinds: [],
     }
   }
@@ -503,13 +725,20 @@ const selectionFacts = (
     return {
       selected: false,
       reason: "rate-limited",
-      inclusionProbability: decision.hinted === true ? 1 : (flagger?.sampling ?? 0) / 100,
+      inclusionProbability:
+        decision.selection?.inclusionProbability ?? (decision.hinted === true ? 1 : (flagger?.sampling ?? 0) / 100),
       hintKinds: decision.hintKinds ?? [],
     }
   }
   const strategy = getFlaggerStrategy(decision.slug)
   if (decision.reason === "unmatched" && strategy && !isLlmCapableStrategy(strategy)) {
     return { selected: true, reason: "deterministic", inclusionProbability: 1, hintKinds: [], outcome: "unmatched" }
+  }
+  // A detector that could never have judged this session is not applicable to
+  // it, which is different from the policy skip `skipped` names. It also lets a
+  // Safety suite complete on the member that could read the session.
+  if (decision.reason === "missing-context") {
+    return { selected: false, reason: "skipped", hintKinds: [], outcome: "notApplicable" }
   }
   return { selected: false, reason: "skipped", hintKinds: [] }
 }

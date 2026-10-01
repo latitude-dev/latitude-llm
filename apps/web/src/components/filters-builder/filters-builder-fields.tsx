@@ -74,6 +74,7 @@ function CollapsibleSection({
         type="button"
         className="flex items-center justify-between py-2 cursor-pointer"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
       >
         <Text.H5 className="w-full">{label}</Text.H5>
         <ChevronIcon className="h-4 w-4 text-muted-foreground" />
@@ -505,6 +506,27 @@ export function FiltersBuilderFields({
               selected={selected}
               onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: values }] : [])}
               placeholder={placeholder}
+            />
+          </CollapsibleSection>
+        ),
+      })
+      continue
+    }
+    if (selectedValues.length > 0) {
+      const staticItems = selectedValues.map((selectedValue) => ({ value: selectedValue, label: selectedValue }))
+      entries.push({
+        group,
+        label,
+        node: (
+          <CollapsibleSection key={field} label={label} defaultOpen>
+            <MultiSelectFilter
+              mode={mode}
+              projectId={projectId}
+              column={field as DistinctColumn}
+              selected={selectedValues}
+              onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: values }] : [])}
+              staticItems={staticItems}
+              placeholder="Filter selected values..."
             />
           </CollapsibleSection>
         ),

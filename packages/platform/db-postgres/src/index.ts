@@ -1,6 +1,10 @@
 export { InvalidEnvValueError, MissingEnvValueError } from "@platform/env"
 // Re-export drizzle-orm helpers to ensure consistent type instances
 export { and, asc, desc, eq, inArray, max } from "drizzle-orm"
+export {
+  type BoundedReadPostgresConfig,
+  createBoundedReadPostgresClient,
+} from "./bounded-read-client.ts"
 export type { Operator, PostgresClient, PostgresConfig, PostgresDb } from "./client.ts"
 export {
   closePostgres,
@@ -28,6 +32,7 @@ export {
   type PollingOutboxConsumerConfig,
 } from "./outbox-consumer.ts"
 export { createOutboxWriter, OutboxEventWriterLive } from "./outbox-writer.ts"
+export { AdminAgentScoreHistoryRepositoryLive } from "./repositories/admin-agent-score-history-repository.ts"
 export { AdminFeatureFlagRepositoryLive } from "./repositories/admin-feature-flag-repository.ts"
 export { AdminOrganizationRepositoryLive } from "./repositories/admin-organization-repository.ts"
 export { AdminProjectRepositoryLive } from "./repositories/admin-project-repository.ts"
@@ -37,6 +42,8 @@ export { AgentDispatchConfigRepositoryLive } from "./repositories/agent-dispatch
 export { AgentDispatchCredentialRepositoryLive } from "./repositories/agent-dispatch-credential-repository.ts"
 export { AgentDispatchIntegrationRepositoryLive } from "./repositories/agent-dispatch-integration-repository.ts"
 export { AgentDispatchRepositoryLive } from "./repositories/agent-dispatch-repository.ts"
+export { AgentScoreDigestSourceLive } from "./repositories/agent-score-digest-source.ts"
+export { AgentScoreSnapshotRepositoryLive } from "./repositories/agent-score-snapshot-repository.ts"
 export { IncidentRepositoryLive } from "./repositories/alert-incident-repository.ts"
 export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
 export { BillingOverrideRepositoryLive } from "./repositories/billing-override-repository.ts"
@@ -90,9 +97,8 @@ export { ShowcaseRepositoryLive } from "./repositories/showcase-repository.ts"
 export { SignalRepositoryLive } from "./repositories/signal-repository.ts"
 export { SlackDeliveryRepositoryLive } from "./repositories/slack-delivery-repository.ts"
 export {
-  findActiveSlackIntegrationByTeamIdAcrossOrgs,
+  hasActiveSlackIntegrationForTeamAcrossOrgs,
   SlackIntegrationRepositoryLive,
-  softRevokeSlackIntegrationAcrossOrgs,
 } from "./repositories/slack-integration-repository.ts"
 export { SsoProviderRepositoryLive } from "./repositories/sso-provider-repository.ts"
 export { StripeBillingProviderLive } from "./repositories/stripe-billing-provider.ts"

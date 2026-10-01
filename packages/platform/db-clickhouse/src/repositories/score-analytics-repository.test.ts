@@ -45,7 +45,7 @@ function setupFixture() {
     },
     readScoreProvenance: async (id: ScoreId) => {
       const result = await ch.client.query({
-        query: `SELECT flagger_slug, scoring_artifact_version, flagger_finding_key, flagger_path
+        query: `SELECT flagger_slug, scoring_artifact_version, flagger_finding_key, flagger_path, flagger_finding_kind, flagger_bundle_key
           FROM scores
           WHERE organization_id = {organizationId:String} AND id = {id:FixedString(24)}
           LIMIT 1`,
@@ -57,6 +57,8 @@ function setupFixture() {
         scoring_artifact_version: string | null
         flagger_finding_key: string | null
         flagger_path: string | null
+        flagger_finding_kind: string | null
+        flagger_bundle_key: string | null
       }>()
       return rows[0]
     },
@@ -214,6 +216,8 @@ describe("ScoreAnalyticsRepository", () => {
           flaggerSlug: "empty-response",
           flaggerFindingKey: "a".repeat(64),
           flaggerPath: "deterministic",
+          flaggerFindingKind: "blank",
+          flaggerBundleKey: "empty-response:blank",
         },
         createdAt: now,
         updatedAt: now,
@@ -226,6 +230,8 @@ describe("ScoreAnalyticsRepository", () => {
         scoring_artifact_version: null,
         flagger_finding_key: "a".repeat(64),
         flagger_path: "deterministic",
+        flagger_finding_kind: "blank",
+        flagger_bundle_key: "empty-response:blank",
       })
     })
 
@@ -265,6 +271,55 @@ describe("ScoreAnalyticsRepository", () => {
         scoring_artifact_version: null,
         flagger_finding_key: null,
         flagger_path: null,
+        flagger_finding_kind: null,
+        flagger_bundle_key: null,
+      })
+    })
+
+    it("projects the structured Safety finding kind so coverage queries need no metadata parse", async () => {
+      const id = "ssssssssssssssssssssssss" as ScoreId
+      const now = new Date("2026-09-11T10:00:00.000Z")
+      const score = {
+        id,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionId: SessionId("safety-session"),
+        traceId: TraceId("t".repeat(32)),
+        spanId: null,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        simulationId: null,
+        signalId: null,
+        value: 0,
+        passed: false,
+        feedback: "The agent printed its hidden system prompt.",
+        error: null,
+        errored: false,
+        duration: 0,
+        tokens: 0,
+        cost: 0,
+        draftedAt: null,
+        annotatorId: null,
+        metadata: {
+          rawFeedback: "The agent printed its hidden system prompt.",
+          flaggerSlug: "jailbreaking",
+          flaggerPath: "sampled",
+          scoringArtifactVersion: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          safetyFindingKind: "injectionCompliance",
+        },
+        createdAt: now,
+        updatedAt: now,
+      } satisfies Score
+
+      await fixture.runCh(fixture.repo.insert(score))
+
+      expect(await fixture.readScoreProvenance(id)).toEqual({
+        flagger_slug: "jailbreaking",
+        scoring_artifact_version: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+        flagger_finding_key: null,
+        flagger_path: "sampled",
+        flagger_finding_kind: "injectionCompliance",
+        flagger_bundle_key: null,
       })
     })
   })
