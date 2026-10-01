@@ -1,0 +1,349 @@
+---
+title: Simulate and regression-test in CI
+description: Turn production failures into a dataset, replay it against your agent on every pull request with GitHub Actions, and compare versions with experiments so regressions fail the build.
+---
+
+<Info>
+  **Where this fits:** This is the automation step of **Refine**. [Regression testing](./regression-testing) explains the loop; this guide wires the whole loop — [dataset](../datasets/overview) in, [scores](../scores/overview) out, [experiments](../experiments/overview) to compare — into GitHub Actions so it runs on every change.
+</Info>
+
+This is simulation-style testing on **replayed real traffic**: every test case is an interaction that actually happened in production, run again against the current version of your agent. It is not a synthetic-user simulator — nothing here invents conversations. If you want an LLM-driven user that improvises multi-turn dialogue, that is the job of [local simulations](./simulations); this guide is the single-turn, deterministic-gate counterpart, and the two share the same datasets and tagging conventions.
+
+The pattern comes from how teams already use Latitude in production: an incident produces a batch of bad traces, the traces behind it become a dataset, someone fills in what the agent *should* have said, and from then on every pull request that touches the agent replays that dataset in CI. A change that re-breaks a fixed case fails the build before it ships.
+
+## 1. Capture the failure cases from production traces
+
+Start from the traffic that went wrong. You can add traces to a dataset from anywhere you find them:
+
+- **From a [signal](../signals/overview)**: open the signal and add its traces — the full set of failures behind one problem becomes a dataset in one action.
+- **From [Search](../search/overview)** or the trace list: select traces and use **Add to Dataset**.
+- **From your coding agent**: over the [MCP server](../getting-started/mcp), an agent like Claude or Cursor can create the dataset and pull in the traces behind a signal for you.
+
+Each trace becomes a row: the trace input becomes the row **input**, and the agent's (wrong) response becomes the row **output**. See [Add traces to a dataset](../datasets/add-traces) for the full flow.
+
+<Note>
+  Add **passing traces too**, not only failures. A dataset made entirely of one incident's traces tests one thing: whether the incident is fixed. The control cases below are what catch a fix that breaks everything else.
+</Note>
+
+## 2. Curate expected outcomes
+
+A row imported from a failing trace records what the agent *did*. To make it a test case, record what it *should have done*:
+
+<Steps>
+  <Step title="Fill in expected output">
+    [Add expected output](../datasets/expected-output) to each row — the correct answer a reviewer would give, the behavior described in the signal, or a corrected version of the original output. You can do this in the UI row by row, or [in bulk over the API or MCP](../datasets/edit-rows).
+  </Step>
+  <Step title="Add a checks column for fuzzy cases">
+    Exact-match on a full LLM response is brittle. Add a [custom column](../datasets/custom-columns) named `checks` and put a small JSON assertion in it, for example:
+
+    ```json
+    { "contains": ["refund", "5-7 business days"], "notContains": ["cannot help"] }
+    ```
+
+    The replay script below checks `contains` / `notContains` phrases when a row has them, and falls back to exact expected-output match when it does not. The column is plain data — the checking logic lives in your script, so extend the shape however you like.
+  </Step>
+  <Step title="Label your control cases">
+    Add a custom column named `caseType` and set it to `control` on the rows that were already working. Everything else counts as a regression case. Why this matters is covered [below](#include-cases-a-lazy-fix-would-break).
+  </Step>
+</Steps>
+
+Custom values are stored under the column's **stable identifier**, not its display name, so the script looks the columns up by name first. See [Edit row contents](../datasets/edit-rows).
+
+## 3. Replay the dataset against your agent
+
+The runner is a script in your own repository: it pulls the rows with the SDK, runs each input through your agent, checks the result, and reports the verdicts back to Latitude as [scores](../scores/overview). Latitude holds the dataset, the traces, and the comparison; your agent runs in your process.
+
+Set `LATITUDE_API_KEY`, `LATITUDE_PROJECT_SLUG`, and `LATITUDE_DATASET_SLUG`. Replace `runAgent` with a call into your own agent, and instrument the LLM SDK your agent actually uses (see the [TypeScript SDK](../telemetry/typescript)).
+
+```bash
+npm install @latitude-data/sdk @latitude-data/telemetry openai
+```
+
+```ts
+// scripts/replay-regressions.ts
+import { randomUUID } from "node:crypto"
+
+import { LatitudeClient } from "@latitude-data/sdk"
+import { Latitude, capture } from "@latitude-data/telemetry"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
+import OpenAI from "openai"
+
+import { runAgent } from "../src/agent" // <- your agent
+
+const PROJECT = process.env.LATITUDE_PROJECT_SLUG!
+const DATASET = process.env.LATITUDE_DATASET_SLUG!
+const AGENT_VERSION = process.env.AGENT_VERSION ?? "local"
+const RUN_ID = process.env.REGRESSION_RUN_ID ?? randomUUID()
+
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  project: PROJECT,
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
+})
+
+const client = new LatitudeClient({
+  apiKey: process.env.LATITUDE_API_KEY!,
+})
+
+async function loadAllRows() {
+  const rows = []
+  let cursor: string | undefined
+  for (;;) {
+    const page = await client.datasets.listRows(PROJECT, DATASET, {
+      cursor,
+      limit: 200,
+    })
+    rows.push(...page.items)
+    if (!page.hasMore || page.nextCursor == null) break
+    cursor = page.nextCursor
+  }
+  return rows
+}
+
+async function customColumnIds() {
+  const { columns } = await client.datasets.listColumns(PROJECT, DATASET)
+  const byName = (name: string) =>
+    columns.find(
+      (column) => column.name === name && column.source.kind === "custom",
+    )?.identifier
+  return { checks: byName("checks"), caseType: byName("caseType") }
+}
+
+type Checks = { contains?: string[]; notContains?: string[] }
+
+function parseChecks(value: unknown): Checks | undefined {
+  if (typeof value !== "string" || value.trim() === "") return undefined
+  try {
+    return JSON.parse(value) as Checks
+  } catch {
+    return undefined
+  }
+}
+
+function asText(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim() !== "") return value
+  return undefined
+}
+
+function judge(output: string, expected: string | undefined, checks: Checks | undefined) {
+  if (checks) {
+    const haystack = output.toLowerCase()
+    const missing = (checks.contains ?? []).filter(
+      (phrase) => !haystack.includes(phrase.toLowerCase()),
+    )
+    const forbidden = (checks.notContains ?? []).filter((phrase) =>
+      haystack.includes(phrase.toLowerCase()),
+    )
+    if (missing.length > 0) return { passed: false, reason: `missing: ${missing.join(", ")}` }
+    if (forbidden.length > 0) return { passed: false, reason: `forbidden: ${forbidden.join(", ")}` }
+    return { passed: true, reason: "all checks passed" }
+  }
+  if (expected !== undefined) {
+    const passed = output.trim() === expected.trim()
+    return { passed, reason: passed ? "matched expected output" : "did not match expected output" }
+  }
+  return undefined // nothing to check against
+}
+
+async function recordScore(args: {
+  sessionId: string
+  rowId: string
+  caseType: string
+  passed: boolean
+  reason: string
+}) {
+  await latitude.flush()
+  const page = await client.traces.list(PROJECT, {
+    limit: 1,
+    filters: { sessionId: [{ op: "eq", value: args.sessionId }] },
+  })
+  const trace = page.items[0]
+  if (!trace) {
+    console.warn(`no trace yet for session ${args.sessionId}`)
+    return
+  }
+  await client.scores.create(PROJECT, {
+    body: {
+      value: args.passed ? 1 : 0,
+      passed: args.passed,
+      feedback: args.reason,
+      sourceId: "ci-regression",
+      trace: { by: "id", id: trace.traceId },
+      metadata: {
+        rowId: args.rowId,
+        runId: RUN_ID,
+        caseType: args.caseType,
+        agentVersion: AGENT_VERSION,
+      },
+    },
+  })
+}
+
+await latitude.ready
+
+try {
+  const rows = await loadAllRows()
+  const columnIds = await customColumnIds()
+
+  let failed = 0
+  let skipped = 0
+  let judged = 0
+
+  for (const row of rows) {
+    const input = asText(row.input)
+    if (!input) {
+      skipped++
+      continue
+    }
+
+    const checks = columnIds.checks ? parseChecks(row.custom[columnIds.checks]) : undefined
+    const caseType =
+      (columnIds.caseType && asText(row.custom[columnIds.caseType])) || "regression"
+    const sessionId = `ci-${RUN_ID}-${row.rowId}`
+
+    const output = await capture(
+      `replay-${row.rowId}`,
+      async () => runAgent(input),
+      {
+        sessionId,
+        tags: ["regression", `agent-${AGENT_VERSION}`],
+        metadata: {
+          dataset: DATASET,
+          rowId: row.rowId,
+          runId: RUN_ID,
+          agentVersion: AGENT_VERSION,
+          caseType,
+        },
+      },
+    )
+
+    const verdict = judge(output, asText(row.expectedOutput), checks)
+    if (!verdict) {
+      skipped++
+      console.warn(`row ${row.rowId} has no expected output and no checks - skipped`)
+      continue
+    }
+
+    judged++
+    if (!verdict.passed) {
+      failed++
+      console.error(`FAIL [${caseType}] row ${row.rowId}: ${verdict.reason}`)
+    }
+
+    await recordScore({
+      sessionId,
+      rowId: row.rowId,
+      caseType,
+      passed: verdict.passed,
+      reason: verdict.reason,
+    })
+  }
+
+  console.log(`judged ${judged} rows, ${failed} failed, ${skipped} skipped`)
+  if (failed > 0) process.exitCode = 1
+  if (process.env.CI && judged === 0) process.exitCode = 1 // an empty gate must not pass
+} finally {
+  await latitude.flush()
+  await latitude.shutdown()
+}
+```
+
+Three things this script gets right that are easy to miss:
+
+- **A skip is not a pass.** Rows with no input, or with neither expected output nor checks, are skipped — and in CI, a run that judged nothing exits non-zero. A misnamed column or an empty dataset cannot greenlight a merge.
+- **Every replayed case lands in Latitude** with the `regression` tag, a per-row session id, and the row id in metadata, so you can open any CI failure as a full [trace](../observability/traces) and inspect what the agent actually did.
+- **Verdicts are posted as scores** with source `ci-regression`, so results live alongside your production data and show up in dashboards, filters, and experiments — the same loop the [Scores API](../scores/api) describes.
+
+<Note>
+  Keep this traffic out of production alerting: use a dedicated project, or exclude the `regression` tag from [evaluation triggers](../evaluations/triggers) and [monitors](../monitors/overview) on the production project — the same [isolation advice](./simulations#isolate-simulation-traffic) as for local simulations. Replayed traces count toward usage the same way production traces do.
+</Note>
+
+The same flow works in Python with `latitude-sdk` and `latitude-telemetry` — the [local simulations guide](./simulations#python) shows the equivalent client calls (`datasets.list_rows`, `datasets.list_columns`, `scores.create`, `capture`).
+
+## 4. Wire it into GitHub Actions
+
+Store `LATITUDE_API_KEY` (and your model provider's key) as repository secrets, then add a workflow that replays the dataset on every pull request that can change agent behavior:
+
+```yaml
+# .github/workflows/agent-regressions.yml
+name: Agent regression tests
+
+on:
+  pull_request:
+    paths:
+      - "src/agent/**"
+      - "prompts/**"
+      - "scripts/replay-regressions.ts"
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Replay the regression dataset
+        run: npx tsx scripts/replay-regressions.ts
+        env:
+          LATITUDE_API_KEY: ${{ secrets.LATITUDE_API_KEY }}
+          LATITUDE_PROJECT_SLUG: support-agent
+          LATITUDE_DATASET_SLUG: refund-regressions
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AGENT_VERSION: ${{ github.event.pull_request.head.sha }}
+          REGRESSION_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+```
+
+The script exits non-zero when any judged row fails (or when nothing was judged), so the job fails and blocks the merge. `AGENT_VERSION` is the commit SHA and `REGRESSION_RUN_ID` is the CI run id, which makes every run traceable: filter **Sessions** on the `regression` tag and search `metadata.runId` to see exactly what a given CI run did.
+
+Because the script reads the dataset live from Latitude, adding a new regression case is a data change, not a code change: add the trace to the dataset, fill in the expected output, and the next CI run covers it. No PR needed.
+
+<Note>
+  Model calls are not free and not instant. If the dataset grows past a few hundred rows, split it — a small, blocking dataset of your worst regressions on every PR, and the full set on a nightly schedule (`on: schedule`).
+</Note>
+
+## 5. Compare versions with experiments
+
+The build status tells you *whether* something broke. [Experiments](../experiments/overview) tell you *how* the change moved everything else — cost, latency, tool use, signals, behaviors — across the same replayed cases.
+
+Every CI run is tagged `agent-<sha>`, so any two runs are comparable:
+
+1. Open **Experiments** and create one.
+2. Baseline variant: tag `regression` and tag `agent-<old-sha>` (or the tag of your last release).
+3. Comparison variant: tag `regression` and tag `agent-<new-sha>`.
+
+The experiment compares the two slices on every metric Latitude tracks. Your CI verdicts appear as scores with source `ci-regression`, and if a [signal](../signals/overview) you thought you fixed still fires on the new slice, the fix did not cover that case — even if the string checks passed.
+
+## Include cases a lazy fix would break
+
+A regression dataset built only from failures has a blind spot: it rewards overcorrection. If the incident was "the agent refused valid refund requests", the laziest possible fix — approve every refund request — passes every row in that dataset perfectly.
+
+This is what the `caseType = control` rows are for. Control cases are traces where the agent behaved **correctly**, chosen specifically because a crude fix to the failure would flip them:
+
+| Regression case (was broken) | Control case (must stay correct) |
+| --- | --- |
+| Refused a refund that policy allows | Refused a refund that policy actually forbids |
+| Escalated a question it could answer | Escalated a legal-threat conversation (it should) |
+| Hallucinated a discount code | Quoted a real, currently valid promotion |
+
+Curate them the same way: find the known-good traces in [Search](../search/overview), add them to the same dataset, fill in expected output or checks, and set `caseType` to `control`. The script runs them identically and labels the verdict's metadata, so when a build fails you can see at a glance whether the change broke the fix or broke the surrounding behavior. A pull request that turns regression rows green by turning control rows red is not a fix — and now it cannot merge looking like one.
+
+## What this is, and what it is not
+
+Honest framing for your team:
+
+- **It is** regression testing on real, replayed production traffic, with results stored next to your production observability and gated in CI.
+- **It is not** a synthetic-user simulator. Each row replays one recorded input once; nobody role-plays the user. For multi-turn conversations driven by a simulated user and judged by an LLM, use [local simulations](./simulations) — same datasets, same tags, same experiments on the other end.
+- **String checks are a floor, not a ceiling.** They catch clear regressions cheaply and deterministically. For semantic judgments, pair this gate with the [evaluations](../evaluations/overview) already scoring your production traffic — the replayed traces flow through them like any other traffic in the project.
+
+## Next step
+
+- [Regression testing](./regression-testing): the concept this guide automates.
+- [Simulate agents locally](./simulations): the multi-turn, simulated-user counterpart.
+- [Datasets](../datasets/overview): everything a dataset row can hold.
+- [Experiments](../experiments/overview): compare any two slices of your data.
