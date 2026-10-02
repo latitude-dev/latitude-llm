@@ -24,7 +24,11 @@ import {
   lookupThroughputExpectationTps,
   lookupTtftExpectationNs,
 } from "../entities/latency-reference-artifact.ts"
-import type { AssessmentReaderFact, LatencyModel } from "../entities/session-assessment-input.ts"
+import type {
+  AssessmentReaderFact,
+  LatencyModel,
+  ToolDefinitionWindowObservation,
+} from "../entities/session-assessment-input.ts"
 import type { CostFamilyDenominators } from "../scoring/aggregate-session-cost.ts"
 import {
   composeSpeedCounterfactual,
@@ -63,6 +67,8 @@ export interface SessionCostEvidenceInput {
 
 export interface SessionCostEvidence {
   readonly readings: readonly CostMetricReading[]
+  readonly toolNamesUsed: readonly string[]
+  readonly toolDefinitionWindowObservations: readonly ToolDefinitionWindowObservation[]
   /** The session's comparable-workload key, which is the matched signal estimator's match key. */
   readonly workloadStratum: string
   readonly denominators: CostFamilyDenominators
@@ -433,6 +439,17 @@ const latencyCoverageFact = ({
 export const readSessionCostEvidence = (input: SessionCostEvidenceInput): SessionCostEvidence => {
   const spendCoverage = readSessionSpendCoverage(input.generations)
   const ledger = buildSessionContentLedger({ generations: input.generations, countTokens: input.countTokens })
+  const toolNamesUsed = [...new Set(input.toolCalls.map((call) => call.normalizedToolName).filter(Boolean))].sort()
+  const definitionInputTokens = new Map<string, number>()
+  for (const definition of input.toolDefinitions) {
+    if (!definition.observationPeriodComplete) continue
+    const name = definition.name.toLowerCase()
+    const inputTokens = definition.estimatedSerializedTokens * Math.max(1, definition.requestCount)
+    definitionInputTokens.set(name, (definitionInputTokens.get(name) ?? 0) + inputTokens)
+  }
+  const toolDefinitionWindowObservations = [...definitionInputTokens.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, inputTokens]) => ({ name, inputTokens }))
   const criticalPath = buildSessionCriticalPath({
     spans: [...input.generations, ...input.toolCalls.map((call) => ({ ...call, operation: "execute_tool" }))],
   })
@@ -485,6 +502,8 @@ export const readSessionCostEvidence = (input: SessionCostEvidenceInput): Sessio
 
   return {
     readings,
+    toolNamesUsed,
+    toolDefinitionWindowObservations,
     workloadStratum: workloadStratumOf(input.generations, input.toolDefinitions),
     denominators: {
       spend: spendCoverage.pricedMicrocents,

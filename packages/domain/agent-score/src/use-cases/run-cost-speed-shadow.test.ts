@@ -147,6 +147,7 @@ describe("runCostSpeedShadow", () => {
     expect(report.batchCount).toBe(3)
     expect(report.requestedSessionCount).toBe(7)
     expect(report.readSessionCount).toBe(7)
+    expect(report.fold.deadSurfaceFinalized).toBe(true)
   })
 
   it("rejects an invalid batch size before reading the window", async () => {
@@ -191,6 +192,7 @@ describe("runCostSpeedShadow", () => {
     expect(report.batchCount).toBe(0)
     expect(report.readSessionCount).toBe(0)
     expect(report.fold.contributions).toEqual([])
+    expect(report.fold.deadSurfaceFinalized).toBe(true)
   })
 
   it("reports coverage only for families the window could actually read", async () => {
