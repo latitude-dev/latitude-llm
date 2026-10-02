@@ -45,7 +45,7 @@ function setupFixture() {
     },
     readScoreProvenance: async (id: ScoreId) => {
       const result = await ch.client.query({
-        query: `SELECT flagger_slug, scoring_artifact_version, flagger_finding_key, flagger_path, flagger_finding_kind
+        query: `SELECT flagger_slug, scoring_artifact_version, flagger_finding_key, flagger_path, flagger_finding_kind, flagger_bundle_key
           FROM scores
           WHERE organization_id = {organizationId:String} AND id = {id:FixedString(24)}
           LIMIT 1`,
@@ -58,6 +58,7 @@ function setupFixture() {
         flagger_finding_key: string | null
         flagger_path: string | null
         flagger_finding_kind: string | null
+        flagger_bundle_key: string | null
       }>()
       return rows[0]
     },
@@ -215,6 +216,8 @@ describe("ScoreAnalyticsRepository", () => {
           flaggerSlug: "empty-response",
           flaggerFindingKey: "a".repeat(64),
           flaggerPath: "deterministic",
+          flaggerFindingKind: "blank",
+          flaggerBundleKey: "empty-response:blank",
         },
         createdAt: now,
         updatedAt: now,
@@ -227,7 +230,8 @@ describe("ScoreAnalyticsRepository", () => {
         scoring_artifact_version: null,
         flagger_finding_key: "a".repeat(64),
         flagger_path: "deterministic",
-        flagger_finding_kind: null,
+        flagger_finding_kind: "blank",
+        flagger_bundle_key: "empty-response:blank",
       })
     })
 
@@ -268,6 +272,7 @@ describe("ScoreAnalyticsRepository", () => {
         flagger_finding_key: null,
         flagger_path: null,
         flagger_finding_kind: null,
+        flagger_bundle_key: null,
       })
     })
 
@@ -314,6 +319,7 @@ describe("ScoreAnalyticsRepository", () => {
         flagger_finding_key: null,
         flagger_path: "sampled",
         flagger_finding_kind: "injectionCompliance",
+        flagger_bundle_key: null,
       })
     })
   })

@@ -23,6 +23,10 @@ class ExportDatasetRowsReadyResponse(UniversalBaseModel):
             description="Short-lived signed URL pointing to the CSV in object storage. Follow it with a plain HTTP GET.",
         ),
     ]
+    """
+    Short-lived signed URL pointing to the CSV in object storage. Follow it with a plain HTTP GET.
+    """
+
     filename: str = pydantic.Field()
     """
     Suggested filename for the downloaded CSV.
@@ -33,10 +37,17 @@ class ExportDatasetRowsReadyResponse(UniversalBaseModel):
         FieldMetadata(alias="expiresAt"),
         pydantic.Field(alias="expiresAt", description="ISO-8601 timestamp at which `downloadUrl` stops working."),
     ]
+    """
+    ISO-8601 timestamp at which `downloadUrl` stops working.
+    """
+
     row_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="rowCount"),
         pydantic.Field(alias="rowCount", description="Number of rows included in the export."),
     ]
+    """
+    Number of rows included in the export.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

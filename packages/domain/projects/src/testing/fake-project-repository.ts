@@ -43,6 +43,14 @@ export const createFakeProjectRepository = (seed: readonly Project[] = []) => {
         rows.set(project.id, project)
       }),
 
+    markFirstTraceAt: (id, at) =>
+      Effect.sync(() => {
+        const row = rows.get(id)
+        if (!isLive(row) || row.firstTraceAt !== null) return false
+        rows.set(id, { ...row, firstTraceAt: at })
+        return true
+      }),
+
     softDelete: (id) =>
       Effect.gen(function* () {
         const row = rows.get(id)

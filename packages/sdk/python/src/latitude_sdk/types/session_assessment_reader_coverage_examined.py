@@ -18,6 +18,10 @@ class SessionAssessmentReaderCoverageExamined(UniversalBaseModel):
         FieldMetadata(alias="readerId"),
         pydantic.Field(alias="readerId", description="Stable identifier of the evidence reader."),
     ]
+    """
+    Stable identifier of the evidence reader.
+    """
+
     label: str = pydantic.Field()
     """
     Human-readable reader name.
@@ -28,11 +32,19 @@ class SessionAssessmentReaderCoverageExamined(UniversalBaseModel):
         FieldMetadata(alias="scoreDimensions"),
         pydantic.Field(alias="scoreDimensions", description="Dimensions the reader can inform."),
     ]
+    """
+    Dimensions the reader can inform.
+    """
+
     finding_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="findingCount"),
         pydantic.Field(alias="findingCount", description="Number of findings produced by the reader."),
     ]
+    """
+    Number of findings produced by the reader.
+    """
+
     selection: typing.Optional[SessionAssessmentReaderCoverageExaminedSelection] = pydantic.Field(default=None)
     """
     Sampling details when this reader is not deterministic.

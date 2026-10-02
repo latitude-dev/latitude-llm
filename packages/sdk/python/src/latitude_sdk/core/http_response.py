@@ -24,6 +24,10 @@ class BaseHttpResponse:
     def status_code(self) -> int:
         return self._response.status_code
 
+    @property
+    def response(self) -> httpx.Response:
+        return self._response
+
 
 class HttpResponse(Generic[T], BaseHttpResponse):
     """HTTP response wrapper that exposes response headers and data."""

@@ -1,4 +1,4 @@
-import { type SlackIntegration, SlackIntegrationConflictError, SlackIntegrationRepository } from "@domain/integrations"
+import { type SlackIntegration, SlackIntegrationRepository } from "@domain/integrations"
 import { generateId, OrganizationId, SlackIntegrationId, type SqlClient, UserId } from "@domain/shared"
 import { Cause, Effect, Exit } from "effect"
 import { afterEach, beforeAll, describe, expect, it } from "vitest"
@@ -7,9 +7,8 @@ import { slackIntegrationDetails } from "../schema/slack-integration-details.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import {
-  findActiveSlackIntegrationByTeamIdAcrossOrgs,
+  hasActiveSlackIntegrationForTeamAcrossOrgs,
   SlackIntegrationRepositoryLive,
-  softRevokeSlackIntegrationAcrossOrgs,
 } from "./slack-integration-repository.ts"
 
 // Same 32-byte hex key as .env.test for parity. Set on process.env so
@@ -95,7 +94,7 @@ describe("SlackIntegrationRepositoryLive", () => {
     expect(fetched?.botAccessToken).toBe("xoxb-plaintext-secret")
   })
 
-  it("translates a cross-org team_id conflict into SlackIntegrationConflictError", async () => {
+  it("lets several orgs connect the same workspace", async () => {
     await runWithLive(
       Effect.gen(function* () {
         const repo = yield* SlackIntegrationRepository
@@ -104,27 +103,37 @@ describe("SlackIntegrationRepositoryLive", () => {
       ORG_B,
     )
 
-    const exit = await Effect.runPromiseExit(
+    await runWithLive(
       Effect.gen(function* () {
         const repo = yield* SlackIntegrationRepository
         yield* repo.save(makeIntegration({ teamId: "T-SHARED" }))
-      }).pipe(withPostgres(SlackIntegrationRepositoryLive, pg.adminPostgresClient, ORG_A)),
+      }),
     )
 
-    expect(Exit.isFailure(exit)).toBe(true)
-    if (Exit.isFailure(exit)) {
-      const failReason = exit.cause.reasons.find(Cause.isFailReason)
-      expect(failReason?.error).toBeInstanceOf(SlackIntegrationConflictError)
-    }
+    const [inA, inB] = await Promise.all([
+      runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* SlackIntegrationRepository
+          return yield* repo.findActiveByOrganizationId()
+        }),
+      ),
+      runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* SlackIntegrationRepository
+          return yield* repo.findActiveByOrganizationId()
+        }),
+        ORG_B,
+      ),
+    ])
+
+    expect(inA?.teamId).toBe("T-SHARED")
+    expect(inA?.organizationId).toBe(ORG_A)
+    expect(inB?.teamId).toBe("T-SHARED")
+    expect(inB?.organizationId).toBe(ORG_B)
   })
 
-  it("does NOT translate the org-level unique violation into SlackIntegrationConflictError", async () => {
-    // Bypassing the install use case (which would soft-revoke first), this
-    // call directly tries to save a second active row for ORG_A. The DB's
-    // `integrations_active_organization_kind_idx` partial unique index
-    // fires. The repository must surface this as RepositoryError, not as
-    // a misleading SlackIntegrationConflictError (which is reserved for
-    // cross-org workspace ownership).
+  it("rejects a second active install in the same org as a RepositoryError", async () => {
+    // Bypasses the install use case, which would soft-revoke first.
     await runWithLive(
       Effect.gen(function* () {
         const repo = yield* SlackIntegrationRepository
@@ -142,7 +151,6 @@ describe("SlackIntegrationRepositoryLive", () => {
     expect(Exit.isFailure(exit)).toBe(true)
     if (Exit.isFailure(exit)) {
       const failReason = exit.cause.reasons.find(Cause.isFailReason)
-      expect(failReason?.error).not.toBeInstanceOf(SlackIntegrationConflictError)
       expect((failReason?.error as { _tag?: string })?._tag).toBe("RepositoryError")
     }
   })
@@ -193,17 +201,27 @@ describe("SlackIntegrationRepositoryLive", () => {
     expect(fetched).toBeNull()
   })
 
-  it("admin findActiveByTeamIdAcrossOrgs returns the owning org regardless of RLS scope", async () => {
-    await runWithLive(
+  it("admin hasActiveSlackIntegrationForTeamAcrossOrgs sees installs regardless of RLS scope", async () => {
+    const saved = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* SlackIntegrationRepository
-        yield* repo.save(makeIntegration({ organizationId: ORG_B, teamId: "T-X" }))
+        return yield* repo.save(makeIntegration({ organizationId: ORG_B, teamId: "T-X" }))
       }),
       ORG_B,
     )
 
-    const found = await Effect.runPromise(findActiveSlackIntegrationByTeamIdAcrossOrgs(pg.postgresDb, "T-X"))
-    expect(found?.organizationId).toBe(ORG_B)
+    expect(await Effect.runPromise(hasActiveSlackIntegrationForTeamAcrossOrgs(pg.postgresDb, "T-X"))).toBe(true)
+    expect(await Effect.runPromise(hasActiveSlackIntegrationForTeamAcrossOrgs(pg.postgresDb, "T-OTHER"))).toBe(false)
+
+    await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
+        yield* repo.softRevokeById(saved.id, new Date())
+      }),
+      ORG_B,
+    )
+
+    expect(await Effect.runPromise(hasActiveSlackIntegrationForTeamAcrossOrgs(pg.postgresDb, "T-X"))).toBe(false)
   })
 
   it("updateRoutes writes a group's routes and read-back round-trips", async () => {
@@ -235,21 +253,5 @@ describe("SlackIntegrationRepositoryLive", () => {
       { channelId: "C1", channelName: "ops" },
       { channelId: "C2", channelName: "alerts" },
     ])
-  })
-
-  it("admin softRevokeAcrossOrgs claims revocation idempotently", async () => {
-    const saved = await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* SlackIntegrationRepository
-        return yield* repo.save(makeIntegration({ organizationId: ORG_B, teamId: "T-Y" }))
-      }),
-      ORG_B,
-    )
-
-    const first = await Effect.runPromise(softRevokeSlackIntegrationAcrossOrgs(pg.postgresDb, saved.id, new Date()))
-    const second = await Effect.runPromise(softRevokeSlackIntegrationAcrossOrgs(pg.postgresDb, saved.id, new Date()))
-
-    expect(first).toBe(true)
-    expect(second).toBe(false)
   })
 })

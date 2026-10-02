@@ -57,7 +57,8 @@ impl OutputPipeline {
     ///
     /// Resolves the output format with this precedence when `--format` is
     /// **not** passed:
-    ///   1. an explicit `--format` flag (always wins);
+    ///   1. an explicit `--format` flag, or the `--human` shorthand
+    ///      (always wins);
     ///   2. the per-binary `<NAME>_OUTPUT` env var, if set to a valid format
     ///      (`NAME` is `app_name` uppercased with `-` → `_`, mirroring the
     ///      `<NAME>_LOG` logging convention);
@@ -71,11 +72,29 @@ impl OutputPipeline {
     /// `--format` values. Callers should map this into their error type
     /// (e.g. `CliError::Validation`).
     pub fn from_matches(matches: &clap::ArgMatches, app_name: &str) -> Result<Self, FormatError> {
+        let flag = |id: &str| {
+            matches
+                .try_get_one::<bool>(id)
+                .ok()
+                .flatten()
+                .copied()
+                .unwrap_or(false)
+        };
         let format = match matches.get_one::<String>("format") {
             Some(s) => OutputFormat::parse(s).map_err(FormatError::UnknownFormat)?,
+            None if flag("human") => OutputFormat::Table,
             None => {
                 let env_var = format!("{}_OUTPUT", app_name.to_uppercase().replace('-', "_"));
-                let env_value = std::env::var(env_var).ok();
+                // Profile below env, as everywhere else. `profiles create`
+                // validated the stored value, so an unparseable one here can
+                // only come from a hand-edited file — treated the same way a
+                // bad `<NAME>_OUTPUT` is, by falling through to the
+                // TTY-aware default rather than failing the command.
+                let env_value = if crate::profiles::outranks_env() {
+                    crate::profiles::format().or_else(|| std::env::var(env_var).ok())
+                } else {
+                    std::env::var(env_var).ok().or_else(crate::profiles::format)
+                };
                 resolve_default_format(env_value.as_deref(), std::io::stdout().is_terminal())
             }
         };
@@ -223,7 +242,7 @@ fn resolve_default_format(env_value: Option<&str>, stdout_is_terminal: bool) -> 
 }
 
 /// Supported output formats.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum OutputFormat {
     /// Pretty-printed JSON (default).
     #[default]
@@ -268,6 +287,75 @@ impl OutputFormat {
     pub fn from_str(s: &str) -> Self {
         Self::parse(s).unwrap_or(Self::Json)
     }
+
+    /// Whether this format is meant for a program rather than a person.
+    ///
+    /// Drives the error contract in [`crate::error::write_error_json`]: machine
+    /// formats get the structured envelope on stdout, human formats get one
+    /// line on stderr. `Raw` and `Http` are human-side here — they mean "hand
+    /// me the server's bytes", so an envelope of ours on stdout would corrupt
+    /// what the caller asked for.
+    pub fn is_machine_readable(&self) -> bool {
+        matches!(self, Self::Json | Self::Jsonl | Self::Yaml)
+    }
+}
+
+/// Resolve the output format from *raw* argv, for use before clap has parsed.
+///
+/// The error path runs outside the parsed-matches world (a spec can fail to
+/// load before any `ArgMatches` exists), but it must land on the same format
+/// the success path would have chosen, so this mirrors
+/// [`OutputPipeline::from_matches`]: an explicit `--format` or `--human`
+/// wins, then `<NAME>_OUTPUT`, then the TTY-aware default. Unknown `--format`
+/// values fall through to the default rather than erroring — the format
+/// resolution performed by clap already reports those.
+pub fn resolve_format_from_raw_args(args: &[String], app_name: &str) -> OutputFormat {
+    // Anything after `--` belongs to the command being invoked, not to us.
+    let args = args_before_separator(args);
+    if let Some(parsed) = explicit_format_arg(args).and_then(|v| OutputFormat::parse(&v).ok()) {
+        return parsed;
+    }
+    // Deliberately no `--json` rung: on every endpoint with a request body
+    // `--json` is that body's flag, so reading it as a format would make
+    // `create --json '{...}'` silently pin the output format too.
+    if args.iter().any(|a| a == "--human") {
+        return OutputFormat::Table;
+    }
+    let env_var = format!("{}_OUTPUT", app_name.to_uppercase().replace('-', "_"));
+    let env_value = std::env::var(env_var).ok();
+    resolve_default_format(env_value.as_deref(), std::io::stdout().is_terminal())
+}
+
+/// True when argv carries an explicit `--format` naming a machine format.
+///
+/// Distinct from "the resolved format is machine-readable", which is also true
+/// for a plain pipe. Callers that change *what* a command does — rather than
+/// how its output is rendered — must key off the explicit request only.
+pub fn explicit_machine_format(args: &[String]) -> bool {
+    explicit_format_arg(args_before_separator(args))
+        .and_then(|v| OutputFormat::parse(&v).ok())
+        .is_some_and(|f| f.is_machine_readable())
+}
+
+/// The leading slice of argv that clap treats as our own flags.
+fn args_before_separator(args: &[String]) -> &[String] {
+    match args.iter().position(|a| a == "--") {
+        Some(i) => &args[..i],
+        None => args,
+    }
+}
+
+/// Extract the value of an explicit `--format` / `--format=` flag from argv.
+fn explicit_format_arg(args: &[String]) -> Option<String> {
+    for (i, a) in args.iter().enumerate() {
+        if let Some(rest) = a.strip_prefix("--format=") {
+            return Some(rest.to_string());
+        }
+        if a == "--format" {
+            return args.get(i + 1).cloned();
+        }
+    }
+    None
 }
 
 /// Format a JSON value according to the specified output format.
@@ -1214,6 +1302,135 @@ mod tests {
     // -----------------------------------------------------------------------
     // Default-format precedence: flag > <NAME>_OUTPUT env > TTY-aware default
     // -----------------------------------------------------------------------
+
+    #[test]
+    fn is_machine_readable_covers_structured_formats_only() {
+        for f in [OutputFormat::Json, OutputFormat::Jsonl, OutputFormat::Yaml] {
+            assert!(f.is_machine_readable(), "{f:?} should be machine-readable");
+        }
+        // Raw/Http hand back the server's bytes — our envelope would corrupt them.
+        for f in [
+            OutputFormat::Table,
+            OutputFormat::Csv,
+            OutputFormat::Raw,
+            OutputFormat::Http,
+        ] {
+            assert!(!f.is_machine_readable(), "{f:?} should be human-side");
+        }
+    }
+
+    #[test]
+    fn explicit_format_arg_reads_both_spellings() {
+        let split = vec![
+            "users".to_string(),
+            "--format".to_string(),
+            "yaml".to_string(),
+        ];
+        assert_eq!(explicit_format_arg(&split).as_deref(), Some("yaml"));
+        let joined = vec!["--format=csv".to_string()];
+        assert_eq!(explicit_format_arg(&joined).as_deref(), Some("csv"));
+        assert!(explicit_format_arg(&["users".to_string()]).is_none());
+        // A trailing `--format` with no value must not panic.
+        assert!(explicit_format_arg(&["--format".to_string()]).is_none());
+    }
+
+    #[test]
+    fn resolve_format_from_raw_args_honors_human_shorthand() {
+        // `--human` sits at the same precedence rung as `--format`, so a caller
+        // can force the interactive rendering without naming a format.
+        assert_eq!(
+            resolve_format_from_raw_args(&["users".to_string(), "--human".to_string()], "my-cli"),
+            OutputFormat::Table
+        );
+        // An explicit --format still outranks it (clap rejects the combination
+        // before this runs; the pre-clap error path must not disagree).
+        assert_eq!(
+            resolve_format_from_raw_args(
+                &["--human".to_string(), "--format=yaml".to_string()],
+                "my-cli"
+            ),
+            OutputFormat::Yaml
+        );
+    }
+
+    #[test]
+    fn resolve_format_from_raw_args_leaves_json_body_flag_alone() {
+        // `--json` is the request-body flag on every endpoint that has a body;
+        // treating it as an output format would make sending a body silently
+        // pin the rendering too. With stdout not a terminal under test, the
+        // TTY-aware default applies either way — what matters is that the flag
+        // itself carries no format meaning.
+        assert_eq!(
+            resolve_format_from_raw_args(
+                &[
+                    "users".to_string(),
+                    "create".to_string(),
+                    "--json".to_string(),
+                    "{\"name\":\"Ada\"}".to_string(),
+                    "--human".to_string(),
+                ],
+                "my-cli"
+            ),
+            OutputFormat::Table
+        );
+    }
+
+    #[test]
+    fn resolve_format_from_raw_args_ignores_args_after_separator() {
+        // `mycli run -- --format=table` forwards the flag to the invoked
+        // command; it must not flip our error representation.
+        assert_eq!(
+            args_before_separator(&[
+                "run".to_string(),
+                "--".to_string(),
+                "--format=table".to_string()
+            ]),
+            &["run".to_string()]
+        );
+        assert_eq!(
+            explicit_format_arg(args_before_separator(&[
+                "run".to_string(),
+                "--".to_string(),
+                "--format=table".to_string(),
+            ])),
+            None
+        );
+    }
+
+    #[test]
+    fn explicit_machine_format_requires_an_actual_flag() {
+        // Gates behaviour changes (`--help` -> operation catalog), so a plain
+        // pipe must not qualify: `<cli> --help | less` has to keep showing help.
+        assert!(explicit_machine_format(&["--format=json".to_string()]));
+        assert!(explicit_machine_format(&[
+            "--format".to_string(),
+            "yaml".to_string()
+        ]));
+        assert!(!explicit_machine_format(&["--format=table".to_string()]));
+        assert!(!explicit_machine_format(&["--help".to_string()]));
+        assert!(!explicit_machine_format(&["--format=nonsense".to_string()]));
+        // After `--` the flag belongs to the invoked command, not to us.
+        assert!(!explicit_machine_format(&[
+            "run".to_string(),
+            "--".to_string(),
+            "--format=json".to_string()
+        ]));
+    }
+
+    #[test]
+    fn resolve_format_from_raw_args_prefers_explicit_flag() {
+        // Explicit flag beats env and TTY state, so an agent can always pin JSON.
+        let args = vec!["--format".to_string(), "json".to_string()];
+        assert_eq!(
+            resolve_format_from_raw_args(&args, "my-cli"),
+            OutputFormat::Json
+        );
+        let args = vec!["--format=table".to_string()];
+        assert_eq!(
+            resolve_format_from_raw_args(&args, "my-cli"),
+            OutputFormat::Table
+        );
+    }
 
     #[test]
     fn resolve_default_format_no_env_piped_is_json() {
