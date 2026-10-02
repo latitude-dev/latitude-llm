@@ -68,12 +68,6 @@ export const buildAgentScoreReadiness = ({
             required: artifact.dimensionFloors.outcome.examinedSessions,
             unit: "sessions",
           }),
-          atLeast({
-            metric: "outcomeCoverage",
-            current: share(coverage.outcome.examinedSessionCount, eligibleSessions),
-            required: artifact.dimensionFloors.outcome.examinedShareOfEligible,
-            unit: "fraction",
-          }),
         ],
       },
       {
@@ -147,12 +141,6 @@ export const buildAgentScoreReadiness = ({
             current: coverage.safety.examinedSessionCount,
             required: artifact.dimensionFloors.safety.examinedSessions,
             unit: "sessions",
-          }),
-          atLeast({
-            metric: "safetyCoverage",
-            current: share(coverage.safety.examinedSessionCount, eligibleSessions),
-            required: artifact.dimensionFloors.safety.examinedShareOfEligible,
-            unit: "fraction",
           }),
           atMost({
             metric: "safetyRateLimitedCoverage",

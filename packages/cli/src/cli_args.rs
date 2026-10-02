@@ -7,14 +7,120 @@ use std::io::{IsTerminal, Read};
 
 use crate::error::CliError;
 
+/// `--help` section for spec parameters the operation cannot run without.
+pub const HELP_HEADING_REQUIRED: &str = "Required parameters";
+/// `--help` section for spec parameters the caller may omit.
+pub const HELP_HEADING_OPTIONAL: &str = "Optional parameters";
+/// `--help` section for per-operation request controls (`--json`,
+/// `--params`, pagination, retries, ...).
+pub const HELP_HEADING_REQUEST: &str = "Request options";
+/// `--help` section for flags every command accepts (output format,
+/// base URL, auth/env-backed variables, ...).
+pub const HELP_HEADING_GLOBAL: &str = "Global options";
+
+/// File every `.global(true)` flag that has no explicit help heading under
+/// [`HELP_HEADING_GLOBAL`], recursively through the whole command tree.
+///
+/// Global flags are registered in several places (root builder, protocol
+/// `build_cli`s, binding grafts, SDK variables) and then copied into every
+/// subcommand by clap, so tagging them here — once, on the finished tree —
+/// keeps them out of the per-operation sections in leaf `--help`. Clap's
+/// auto-generated `--help`/`--version` only exist after `build()`, so the
+/// tree is built first and those two are filed alongside the globals.
+pub fn apply_global_help_heading(mut cmd: clap::Command) -> clap::Command {
+    cmd.build();
+    apply_global_help_heading_built(cmd)
+}
+
+fn apply_global_help_heading_built(cmd: clap::Command) -> clap::Command {
+    let cmd = cmd.mut_args(|arg| {
+        // Clap's auto `--help`/`--version` are identified by their *action*,
+        // not their id. Matching the ids would also capture a spec parameter
+        // named `version`: unlike `help` it is absent from
+        // `BUILTIN_FLAG_NAMES`, so `param_clap_arg_id` leaves the id
+        // un-mangled and an API's own `--version` query param would be filed
+        // under `Global options`. Only the real flags carry these actions —
+        // spec params are `Set`/`Append`/`SetTrue`.
+        let is_auto_help_or_version = matches!(
+            arg.get_action(),
+            clap::ArgAction::Help
+                | clap::ArgAction::HelpShort
+                | clap::ArgAction::HelpLong
+                | clap::ArgAction::Version
+        );
+        // `is_none()` keeps an explicit heading set elsewhere: the per-leaf
+        // global-header copies are tagged at their registration site (see
+        // `openapi::app::register_global_header_on_nonconflicting_leaves`)
+        // because they cannot be `global(true)` after a long-name collision.
+        if (arg.is_global_set() || is_auto_help_or_version) && arg.get_help_heading().is_none() {
+            arg.help_heading(HELP_HEADING_GLOBAL)
+        } else {
+            arg
+        }
+    });
+    apply_required_usage(cmd).mut_subcommands(apply_global_help_heading_built)
+}
+
+/// Spell out the flags filed under [`HELP_HEADING_REQUIRED`] in the usage
+/// line — `cli pets create [OPTIONS] --name <NAME> --species <SPECIES>` —
+/// the way clap would if they were clap-required. They are deliberately
+/// not (the executor validates, since `--params`/`--json` can supply the
+/// same input), so the default usage would show only `[OPTIONS]`.
+fn apply_required_usage(mut cmd: clap::Command) -> clap::Command {
+    let mut required: Vec<String> = cmd
+        .get_arguments()
+        .filter(|arg| arg.get_help_heading() == Some(HELP_HEADING_REQUIRED))
+        .filter_map(|arg| {
+            let long = arg.get_long()?;
+            let value = arg
+                .get_value_names()
+                .and_then(|names| names.first())
+                .map(|name| format!(" <{name}>"))
+                .unwrap_or_default();
+            Some(format!("--{long}{value}"))
+        })
+        .collect();
+    if required.is_empty() {
+        return cmd;
+    }
+    required.sort();
+    let default_usage = cmd.render_usage().to_string();
+    let default_usage = default_usage
+        .strip_prefix("Usage: ")
+        .unwrap_or(&default_usage)
+        .trim_end();
+    cmd.override_usage(format!("{default_usage} {}", required.join(" ")))
+}
+
 /// True for `--version`, `-V`, or the bare `version` subcommand.
 pub fn is_version_flag(arg: &str) -> bool {
     matches!(arg, "--version" | "-V" | "version")
 }
 
-/// Resolve the API base URL override from the `--base-url` flag and the
-/// `{NAME}_BASE_URL` env var (flag wins). Validates the flag value for
-/// dangerous characters; the env var is treated as trusted.
+/// [`resolve_base_url_override`] without an `ArgMatches`.
+///
+/// For callers outside clap dispatch — `Binding::invoke_operation` — where
+/// there is no `--base-url` flag to read. Consults the env var and the
+/// active profile, in the same order.
+pub fn resolve_base_url_override_for(app_name: &str) -> Result<Option<String>, CliError> {
+    let env_var_name = format!("{}_BASE_URL", app_name.to_uppercase().replace('-', "_"));
+    let from_env = std::env::var(env_var_name).ok();
+    if crate::profiles::outranks_env() {
+        return Ok(crate::profiles::base_url().or(from_env));
+    }
+    Ok(from_env.or_else(crate::profiles::base_url))
+}
+
+/// Resolve the API base URL override from the `--base-url` flag, the
+/// `{NAME}_BASE_URL` env var, and the active profile's `base_url`, in that
+/// order. Validates the flag value for dangerous characters; the env var is
+/// treated as trusted, and the profile's value was validated by
+/// `profiles create`.
+///
+/// The profile rung is last so a CI pipeline exporting `{NAME}_BASE_URL` is
+/// never silently redirected by a developer's stored profile. It exists for
+/// specs that declare no `servers[].variables` to template — region/edge →
+/// URL shaping is then an overlay concern rather than framework code.
 pub fn resolve_base_url_override(
     matches: &clap::ArgMatches,
     app_name: &str,
@@ -25,7 +131,32 @@ pub fn resolve_base_url_override(
     }
     let env_var_name = format!("{}_BASE_URL", app_name.to_uppercase().replace('-', "_"));
     let base_url_env_var = std::env::var(env_var_name).ok();
-    Ok(base_url_flag.or(base_url_env_var))
+    // `-p` outranks the env var; an ambient profile does not. Same rung
+    // ordering as credentials — see `crate::profiles::outranks_env`.
+    if crate::profiles::outranks_env() {
+        return Ok(base_url_flag
+            .or_else(crate::profiles::base_url)
+            .or(base_url_env_var));
+    }
+    Ok(base_url_flag
+        .or(base_url_env_var)
+        .or_else(crate::profiles::base_url))
+}
+
+/// Resolve the consumer-supplied `User-Agent` suffix from the suffix
+/// flag (`--user-agent-suffix` by default, or the configured
+/// `userAgentSuffixFlag` name). The clap arg id is stable
+/// (`"user-agent-suffix"`) regardless of the flag's long name, so this
+/// lookup is name-independent. Returns the flag value if present, else
+/// `None` — in which case [`crate::http::HttpConfig`] falls back to the
+/// derived `<NAME>_*` env var. Keeping the env fallback in `HttpConfig`
+/// means the flag simply takes precedence when both are set.
+pub fn resolve_user_agent_suffix_override(matches: &clap::ArgMatches) -> Option<String> {
+    matches
+        .try_get_one::<String>("user-agent-suffix")
+        .ok()
+        .flatten()
+        .cloned()
 }
 
 /// True when raw args contain the `--schema` flag.
@@ -37,6 +168,18 @@ pub fn resolve_base_url_override(
 /// subcommand before our intercept runs.
 pub fn wants_schema(args: &[String]) -> bool {
     args.iter().any(|a| a == "--schema")
+}
+
+/// True when raw args contain `--help` / `-h`.
+///
+/// Paired with an explicit machine `--format`, this is treated as a request for
+/// the same catalog `--schema` emits: the generated README documents
+/// `<cli> --help --format json | jq 'length'` as the machine-readable list of
+/// every operation, and until now that printed prose and made `jq` fail.
+/// Deliberately *not* satisfied by the piped default — `<cli> --help | less`
+/// must keep showing help.
+pub fn wants_help(args: &[String]) -> bool {
+    args.iter().any(|a| a == "--help" || a == "-h")
 }
 
 /// True when raw args contain the `--spec` flag.
@@ -210,6 +353,38 @@ mod tests {
 
     fn args(slice: &[&str]) -> Vec<String> {
         slice.iter().map(|s| s.to_string()).collect()
+    }
+
+    /// An operation parameter whose own name is `version` must stay in its
+    /// own section. `version` is absent from `BUILTIN_FLAG_NAMES`, so its
+    /// clap id is not `-param`-mangled and an id-based match for clap's auto
+    /// `--version` would swallow it — hence the action-based check.
+    #[test]
+    fn test_param_named_version_is_not_filed_as_global() {
+        let cmd = clap::Command::new("cli").subcommand(
+            clap::Command::new("list")
+                // No help heading, mirroring a protocol builder that does not
+                // yet assign one (e.g. AsyncAPI channel params).
+                .arg(clap::Arg::new("version").long("version").value_name("STRING"))
+                .arg(
+                    clap::Arg::new("format")
+                        .long("format")
+                        .value_name("FORMAT")
+                        .global(true),
+                ),
+        );
+        let cmd = apply_global_help_heading(cmd);
+        let leaf = cmd.find_subcommand("list").expect("list missing");
+        let heading = |id: &str| {
+            leaf.get_arguments()
+                .find(|a| a.get_id() == id)
+                .unwrap_or_else(|| panic!("{id} missing"))
+                .get_help_heading()
+        };
+        assert_eq!(heading("version"), None, "spec param must keep its own section");
+        assert_eq!(heading("format"), Some(HELP_HEADING_GLOBAL));
+        // Clap's real auto `--help` still lands under Global options.
+        assert_eq!(heading("help"), Some(HELP_HEADING_GLOBAL));
     }
 
     #[test]

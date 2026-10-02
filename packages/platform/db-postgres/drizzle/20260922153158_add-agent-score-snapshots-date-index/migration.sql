@@ -1,0 +1,1 @@
+CREATE INDEX "agent_score_snapshots_date_idx" ON "latitude"."agent_score_snapshots" ("date");

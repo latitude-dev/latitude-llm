@@ -82,6 +82,7 @@ const failedToolCallFindingSchema = z
     recovered: z.boolean().optional(),
     sameSubjectRecovered: z.boolean().optional(),
     terminal: z.boolean().optional(),
+    errorClass: z.string().min(1).optional(),
   })
   .strict()
 

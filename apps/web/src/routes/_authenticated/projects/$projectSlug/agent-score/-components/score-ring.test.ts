@@ -1,5 +1,5 @@
+import { buildWeightedRingSegments, DIMENSION_SEGMENT_GAP_RATIO } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import { buildWeightedRingSegments, DIMENSION_SEGMENT_GAP_RATIO } from "./score-ring.tsx"
 
 const dimensions = [
   { id: "outcome", weight: 0.35, score: 80 },

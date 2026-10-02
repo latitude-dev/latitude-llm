@@ -17,16 +17,28 @@ class MemoryStore(UniversalBaseModel):
             description="Store identifier (`gen_ai.memory.store.id`). The empty string is the unattributed bucket.",
         ),
     ]
+    """
+    Store identifier (`gen_ai.memory.store.id`). The empty string is the unattributed bucket.
+    """
+
     record_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="recordCount"),
         pydantic.Field(alias="recordCount", description="Number of live (non-deleted) records in the store."),
     ]
+    """
+    Number of live (non-deleted) records in the store.
+    """
+
     token_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokenCount"),
         pydantic.Field(alias="tokenCount", description="Total tokens across the store's live record bodies."),
     ]
+    """
+    Total tokens across the store's live record bodies.
+    """
+
     last_updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="lastUpdatedAt"),
@@ -34,6 +46,10 @@ class MemoryStore(UniversalBaseModel):
             alias="lastUpdatedAt", description="ISO-8601 timestamp of the store's most recent mutating write."
         ),
     ]
+    """
+    ISO-8601 timestamp of the store's most recent mutating write.
+    """
+
     last_read_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="lastReadAt"),
@@ -43,15 +59,26 @@ class MemoryStore(UniversalBaseModel):
             description="ISO-8601 timestamp of the store's most recent read. `null` when never read.",
         ),
     ]
+    """
+    ISO-8601 timestamp of the store's most recent read. `null` when never read.
+    """
+
     session_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="sessionCount"),
         pydantic.Field(alias="sessionCount", description="Number of distinct sessions that wrote to the store."),
     ]
+    """
+    Number of distinct sessions that wrote to the store.
+    """
+
     user_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="userCount"),
         pydantic.Field(alias="userCount", description="Number of distinct end-users who accessed the store."),
     ]
+    """
+    Number of distinct end-users who accessed the store.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
