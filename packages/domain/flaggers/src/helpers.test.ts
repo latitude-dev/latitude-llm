@@ -303,6 +303,61 @@ describe("detectToolCallErrorsFlagger", () => {
     }
   })
 
+  it("does not match a file-read tool reporting that the target path is missing", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-read", "read_file"),
+        toolResponse("call-read", {
+          error: "File not found: /topics/russian-curriculum/lessons/2026-10-02.md",
+        }),
+      ]),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("does not match Claude Code Read reporting ENOENT", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-read", "Read"),
+        toolResponse("call-read", {
+          isError: true,
+          error: "ENOENT: no such file or directory, open '/topics/daily-call-ats-reconciliation/validate-manifest.js'",
+        }),
+      ]),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("still matches a file-read tool that fails for a reason other than a missing path", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-read", "read_file"),
+        toolResponse("call-read", { ok: false, error: "permission denied" }),
+      ]),
+    )
+
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toBe('Tool "read_file" returned error: permission denied')
+    }
+  })
+
+  it("still matches a missing-file error from a tool that is not a file reader", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-weather"),
+        toolResponse("call-weather", { error: "File not found: /tmp/forecast.json" }),
+      ]),
+    )
+
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toContain("File not found")
+    }
+  })
+
   it("does not match plain-string responses by keyword (only structured signals count)", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([

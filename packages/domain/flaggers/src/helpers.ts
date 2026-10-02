@@ -562,11 +562,43 @@ export function classifyToolError(response: unknown): string {
   return (snippet === null ? null : normalizeToolErrorMessage(snippet)) ?? UNSPECIFIED_TOOL_ERROR_CLASS
 }
 
+const FILE_READ_TOOL_NAMES = new Set(["read", "read_file", "readfile", "read_text_file"])
+
+const MISSING_FILE_ERROR_CLASSES = new Set([
+  "file-not-found",
+  "file-does-not-exist",
+  "enoent",
+  "no-such-file",
+  "no-such-file-or-directory",
+  "does-not-exist",
+])
+
+const MISSING_FILE_ERROR_TEXT = /(?:file not found|enoent\b|no such file|does not exist)/i
+
+const normalizeToolName = (name: string): string =>
+  name
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
+
+const isFileReadTool = (name: string): boolean => FILE_READ_TOOL_NAMES.has(normalizeToolName(name))
+
+const isMissingFileTargetError = (response: unknown): boolean => {
+  const errorClass = classifyToolError(response)
+  if (MISSING_FILE_ERROR_CLASSES.has(errorClass) || errorClass.startsWith("enoent-")) return true
+  const snippet = extractToolErrorSnippet(response)
+  return snippet !== null && MISSING_FILE_ERROR_TEXT.test(snippet)
+}
+
+const isExpectedToolResponse = (response: unknown, scope: ExpectedStatusScope): boolean =>
+  responseIndicatesExpectedToolError(response, scope) ||
+  (scope.toolName !== undefined && isFileReadTool(scope.toolName) && isMissingFileTargetError(response))
+
 export function toolResponseIndicatesFailure(
   response: unknown,
   scope: ExpectedStatusScope = { contract: EMPTY_TOOL_EXPECTED_STATUS_CONTRACT },
 ): boolean {
-  if (responseIndicatesExpectedToolError(response, scope)) return false
+  if (isExpectedToolResponse(response, scope)) return false
   if (typeof response === "string") {
     const trimmed = response.trim()
     if (trimmed === "") return false

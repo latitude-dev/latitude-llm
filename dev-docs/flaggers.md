@@ -180,6 +180,8 @@ So every deterministic finding carries a **bundle key** (`flaggerBundleKey`, `@d
 
 `errorClass` comes from `classifyToolError`: a declared HTTP status (`http-503`) first, then the vendor's own `code`/`type` (`econnreset`), and only then the message with ids, hashes, urls, paths, quoted payloads and digits stripped. Recovery state is deliberately **not** in the key — whether the agent worked past a failing tool varies run to run, the broken tool does not.
 
+File-read tools (`read_file`, `Read`, `read`, `read_text_file`) are the one exception to "a not-found is a failed call": a missing target path (`file-not-found`, `ENOENT`, `no such file`, `does not exist`) is the existence probe those tools are for, not a broken integration. Other failures from the same tools (permission, timeout, I/O) and not-found from any other tool still match.
+
 Model-authored judgements get no key and keep clustering by meaning, which is the only thing that groups differently-worded verdicts.
 
 ### Recovered tool errors are reported, not suppressed
