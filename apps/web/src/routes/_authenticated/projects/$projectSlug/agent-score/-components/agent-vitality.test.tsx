@@ -1,15 +1,20 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { AgentScoreRecord } from "../../../../../../domains/agent-score/agent-score.functions.ts"
 import { AgentVitality } from "./agent-vitality.tsx"
+import { ScoreSummary } from "./score-summary.tsx"
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+})
 
 const interval = { lower: 50, upper: 80 }
 const snapshot: AgentScoreRecord = {
   date: "2026-09-12",
-  score: 66.3,
+  createdAt: "2026-09-12T04:30:00.000Z",
+  score: 66.8,
   interval,
   dimensions: {
     outcome: { score: 82.4, interval },
@@ -26,13 +31,49 @@ const snapshot: AgentScoreRecord = {
 
 const dimensionWeights = { outcome: 0.35, reliability: 0.25, cost: 0.15, speed: 0.15, safety: 0.1 }
 
+function VitalityOverview(
+  props: React.ComponentProps<typeof AgentVitality> & { history: readonly AgentScoreRecord[] | undefined },
+) {
+  return (
+    <>
+      <AgentVitality {...props} />
+      <ScoreSummary snapshot={props.snapshot} history={props.history} isLoading={props.isLoading} />
+    </>
+  )
+}
+
 describe("AgentVitality", () => {
   it("renders a score-shaped placeholder while loading", () => {
-    render(<AgentVitality snapshot={null} history={undefined} dimensionWeights={undefined} isLoading />)
+    render(
+      <VitalityOverview
+        explanation={null}
+        snapshot={null}
+        history={undefined}
+        dimensionWeights={undefined}
+        isLoading
+      />,
+    )
 
     expect(screen.getByLabelText("Loading Agent Score").getAttribute("aria-busy")).toBe("true")
     expect(screen.queryByText("—")).toBeNull()
     expect(screen.queryByText(/No score published/)).toBeNull()
+  })
+
+  it("does not compare snapshots from different scoring versions", () => {
+    const previousSnapshot = { ...snapshot, date: "2026-09-11", score: 50 }
+    const currentSnapshot = { ...snapshot, scoringVersion: "agent-score-v2-provisional" }
+
+    render(
+      <VitalityOverview
+        explanation={null}
+        snapshot={currentSnapshot}
+        history={[previousSnapshot]}
+        dimensionWeights={dimensionWeights}
+        isLoading={false}
+      />,
+    )
+
+    expect(screen.queryByText(/up|down/)).toBeNull()
   })
 
   it("does not compare against an older snapshot when the previous score is zero", () => {
@@ -40,7 +81,8 @@ describe("AgentVitality", () => {
     const olderSnapshot = { ...snapshot, date: "2026-09-10", score: 50 }
 
     render(
-      <AgentVitality
+      <VitalityOverview
+        explanation={null}
         snapshot={snapshot}
         history={[olderSnapshot, previousSnapshot]}
         dimensionWeights={dimensionWeights}
@@ -52,16 +94,76 @@ describe("AgentVitality", () => {
   })
 
   it("keeps the score ring placeholder when a score is unavailable", () => {
-    render(<AgentVitality snapshot={null} history={[]} dimensionWeights={dimensionWeights} isLoading={false} />)
+    render(
+      <VitalityOverview
+        explanation={null}
+        snapshot={null}
+        history={[]}
+        dimensionWeights={dimensionWeights}
+        isLoading={false}
+      />,
+    )
 
     expect(screen.getByText("Agent vitality")).toBeDefined()
     expect(screen.getByText("Score not ready")).toBeDefined()
+    expect(screen.getByText("No score was published for this date.")).toBeDefined()
     expect(screen.getByText("—")).toBeDefined()
   })
 
-  it("emphasizes a hovered dimension and restores the composite over the center", () => {
+  it("shows the selected snapshot date and computation timestamp", () => {
+    render(
+      <VitalityOverview
+        explanation={null}
+        snapshot={snapshot}
+        history={[]}
+        dimensionWeights={dimensionWeights}
+        isLoading={false}
+      />,
+    )
+
+    expect(screen.getByText("Score date")).toBeDefined()
+    expect(screen.getAllByText("Sep 12, 2026")).toHaveLength(2)
+    expect(screen.getByText("Computed")).toBeDefined()
+    expect(screen.getByText("4:30 AM")).toBeDefined()
+    expect(screen.queryByText("Latest available")).toBeNull()
+    expect(screen.queryByText("No score was published for this date.")).toBeNull()
+  })
+
+  it("keeps the hover card open after the tooltip opening delay", () => {
+    vi.useFakeTimers()
     const { container } = render(
-      <AgentVitality snapshot={snapshot} history={[]} dimensionWeights={dimensionWeights} isLoading={false} />,
+      <VitalityOverview
+        explanation={null}
+        snapshot={snapshot}
+        history={[]}
+        dimensionWeights={dimensionWeights}
+        isLoading={false}
+      />,
+    )
+    const outcomeHitArea = container.querySelector('[data-ring-hit-area="outcome"]') as Element
+
+    act(() => {
+      fireEvent.pointerEnter(outcomeHitArea)
+      fireEvent.pointerMove(outcomeHitArea)
+    })
+    expect(screen.getByRole("tooltip").textContent).toContain("Outcome quality")
+
+    act(() => vi.advanceTimersByTime(2_000))
+    expect(screen.getByRole("tooltip").textContent).toContain("Outcome quality")
+
+    fireEvent.keyDown(document, { key: "Escape" })
+    expect(screen.queryByRole("tooltip")).toBeNull()
+  })
+
+  it("shows dimension details on hover while keeping the composite summary fixed", () => {
+    const { container } = render(
+      <VitalityOverview
+        explanation={null}
+        snapshot={snapshot}
+        history={[]}
+        dimensionWeights={dimensionWeights}
+        isLoading={false}
+      />,
     )
     const outcomeHitArea = container.querySelector('[data-ring-hit-area="outcome"]')
     const vitalityHitArea = container.querySelector('[data-ring-hit-area="vitality"]')
@@ -69,22 +171,28 @@ describe("AgentVitality", () => {
     const vitalitySegment = container.querySelector('[data-ring-segment="vitality"]')
 
     expect(screen.getByText("Agent vitality")).toBeDefined()
-    expect(screen.getByText("66.3")).toBeDefined()
+    expect(screen.getByText("66")).toBeDefined()
 
     fireEvent.pointerEnter(outcomeHitArea as Element)
 
-    expect(screen.getByText("Outcome quality")).toBeDefined()
-    expect(screen.getByText("82.4")).toBeDefined()
+    expect(screen.getAllByText("Outcome quality")[0]).toBeDefined()
+    expect(screen.getAllByText("82")[0]).toBeDefined()
     expect(outcomeSegment?.getAttribute("opacity")).toBe("1")
-    expect(outcomeSegment?.querySelector("circle")?.getAttribute("stroke-width")).toBe("7")
+    expect(outcomeSegment?.querySelector("circle")?.getAttribute("stroke-width")).toBe("4")
     expect(vitalitySegment?.getAttribute("opacity")).toBe("0.2")
 
-    fireEvent.pointerEnter(vitalityHitArea as Element)
-
+    expect(screen.getByText("66")).toBeDefined()
     expect(screen.getByText("Agent vitality")).toBeDefined()
-    expect(screen.getByText("66.3")).toBeDefined()
-    expect(outcomeSegment?.getAttribute("opacity")).toBe("0.5")
+
+    fireEvent.pointerLeave(container.querySelector("svg") as Element)
+    expect(screen.queryByText("Outcome quality")).toBeNull()
+
+    fireEvent.focus(vitalityHitArea as Element)
+
+    expect(screen.getAllByText("Agent vitality")[0]).toBeDefined()
+    expect(screen.getAllByText("66")[0]).toBeDefined()
+    expect(outcomeSegment?.getAttribute("opacity")).toBe("0.6")
     expect(vitalitySegment?.getAttribute("opacity")).toBe("1")
-    expect(vitalitySegment?.querySelector("circle")?.getAttribute("stroke-width")).toBe("7")
+    expect(vitalitySegment?.querySelector("circle")?.getAttribute("stroke-width")).toBe("4")
   })
 })

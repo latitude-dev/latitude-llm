@@ -103,6 +103,7 @@ function setup(
     list: () => Effect.die("not used"),
     listIncludingDeleted: () => Effect.die("not used"),
     save: () => Effect.die("not used"),
+    markFirstTraceAt: () => Effect.die("not used"),
     softDelete: () => Effect.die("not used"),
     hardDelete: () => Effect.die("not used"),
     existsByName: () => Effect.die("not used"),

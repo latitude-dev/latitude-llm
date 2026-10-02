@@ -1,36 +1,24 @@
 import type { FilterSet } from "@domain/shared"
-import {
-  CodeBlock,
-  Conversation,
-  DetailSection,
-  DetailSummary,
-  ProviderIcon,
-  Skeleton,
-  TagBadgeList,
-  Text,
-  Tooltip,
-} from "@repo/ui"
+import { Conversation, DetailSection, DetailSummary, ProviderIcon, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon, WrenchIcon } from "lucide-react"
 import { useMemo } from "react"
 import { rollupCostDisplay } from "../../../../../../../domains/spans/cost-display.ts"
 import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
+import { DetailFilterTags } from "../../detail-filter-tags.tsx"
 import { MemoryChangesSection } from "../../memory-changes/memory-changes-section.tsx"
 import { MemorySummary } from "../../memory-summary.tsx"
+import { MetadataJson } from "../../metadata-json.tsx"
 import { AgentsBreakdown } from "../../session-detail-drawer/agents-breakdown/agents-breakdown.tsx"
 import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import { aggregateToolPills, ToolPillList } from "../../tool-pills.tsx"
 import { TraceOutlierBadge, type TraceOutlierMetric } from "../../trace-outlier-badge.tsx"
+import { UserSessionsLink } from "../../user-sessions-link.tsx"
 import { DurationBar } from "../duration-bar.tsx"
 import { computeDurationBreakdown } from "../duration-composition.ts"
 import { ModelFilterLink } from "./spans-tab/model-filter-link.tsx"
 import { UsageSummary } from "./spans-tab/span-detail/usage-summary.tsx"
-
-function JsonBlock({ value }: { readonly value: unknown }) {
-  const formatted = useMemo(() => JSON.stringify(value, null, 2), [value])
-  return <CodeBlock value={formatted} className="bg-secondary" />
-}
 
 const METRIC_FILTER_FIELD: Readonly<Record<TraceOutlierMetric, string>> = {
   durationNs: "duration",
@@ -185,6 +173,8 @@ export function TraceTab({
         )
       )}
 
+      <UserSessionsLink userId={traceRecord?.userId} />
+
       <AgentsBreakdown graph={agentGraph} />
 
       {/* ── Tags ── */}
@@ -193,7 +183,7 @@ export function TraceTab({
         {isRecordLoading ? (
           <Skeleton className="h-5 w-32" />
         ) : hasTags ? (
-          <TagBadgeList tags={traceRecord.tags} />
+          <DetailFilterTags tags={traceRecord.tags} filters={filters} onFiltersChange={onFiltersChange} />
         ) : (
           <Text.H6 color="foregroundMuted" italic>
             No tags
@@ -227,7 +217,7 @@ export function TraceTab({
           isRecordLoading ? (
             <Skeleton className="h-16 w-full" />
           ) : hasMetadata ? (
-            <JsonBlock value={traceRecord.metadata} />
+            <MetadataJson value={traceRecord.metadata} />
           ) : (
             <Text.H6 color="foregroundMuted" italic>
               No metadata

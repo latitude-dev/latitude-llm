@@ -35,6 +35,20 @@ Organization scope is where reliability needs:
 - Users without an active organization are routed to `/welcome` for organization selection or onboarding.
 - `apps/api` and `apps/ingest` do not use browser sessions for auth; they use API-key context directly.
 
+### Roles and member administration
+
+Membership roles are `owner`, `admin`, and `member`. **Administration** (invite, change roles, remove members, cancel invitations) requires an admin-capable role: `owner` or `admin` (`isAdminRole` in `@domain/organizations`).
+
+| Action | Who may perform it | Hard rejects |
+| --- | --- | --- |
+| Remove member | Owner or admin | Plain `member` callers (`NotAdminError`). Self-removal (`CannotRemoveSelfError`). Removing the org owner (`CannotRemoveOwnerError`) — transfer ownership first. |
+| Change member role | Owner or admin | Plain `member` callers. Changing your own role. Changing the owner's role directly. |
+| Invite / cancel invitation | Owner or admin | Same admin gate on the use-cases; see `@domain/organizations` invite and cancel flows. |
+
+The settings UI and the public **Members** API (`packages/operations/src/operations/members.ts`) both call the same domain use-cases (`removeMemberUseCase`, `updateMemberRoleUseCase`, …). Member mutations on the API require **OAuth** (a human actor), not an organization API key — see `require-oauth.ts` on those operations.
+
+Each organization has exactly one owner row at steady state. Demoting or removing that row without a transfer path would leave the org headless, so owner role changes go through the dedicated ownership transfer flow rather than a direct role edit on the owner membership.
+
 ## How organizations get created
 
 Three paths onto the same `organizations` table. Two of them also write the initial `members` row; bootstrap deliberately does not, and stays owner-less until the claim flow adopts it:

@@ -4,7 +4,7 @@ import { PROVISIONAL_COST_METRIC_CATALOG } from "../entities/cost-metric-catalog
 import { LAUNCH_COST_ARTIFACT_VERSION } from "./launch-cost-scoring-artifact.ts"
 import { LAUNCH_LATENCY_ARTIFACT_VERSION } from "./launch-latency-reference-artifact.ts"
 
-export const LAUNCH_SCORING_VERSION = "agent-score-v1-provisional"
+export const LAUNCH_SCORING_VERSION = "agent-score-v8-provisional"
 
 const BUNDLED_JUDGE = FLAGGER_DEFAULT_CLASSIFIER_MODEL
 
@@ -17,23 +17,36 @@ const BUNDLED_JUDGE = FLAGGER_DEFAULT_CLASSIFIER_MODEL
  *
  * The floors are provisional. Outcome's and Safety's came from PRs 4 and 5, Reliability's, Speed's
  * and Cost's are first guesses, and all of them are what P6-55 and P6-53 replace against measured
- * traffic. Safety's examined floor in particular cannot be met at the window's session target
- * without the traffic-aware sampling rate, which is why the flag stays on until that number is
- * chosen.
+ * traffic.
  */
 export const LAUNCH_AGENT_SCORE_ARTIFACT = {
   scoringVersion: LAUNCH_SCORING_VERSION,
   calibration: "provisional",
   compositeWeights: { outcome: 0.35, reliability: 0.25, cost: 0.15, speed: 0.15, safety: 0.1 },
   referenceRuns: { reliability: 20, safety: 100 },
-  window: { stepDays: [7, 14, 21, 28], sessionTarget: 1_000, sessionFloor: 200, hysteresisMargin: 0.1 },
+  window: { stepDays: [7, 14, 21, 28], sessionTarget: 50, sessionFloor: 50, hysteresisMargin: 0.1 },
   dimensionFloors: {
-    outcome: { examinedSessions: 100, examinedShareOfEligible: 0.05 },
+    outcome: { examinedSessions: 50 },
     // A census rather than a sample, so the bar is how much of the base could be read at all.
-    reliability: { readableSessions: 200, readableShareOfEligible: 0.8 },
+    reliability: { readableSessions: 50, readableShareOfEligible: 0.8 },
     cost: { publishableSessionShare: 0.8 },
-    speed: { completeCriticalPathSessions: 200, completeCriticalPathShareOfEligible: 0.5 },
-    safety: { examinedSessions: 1_000, examinedShareOfEligible: 0.05, maxRateLimitedHintedShare: 0.1 },
+    speed: { completeCriticalPathSessions: 50, completeCriticalPathShareOfEligible: 0.5 },
+    safety: { examinedSessions: 50, maxRateLimitedHintedShare: 0.1 },
+  },
+  outcomeDegradation: {
+    degradedWeight: 0.75,
+    minAnalyzedSessions: 50,
+    // `hesitation` and `stalling` are not quality deficits. `policy_refusal` is the agent working
+    // correctly. The positive kinds never enter: requiring good news to call a session clean would
+    // make a detector that failed to fire lower the score, which is coverage penalising rather than
+    // flattering, and just as wrong.
+    rules: [
+      { kind: "user_frustration", minConfidence: 0.85, minOccurrences: 1 },
+      { kind: "abandonment", minConfidence: 0.85, minOccurrences: 1 },
+      { kind: "escalation", minConfidence: 0.85, minOccurrences: 1 },
+      { kind: "clarification_loop", minConfidence: 0.8, minOccurrences: 1 },
+      { kind: "user_correction", minConfidence: 0.8, minOccurrences: 3 },
+    ],
   },
   costArtifactVersion: LAUNCH_COST_ARTIFACT_VERSION,
   costCatalogVersion: PROVISIONAL_COST_METRIC_CATALOG.catalogVersion,

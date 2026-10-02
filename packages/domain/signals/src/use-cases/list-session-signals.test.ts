@@ -27,6 +27,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   filters: null,
   assigneeId: null,
   priority: null,
+  bundleKey: null,
   centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
   promotedAt: new Date("2026-03-01T00:00:00.000Z"),

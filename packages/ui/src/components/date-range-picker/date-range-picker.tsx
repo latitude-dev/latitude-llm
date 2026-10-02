@@ -1,7 +1,7 @@
 import { format } from "date-fns"
-import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
+import { CalendarIcon, ChevronDown } from "lucide-react"
 import { useState } from "react"
-import { DayPicker, type DateRange as DayPickerDateRange } from "react-day-picker"
+import type { DateRange as DayPickerDateRange } from "react-day-picker"
 
 import { cn } from "../../utils/cn.ts"
 import { Button } from "../button/button.tsx"
@@ -9,6 +9,7 @@ import { Icon } from "../icons/icons.tsx"
 import { Popover, PopoverContent, PopoverTrigger } from "../popover/primitives.tsx"
 import { Select, type SelectOption } from "../select/index.tsx"
 import { Text } from "../text/text.tsx"
+import { Calendar } from "./calendar.tsx"
 
 export interface DateRange {
   readonly from?: Date
@@ -28,6 +29,8 @@ export interface DateRangePickerChange {
 }
 
 interface DateRangePickerProps {
+  readonly mode?: "single" | "range"
+  readonly ariaLabel?: string
   readonly value: DateRange | undefined
   readonly presets?: readonly DateRangePickerPreset[]
   readonly selectedPresetId: string | undefined
@@ -147,18 +150,36 @@ function formatDraftSummary(range?: DateRange) {
 }
 
 function RangeCalendar({
+  mode,
   value,
   minDate,
   maxDate,
   onChange,
 }: {
+  readonly mode: "single" | "range"
   readonly value: DateRange | undefined
   readonly minDate?: Date
   readonly maxDate?: Date
   readonly onChange: (next: DateRange | undefined) => void
 }) {
+  if (mode === "single") {
+    return (
+      <Calendar
+        mode="single"
+        required
+        showOutsideDays
+        defaultMonth={value?.from ?? maxDate ?? new Date()}
+        {...(minDate ? { fromDate: minDate } : {})}
+        {...(maxDate ? { toDate: maxDate } : {})}
+        selected={value?.from}
+        onSelect={(date) => {
+          if (date) onChange({ from: date, to: date })
+        }}
+      />
+    )
+  }
   return (
-    <DayPicker
+    <Calendar
       mode="range"
       showOutsideDays
       defaultMonth={value?.from ?? value?.to ?? maxDate ?? new Date()}
@@ -166,55 +187,13 @@ function RangeCalendar({
       {...(maxDate ? { toDate: maxDate } : {})}
       selected={toDayPickerRange(value)}
       onSelect={(nextRange) => onChange(fromDayPickerRange(nextRange))}
-      className="select-none"
-      classNames={{
-        months: "flex flex-col",
-        month: "space-y-3",
-        caption: "relative flex items-center justify-center px-1 pt-1",
-        caption_label: "text-sm font-medium text-foreground",
-        nav: "contents",
-        nav_button:
-          "inline-flex h-7 w-7 items-center justify-center rounded-md bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
-        table: "w-full border-collapse",
-        head_row: "flex",
-        head_cell: "h-8 w-9 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground",
-        row: "mt-1.5 flex w-full",
-        cell: cn(
-          "relative h-9 w-9 p-0 text-center text-sm",
-          "[&:has([aria-selected].day-range-end)]:rounded-r-md",
-          "first:[&:has([aria-selected])]:rounded-l-md",
-          "last:[&:has([aria-selected])]:rounded-r-md",
-          "focus-within:relative focus-within:z-20",
-          "[&:has([aria-selected])]:bg-muted",
-          "[&:has([aria-selected])]:text-foreground",
-        ),
-        day: cn(
-          "inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-sm font-normal transition-colors",
-          "hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        ),
-        day_selected:
-          "bg-foreground text-background font-medium hover:bg-foreground/90 hover:text-background aria-selected:opacity-100",
-        day_today: "bg-primary text-primary-foreground font-medium hover:bg-primary/90 hover:text-primary-foreground",
-        day_outside: "text-muted-foreground opacity-50",
-        day_disabled: "text-muted-foreground opacity-30",
-        day_hidden: "invisible",
-        day_range_middle:
-          "day-range-middle !rounded-none !bg-transparent !text-foreground !font-normal hover:!bg-transparent hover:!text-foreground",
-        day_range_start:
-          "day-range-start !bg-foreground !text-background hover:!bg-foreground/90 hover:!text-background",
-        day_range_end: "day-range-end !bg-foreground !text-background hover:!bg-foreground/90 hover:!text-background",
-      }}
-      components={{
-        IconLeft: () => <Icon icon={ChevronLeft} size="sm" />,
-        IconRight: () => <Icon icon={ChevronRight} size="sm" />,
-      }}
     />
   )
 }
 
 export function DateRangePicker({
+  mode = "range",
+  ariaLabel,
   value,
   presets = [],
   selectedPresetId,
@@ -290,6 +269,7 @@ export function DateRangePicker({
             variant="outline"
             size="default"
             disabled={disabled}
+            aria-label={ariaLabel}
             // `[&>div]` targets Button's inner content wrapper so the chevron sits at the far end;
             // Button packs its children into one content-width row, so plain `justify-between` can't.
             className={cn(
@@ -334,18 +314,27 @@ export function DateRangePicker({
               />
             ) : null}
             <RangeCalendar
+              mode={mode}
               value={draftRange}
               {...(minDate ? { minDate } : {})}
               {...(maxDate ? { maxDate } : {})}
-              onChange={setDraftRange}
+              onChange={(range) => {
+                setDraftRange(range)
+                if (mode === "single") {
+                  setOpen(false)
+                  onChange({ range, source: "calendar" })
+                }
+              }}
             />
             <div className="flex items-center justify-between gap-3">
               <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
                 {formatDraftSummary(draftRange)}
               </Text.H6>
-              <Button type="button" variant="ghost" size="sm" disabled={!canClear} onClick={handleClear}>
-                {clearLabel}
-              </Button>
+              {mode === "range" ? (
+                <Button type="button" variant="ghost" size="sm" disabled={!canClear} onClick={handleClear}>
+                  {clearLabel}
+                </Button>
+              ) : null}
             </div>
           </div>
         </PopoverContent>
