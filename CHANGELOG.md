@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## v0.3.119 - 2026-10-01
+
+### Organizations
+
+- Restricted member removal to organization owners and administrators. Regular members can no longer remove other members through the API (ref: #4722).
+
+### Flaggers and scores
+
+- Fixed duplicate safety findings in sessions with more than 200 scores by querying the existing finding directly (ref: #4717).
+- Refreshed safety finding evidence when a new analysis found the same issue, while retaining the existing score identifier (ref: #4691).
+- Replaced stale ClickHouse score analytics after a score moved to another signal (ref: #4710).
+
+### Agent Score
+
+- Allowed weekly digest notification requests to retry after a failed run. Recipient-level checks still prevent duplicate notifications (ref: #4723).
+- Added a product guide for Agent Score, its dimensions, and its evidence (ref: #4720).
+
+### Traces and sessions
+
+- Added clickable HTTP and HTTPS links in metadata, tag filter shortcuts, and actions to view all sessions for a user (ref: #4731).
+
+### SDKs
+
+- Updated the Python SDK lockfile to match version 9.15.0, fixing locked dependency installation (ref: #4733).
+
 ## v0.3.118 - 2026-09-23
 
 ### Agent Score
