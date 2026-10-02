@@ -1,4 +1,5 @@
 import { SCORE_DIMENSIONS, type ScoreDimension } from "@domain/shared"
+import { CAUSE_EXAMPLE_SESSION_LIMIT } from "../constants.ts"
 import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostMetricCatalog } from "../entities/cost-metric-catalog.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
@@ -62,7 +63,9 @@ const DESTINATION_BY_CAUSE: Readonly<Record<string, CauseDestination>> = {
 const asCauseDestination = (destination: string): CauseDestination | undefined =>
   (CAUSE_DESTINATIONS as readonly string[]).includes(destination) ? (destination as CauseDestination) : undefined
 
-const destinationForMetric = ({
+export const destinationForCause = (causeId: string): CauseDestination | undefined => DESTINATION_BY_CAUSE[causeId]
+
+export const destinationForMetric = ({
   metricId,
   catalog,
 }: {
@@ -87,6 +90,14 @@ export interface DimensionCauseRow extends CauseAttribution {
   readonly observationCount: number
   /** The section that owns this evidence. Absent when nothing can usefully be opened. */
   readonly destination?: CauseDestination
+  /**
+   * Sessions somebody can open to see the cause, capped at `CAUSE_EXAMPLE_SESSION_LIMIT`.
+   *
+   * Present only where the window still holds session-level evidence when the row is built, which
+   * is Reliability. Cost and Speed are attributed over a fold that released its sessions on purpose,
+   * and their rows lead to the sections that own the evidence instead.
+   */
+  readonly exampleSessionIds?: readonly string[]
 }
 
 export interface DimensionAttribution {
@@ -148,7 +159,10 @@ export const attributeCostWindow = ({
       family,
       fold.contributions.reduce(
         (total, contribution) =>
-          total + (contribution.families.find((entry) => entry.family === family)?.eligibleUnits ?? 0),
+          total +
+          (contribution.costUsableForDenominator
+            ? (contribution.families.find((entry) => entry.family === family)?.eligibleUnits ?? 0)
+            : 0),
         0,
       ),
     ]),
@@ -209,6 +223,9 @@ export const attributeSpeedWindow = ({
   readonly seed?: number
 }): DimensionAttribution => {
   const causeIds = [...fold.speedCauseNs.keys()]
+  const observedSessionCount = fold.contributions.filter(
+    (contribution) => contribution.speed.usableForDenominator,
+  ).length
   const scoreWith = (active: ReadonlySet<string>): number => {
     if (observedNs <= 0) return 100
     const avoidable = [...active].reduce((total, causeId) => total + (fold.speedCauseNs.get(causeId) ?? 0), 0)
@@ -230,7 +247,7 @@ export const attributeSpeedWindow = ({
         label: causeId,
         evidence: "measured",
         nativeEffect: { value: fold.speedCauseNs.get(causeId) ?? 0, unit: "nanoseconds" },
-        observationCount: fold.foldedSessionCount,
+        observationCount: observedSessionCount,
         ...(destination ? { destination } : {}),
       }
     },
@@ -260,6 +277,7 @@ export const attributeReliabilityWindow = ({
   const readable = endpoints.filter((endpoint) => endpoint.readable)
   const patterns = new Map<string, { readonly causes: readonly string[]; count: number }>()
   const sessionsByCause = new Map<string, number>()
+  const examplesByCause = new Map<string, string[]>()
   for (const endpoint of readable) {
     if (endpoint.causes.length === 0) continue
     const causes = [...endpoint.causes].sort()
@@ -267,7 +285,12 @@ export const attributeReliabilityWindow = ({
     const pattern = patterns.get(key) ?? { causes, count: 0 }
     pattern.count += 1
     patterns.set(key, pattern)
-    for (const cause of causes) sessionsByCause.set(cause, (sessionsByCause.get(cause) ?? 0) + 1)
+    for (const cause of causes) {
+      sessionsByCause.set(cause, (sessionsByCause.get(cause) ?? 0) + 1)
+      const examples = examplesByCause.get(cause) ?? []
+      if (examples.length < CAUSE_EXAMPLE_SESSION_LIMIT) examples.push(endpoint.sessionId)
+      examplesByCause.set(cause, examples)
+    }
   }
 
   const causeIds = [...sessionsByCause.keys()]
@@ -291,12 +314,14 @@ export const attributeReliabilityWindow = ({
     }),
     describe: (causeId) => {
       const destination = DESTINATION_BY_CAUSE[causeId]
+      const examples = examplesByCause.get(causeId)
       return {
         label: causeId,
         evidence: "measured",
         nativeEffect: { value: sessionsByCause.get(causeId) ?? 0, unit: "sessions" },
         observationCount: sessionsByCause.get(causeId) ?? 0,
         ...(destination ? { destination } : {}),
+        ...(examples?.length ? { exampleSessionIds: examples } : {}),
       }
     },
   })

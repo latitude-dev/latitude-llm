@@ -1,7 +1,7 @@
 import type { OrganizationId, ProjectId, SessionId } from "@domain/shared"
 import { Effect } from "effect"
 import type { AgentScoreResult } from "../entities/agent-score.ts"
-import type { AgentScoreArtifact, ScoringJudge } from "../entities/agent-score-artifact.ts"
+import type { AgentScoreArtifact, MomentDegradationRule, ScoringJudge } from "../entities/agent-score-artifact.ts"
 import { resolveScoringVersion } from "../entities/agent-score-artifact.ts"
 import type { CostMetricCatalog } from "../entities/cost-metric-catalog.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
@@ -16,7 +16,9 @@ import {
   attributeSpeedWindow,
   type DimensionAttribution,
 } from "../scoring/attribute-dimensions.ts"
+import { attributeOutcomeWindow } from "../scoring/attribute-outcome.ts"
 import { aggregateWindowSpeed } from "../scoring/bootstrap-window.ts"
+import { buildAgentScoreReadiness } from "../scoring/build-score-readiness.ts"
 import {
   buildWindowIssues,
   readSessionIssueEvidence,
@@ -29,7 +31,9 @@ import {
 } from "../scoring/build-window-signal-effects.ts"
 import { composeAgentScore } from "../scoring/compose-agent-score.ts"
 import { estimateProjectReliability } from "../scoring/estimate-reliability.ts"
+import { evaluateMomentDegradation } from "../scoring/evaluate-moment-degradation.ts"
 import { EMPTY_WINDOW_FOLD, foldWindowBatch, type WindowFold } from "../scoring/fold-window-contributions.ts"
+import { observeDimensionCauses } from "../scoring/observe-dimension-causes.ts"
 import { selectDeterministicOutcomeFailures } from "../scoring/select-outcome-endpoints.ts"
 import { type ReliabilitySessionEndpoint, selectReliabilityEndpoints } from "../scoring/select-reliability-endpoints.ts"
 import { selectScoreWindow } from "../scoring/select-score-window.ts"
@@ -79,6 +83,8 @@ interface WindowPass {
   readonly fold: WindowFold
   readonly reliabilityEndpoints: readonly ReliabilitySessionEndpoint[]
   readonly deterministicOutcomeFailures: readonly string[]
+  /** Sessions conversation analysis read, and the degrading kinds it found on each. */
+  readonly momentDegradation: ReadonlyMap<string, readonly string[]>
   readonly readers: ReadonlyMap<string, WindowReaderCoverage>
   readonly signalEvidence: readonly SessionSignalEvidence[]
   readonly issueEvidence: readonly SessionIssueEvidence[]
@@ -100,11 +106,13 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
   readonly latencyArtifact: LatencyReferenceArtifact
   readonly costArtifact: CostScoringArtifact
   readonly catalog: CostMetricCatalog
+  readonly degradationRules: readonly MomentDegradationRule[]
   readonly batchSize: number
 }) {
   let fold: WindowFold = EMPTY_WINDOW_FOLD
   const reliabilityEndpoints: ReliabilitySessionEndpoint[] = []
   const deterministicOutcomeFailures: string[] = []
+  const momentDegradation = new Map<string, readonly string[]>()
   let readers: ReadonlyMap<string, WindowReaderCoverage> = new Map()
   const signalEvidence: SessionSignalEvidence[] = []
   const issueEvidence: SessionIssueEvidence[] = []
@@ -128,6 +136,15 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
     })
     reliabilityEndpoints.push(...selectReliabilityEndpoints(sessions))
     deterministicOutcomeFailures.push(...selectDeterministicOutcomeFailures(sessions))
+    for (const session of sessions) {
+      // Only analyzed sessions are recorded at all. An absent entry means analysis could not read
+      // the session, which is not the same as reading it and finding nothing.
+      if (!session.momentsAnalyzed) continue
+      momentDegradation.set(
+        session.sessionId,
+        evaluateMomentDegradation({ session, rules: input.degradationRules }).kinds,
+      )
+    }
     readers = tallyWindowReaderCoverage(sessions, readers)
     signalEvidence.push(...sessions.map(readSessionSignalEvidence))
     issueEvidence.push(...sessions.map(readSessionIssueEvidence))
@@ -137,6 +154,7 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
     fold,
     reliabilityEndpoints,
     deterministicOutcomeFailures,
+    momentDegradation,
     readers,
     signalEvidence,
     issueEvidence,
@@ -170,20 +188,11 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     ...(input.previousStepDays !== undefined ? { previousStepDays: input.previousStepDays } : {}),
   })
 
-  if (selection.status === "withheld") {
-    yield* Effect.annotateCurrentSpan("agentScore.withheld", "sessionFloor")
-    const belowFloor: AgentScoreResult = {
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      scoringVersion: version.scoringVersion,
-      status: "withheld",
-      dimensions: [],
-      withheldReason: "sessionFloor",
-    }
-    return belowFloor
-  }
-
-  const from = new Date(input.to.getTime() - selection.stepDays * 24 * 60 * 60 * 1000)
+  const belowSessionFloor = selection.status === "withheld"
+  const stepDays = selection.status === "selected" ? selection.stepDays : Math.max(...input.artifact.window.stepDays)
+  const eligibleSessionCount = selection.eligibleSessionCount
+  const windowReason = selection.status === "selected" ? selection.reason : ("belowSessionFloor" as const)
+  const from = new Date(input.to.getTime() - stepDays * 24 * 60 * 60 * 1000)
   const sessionIds = yield* windowSource.readEligibleSessionIds({
     organizationId: input.organizationId,
     projectId: input.projectId,
@@ -199,6 +208,7 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     latencyArtifact: input.latencyArtifact,
     costArtifact: input.costArtifact,
     catalog: input.catalog,
+    degradationRules: input.artifact.outcomeDegradation.rules,
     batchSize: input.batchSize ?? AGENT_SCORE_BATCH_SIZE,
   })
 
@@ -210,6 +220,11 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     supportedJudgmentVersions: version.supportedJudgmentVersions.taskOutcome,
     deterministicFailureSessionIds: pass.deterministicOutcomeFailures,
     floors: input.artifact.dimensionFloors.outcome,
+    degradation: {
+      degradedKindsBySession: pass.momentDegradation,
+      degradedWeight: input.artifact.outcomeDegradation.degradedWeight,
+      minAnalyzedSessions: input.artifact.outcomeDegradation.minAnalyzedSessions,
+    },
   })
   const safety = yield* estimateProjectSafetyWindow({
     organizationId: input.organizationId,
@@ -221,7 +236,7 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     referenceRunSessions: input.artifact.referenceRuns.safety,
   })
   const reliability = estimateProjectReliability({
-    eligibleSessionCount: selection.eligibleSessionCount,
+    eligibleSessionCount,
     sessions: pass.reliabilityEndpoints,
     floors: input.artifact.dimensionFloors.reliability,
     referenceRunSessions: input.artifact.referenceRuns.reliability,
@@ -241,7 +256,11 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
   const speed = {
     gate: gateSpeedWindow({
       speed: aggregateWindowSpeed(pass.fold.contributions, signalEffects.avoidableNs),
-      eligibleSessionCount: selection.eligibleSessionCount,
+      eligibleSessionCount,
+      missingLatencyReferenceSessionCount: pass.fold.contributions.filter(
+        (contribution) => contribution.speed.missingLatencyReference,
+      ).length,
+      unreferencedLatencyModels: [...pass.fold.unreferencedLatencyModels.values()],
       floors: input.artifact.dimensionFloors.speed,
     }),
   }
@@ -266,8 +285,20 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
   // number nobody may see would be the same claim by another route.
   const scoreOf = (dimension: string) =>
     composition.dimensions.find((entry) => entry.scoreDimension === dimension)?.score
-  const attribution: DimensionAttribution[] = composition.composite
+  const publishable = !belowSessionFloor && composition.composite !== undefined
+  const attribution: DimensionAttribution[] = publishable
     ? [
+        attributeOutcomeWindow({
+          // Only the sessions the estimator scored: a row built over sessions it excluded would
+          // describe a different denominator than the number above it.
+          degradedKindsBySession: new Map(
+            outcome.judgedSessions
+              .filter((verdict) => verdict.succeeded && pass.momentDegradation.has(verdict.sessionId))
+              .map((verdict) => [verdict.sessionId, pass.momentDegradation.get(verdict.sessionId) ?? []]),
+          ),
+          degradation: outcome.degradation,
+          observedScore: scoreOf("outcome") ?? 100,
+        }),
         attributeReliabilityWindow({
           endpoints: pass.reliabilityEndpoints,
           referenceRunSessions: input.artifact.referenceRuns.reliability,
@@ -293,43 +324,69 @@ export const computeAgentScore = Effect.fn("agentScore.computeAgentScore")(funct
     : []
 
   const issues = buildWindowIssues({ evidence: pass.issueEvidence, outcome, safety })
+  const observedCauses = observeDimensionCauses({
+    fold: pass.fold,
+    reliabilityEndpoints: pass.reliabilityEndpoints,
+    signalEvidence: pass.signalEvidence,
+    signalEffects,
+    catalog: input.catalog,
+  })
 
-  yield* Effect.annotateCurrentSpan("agentScore.stepDays", selection.stepDays)
+  yield* Effect.annotateCurrentSpan("agentScore.stepDays", stepDays)
   yield* Effect.annotateCurrentSpan("agentScore.unmeasured", composition.unmeasuredDimensions.join(",") || "none")
+  if (belowSessionFloor) yield* Effect.annotateCurrentSpan("agentScore.withheld", "sessionFloor")
+
+  const dimensions = belowSessionFloor
+    ? composition.dimensions.map(({ score: _score, interval: _interval, ...dimension }) => dimension)
+    : composition.dimensions
+
+  const coverage = {
+    eligibleSessionCount,
+    readSessionCount: pass.readSessionCount,
+    outcome,
+    reliability,
+    safety,
+    cost: cost.gate,
+    speed: speed.gate,
+    readers: [...pass.readers.values()],
+    artifactVersions: {
+      cost: input.costArtifact.artifactVersion,
+      costCatalog: input.catalog.catalogVersion,
+      latency: input.latencyArtifact.artifactVersion,
+    },
+    unmeasuredSignalEffects: signalEffects.gaps.length,
+  }
+  const native = { cost: composition.cost, speed: composition.speed }
+  const readiness = buildAgentScoreReadiness({
+    coverage,
+    native,
+    artifact: input.artifact,
+    costArtifact: input.costArtifact,
+  })
 
   const result: AgentScoreResult = {
     organizationId: input.organizationId,
     projectId: input.projectId,
     scoringVersion: version.scoringVersion,
-    status: composition.composite ? "published" : "withheld",
+    sessionFloor: input.artifact.window.sessionFloor,
+    status: publishable ? "published" : "withheld",
     window: {
-      stepDays: selection.stepDays,
+      stepDays,
       from,
       to: input.to,
-      reason: selection.reason,
-      eligibleSessionCount: selection.eligibleSessionCount,
+      reason: windowReason,
+      eligibleSessionCount,
     },
-    dimensions: composition.dimensions,
-    ...(composition.composite ? { composite: composition.composite } : {}),
-    ...(composition.composite ? {} : { withheldReason: "unmeasuredDimensions" as const }),
-    coverage: {
-      eligibleSessionCount: selection.eligibleSessionCount,
-      readSessionCount: pass.readSessionCount,
-      outcome,
-      reliability,
-      safety,
-      cost: cost.gate,
-      speed: speed.gate,
-      readers: [...pass.readers.values()],
-      artifactVersions: {
-        cost: input.costArtifact.artifactVersion,
-        costCatalog: input.catalog.catalogVersion,
-        latency: input.latencyArtifact.artifactVersion,
-      },
-      unmeasuredSignalEffects: signalEffects.gaps.length,
-    },
-    native: { cost: composition.cost, speed: composition.speed },
+    dimensions,
+    ...(publishable ? { composite: composition.composite } : {}),
+    ...(publishable
+      ? {}
+      : { withheldReason: belowSessionFloor ? ("sessionFloor" as const) : ("unmeasuredDimensions" as const) }),
+    coverage,
+    native,
+    readiness,
     attribution,
+    observedCauses,
     issues,
   }
   return result

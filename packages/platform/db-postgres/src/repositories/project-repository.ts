@@ -174,6 +174,22 @@ export const ProjectRepositoryLive = Layer.effect(
           )
         }),
 
+      markFirstTraceAt: (id: ProjectIdType, at: Date) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(projects)
+                .set({ firstTraceAt: at })
+                .where(
+                  and(eq(projects.organizationId, organizationId), eq(projects.id, id), isNull(projects.firstTraceAt)),
+                )
+                .returning({ id: projects.id }),
+            )
+            .pipe(Effect.map((results) => results.length > 0))
+        }),
+
       softDelete: (id: ProjectIdType) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

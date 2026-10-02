@@ -25,13 +25,15 @@ export class MemoryClient {
     /**
      * Returns a cursor-paginated page of the project's memory stores, one roll-up row each (record count, tokens, last-updated, sessions, users). A store groups records under `gen_ai.memory.store.id`; the empty-string store is the unattributed bucket.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.ListStoresMemoryRequest} request
      * @param {MemoryClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.memory.listStores("projectSlug")
@@ -117,13 +119,15 @@ export class MemoryClient {
     /**
      * Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately, one record at a time.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.GetStoreMemoryRequest} request
      * @param {MemoryClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.memory.getStore("projectSlug", {
@@ -209,13 +213,15 @@ export class MemoryClient {
     /**
      * Returns a per-record diff of the store between two points in time — added, updated, and removed records with token deltas. `from` defaults to the empty state (everything counts as added); `to` defaults to the current state. Unchanged records are pruned.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.GetStoreDiffMemoryRequest} request
      * @param {MemoryClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.memory.getStoreDiff("projectSlug", {
@@ -302,13 +308,15 @@ export class MemoryClient {
     /**
      * Returns the end-users who accessed the store (reads and writes both count as access), most recent access first. Capped at the 1000 most recent accessors.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.ListStoreUsersMemoryRequest} request
      * @param {MemoryClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.memory.listStoreUsers("projectSlug", {
@@ -393,13 +401,15 @@ export class MemoryClient {
     /**
      * Returns one record's current body plus its mutating version history (newest first), each version carrying the authoring span/trace/session/user and per-version token deltas.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.GetRecordMemoryRequest} request
      * @param {MemoryClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.memory.getRecord("projectSlug", {
@@ -486,13 +496,15 @@ export class MemoryClient {
     /**
      * Returns the before/after bodies for one change — the version authored by `spanId` against its predecessor in the record's mutating chain. Returns 404 when the span is not a recorded change of the record.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.GetRecordChangeMemoryRequest} request
      * @param {MemoryClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.memory.getRecordChange("projectSlug", {
@@ -581,13 +593,15 @@ export class MemoryClient {
     /**
      * Returns the retrieval (`search_memory`) events for one record, newest first and capped, each with the query text (when captured), tokens returned, and the accessing span/trace/session/user.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.ListRecordReadsMemoryRequest} request
      * @param {MemoryClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.memory.listRecordReads("projectSlug", {
@@ -675,13 +689,15 @@ export class MemoryClient {
     /**
      * Returns the end-users who accessed one record with per-user read and write counts, most recent access first. Capped at the 1000 most recent accessors.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.ListRecordUsersMemoryRequest} request
      * @param {MemoryClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.memory.listRecordUsers("projectSlug", {

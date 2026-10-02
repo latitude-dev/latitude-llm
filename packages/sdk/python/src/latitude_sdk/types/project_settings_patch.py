@@ -25,6 +25,10 @@ class ProjectSettingsPatch(UniversalBaseModel):
             description="When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
         ),
     ]
+    """
+    When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.
+    """
+
     redaction: typing.Optional[RedactionSetting] = None
     notifications: typing.Optional[NotificationsSetting] = None
     escalation: typing.Optional[EscalationSetting] = None

@@ -309,6 +309,10 @@ impl Binding for AsyncApiBinding {
             );
             let base_url_override = composed.as_deref();
 
+            let http_config = prepared.http_config.clone().with_user_agent_suffix_override(
+                crate::cli_args::resolve_user_agent_suffix_override(root_matches),
+            );
+
             // Resolve binding-level CLI args (e.g. `--voice`, `--audio-out`)
             // ONCE per dispatch, then pick the init payload and
             // autoresponder via the dynamic-or-static helpers on `CliApp`.
@@ -340,7 +344,7 @@ impl Binding for AsyncApiBinding {
                 &param_args,
                 base_url_override,
                 &self.inner.auth_bindings,
-                &prepared.http_config,
+                &http_config,
                 resolved_init_payload.as_ref(),
                 resolved_autoresponder,
                 dry_run,

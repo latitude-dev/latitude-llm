@@ -91,6 +91,14 @@ export type AssessmentFinding = AssessmentFindingReference &
     | {
         readonly kind: "moment"
         readonly momentKinds: readonly string[]
+        /**
+         * Per-label confidence, which the degradation predicate reads.
+         *
+         * Kept beside `momentKinds` rather than replacing it: grouping and the association effects
+         * only care which kinds occurred, while scoring also has to know how sure the classifier
+         * was. One entry per label, so a moment carrying two labels contributes two.
+         */
+        readonly momentLabels: readonly { readonly kind: string; readonly confidence: number }[]
       }
   )
 
@@ -105,6 +113,11 @@ export const READER_LIMITATIONS = [
   "criticalPathUnavailable",
   "missingLatencyReference",
 ] as const
+
+export interface LatencyModel {
+  readonly provider: string
+  readonly model: string
+}
 
 export interface AssessmentReaderFact {
   readonly readerId: string
@@ -130,15 +143,17 @@ export interface NormalizedSessionCostEvidence {
   /**
    * The workload this session is comparable with, for the matched signal estimator.
    *
-   * Built from provider, model, prompt size and streaming mode because those are what make two
-   * sessions cost and take a similar amount without any signal being involved. Comparison only ever
-   * happens inside one key, so an agent whose signal-bearing sessions are also its biggest sessions
-   * cannot have that difference read as the signal's effect.
+   * Built from provider, model, input and output size, toolset, call scale and streaming mode because
+   * those are what make two sessions cost and take a similar amount without any signal being
+   * involved. Comparison only ever happens inside one key, so an agent whose signal-bearing sessions
+   * are also its biggest sessions cannot have that difference read as the signal's effect.
    */
   readonly workloadStratum: string
   readonly denominators: CostFamilyDenominators
   readonly observedCriticalPathNs: number
   readonly criticalPathComplete: boolean
+  /** Critical-path models with no frozen latency reference; any entry keeps the session out of Speed. */
+  readonly unreferencedLatencyModels: readonly LatencyModel[]
   readonly measuredAvoidableNs: number
   readonly estimatedAvoidableNs: number
   readonly measuredAvoidableMicrocents: number
@@ -168,5 +183,12 @@ export interface NormalizedSessionAssessmentInput {
    * able to move a score's explanation by being invisible to it.
    */
   readonly scoringEligibleSignalIds: readonly string[]
+  /**
+   * Whether conversation analysis ran on this session, which is the basis moment evidence describes.
+   *
+   * Moment findings are only absent-because-clean on an analyzed session. On a skipped or failed one
+   * their absence says nothing, and treating the two alike is how a coverage gap reads as health.
+   */
+  readonly momentsAnalyzed: boolean
   readonly costEvidence?: NormalizedSessionCostEvidence
 }

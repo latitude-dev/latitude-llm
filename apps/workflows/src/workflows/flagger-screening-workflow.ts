@@ -30,9 +30,9 @@ export const flaggerScreeningWorkflow = async (input: FlaggerScreeningWorkflowIn
   for (const classification of screening.classifications) {
     try {
       await startChild(flaggerClassificationWorkflow, {
-        // One classification per session×slug at a time; a later generation
-        // re-runs after the previous completes (default ALLOW_DUPLICATE).
-        workflowId: `flagger-classification:${input.sessionId}:${classification.flaggerSlug}`,
+        // One classification per session×slug×generation so a newer screen can
+        // start while a prior generation's classification is still running.
+        workflowId: `flagger-classification:${input.sessionId}:${classification.flaggerSlug}:${input.analysisHash.slice(0, 16)}`,
         parentClosePolicy: ParentClosePolicy.ABANDON,
         args: [
           {
@@ -50,9 +50,10 @@ export const flaggerScreeningWorkflow = async (input: FlaggerScreeningWorkflowIn
       started++
     } catch (error) {
       if (isAlreadyStartedError(error)) {
-        log.info("Flagger classification already running for this session×slug", {
+        log.info("Flagger classification already running for this session×slug×generation", {
           sessionId: input.sessionId,
           flaggerSlug: classification.flaggerSlug,
+          analysisHash: input.analysisHash,
         })
         continue
       }

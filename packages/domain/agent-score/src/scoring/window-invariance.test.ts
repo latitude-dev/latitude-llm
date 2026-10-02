@@ -17,8 +17,14 @@ import type { ReliabilitySessionEndpoint } from "./select-reliability-endpoints.
 
 const contribution = (index: number, penalized: number): SessionWindowContribution => ({
   sessionId: `session-${index}`,
+  costUsableForDenominator: true,
   families: [{ family: "tools", eligibleUnits: 20, penalizedUnits: penalized }],
-  speed: { observedNs: 1_000_000, avoidableNs: penalized * 10_000, usableForDenominator: true },
+  speed: {
+    observedNs: 1_000_000,
+    avoidableNs: penalized * 10_000,
+    usableForDenominator: true,
+    missingLatencyReference: false,
+  },
 })
 
 const window = (count: number): SessionWindowContribution[] =>
@@ -78,9 +84,11 @@ const signalSession = ({
   fold: (index % 2) as 0 | 1,
   familyPenaltyShare: { spend: 0, context: 0, tools: penalty, memory: 0, recovery: 0 },
   avoidableNs: 0,
+  speedUsable: true,
   unlinkedSignalIds: signals,
   inclusionProbabilityBySignalId: new Map(signals.map((signalId) => [signalId, 1])),
   linkedSignalIds: [],
+  signals: [],
 })
 
 /** Exposed sessions carry a small excess, so the residual cap never masks a doubling. */

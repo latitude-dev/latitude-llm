@@ -1,29 +1,22 @@
 import type { FilterSet } from "@domain/shared"
-import {
-  CodeBlock,
-  Conversation,
-  DetailSection,
-  DetailSummary,
-  ProviderIcon,
-  Skeleton,
-  TagBadgeList,
-  Text,
-  Tooltip,
-} from "@repo/ui"
+import { Conversation, DetailSection, DetailSummary, ProviderIcon, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon, WrenchIcon } from "lucide-react"
 import { type ReactNode, useMemo } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
+import { DetailFilterTags } from "../detail-filter-tags.tsx"
 import { MemoryChangesSection } from "../memory-changes/memory-changes-section.tsx"
 import { MemorySummary } from "../memory-summary.tsx"
+import { MetadataJson } from "../metadata-json.tsx"
 import { SessionOutlierBadge, type SessionOutlierMetric } from "../session-outlier-badge.tsx"
 import { aggregateToolPills, ToolPillList } from "../tool-pills.tsx"
 import { DurationBar } from "../trace-detail-drawer/duration-bar.tsx"
 import { computeSessionDurationBreakdown } from "../trace-detail-drawer/duration-composition.ts"
 import { ModelFilterLink } from "../trace-detail-drawer/tabs/spans-tab/model-filter-link.tsx"
 import { UsageSummary } from "../trace-detail-drawer/tabs/spans-tab/span-detail/usage-summary.tsx"
+import { UserSessionsLink } from "../user-sessions-link.tsx"
 import { AgentsBreakdown } from "./agents-breakdown/agents-breakdown.tsx"
 import { useAgentGraph } from "./agents-breakdown/use-agent-graph.ts"
 import { isLargeSession } from "./session-size.ts"
@@ -35,11 +28,6 @@ const METRIC_FILTER_FIELD: Partial<Record<SessionOutlierMetric, string>> = {
   durationNs: "duration",
   timeToFirstTokenNs: "ttft",
   costTotalMicrocents: "cost",
-}
-
-function JsonBlock({ value }: { readonly value: unknown }) {
-  const formatted = useMemo(() => JSON.stringify(value, null, 2), [value])
-  return <CodeBlock value={formatted} className="bg-secondary" />
 }
 
 function MetadataSpanBreakdown({
@@ -228,10 +216,12 @@ export function MetadataTab({
         <MetadataSpanBreakdown session={session} durationBadge={durationBadge} costBadges={costBadgesNode} />
       )}
 
+      <UserSessionsLink userId={session.userId} />
+
       <div className="flex flex-col gap-1">
         <Text.H6 color="foregroundMuted">Tags</Text.H6>
         {hasTags ? (
-          <TagBadgeList tags={session.tags} />
+          <DetailFilterTags tags={session.tags} filters={filters} onFiltersChange={onFiltersChange} />
         ) : (
           <Text.H6 color="foregroundMuted" italic>
             No tags
@@ -246,7 +236,7 @@ export function MetadataTab({
       <DetailSection icon={<TextIcon className="h-4 w-4" />} label="Metadata" defaultOpen={false}>
         {() =>
           hasMetadata ? (
-            <JsonBlock value={session.metadata} />
+            <MetadataJson value={session.metadata} />
           ) : (
             <Text.H6 color="foregroundMuted" italic>
               No metadata
