@@ -12,6 +12,19 @@ class SSEDecoder:
         self._last_event_id = ""
         self._retry: Optional[int] = None
 
+    def reset_in_progress_event(self) -> None:
+        """Discard any partially-parsed (undispatched) event.
+
+        Used when a stream ends mid-event before reconnecting: the buffered
+        ``event``/``data``/``retry`` fields of the never-dispatched event must
+        be dropped so they do not corrupt the first event of the reconnected
+        stream. Per the SSE spec the last event id is *not* reset here — it
+        persists across connections.
+        """
+        self._event = ""
+        self._data = []
+        self._retry = None
+
     def decode(self, line: str) -> Optional[ServerSentEvent]:
         # See: https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation  # noqa: E501
 

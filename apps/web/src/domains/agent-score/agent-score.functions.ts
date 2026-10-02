@@ -1,7 +1,9 @@
 import {
   type AgentScoreExplanation,
   type AgentScoreSnapshot,
+  agentScoreSnapshotWorkflowId,
   getAgentScoreExplanation,
+  getAgentScoreForDate,
   getCurrentAgentScore,
   LAUNCH_AGENT_SCORE_ARTIFACT,
   listAgentScoreHistory,
@@ -13,9 +15,11 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
-import { getPostgresClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
+import { getPostgresClient, getRedisClient, getWorkflowQuerier, getWorkflowStarter } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
+import { type AgentScoreComputationRecord, toAgentScoreComputationRecord } from "./agent-score-computation.ts"
+import { agentScoreDateSchema } from "./agent-score-date.ts"
 
 export interface AgentScoreRecord {
   readonly date: string
@@ -26,9 +30,10 @@ export interface AgentScoreRecord {
   readonly windowDays: number
   readonly eligibleSessionCount: number
   readonly policyCap: number | null
+  readonly createdAt: string
 }
 
-interface CurrentAgentScoreRecord {
+interface ProjectAgentScoreRecord {
   readonly available: boolean
   readonly date: string
   readonly snapshot: AgentScoreRecord | null
@@ -44,36 +49,37 @@ const toRecord = (snapshot: AgentScoreSnapshot): AgentScoreRecord => ({
   windowDays: snapshot.windowDays,
   eligibleSessionCount: snapshot.eligibleSessionCount,
   policyCap: snapshot.policyCap ?? null,
+  createdAt: snapshot.createdAt.toISOString(),
 })
 
-const projectInput = z.object({ projectId: z.string() })
-const AGENT_SCORE_REFRESH_THROTTLE_MS = 5 * 60_000
+const projectInput = z.object({ projectId: z.string(), date: agentScoreDateSchema.optional() })
+const datedProjectInput = projectInput.extend({ date: agentScoreDateSchema })
 
 export const getProjectAgentScore = createServerFn({ method: "GET" })
   .inputValidator(projectInput)
-  .handler(async ({ data, context }): Promise<CurrentAgentScoreRecord> => {
+  .handler(async ({ data, context }): Promise<ProjectAgentScoreRecord> => {
     const orgId = await resolveOrgScope(context)
-    const current = await Effect.runPromise(
-      getCurrentAgentScore({ organizationId: orgId, projectId: ProjectId(data.projectId) }).pipe(
+    const latest = await Effect.runPromise(
+      getAgentScoreForDate({ organizationId: orgId, projectId: ProjectId(data.projectId), date: data.date }).pipe(
         withScopedPostgres(AgentScoreSnapshotRepositoryLive, getPostgresClient(), orgId),
         withTracing,
       ),
     )
 
     return {
-      available: current.available,
-      date: current.date,
-      snapshot: current.available ? toRecord(current.snapshot) : null,
+      available: latest.available,
+      date: latest.available ? latest.snapshot.date : latest.date,
+      snapshot: latest.available ? toRecord(latest.snapshot) : null,
       dimensionWeights: LAUNCH_AGENT_SCORE_ARTIFACT.compositeWeights,
     }
   })
 
 export const getProjectAgentScoreHistory = createServerFn({ method: "GET" })
-  .inputValidator(projectInput)
+  .inputValidator(datedProjectInput)
   .handler(async ({ data, context }): Promise<readonly AgentScoreRecord[]> => {
     const orgId = await resolveOrgScope(context)
     const snapshots = await Effect.runPromise(
-      listAgentScoreHistory({ organizationId: orgId, projectId: ProjectId(data.projectId) }).pipe(
+      listAgentScoreHistory({ organizationId: orgId, projectId: ProjectId(data.projectId), to: data.date }).pipe(
         withScopedPostgres(AgentScoreSnapshotRepositoryLive, getPostgresClient(), orgId),
         withTracing,
       ),
@@ -87,55 +93,87 @@ export interface AgentScoreExplanationRecord {
   readonly explanation: AgentScoreExplanation | null
 }
 
-/**
- * The cause rows, read from the cache the scoring worker warms.
- *
- * Separate from the score on purpose: the page renders its numbers from the snapshot immediately and
- * fills the explanation in when it arrives, because computing one means reading every session in the
- * window and that is not work a page load can wait on. The page's explicit refresh action can enqueue
- * that worker when the cache is missing or stale.
- */
-export const getProjectAgentScoreExplanation = createServerFn({ method: "GET" })
+export const getProjectAgentScoreComputation = createServerFn({ method: "GET" })
   .inputValidator(projectInput)
+  .handler(async ({ data, context }): Promise<AgentScoreComputationRecord> => {
+    const orgId = await resolveOrgScope(context)
+    const projectId = ProjectId(data.projectId)
+    const date =
+      data.date ??
+      (
+        await Effect.runPromise(
+          getAgentScoreForDate({ organizationId: orgId, projectId }).pipe(
+            withScopedPostgres(AgentScoreSnapshotRepositoryLive, getPostgresClient(), orgId),
+            withTracing,
+          ),
+        )
+      ).date
+    const workflowQuerier = await getWorkflowQuerier()
+    const descriptions = await Effect.runPromise(
+      Effect.all(
+        [false, true].map((force) =>
+          workflowQuerier.describe(
+            agentScoreSnapshotWorkflowId({
+              organizationId: orgId,
+              projectId,
+              date,
+              force,
+            }),
+          ),
+        ),
+        { concurrency: "unbounded" },
+      ).pipe(withTracing),
+    )
+
+    return toAgentScoreComputationRecord({ date, descriptions })
+  })
+
+export const getProjectAgentScoreExplanation = createServerFn({ method: "GET" })
+  .inputValidator(datedProjectInput)
   .handler(async ({ data, context }): Promise<AgentScoreExplanationRecord> => {
     const orgId = await resolveOrgScope(context)
+    const projectId = ProjectId(data.projectId)
     const result = await Effect.runPromise(
-      getAgentScoreExplanation({ organizationId: orgId, projectId: ProjectId(data.projectId) }).pipe(
+      getAgentScoreExplanation({ organizationId: orgId, projectId, date: data.date }).pipe(
+        withScopedPostgres(AgentScoreSnapshotRepositoryLive, getPostgresClient(), orgId),
         Effect.provide(RedisCacheStoreLive(getRedisClient())),
         withTracing,
       ),
     )
-
-    return {
-      status: result.status,
-      explanation: result.status === "ready" ? result.explanation : null,
-    }
+    return { status: result.status, explanation: result.status === "ready" ? result.explanation : null }
   })
 
 export const refreshProjectAgentScore = createServerFn({ method: "POST" })
-  .inputValidator(projectInput)
-  .handler(async ({ data, context }): Promise<{ enqueued: true }> => {
+  .inputValidator(datedProjectInput)
+  .handler(async ({ data, context }): Promise<{ enqueued: boolean; date: string }> => {
     const orgId = await resolveOrgScope(context)
-    const publisher = await getQueuePublisher()
     const projectId = ProjectId(data.projectId)
-    const date = new Date().toISOString().slice(0, 10)
+    const current = await Effect.runPromise(
+      getCurrentAgentScore({ organizationId: orgId, projectId, now: new Date(`${data.date}T00:00:00.000Z`) }).pipe(
+        withScopedPostgres(AgentScoreSnapshotRepositoryLive, getPostgresClient(), orgId),
+        withTracing,
+      ),
+    )
+    if (current.available && current.snapshot.explanation) return { enqueued: false, date: data.date }
+    const workflowStarter = await getWorkflowStarter()
     await Effect.runPromise(
-      publisher
-        .publish(
-          "agent-score",
-          "snapshotProject",
+      workflowStarter
+        .start(
+          "agentScoreSnapshotWorkflow",
+          { organizationId: orgId, projectId, date: data.date, force: true },
           {
-            organizationId: orgId,
-            projectId,
-            date,
-            force: true,
-          },
-          {
-            dedupeKey: `org:${orgId}:agent-score:refresh:${projectId}:${date}`,
-            leadingThrottleMs: AGENT_SCORE_REFRESH_THROTTLE_MS,
+            workflowId: agentScoreSnapshotWorkflowId({
+              organizationId: orgId,
+              projectId,
+              date: data.date,
+              force: true,
+            }),
           },
         )
-        .pipe(withTracing),
+        .pipe(
+          Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.void),
+          withTracing,
+        ),
     )
-    return { enqueued: true }
+    return { enqueued: true, date: data.date }
   })

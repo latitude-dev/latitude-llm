@@ -24,11 +24,19 @@ class ToolSummary(UniversalBaseModel):
             alias="offeredCount", description="LLM turns that offered this tool. 0 means no definition was seen."
         ),
     ]
+    """
+    LLM turns that offered this tool. 0 means no definition was seen.
+    """
+
     offered_traces: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="offeredTraces"),
         pydantic.Field(alias="offeredTraces", description="Distinct traces that offered this tool."),
     ]
+    """
+    Distinct traces that offered this tool.
+    """
+
     last_offered: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="lastOffered"),
@@ -38,6 +46,10 @@ class ToolSummary(UniversalBaseModel):
             description="ISO-8601 timestamp the tool was last offered. `null` when never offered.",
         ),
     ]
+    """
+    ISO-8601 timestamp the tool was last offered. `null` when never offered.
+    """
+
     selection_rate: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="selectionRate"),
@@ -47,6 +59,10 @@ class ToolSummary(UniversalBaseModel):
             description="Calls per offer (`calls / offeredCount`). Can exceed 1. `null` when never offered.",
         ),
     ]
+    """
+    Calls per offer (`calls / offeredCount`). Can exceed 1. `null` when never offered.
+    """
+
     trend: typing.List[ToolCallHistogramBucket] = pydantic.Field()
     """
     Per-bucket call counts across the range.

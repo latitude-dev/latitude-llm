@@ -47,7 +47,7 @@ export function VitalityHoverContent({
   return (
     <div className="flex flex-col px-4 pb-2">
       <div className="flex items-center gap-3 py-4">
-        <DimensionScoreRing score={result?.score ?? null} />
+        <DimensionScoreRing score={result ? (overall ? Math.floor(result.score) : result.score) : null} />
         <div className="flex min-w-0 flex-col gap-1">
           <Text.H5M>{meta.title}</Text.H5M>
           <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>

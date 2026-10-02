@@ -21,5 +21,8 @@ class EvaluationScoreMetadata(UniversalBaseModel):
             description="Hash of the evaluation script that produced this score; lets the platform track which version generated it.",
         ),
     ]
+    """
+    Hash of the evaluation script that produced this score; lets the platform track which version generated it.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

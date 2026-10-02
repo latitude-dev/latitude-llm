@@ -24,6 +24,10 @@ class ToolErrorBreakdownRow(UniversalBaseModel):
         FieldMetadata(alias="errorType"),
         pydantic.Field(alias="errorType", description="An error type seen in the cluster."),
     ]
+    """
+    An error type seen in the cluster.
+    """
+
     calls: int = pydantic.Field()
     """
     Number of failed calls in the cluster.
