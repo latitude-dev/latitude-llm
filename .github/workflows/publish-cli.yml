@@ -105,10 +105,14 @@ jobs:
         shell: bash
         working-directory: packages/cli
         run: |
-          # Linux uses rustls so the binary carries no runtime OpenSSL dependency; macOS/Windows keep native-tls.
+          # Linux vendors OpenSSL so the binary carries no runtime OpenSSL dependency; macOS/Windows use
+          # the system stack. The generated Cargo.toml picks native-tls for every non-musl target from a
+          # per-target dependency table, and a feature cannot switch off a per-target dependency — so
+          # vendoring, rather than selecting rustls, is what keeps the binary self-contained. Needs perl
+          # and make in the build image (both present in the cross images).
           FEATURES=""
           if [ "${{ runner.os }}" = "Linux" ]; then
-            FEATURES="--no-default-features --features rustls"
+            FEATURES="--features reqwest/native-tls-vendored"
           fi
           if [ "${{ matrix.cross }}" = "true" ]; then
             cross build --release --bin latitude --target ${{ matrix.target }} $FEATURES

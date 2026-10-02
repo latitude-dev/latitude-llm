@@ -1,5 +1,5 @@
+import { resolveScoringCutoff } from "@domain/agent-score"
 import { describe, expect, it } from "vitest"
-import { resolveScoringCutoff } from "./agent-score-snapshot.ts"
 
 describe("resolveScoringCutoff", () => {
   it("ends the window at the end of a date that is already over", () => {

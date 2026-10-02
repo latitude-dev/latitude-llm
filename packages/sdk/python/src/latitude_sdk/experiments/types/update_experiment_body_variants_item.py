@@ -31,6 +31,10 @@ class UpdateExperimentBodyVariantsItem(UniversalBaseModel):
         FieldMetadata(alias="filterSet"),
         pydantic.Field(alias="filterSet", description="Session filters selecting this variant's population."),
     ]
+    """
+    Session filters selecting this variant's population.
+    """
+
     query: typing.Optional[str] = pydantic.Field(default=None)
     """
     Free-text / semantic search, or `null`.
@@ -43,5 +47,8 @@ class UpdateExperimentBodyVariantsItem(UniversalBaseModel):
             alias="timeRange", default=None, description="Time window, or `null` for the default last-30-days window."
         ),
     ]
+    """
+    Time window, or `null` for the default last-30-days window.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

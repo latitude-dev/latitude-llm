@@ -8,6 +8,7 @@ import { sessionSearchQaFixture } from "./fixtures/session-search-qa.ts"
 import { supportEvalsOutFixture } from "./fixtures/support-evals-out.ts"
 import { systemSignalsSignalProbeFixture } from "./fixtures/system-signals-issue-probe.ts"
 import { toolCallErrorFixture } from "./fixtures/tool-call-error.ts"
+import { toolCallErrorBundlingFixture } from "./fixtures/tool-call-error-bundling.ts"
 import { warrantyEvalInFixture } from "./fixtures/warranty-eval-in.ts"
 
 export const liveSeedFixtures = [
@@ -18,6 +19,7 @@ export const liveSeedFixtures = [
   offServiceLiveQueueOutFixture,
   frustrationInFixture,
   toolCallErrorFixture,
+  toolCallErrorBundlingFixture,
   emptyResponseFixture,
   outputSchemaFixture,
   systemSignalsSignalProbeFixture,

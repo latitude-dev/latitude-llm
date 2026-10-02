@@ -35,6 +35,28 @@ export const getCurrentAgentScore = Effect.fn("agentScore.getCurrentAgentScore")
   return (snapshot ? { available: true, date, snapshot } : { available: false, date }) satisfies CurrentAgentScore
 })
 
+/**
+ * The newest published score through today, or an explicit absence.
+ *
+ * The returned date remains the requested day so callers can distinguish the page's current date
+ * from the snapshot date when a project has not published a score today.
+ */
+export const getLatestAgentScore = Effect.fn("agentScore.getLatestAgentScore")(function* (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly now?: Date
+}) {
+  const date = utcDateOf(input.now ?? new Date())
+  const repository = yield* AgentScoreSnapshotRepository
+  const snapshot = yield* repository.findLatest({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    throughDate: date,
+  })
+
+  return (snapshot ? { available: true, date, snapshot } : { available: false, date }) satisfies CurrentAgentScore
+})
+
 const daysBefore = (date: string, days: number): string =>
   new Date(new Date(`${date}T00:00:00.000Z`).getTime() - days * 86_400_000).toISOString().slice(0, 10)
 
@@ -61,4 +83,17 @@ export const listAgentScoreHistory = Effect.fn("agentScore.listAgentScoreHistory
     from,
     to,
   })
+})
+
+export const getAgentScoreForDate = Effect.fn("agentScore.getForDate")(function* (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly date?: string | undefined
+  readonly now?: Date
+}) {
+  yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+  const result = input.date
+    ? yield* getCurrentAgentScore({ ...input, now: new Date(`${input.date}T00:00:00.000Z`) })
+    : yield* getLatestAgentScore(input)
+  return result.available ? { ...result, date: result.snapshot.date } : result
 })
