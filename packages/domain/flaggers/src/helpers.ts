@@ -13,9 +13,26 @@ type ConversationMessagesOnly = Pick<FlaggerConversation, "allMessages">
 type ToolErrorConversation = Pick<FlaggerConversation, "allMessages" | "definedTools" | "outputMessages">
 
 const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
-const EXPECTED_TOOL_HTTP_STATUS_MIN = 400
-const EXPECTED_TOOL_HTTP_STATUS_MAX = 499
 const ERROR_SNIPPET_MAX_LENGTH = 160
+
+/**
+ * HTTP statuses a caller declared as normal control flow for a tool.
+ *
+ * Without a declaration a 4xx is a failed call. The range used to exempt itself, which silently
+ * excused every 404 from a search tool and every 409 from a writer — a tool answering "not found"
+ * is only expected if whoever wired it up says so, and no range can know that.
+ */
+export interface ToolExpectedStatusContract {
+  /** Keyed by the tool name as declared, exact match. */
+  readonly byToolName: ReadonlyMap<string, ReadonlySet<number>>
+  /** Statuses expected whatever the tool. */
+  readonly anyTool: ReadonlySet<number>
+}
+
+export const EMPTY_TOOL_EXPECTED_STATUS_CONTRACT: ToolExpectedStatusContract = {
+  byToolName: new Map(),
+  anyTool: new Set(),
+}
 
 // Below this fraction of input tokens served from cache, caching is essentially
 // not working: a healthy multi-turn agent re-reads the great majority of its
@@ -129,6 +146,8 @@ export interface ToolCallErrorFinding {
   readonly recovered?: boolean
   readonly sameSubjectRecovered?: boolean
   readonly terminal?: boolean
+  /** Stable class of the failure, volatile detail stripped. Only set for `kind: "error"`. */
+  readonly errorClass?: string
 }
 
 interface SuccessfulToolResponse {
@@ -155,7 +174,10 @@ const conversationHasAnyToolCall = (conversation: ConversationMessagesOnly): boo
 
 // Every tool-call defect in encounter order; the deterministic flagger
 // annotates the first, the `tool:error` hint gatherer surfaces them all.
-export function collectToolCallErrorFindings(conversation: ToolErrorConversation): readonly ToolCallErrorFinding[] {
+export function collectToolCallErrorFindings(
+  conversation: ToolErrorConversation,
+  expectedStatuses: ToolExpectedStatusContract = EMPTY_TOOL_EXPECTED_STATUS_CONTRACT,
+): readonly ToolCallErrorFinding[] {
   const findings: ToolCallErrorFinding[] = []
   const callById = new Map<string, { name: string; messageIndex: number; partIndex: number }>()
   const successfulCallIds = new Set<string>()
@@ -241,7 +263,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
         continue
       }
 
-      if (toolResponseIndicatesFailure(part.response)) {
+      if (toolResponseIndicatesFailure(part.response, { contract: expectedStatuses, toolName: call.name })) {
         const snippet = extractToolErrorSnippet(part.response)
         findings.push({
           kind: "error",
@@ -254,6 +276,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
           toolCallId,
           responseMessageIndex: msgIdx,
           responsePartIndex: partIndex,
+          errorClass: classifyToolError(part.response),
         })
       } else if (toolCallId) {
         successfulCallIds.add(toolCallId)
@@ -298,21 +321,31 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
 }
 
 /**
- * Flags the first defect the run did NOT work through. A tool error the agent
- * retried or moved past is invisible to the user — a coding agent produces them
- * by the dozen — and raising a signal for one costs a clustering pass, a naming
- * generation and a row in someone's triage list. Structural defects (malformed,
- * duplicate, undeclared, unknown id) always flag: they are bugs in how the
- * agent calls tools, not transient failures.
+ * Flags the defect that best represents the run: the first one it did not work
+ * through, and otherwise the first recovered one. A recovered error is still a
+ * broken integration the owner wants to know about — it is quieter, not absent —
+ * and `flaggerBundleKey` is what keeps a tool that fails the same way all day to
+ * one issue rather than one per occurrence.
  */
 export function detectToolCallErrorsFlagger(
   conversation: ToolErrorConversation,
 ): DeterministicFlaggerMatch<ToolCallErrorFindingKind> {
-  const finding = collectToolCallErrorFindings(conversation).find(
-    (candidate) => candidate.kind !== "error" || candidate.recovered !== true,
-  )
+  const findings = collectToolCallErrorFindings(conversation)
+  const finding = selectRepresentativeToolCallErrorFinding(findings)
   return finding ? match(finding.kind, finding.feedback, finding.messageIndex) : NO_MATCH
 }
+
+const isUnrecoveredToolDefect = <
+  Finding extends { readonly kind: ToolCallErrorFindingKind; readonly recovered?: boolean },
+>(
+  finding: Finding,
+): boolean => finding.kind !== "error" || finding.recovered !== true
+
+export const selectRepresentativeToolCallErrorFinding = <
+  Finding extends { readonly kind: ToolCallErrorFindingKind; readonly recovered?: boolean },
+>(
+  findings: readonly Finding[],
+): Finding | null => findings.find(isUnrecoveredToolDefect) ?? findings[0] ?? null
 
 function toNonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null
@@ -325,29 +358,39 @@ function toHttpStatus(value: unknown): number | null {
   return match?.[1] ? Number(match[1]) : null
 }
 
-function isExpectedToolHttpStatus(value: unknown): boolean {
-  const status = toHttpStatus(value)
-  return status !== null && status >= EXPECTED_TOOL_HTTP_STATUS_MIN && status <= EXPECTED_TOOL_HTTP_STATUS_MAX
+interface ExpectedStatusScope {
+  readonly contract: ToolExpectedStatusContract
+  readonly toolName?: string | undefined
 }
 
-function responseIndicatesExpectedToolError(response: unknown): boolean {
+function isDeclaredExpectedStatus(value: unknown, scope: ExpectedStatusScope): boolean {
+  const status = toHttpStatus(value)
+  if (status === null) return false
+  if (scope.contract.anyTool.has(status)) return true
+  const declared = scope.toolName === undefined ? undefined : scope.contract.byToolName.get(scope.toolName)
+  return declared?.has(status) === true
+}
+
+function responseIndicatesExpectedToolError(response: unknown, scope: ExpectedStatusScope): boolean {
   if (typeof response === "string") {
     const trimmed = response.trim()
     if (trimmed === "") return false
     try {
-      return responseIndicatesExpectedToolError(JSON.parse(trimmed))
+      return responseIndicatesExpectedToolError(JSON.parse(trimmed), scope)
     } catch {
-      return isExpectedToolHttpStatus(trimmed)
+      return isDeclaredExpectedStatus(trimmed, scope)
     }
   }
 
-  if (Array.isArray(response)) return response.length > 0 && response.every(responseIndicatesExpectedToolError)
+  if (Array.isArray(response)) {
+    return response.length > 0 && response.every((entry) => responseIndicatesExpectedToolError(entry, scope))
+  }
   if (!isRecord(response)) return false
 
   if (
-    isExpectedToolHttpStatus(response.status) ||
-    isExpectedToolHttpStatus(response.statusCode) ||
-    isExpectedToolHttpStatus(response.code)
+    isDeclaredExpectedStatus(response.status, scope) ||
+    isDeclaredExpectedStatus(response.statusCode, scope) ||
+    isDeclaredExpectedStatus(response.code, scope)
   ) {
     return true
   }
@@ -355,14 +398,14 @@ function responseIndicatesExpectedToolError(response: unknown): boolean {
   const error = response.error
   if (isRecord(error)) {
     return (
-      isExpectedToolHttpStatus(error.status) ||
-      isExpectedToolHttpStatus(error.statusCode) ||
-      isExpectedToolHttpStatus(error.code) ||
-      isExpectedToolHttpStatus(error.message)
+      isDeclaredExpectedStatus(error.status, scope) ||
+      isDeclaredExpectedStatus(error.statusCode, scope) ||
+      isDeclaredExpectedStatus(error.code, scope) ||
+      isDeclaredExpectedStatus(error.message, scope)
     )
   }
 
-  return isExpectedToolHttpStatus(error) || isExpectedToolHttpStatus(response.message)
+  return isDeclaredExpectedStatus(error, scope) || isDeclaredExpectedStatus(response.message, scope)
 }
 
 function truncate(s: string | null): string | null {
@@ -391,21 +434,149 @@ export function extractToolErrorSnippet(response: unknown): string | null {
     if (inner) return truncate(inner)
   }
 
+  if (Array.isArray(response.errors) && response.errors.length > 0) {
+    const fromErrors = extractToolErrorSnippet(response.errors[0])
+    if (fromErrors) return fromErrors
+  }
+
   return truncate(toNonEmptyString(response.message) ?? toNonEmptyString(response.status))
 }
 
-export function toolResponseIndicatesFailure(response: unknown): boolean {
-  if (responseIndicatesExpectedToolError(response)) return false
+/** Class used when a failed response carries no usable status, code or prose. */
+export const UNSPECIFIED_TOOL_ERROR_CLASS = "unspecified"
+
+/**
+ * Longest failure class kept. Long enough to separate "connection reset by peer"
+ * from "connection refused", short enough that a stack trace cannot become a class
+ * of its own.
+ */
+const TOOL_ERROR_CLASS_MAX_LENGTH = 48
+
+/**
+ * Fragments that differ between two occurrences of the *same* failure: ids, hashes,
+ * timestamps, quoted payloads, urls and paths. Stripped before classing so a tool
+ * that fails the same way a thousand times lands on one class.
+ */
+const VOLATILE_ERROR_FRAGMENTS: readonly RegExp[] = [
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+  /\b[0-9a-f]{8,}\b/gi,
+  /\b[a-z][a-z0-9+.-]*:\/\/\S+/gi,
+  /~?(?:\/[A-Za-z0-9_.-]+){2,}/g,
+  /"[^"]*"|'[^']*'/g,
+]
+
+/**
+ * Characters of raw message scanned before classing. A tool may return a megabyte
+ * of prose, and only the first 48 characters of the resulting slug survive — so
+ * this bounds the regex work without changing any realistic classification.
+ * Without it the string-response path is unbounded: `extractToolErrorSnippet`
+ * caps the object path at `ERROR_SNIPPET_MAX_LENGTH`, but a bare string reaches
+ * normalization whole.
+ */
+const TOOL_ERROR_MESSAGE_SCAN_LIMIT = 1_000
+
+// Hand-rolled rather than /^-+|-+$/: an anchored `-+$` backtracks quadratically
+// on a long run of dashes, and this runs on tool output we do not control.
+const trimSeparators = (value: string): string => {
+  let start = 0
+  let end = value.length
+  while (start < end && value.charCodeAt(start) === 45) start++
+  while (end > start && value.charCodeAt(end - 1) === 45) end--
+  return value.slice(start, end)
+}
+
+const slugifyErrorClass = (value: string): string | null => {
+  const slug = trimSeparators(value.toLowerCase().replace(/[^a-z0-9]+/g, "-"))
+  if (slug === "") return null
+  return slug.length > TOOL_ERROR_CLASS_MAX_LENGTH ? trimSeparators(slug.slice(0, TOOL_ERROR_CLASS_MAX_LENGTH)) : slug
+}
+
+const normalizeToolErrorMessage = (message: string): string | null => {
+  let normalized = message.slice(0, TOOL_ERROR_MESSAGE_SCAN_LIMIT)
+  for (const fragment of VOLATILE_ERROR_FRAGMENTS) normalized = normalized.replace(fragment, " ")
+  // Digits go last and wholesale: a retry count, a byte size and a line number are
+  // all noise, and any status worth keeping was already read from its own field.
+  return slugifyErrorClass(normalized.replace(/\d+/g, " "))
+}
+
+const toDeclaredHttpStatus = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isInteger(value) && value >= 100 && value <= 599) return value
+  if (typeof value !== "string") return null
+  const trimmed = value.trim()
+  return /^[1-5]\d{2}$/.test(trimmed) ? Number(trimmed) : null
+}
+
+const readErrorClassFields = (record: Record<string, unknown>): string | null => {
+  const status =
+    toDeclaredHttpStatus(record.status) ?? toDeclaredHttpStatus(record.statusCode) ?? toDeclaredHttpStatus(record.code)
+  if (status !== null) return `http-${status}`
+  // A non-numeric `code` is the vendor's own name for the failure (ECONNRESET,
+  // rate_limited); it beats anything guessable from the prose.
+  const code = toNonEmptyString(record.code) ?? toNonEmptyString(record.type)
+  return code === null ? null : slugifyErrorClass(code)
+}
+
+/**
+ * The failure class a tool response belongs to: the same tool failing the same way
+ * yields the same string however the message is worded. This is what bundles repeat
+ * failures into one issue instead of one per occurrence.
+ */
+export function classifyToolError(response: unknown): string {
+  if (typeof response === "string") {
+    const trimmed = response.trim()
+    if (trimmed === "") return UNSPECIFIED_TOOL_ERROR_CLASS
+    try {
+      return classifyToolError(JSON.parse(trimmed))
+    } catch {
+      return normalizeToolErrorMessage(trimmed) ?? UNSPECIFIED_TOOL_ERROR_CLASS
+    }
+  }
+
+  if (Array.isArray(response)) {
+    for (const entry of response) {
+      const classified = classifyToolError(entry)
+      if (classified !== UNSPECIFIED_TOOL_ERROR_CLASS) return classified
+    }
+    return UNSPECIFIED_TOOL_ERROR_CLASS
+  }
+
+  if (isRecord(response)) {
+    const own = readErrorClassFields(response)
+    if (own !== null) return own
+    const error = response.error
+    if (isRecord(error)) {
+      const nested = readErrorClassFields(error)
+      if (nested !== null) return nested
+    }
+    // `toolResponseIndicatesFailure` accepts a non-empty `errors` array, so a
+    // response shaped that way is a failure whose detail lives nowhere else.
+    // Without this every such failure classes as `unspecified` and two unrelated
+    // ones share a bucket.
+    if (Array.isArray(response.errors) && response.errors.length > 0) {
+      const first = classifyToolError(response.errors[0])
+      if (first !== UNSPECIFIED_TOOL_ERROR_CLASS) return first
+    }
+  }
+
+  const snippet = extractToolErrorSnippet(response)
+  return (snippet === null ? null : normalizeToolErrorMessage(snippet)) ?? UNSPECIFIED_TOOL_ERROR_CLASS
+}
+
+export function toolResponseIndicatesFailure(
+  response: unknown,
+  scope: ExpectedStatusScope = { contract: EMPTY_TOOL_EXPECTED_STATUS_CONTRACT },
+): boolean {
+  if (responseIndicatesExpectedToolError(response, scope)) return false
   if (typeof response === "string") {
     const trimmed = response.trim()
     if (trimmed === "") return false
     try {
-      return toolResponseIndicatesFailure(JSON.parse(trimmed))
+      return toolResponseIndicatesFailure(JSON.parse(trimmed), scope)
     } catch {
       return false
     }
   }
-  if (Array.isArray(response)) return response.some(toolResponseIndicatesFailure)
+  if (Array.isArray(response)) return response.some((entry) => toolResponseIndicatesFailure(entry, scope))
   if (!isRecord(response)) return false
   if (response.isError === true || response.ok === false || response.success === false) return true
 

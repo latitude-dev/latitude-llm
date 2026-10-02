@@ -14,10 +14,17 @@ class SessionAssessmentEvidenceDestinationToolCall(UniversalBaseModel):
         FieldMetadata(alias="traceId"),
         pydantic.Field(alias="traceId", description="Trace containing the destination tool call."),
     ]
+    """
+    Trace containing the destination tool call.
+    """
+
     tool_call_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="toolCallId"),
         pydantic.Field(alias="toolCallId", description="Identifier of the destination tool call."),
     ]
+    """
+    Identifier of the destination tool call.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -7,7 +7,7 @@ import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } 
  * Slack-specific extension of {@link integrations}. One row per
  * Slack integration, keyed by `integration_id` (1:1 with the parent).
  * The parent owns the lifecycle (`installed_at`, `revoked_at`) and the
- * cross-org workspace claim (`vendor_account_id` = Slack `team_id`).
+ * workspace id (`vendor_account_id` = Slack `team_id`).
  *
  * This table holds the Slack-only shape:
  * - `bot_access_token` and `refresh_token` are AES-256-GCM encrypted at

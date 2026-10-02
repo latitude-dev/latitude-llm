@@ -15,6 +15,7 @@ export const FLAGGER_USE_CASE_PRESETS = [
     label: "Support agent",
     description: "Customer-facing assistants handling questions, escalations, and account workflows.",
     enabledSlugs: [
+      "task-failure",
       "frustration",
       "refusal",
       "forgetting",
@@ -31,6 +32,7 @@ export const FLAGGER_USE_CASE_PRESETS = [
     label: "Coding agent",
     description: "Agents that edit files, call tools, and work through multi-step implementation tasks.",
     enabledSlugs: [
+      "task-failure",
       "laziness",
       "trashing",
       "bluffing",
@@ -42,19 +44,32 @@ export const FLAGGER_USE_CASE_PRESETS = [
       "output-schema-validation",
       "frustration",
       "low-cache-hit-rate",
+      "jailbreaking",
+      "pii-leakage",
     ],
   },
   {
     id: "sales-agent",
     label: "Sales agent",
     description: "Lead qualification and buyer-facing assistants where tone and follow-through matter.",
-    enabledSlugs: ["frustration", "refusal", "forgetting", "incompletion", "empty-response", "jailbreaking", "nsfw"],
+    enabledSlugs: [
+      "task-failure",
+      "frustration",
+      "refusal",
+      "forgetting",
+      "incompletion",
+      "empty-response",
+      "jailbreaking",
+      "nsfw",
+      "pii-leakage",
+    ],
   },
   {
     id: "tool-workflow-agent",
     label: "Tool workflow agent",
     description: "Agents that coordinate tools, APIs, and structured workflows.",
     enabledSlugs: [
+      "task-failure",
       "tool-call-errors",
       "trashing",
       "bluffing",
@@ -63,6 +78,8 @@ export const FLAGGER_USE_CASE_PRESETS = [
       "empty-response",
       "laziness",
       "low-cache-hit-rate",
+      "jailbreaking",
+      "pii-leakage",
     ],
   },
   {
@@ -70,6 +87,7 @@ export const FLAGGER_USE_CASE_PRESETS = [
     label: "Knowledge-base agent",
     description: "RAG and documentation assistants that need to preserve context and answer directly.",
     enabledSlugs: [
+      "task-failure",
       "forgetting",
       "refusal",
       "incompletion",
@@ -77,19 +95,29 @@ export const FLAGGER_USE_CASE_PRESETS = [
       "frustration",
       "laziness",
       "low-cache-hit-rate",
+      "jailbreaking",
+      "pii-leakage",
     ],
   },
   {
     id: "structured-extraction-agent",
     label: "Structured extraction",
     description: "Extraction and classification agents that return machine-readable output.",
-    enabledSlugs: ["output-schema-validation", "empty-response", "tool-call-errors", "laziness"],
+    enabledSlugs: [
+      "task-failure",
+      "output-schema-validation",
+      "empty-response",
+      "tool-call-errors",
+      "laziness",
+      "jailbreaking",
+      "pii-leakage",
+    ],
   },
   {
     id: "safety-agent",
     label: "Safety agent",
     description: "Moderation and policy-sensitive assistants exposed to adversarial or unsafe inputs.",
-    enabledSlugs: ["nsfw", "jailbreaking", "refusal", "frustration", "empty-response", "pii-leakage"],
+    enabledSlugs: ["task-failure", "nsfw", "jailbreaking", "refusal", "frustration", "empty-response", "pii-leakage"],
   },
 ] as const satisfies ReadonlyArray<FlaggerUseCasePreset>
 
@@ -120,6 +148,12 @@ export const FLAGGER_GROUPS = [
     slugs: ["frustration", "jailbreaking", "nsfw"],
   },
   {
+    id: "task-outcome",
+    label: "Task outcome",
+    description: "The LLM reference judge behind the Outcome score.",
+    slugs: ["task-failure"],
+  },
+  {
     id: "agent-behavior",
     label: "Agent behavior",
     description: "LLM-based detection of failure modes in the agent's own output.",
@@ -136,9 +170,11 @@ const _assertFlaggerGroupsExhaustive: [_MissingFromFlaggerGroups] extends [never
   true
 void _assertFlaggerGroupsExhaustive
 
-// Onboarding sorts the flat card grid by user-side first, then agent-side, then deterministic
-// programmatic checks — easier-to-grasp categories lead so the user can scan and pick fast.
+// Onboarding sorts the flat card grid by task outcome, then user-side, then agent-side, then
+// deterministic programmatic checks — easier-to-grasp categories lead so the user can scan and
+// pick fast.
 const ONBOARDING_GROUP_ORDER: ReadonlyArray<(typeof FLAGGER_GROUPS)[number]["id"]> = [
+  "task-outcome",
   "user-signals",
   "agent-behavior",
   "response-validity",

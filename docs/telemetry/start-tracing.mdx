@@ -3,6 +3,12 @@ title: Start tracing
 description: Connect your agent to Latitude and send your first traces.
 ---
 
+<Note>
+  Coming from Langfuse, LangSmith, or Braintrust? Follow [Migrate to Latitude](./imports/migrate)
+  instead: it covers this setup plus porting your context, backfilling your existing traces
+  with a one-time [import](./imports/overview), and cutting over.
+</Note>
+
 Use your agent to add Latitude tracing to your app or agent harness. The `latitude-setup` skill inspects your codebase, detects your LLM providers and existing OpenTelemetry setup, installs the right SDK or harness plugin, verifies that traces arrive in your project, and builds your first [Artifact](/more/artifacts) from them. If you don't have a Latitude account yet, it bootstraps a temporary one from the terminal, no signup, and gives you a link to claim it.
 
 <Steps>
@@ -46,4 +52,5 @@ For other languages, use the [OpenTelemetry exporter](../telemetry/otel-exporter
 - Explore traces in [Observability](../observability/overview)
 - Add provider-specific instrumentation from the Observability sidebar
 - Trace your agent's long-term memory with [Memory tracing](./memory)
+- Already have traces elsewhere? [Import them as a one-time backfill](./imports/overview) so you do not start from an empty project
 - Learn how traces become [scores](../scores/overview), [signals](../signals/overview), and [evaluations](../evaluations/overview)

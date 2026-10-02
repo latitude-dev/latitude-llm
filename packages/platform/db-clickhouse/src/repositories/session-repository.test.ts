@@ -708,7 +708,7 @@ describe("SessionRepository", () => {
 
   describe("getCohortBaseline", () => {
     const taggedSpan = (overrides: SpanOverrides & { readonly tags?: readonly string[] }): SpanRow => ({
-      ...makeSpanRow(overrides),
+      ...makeSpanRow({ model: "test-model", ...overrides }),
       ...(overrides.tags ? { tags: [...overrides.tags] } : {}),
     })
 
@@ -747,6 +747,44 @@ describe("SessionRepository", () => {
       expect(baseline.count).toBe(3)
       expect(baseline.metrics.costTotalMicrocents.sampleCount).toBe(3)
       expect(baseline.metrics.costTotalMicrocents.p50).toBe(200)
+    })
+
+    it("excludes non-LLM sessions from the cohort and percentile sample gates", async () => {
+      const start = new Date(Date.UTC(2026, 5, 1, 11, 0, 0))
+      const nonLlmRows = Array.from({ length: 1_001 }, (_value, index) =>
+        makeSpanRow({
+          traceId: (index + 16).toString(16).padStart(32, "0"),
+          spanId: (index + 16).toString(16).padStart(16, "0"),
+          startTime: new Date(start.getTime() + index * 1_000),
+          durationMs: 100,
+          operation: "unspecified",
+        }),
+      )
+      await insertSpans([
+        ...nonLlmRows,
+        taggedSpan({
+          traceId: `04${"a".repeat(30)}`,
+          spanId: `04${"b".repeat(14)}`,
+          sessionId: "model-session",
+          startTime: new Date(start.getTime() + 2_000_000),
+          durationMs: 5_000,
+        }),
+        makeSpanRow({
+          traceId: `05${"a".repeat(30)}`,
+          spanId: `05${"b".repeat(14)}`,
+          sessionId: "token-session",
+          startTime: new Date(start.getTime() + 2_001_000),
+          durationMs: 5_000,
+          tokensOutput: 10,
+        }),
+      ])
+
+      const baseline = await runCh(repo.getCohortBaseline({ organizationId: ORG_ID, projectId: PROJECT_ID }))
+
+      expect(baseline.count).toBe(2)
+      expect(baseline.metrics.durationNs.sampleCount).toBe(2)
+      expect(baseline.metrics.durationNs.p50).toBe(5_000_000_000)
+      expect(baseline.metrics.durationNs.p99).toBeNull()
     })
 
     it("ignores zero-filled cost and token values in percentile baselines", async () => {

@@ -147,8 +147,8 @@ function QuantileStrip({ baseline, value }: { baseline: Baselines[SessionOutlier
 }
 
 /**
- * A tooltip that explains that the outlier is scoped to all sessions in the
- * current project, then displays the baseline values for the given metric.
+ * A tooltip that explains that the outlier is scoped to LLM-active sessions
+ * in the current project, then displays the baseline values for the given metric.
  */
 function OutlierTooltip({
   cohorts,
@@ -166,8 +166,8 @@ function OutlierTooltip({
     <div className="flex flex-col gap-4 min-w-64">
       <div className="flex flex-col gap-2">
         <Text.H6>
-          This session's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the sessions in
-          this project.
+          This session's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the LLM-active
+          sessions in this project.
         </Text.H6>
       </div>
       <div className="flex flex-col gap-2">
@@ -190,7 +190,7 @@ function OutlierTooltip({
 
 /**
  * Renders a p90/p95/p99 outlier badge when a session's metric value exceeds the
- * percentile thresholds of the project-wide cohort. The baseline is fetched
+ * percentile thresholds of the project-wide LLM-active cohort. The baseline is fetched
  * once per project via `useSessionCohortSummary` — TanStack Query dedupes
  * across every row in the table.
  *

@@ -26,6 +26,21 @@ export const createFakeFlaggerRepository = (
         [...flaggers.values()].filter((f) => f.projectId === projectId).sort((a, b) => a.slug.localeCompare(b.slug)),
       ),
 
+    // The fake has no notion of who set a rate, so it applies every derived rate. Tests that care
+    // about the override use the real repository, where the column lives.
+    applyDerivedSampling: ({ projectId, rates }) =>
+      Effect.sync(() => {
+        let updated = 0
+        for (const rate of rates) {
+          const id = indexByProjectSlug.get(keyFor(projectId, rate.slug))
+          const flagger = id ? flaggers.get(id) : undefined
+          if (!id || !flagger) continue
+          flaggers.set(id, { ...flagger, sampling: rate.sampling, updatedAt: new Date() })
+          updated += 1
+        }
+        return updated
+      }),
+
     findByProjectAndSlug: ({ projectId, slug }) =>
       Effect.sync(() => {
         const id = indexByProjectSlug.get(keyFor(projectId, slug))

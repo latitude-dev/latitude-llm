@@ -2,6 +2,7 @@ import { getSessionAssessment, type SessionAssessment } from "@domain/agent-scor
 import { ProjectId, SessionId } from "@domain/shared"
 import {
   FlaggerScreeningDecisionRepositoryLive,
+  MemoryRepositoryLive,
   SessionAnalysisRepositoryLive,
   SessionAssessmentBulkTelemetrySourceLive,
   SessionMomentLabelRepositoryLive,
@@ -32,6 +33,7 @@ const telemetryLayer = SessionAssessmentBulkTelemetrySourceLive.pipe(
       SessionSemanticMomentRepositoryLive,
       SessionMomentLabelRepositoryLive,
       FlaggerScreeningDecisionRepositoryLive,
+      MemoryRepositoryLive,
     ),
   ),
 )

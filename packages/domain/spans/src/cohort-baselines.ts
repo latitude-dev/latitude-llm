@@ -1,8 +1,8 @@
 /**
  * Project-wide cohort percentile baselines, shared by traces and sessions.
  *
- * A "cohort" is every trace (or session) in the project. For each numeric
- * metric we compute p50/p90/p95/p99 across the cohort and expose them as a
+ * A "cohort" is the stable project-wide population defined by each repository.
+ * For each numeric metric we compute p50/p90/p95/p99 across the cohort and expose them as a
  * baseline that the UI compares a single item's value against (the
  * trace/session outlier badge).
  *

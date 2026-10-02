@@ -23,6 +23,8 @@ export interface ScoreListOptions {
   readonly draftMode?: ScoreDraftMode
   /** Drop failed, non-errored evaluation runs that have no stamped signal (`signalId` is null). */
   readonly omitAbsentEvaluations?: boolean
+  /** Drop a flagger's positive reference verdict, which is a measurement rather than a reviewer's annotation. */
+  readonly omitFlaggerReferenceVerdicts?: boolean
 }
 
 export interface ScoreListPage {
@@ -181,13 +183,34 @@ export interface ScoreRepositoryShape {
     readonly traceId: TraceId
     readonly feedback: string
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
+  findPublishedSystemAnnotationByAnchor(input: {
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+    readonly flaggerSlug: string
+    readonly contentHash: string
+  }): Effect.Effect<Score | null, RepositoryError, SqlClient>
+  findPublishedSystemVerdictByGeneration(input: {
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+    readonly flaggerSlug: string
+    readonly analysisHash: string
+  }): Effect.Effect<Score | null, RepositoryError, SqlClient>
+  findPublishedSystemSafetyFindingByKind(input: {
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+    readonly flaggerSlug: string
+    readonly safetyFindingKind: string
+  }): Effect.Effect<Score | null, RepositoryError, SqlClient>
   /**
    * Published flagger-authored annotations for one session, newest first,
-   * bounded by `limit`. Backs the flagger anchor dedup.
+   * bounded by `limit`. Backs the flagger dedup lookups, which pass
+   * `flaggerSlug` so a busy session's other detectors cannot push the row they
+   * are looking for past the limit.
    */
   listPublishedSystemAnnotationsBySession(input: {
     readonly projectId: ProjectId
     readonly sessionId: SessionId
+    readonly flaggerSlug?: string
     readonly limit?: number
   }): Effect.Effect<readonly Score[], RepositoryError, SqlClient>
   /**

@@ -41,7 +41,11 @@ import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { USAGE_OPERATIONS_SQL } from "../metric-sql/helpers.ts"
-import { MESSAGE_OPERATION_FILTER, SYSTEM_INSTRUCTION_OPERATION_FILTER } from "../registries/helpers.ts"
+import {
+  HAS_LLM_ACTIVITY_SQL,
+  MESSAGE_OPERATION_FILTER,
+  SYSTEM_INSTRUCTION_OPERATION_FILTER,
+} from "../registries/helpers.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 import { buildSessionIntelligenceFilters } from "../session-intelligence-filters.ts"
@@ -749,6 +753,7 @@ export const SessionRepositoryLive = Layer.effect(
                         AND project_id = {projectId:String}
                         ${excludeClause}
                       GROUP BY organization_id, project_id, session_id
+                      HAVING ${HAS_LLM_ACTIVITY_SQL}
                     )`,
               query_params: {
                 organizationId: organizationId as string,

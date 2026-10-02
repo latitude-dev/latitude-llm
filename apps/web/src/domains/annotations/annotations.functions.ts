@@ -264,6 +264,7 @@ export const listAnnotationsBySession = createServerFn({ method: "POST" })
             ...(data.limit !== undefined ? { limit: data.limit } : {}),
             ...(data.offset !== undefined ? { offset: data.offset } : {}),
             draftMode: data.draftMode ?? "include",
+            omitFlaggerReferenceVerdicts: true,
           },
         })
       }).pipe(withScopedPostgres(ScoreRepositoryLive, client, organizationId), withTracing),

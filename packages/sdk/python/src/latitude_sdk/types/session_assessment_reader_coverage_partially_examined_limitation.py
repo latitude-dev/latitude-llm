@@ -12,7 +12,11 @@ SessionAssessmentReaderCoveragePartiallyExaminedLimitation = typing.Union[
         "missingTelemetry",
         "unmappedTelemetry",
         "missingPricing",
+        "missingContent",
+        "truncatedContent",
+        "unknownModelContext",
         "criticalPathUnavailable",
+        "missingLatencyReference",
     ],
     typing.Any,
 ]
