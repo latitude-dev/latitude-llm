@@ -3,7 +3,9 @@
 /**
  * @example
  *     {
- *         rows: [{}]
+ *         rows: [{
+ *                 input: null
+ *             }]
  *     }
  */
 export interface InsertDatasetRowsBody {

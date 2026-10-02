@@ -5,11 +5,13 @@ description: "Move an app from the Latitude V1 prompt manager and gateway to Lat
 
 Latitude V1 was a prompt engineering platform. You wrote prompts in PromptL, published them, and your app called them through the Latitude gateway. Latitude V2 is an observability and signal-discovery platform for agents you run yourself. Your code calls the model provider directly, and Latitude watches through OpenTelemetry.
 
-This guide is for teams with a V1 workspace who want to move. It maps each V1 concept to its V2 equivalent, then walks through a real migration: LinguaAI, a FastAPI language tutor whose two prompts ran through `sdk.prompts.run()` on V1. The walkthrough drives the control plane from a coding agent over the Latitude MCP, because that is the quickest way to do it. Every MCP call has a REST, CLI, and SDK twin, listed at the end.
+This guide is for teams with a V1 workspace who need to move before V1 is sunset. It maps each V1 concept to its V2 equivalent, then walks through a real migration: LinguaAI, a FastAPI language tutor whose two prompts ran through `sdk.prompts.run()` on V1. The walkthrough drives the control plane from a coding agent over the Latitude MCP, because that is the quickest way to do it. Every MCP call has a REST, CLI, and SDK twin, listed at the end.
 
-<Info>
-  **Do I have to migrate?** V1 keeps running for existing customers, but new features ship only to V2. Treat V2 onboarding as a fresh start rather than a data migration. Your prompts move into your codebase, your golden datasets move over as CSV, and traces, signals and evaluations are rebuilt from live traffic within days.
-</Info>
+<Warning>
+  **Do I have to migrate?** Yes. Latitude V1 is sunset on **30 October 2026**. After that date the V1 prompt manager and gateway stop serving traffic, so any app still calling `prompts.run()` or `prompts.chat()` will break. If your team needs more time, email [hello@latitude.so](mailto:hello@latitude.so) and we will work out a timeline that suits you.
+</Warning>
+
+Treat V2 onboarding as a fresh start rather than a data migration. Your prompts move into your codebase, your golden datasets move over as CSV, and traces, signals and evaluations are rebuilt from live traffic within days.
 
 ## What changed
 

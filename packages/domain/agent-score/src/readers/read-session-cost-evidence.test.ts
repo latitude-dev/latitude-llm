@@ -237,6 +237,7 @@ describe("latency reader coverage", () => {
     expect(reader(evidence, "spans.ttft")).toMatchObject({ applicable: true, readableCount: 1, totalCount: 1 })
     expect(reader(evidence, "spans.throughput")).toMatchObject({ applicable: true, readableCount: 1, totalCount: 1 })
     expect(reader(evidence, "spans.ttft")?.limitation).toBeUndefined()
+    expect(evidence.unreferencedLatencyModels).toEqual([])
   })
 
   it("reports an unbuilt reference as unmeasured rather than contributing nothing silently", () => {
@@ -254,6 +255,7 @@ describe("latency reader coverage", () => {
       limitation: "missingLatencyReference",
     })
     expect(evidence.speed.estimatedAvoidableNs).toBe(0)
+    expect(evidence.unreferencedLatencyModels).toEqual([{ provider: "openai", model: "gpt-4o" }])
   })
 
   it("reports a cohort the reference does not cover as unreadable", () => {
@@ -263,6 +265,28 @@ describe("latency reader coverage", () => {
       readableCount: 0,
       limitation: "missingLatencyReference",
     })
+    expect(evidence.unreferencedLatencyModels).toEqual([{ provider: "anthropic", model: "claude-sonnet-5" }])
+  })
+
+  it("names each unreferenced model once however many of its calls sit on the path", () => {
+    const sequential = (overrides: Partial<SessionGenerationFact>, startMs: number, endMs: number) =>
+      generation({
+        ...overrides,
+        startTime: at(startMs),
+        endTime: at(endMs),
+        durationNs: (endMs - startMs) * 1_000_000,
+        timeToFirstTokenNs: 100_000_000,
+      })
+    const evidence = readOnPath(
+      [
+        sequential({ spanId: SpanId("first"), provider: "anthropic", model: "claude-sonnet-5" }, 100, 600),
+        sequential({ spanId: SpanId("second"), provider: "anthropic", model: "claude-sonnet-5" }, 600, 1_100),
+        sequential({ spanId: SpanId("referenced") }, 1_100, 1_900),
+      ],
+      artifact,
+    )
+
+    expect(evidence.unreferencedLatencyModels).toEqual([{ provider: "anthropic", model: "claude-sonnet-5" }])
   })
 
   it("ignores reference gaps for generations that hold no critical-path time", () => {
@@ -289,6 +313,7 @@ describe("latency reader coverage", () => {
 
     expect(reader(evidence, "spans.ttft")).toMatchObject({ readableCount: 1, totalCount: 1 })
     expect(reader(evidence, "spans.throughput")).toMatchObject({ readableCount: 1, totalCount: 1 })
+    expect(evidence.unreferencedLatencyModels).toEqual([])
   })
 
   it("leaves a non-streaming call out of the time-to-first-token denominator entirely", () => {

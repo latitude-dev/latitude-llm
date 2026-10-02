@@ -4,6 +4,7 @@ import type { BaseClientOptions, BaseRequestOptions } from "../../../../BaseClie
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "../../../../BaseClient.js";
 import { mergeHeaders } from "../../../../core/headers.js";
 import * as core from "../../../../core/index.js";
+import { mergeAdditionalBodyParameters } from "../../../../core/requestBody.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
@@ -25,13 +26,15 @@ export class AnalyticsClient {
     /**
      * Compute a metric over a filtered stream (`traces`, `sessions`, `spans`, `scores`, `behaviors`, `moments`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and reports.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.QueryAnalyticsRequest} request
      * @param {AnalyticsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.analytics.query("projectSlug", {
@@ -79,7 +82,7 @@ export class AnalyticsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: _body,
+            body: mergeAdditionalBodyParameters(_body, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
