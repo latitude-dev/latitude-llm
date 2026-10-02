@@ -1,5 +1,6 @@
 import { TraceId } from "@domain/shared"
 import { Effect } from "effect"
+import { LAUNCH_LATENCY_REFERENCE_ARTIFACT } from "../artifacts/launch-latency-reference-artifact.ts"
 import { SESSION_ASSESSMENT_RESOLVER_CONCURRENCY } from "../constants.ts"
 import type { LatencyReferenceArtifact } from "../entities/latency-reference-artifact.ts"
 import {
@@ -11,13 +12,14 @@ import { resolveSessionAssessment } from "../resolver/resolve-session-assessment
 import { readSessionAssessmentSources } from "./read-session-assessment-sources.ts"
 
 export interface ReadSessionAssessmentInputBatchInput extends SessionAssessmentBulkScope {
+  /** Defaults to the committed launch reference, so the session panel and the window score agree. */
   readonly latencyArtifact?: LatencyReferenceArtifact
 }
 
 export const readSessionAssessmentInputBatch = (input: ReadSessionAssessmentInputBatchInput) =>
   Effect.gen(function* () {
     if (input.sessionIds.length === 0) return []
-    const { latencyArtifact, ...scope } = input
+    const { latencyArtifact = LAUNCH_LATENCY_REFERENCE_ARTIFACT, ...scope } = input
 
     const telemetrySource = yield* SessionAssessmentBulkTelemetrySource
     const judgmentSource = yield* SessionAssessmentBulkJudgmentSource
@@ -41,7 +43,7 @@ export const readSessionAssessmentInputBatch = (input: ReadSessionAssessmentInpu
           ...facts,
           scores: judgment?.scores ?? [],
           signals: judgment?.signals ?? [],
-          ...(latencyArtifact ? { latencyArtifact } : {}),
+          latencyArtifact,
         })
       },
       { concurrency: SESSION_ASSESSMENT_RESOLVER_CONCURRENCY },

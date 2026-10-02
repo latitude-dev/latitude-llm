@@ -15,14 +15,14 @@ findings and a record of which sessions each flagger could have examined.
 | return structured deterministic findings from telemetry readers | distinguish terminal failure, recovery, exposure, and harm without turning every fact into a score |
 | link a discovery score to its source finding | merge the score and signal back into one assessment item without duplicating finding data |
 | persist non-reproducible model verdicts and their provenance | preserve the exact result that was produced without rerunning a judge on page load |
-| retain recovered findings in the dynamic read model without publishing discovery events automatically | measure recovery burden and marginal retry resources without signal-volume inflation |
+| retain recovered findings in the dynamic read model, and bundle their discovery events by failure class | measure recovery burden and marginal retry resources without signal-volume inflation |
 | record tool name, input hash, output hash, and avoidability proof separately | distinguish observed repetition from confirmed waste; the current deterministic reader compares only name and argument preview |
 | replace the blanket HTTP 400 through 499 exception with a caller-declared expected-status contract | avoid treating ordinary client errors as successful tool responses |
 | guard empty grouping fields | prevent missing telemetry from manufacturing matches |
 | require usability evidence for repeated-character output | avoid classifying valid compact answers as terminal failures |
 | pair truncation with output damage | distinguish configured length stops from broken output |
 | separate injection attempt from compliance | keep exposure out of the Safety numerator |
-| add the sampled `task-success` verdict path | give Outcome a direct holistic reference verdict and persist passed scores |
+| add the sampled `task-failure` verdict path | give Outcome a direct holistic reference verdict and persist passed scores |
 | store every screening decision and inclusion probability | provide denominators and selection correction |
 | copy bounded score-native provenance to ClickHouse | keep persisted classifier and signal queries session-grained |
 
@@ -36,7 +36,7 @@ telemetry:
 | --- | --- | --- |
 | `empty-response` | one generic match | writes that match as the discovery score |
 | `output-schema-validation` | every damaged assistant output, with generation position | writes the first match as the discovery score |
-| `tool-call-errors` | `collectToolCallErrorFindings` already returns every defect | selects the first structural or unrecovered defect for discovery |
+| `tool-call-errors` | `collectToolCallErrorFindings` already returns every defect | selects the first structural or unrecovered defect for discovery, falling back to the first recovered one |
 | deterministic `trashing` | longest qualifying identical-call run | writes that loop as the discovery score |
 | `low-cache-hit-rate` | one session-wide generic match | writes that match as the discovery score |
 
@@ -97,14 +97,15 @@ captured definitions are a common cause.
 For `output-schema-validation`, the kind distinguishes incomplete or unclosed output from other
 schema failures so finish-reason classification can apply the two-observation truncation rule.
 
-## Task Success
+## Task failure
 
-`task-success` is a configurable LLM-as-judge flagger named **Task Success**. It asks whether the
+`task-failure` is a configurable LLM-as-judge flagger named **Task failure**. It is named for what
+it flags, like every other detector; the verdict it answers with is still two-sided. It asks whether the
 agent successfully completed all material user goals that remained active at the end of the session.
 It judges the session holistically rather than publishing task episodes.
 
 ```ts
-type TaskSuccessVerdict =
+type TaskOutcomeVerdict =
   | { verdict: "success"; feedback: string; messageIndex?: number }
   | { verdict: "failure"; feedback: string; messageIndex?: number }
   | { verdict: "indeterminate"; reason: string }
@@ -114,7 +115,7 @@ type TaskSuccessVerdict =
 The flagger uses the normal project-configured sample rate, hints, rate limits, and screening
 decision infrastructure. The selection probability is stored before classification.
 
-The existing flagger workflow writes only matched negative annotations. Task Success extends it:
+The existing flagger workflow writes only matched negative annotations. The task-failure judge extends it:
 
 - `success` writes a published, passed system score with `value = 1`;
 - `failure` writes a published, failed system score with `value = 0`, feedback, and anchors;
@@ -140,14 +141,21 @@ session level without proving that `search_docs` recovered.
 Recovered findings remain available to Cost and Speed because the telemetry reader returns them.
 Cost records the incident in its recovery family and only adds spend, context, tool, or memory units
 that a separate reader can attribute. A tool or memory span has no inherent billable cost. They do
-not create additional scores or publish the `ScoreCreated` event used by signal discovery,
-clustering, naming, monitor evaluation, and notifications. Signal discovery continues to receive the
-one primary terminal finding, structural defect, or other finding selected by its evidence policy.
+not create additional scores of their own: signal discovery receives the one finding selected by the
+reader's evidence policy, which prefers a terminal defect and falls back to a recovered one rather
+than selecting nothing.
 
-This separation prevents a session with several tool failures from manufacturing several annotation
-scores or signal candidates. A calculated finding's stable `findingKey` includes its source identity
-and finding kind, such as a tool-call id plus `error` or a span id plus `provider-error`. Re-screening
-and daily recomputation produce the same key without a persisted observation id.
+Recovery therefore controls scoring, not visibility. A retried-past integration failure is still an
+integration failure its owner should see, and the volume it would otherwise produce is answered by
+the bundle key rather than by suppression: every occurrence of one tool failing one way lands on a
+single issue. See `dev-docs/flaggers.md` § Bundle keys.
+
+One score per session per flagger still holds, so a session with several tool failures cannot
+manufacture several annotation scores or signal candidates. A calculated finding's stable
+`findingKey` includes its source identity and finding kind, such as a tool-call id plus `error` or a
+span id plus `provider-error`. Re-screening and daily recomputation produce the same key without a
+persisted observation id. The `bundleKey` is the complementary axis: `findingKey` identifies one
+occurrence, `bundleKey` identifies the class it belongs to across sessions.
 
 ## Deterministic and sampled flaggers
 
@@ -311,17 +319,39 @@ generations remain operational history but do not add to the examined denominato
 the newest generation is pending or failed, that session is unexamined; readers never fall back to a
 successful older generation.
 
-For Task Success, hinted sessions form a deterministically selected stratum and unhinted sessions use
-the configured probability. Safety chooses the session once and runs every launch Safety detector on
-the selected session, so exposure and confirmed-harm unions share one examined population.
+The task-failure judge declares no hint kinds. Every readable session belongs to one uniform stratum
+at the project-configured rate, recorded as `ordinary-sample`. A hinted stratum was the earlier
+design and is deferred to a later scoring version: hinted classification is rate limited per
+organization and slug, and a rate-limited hinted session records `selected: false` with inclusion
+probability one, which drops failure-correlated sessions preferentially and is informative
+missingness the ratio estimator cannot correct. Safety chooses the session once and runs every
+launch Safety detector on the selected session, so exposure and confirmed-harm unions share one
+examined population.
 
 The initial Safety suite contains Jailbreaking and PII Leakage. NSFW remains contextual unless a
 later structured result contract can identify assistant-caused harm.
 
+The suite resolves its selection once per session and analysis generation, before any member is
+screened. One sampling draw on a key that omits the slug puts both members on the same side of it,
+at the lowest rate any enabled member is configured for, which is the only rate every member
+satisfies. The rate limit is checked once in a bucket the suite shares, because members screen
+concurrently: two calls against one bucket would consume two tokens and could still admit one member
+while dropping the other, spending a model call on a session the estimator must then discard.
+
+Whether a member was hinted stays that member's own fact, recorded in its own `hintKinds`. A member
+the suite carried along was still examined with certainty, so it records `uniform-sample` at
+inclusion probability one rather than an ordinary sample it never drew. Sharing hinted-ness across
+the suite would also mute detectors suppressed by a member, since a bare-slug suppressor fires on
+any hinted classification.
+
+A member that cannot read the session records `outcome: "notApplicable"` rather than a selection
+reason, so the suite still completes on the member that can. `skipped` stays reserved for the policy
+skip above.
+
 This table supports:
 
 - inverse-probability correction for signal and flagger evidence;
-- Task Success and Safety examined populations;
+- task-outcome and Safety examined populations;
 - per-flagger coverage and rate-limiter diagnostics;
 - confidence intervals over the examined population;
 - an honest distinction between no finding and no examination.
@@ -336,7 +366,7 @@ PR 2 adds only bounded provenance and linkage that belongs to a persisted flagge
 - `flagger_path`, either deterministic or sampled.
 
 Recovery, terminal status, and other telemetry-derived fields remain outputs of the shared readers
-and are not copied into Score. Task Success uses the existing passed value plus its flagger identity.
+and are not copied into Score. The task-failure judge uses the existing passed value plus its flagger identity.
 Safety adds one bounded structured finding kind for exposure, defense, or confirmed harm. Postgres
 score metadata remains the source for detailed feedback and evidence anchors.
 

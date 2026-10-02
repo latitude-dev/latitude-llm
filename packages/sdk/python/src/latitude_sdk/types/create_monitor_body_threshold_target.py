@@ -57,6 +57,10 @@ class CreateMonitorBodyThresholdTarget(UniversalBaseModel):
             description="Saved-search id for saved-search monitors, or `null` for inline targets.",
         ),
     ]
+    """
+    Saved-search id for saved-search monitors, or `null` for inline targets.
+    """
+
     metric: typing.Optional[CreateMonitorBodyThresholdTargetMetric] = pydantic.Field(default=None)
     """
     Default metric evaluated for this target.

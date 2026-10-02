@@ -1,5 +1,5 @@
 import type { FlaggerScreeningDecision } from "@domain/flaggers"
-import type { Score } from "@domain/scores"
+import type { SafetyFindingKind, Score } from "@domain/scores"
 import { OrganizationId, ProjectId, ScoreId, SessionId, SignalId, SpanId, TraceId } from "@domain/shared"
 import type { SignalWithLifecycle } from "@domain/signals"
 import type { SessionDetail, SessionGenerationFact, SessionToolCallFact, Span } from "@domain/spans"
@@ -328,10 +328,198 @@ describe("readSessionAssessmentSources", () => {
     expect(
       result.findings.some((finding) => finding.kind === "providerError" || finding.kind === "finishFailure"),
     ).toBe(false)
-    expect(result.readers.filter((reader) => reader.readerId.startsWith("spans."))).toEqual([
+    expect(
+      result.readers.filter((reader) => ["spans.finish_failure", "spans.provider_error"].includes(reader.readerId)),
+    ).toEqual([
       expect.objectContaining({ readerId: "spans.finish_failure", limitation: "unmappedTelemetry", readableCount: 0 }),
       expect.objectContaining({ readerId: "spans.provider_error", limitation: "unmappedTelemetry", readableCount: 0 }),
     ])
+  })
+
+  it("reads a plain-text tool error from span status and attributes its same-tool retry", async () => {
+    const root = generation("r", 0, 30)
+    const failed = toolCall("s", "call-failed", 1, 10, {
+      parentSpanId: root.spanId,
+      statusCode: "error",
+      statusMessage: "429 rate limited by carrier feed",
+    })
+    const retry = toolCall("t", "call-retry", 11, 20, { parentSpanId: root.spanId })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-failed", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-failed", response: "429 rate limited" }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-retry", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-retry", response: "booking found" }],
+        },
+        { role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] },
+      ]),
+      [],
+      { generations: [root], toolCalls: [failed, retry] },
+    )
+    const failure = result.findings.find((finding) => finding.kind === "toolFailure")
+
+    expect(result.findings.filter((finding) => finding.kind === "toolFailure")).toHaveLength(1)
+    expect(failure).toMatchObject({
+      recovered: true,
+      sameSubjectRecovered: true,
+      terminal: false,
+      anchors: expect.arrayContaining([expect.objectContaining({ kind: "span", traceId, spanId: failed.spanId })]),
+    })
+    expect(result.readers.find((reader) => reader.readerId === "tools.call_status")).toMatchObject({
+      findingCount: 1,
+      readableCount: 2,
+      totalCount: 2,
+    })
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "recovery.recovered_incident_rate"),
+    ).toMatchObject({ adverseUnits: 1 })
+    expect(result.costEvidence?.avoidableNsByCause["recovered:toolFailure"]).toBeGreaterThan(0)
+  })
+
+  it("attributes a paid generation before the successful same-tool retry", async () => {
+    const failed = toolCall("n", "call-failed", 0, 10, { statusCode: "error" })
+    const retryGeneration = generation("o", 11, 20, { costTotalMicrocents: 325 })
+    const retry = toolCall("p", "call-retry", 21, 30)
+    const result = await read(
+      session([{ role: "assistant", parts: [{ type: "text", content: "Recovered answer" }] }]),
+      [],
+      { generations: [retryGeneration], toolCalls: [failed, retry] },
+    )
+
+    expect(
+      result.costEvidence?.readings.find((reading) => reading.metricId === "cost.recoverable_spend_share"),
+    ).toMatchObject({ adverseUnits: 325 })
+  })
+
+  it("keeps a final error-status tool call terminal", async () => {
+    const failed = toolCall("u", "call-terminal", 0, 10, {
+      statusCode: "error",
+      statusMessage: "timeout",
+    })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-terminal", name: "search", arguments: {} }],
+        },
+      ]),
+      [],
+      { toolCalls: [failed] },
+    )
+
+    expect(result.findings.find((finding) => finding.kind === "toolFailure")).toMatchObject({
+      recovered: false,
+      sameSubjectRecovered: false,
+      terminal: true,
+    })
+  })
+
+  it("does not infer span-status recovery from a different tool", async () => {
+    const failed = toolCall("v", "call-failed", 0, 10, { statusCode: "error" })
+    const fallback = toolCall("w", "call-fallback", 11, 20, {
+      toolName: "fallback",
+      normalizedToolName: "fallback",
+    })
+    const result = await read(
+      session([{ role: "assistant", parts: [{ type: "text", content: "Fallback answer" }] }]),
+      [],
+      { toolCalls: [failed, fallback] },
+    )
+
+    expect(result.findings.find((finding) => finding.kind === "toolFailure")).toMatchObject({
+      recovered: false,
+      terminal: true,
+    })
+  })
+
+  it("deduplicates one exact error span without changing deterministic evidence identity", async () => {
+    const value = session([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-json", name: "search", arguments: {} }],
+      },
+      {
+        role: "tool",
+        parts: [{ type: "tool_call_response", id: "call-json", response: { error: "timeout" } }],
+      },
+    ])
+    const deterministic = await read(value)
+    const original = deterministic.findings.find((finding) => finding.kind === "toolFailure")
+    const failed = toolCall("x", "call-json", 0, 10, { statusCode: "error", statusMessage: "timeout" })
+    const result = await read(value, [], { toolCalls: [failed] })
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toMatchObject({
+      evidenceKey: original?.evidenceKey,
+    })
+    expect(failures[0]?.anchors.some((anchor) => anchor.kind === "span")).toBe(false)
+  })
+
+  it("keeps reused error spans separate instead of aligning conversation ordinals", async () => {
+    const first = toolCall("y", "call-reused", 0, 10, { statusCode: "error" })
+    const second = toolCall("z", "call-reused", 11, 20, { statusCode: "error" })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call-reused", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "call-reused", response: { error: "timeout" } }],
+        },
+      ]),
+      [],
+      { toolCalls: [first, second] },
+    )
+    const failures = result.findings.filter((finding) => finding.kind === "toolFailure")
+
+    expect(failures).toHaveLength(2)
+    expect(failures.flatMap((finding) => finding.anchors)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "span", spanId: first.spanId }),
+        expect.objectContaining({ kind: "span", spanId: second.spanId }),
+      ]),
+    )
+    expect(result.readers.find((reader) => reader.readerId === "tools.call_status")).toMatchObject({
+      limitation: "unmappedTelemetry",
+    })
+  })
+
+  it("reports unset tool status as missing telemetry", async () => {
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
+      toolCalls: [toolCall("m", "call-unset", 0, 10, { statusCode: "unset" })],
+    })
+
+    expect(result.findings.some((finding) => finding.kind === "toolFailure")).toBe(false)
+    expect(result.readers.find((reader) => reader.readerId === "tools.call_status")).toMatchObject({
+      limitation: "missingTelemetry",
+      readableCount: 0,
+      totalCount: 1,
+    })
+  })
+
+  it("anchors a status failure without a call ID directly to its span", async () => {
+    const failed = toolCall("q", "", 0, 10, { statusCode: "error" })
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "No result" }] }]), [], {
+      toolCalls: [failed],
+    })
+    const failure = result.findings.find((finding) => finding.kind === "toolFailure")
+
+    expect(failure?.anchors).toEqual([{ kind: "span", traceId, spanId: failed.spanId }])
+    expect(failure?.destinations).toEqual([{ kind: "span", traceId, spanId: failed.spanId }])
   })
 
   it("resolves several tool defects with one linked discovery score", async () => {
@@ -422,6 +610,36 @@ describe("readSessionAssessmentSources", () => {
     })
   })
 
+  it("attaches the producing flagger's sampling probability to a signal finding", async () => {
+    const screeningDecision = {
+      decisionId: "d".repeat(64),
+      organizationId,
+      projectId,
+      sessionId,
+      flaggerSlug: "refusal",
+      analysisHash: "a".repeat(64),
+      scoringArtifactVersion: "flagger-screening-v1",
+      attempt: 1,
+      version: 1,
+      selected: true,
+      reason: "ordinary-sample",
+      inclusionProbability: 0.25,
+      hintKinds: [],
+      outcome: "matched",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      retentionDays: 90,
+    } satisfies FlaggerScreeningDecision
+    const assessment = await read(session([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]), [], {
+      scores: [score("sampled-score", "sampled-signal", { flaggerSlug: "refusal" })],
+      signals: [signal("sampled-signal")],
+      screeningDecisions: [screeningDecision],
+    })
+
+    expect(assessment.findings.find((finding) => finding.scoreIds.includes("sampled-score"))).toMatchObject({
+      observationProbability: 0.25,
+    })
+  })
+
   it("attributes a recovered tool failure to the generation that completed the session", async () => {
     const failedCall = toolCall("h", "call-recovered", 0, 10, { statusCode: "error" })
     const retry = generation("i", 11, 20, { costTotalMicrocents: 325 })
@@ -497,6 +715,249 @@ describe("readSessionAssessmentSources", () => {
     expect(result.items.find((item) => item.metricId === "tools.call_failed")).toMatchObject({
       polarity: "negative",
       impactLevel: "high",
+    })
+  })
+
+  describe("task-outcome verdicts", () => {
+    const ANALYSIS_HASH = "a".repeat(64)
+
+    const verdictScore = (passed: boolean): Score =>
+      ({
+        ...score("score-task-failure", "signal-unused"),
+        signalId: null,
+        passed,
+        value: passed ? 1 : 0,
+        feedback: passed ? "Cancelled the subscription and confirmed the date." : "The cancellation never happened.",
+        metadata: {
+          rawFeedback: "raw",
+          flaggerSlug: "task-failure",
+          flaggerPath: "sampled",
+          scoringArtifactVersion: "task-failure-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          analysisHash: ANALYSIS_HASH,
+          messageIndex: 0,
+        },
+      }) as Score
+
+    const judgeDecision = (
+      outcome: FlaggerScreeningDecision["outcome"],
+      overrides: Partial<FlaggerScreeningDecision> = {},
+    ): FlaggerScreeningDecision =>
+      ({
+        decisionId: "d".repeat(64),
+        organizationId,
+        projectId,
+        sessionId,
+        flaggerSlug: "task-failure",
+        analysisHash: ANALYSIS_HASH,
+        scoringArtifactVersion: "flagger-screening-v1",
+        attempt: 1,
+        version: 2,
+        selected: true,
+        reason: "ordinary-sample",
+        inclusionProbability: 0.1,
+        hintKinds: [],
+        outcome,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        retentionDays: 90,
+        ...overrides,
+      }) satisfies FlaggerScreeningDecision
+
+    const judged = (passed: boolean, outcome: FlaggerScreeningDecision["outcome"]) =>
+      read(session([{ role: "assistant", parts: [{ type: "text", content: "Cancelled" }] }]), [], {
+        scores: [verdictScore(passed)],
+        screeningDecisions: [judgeDecision(outcome)],
+      })
+
+    const taskOutcomeItem = (resolved: ReturnType<typeof resolveSessionAssessment>) =>
+      resolved.items.find((item) => item.metricId === "sessions.task_success")
+
+    it("renders a success as positive Outcome evidence with the judge's own words", async () => {
+      const resolved = resolveSessionAssessment(await judged(true, "success"))
+      const item = taskOutcomeItem(resolved)
+
+      expect(item).toMatchObject({
+        label: "Task failure",
+        description: "Cancelled the subscription and confirmed the date.",
+        polarity: "positive",
+        source: "flagger",
+        scoreIds: ["score-task-failure"],
+      })
+      expect(item?.effects).toEqual([
+        expect.objectContaining({
+          scoreDimension: "outcome",
+          role: "taskOutcome",
+          direction: "positive",
+          impact: { kind: "taskOutcome", verdict: "success" },
+        }),
+      ])
+      expect(item?.anchors).toContainEqual(expect.objectContaining({ kind: "message", messageIndex: 0 }))
+    })
+
+    it("renders a failure as negative Outcome evidence", async () => {
+      const resolved = resolveSessionAssessment(await judged(false, "failure"))
+
+      expect(taskOutcomeItem(resolved)).toMatchObject({ polarity: "negative", impactLevel: "high" })
+      expect(taskOutcomeItem(resolved)?.effects[0]).toMatchObject({
+        direction: "negative",
+        impact: { kind: "taskOutcome", verdict: "failure" },
+      })
+    })
+
+    // The judge writes no score for these two, so the only place they can show
+    // up is coverage. An item would claim a verdict nobody reached.
+    it.each(["indeterminate", "notApplicable"] as const)("keeps %s out of the evidence list", async (outcome) => {
+      const resolved = resolveSessionAssessment(
+        await read(session([{ role: "assistant", parts: [{ type: "text", content: "Cancelled" }] }]), [], {
+          screeningDecisions: [judgeDecision(outcome)],
+        }),
+      )
+
+      expect(taskOutcomeItem(resolved)).toBeUndefined()
+      expect(resolved.coverage.readers).toContainEqual(
+        expect.objectContaining({
+          readerId: "flagger:task-failure",
+          scoreDimensions: ["outcome"],
+          status: outcome === "notApplicable" ? "notApplicable" : "notExamined",
+        }),
+      )
+    })
+
+    it("reports a session the judge never examined as unexamined rather than clean", async () => {
+      const resolved = resolveSessionAssessment(
+        await read(session([{ role: "assistant", parts: [{ type: "text", content: "Cancelled" }] }]), [], {
+          screeningDecisions: [judgeDecision(undefined, { selected: false })],
+        }),
+      )
+      const outcome = resolved.dimensions.find((dimension) => dimension.scoreDimension === "outcome")
+
+      expect(taskOutcomeItem(resolved)).toBeUndefined()
+      expect(resolved.coverage.readers).toContainEqual(
+        expect.objectContaining({
+          readerId: "flagger:task-failure",
+          status: "notExamined",
+          limitation: "notSelected",
+          selection: { method: "ordinary-sample", inclusionProbability: 0.1 },
+        }),
+      )
+      // The deterministic Outcome readers did run, so the dimension is partly
+      // covered; what must never happen is a verdict appearing without a judge.
+      expect(outcome?.coverage).toBe("partial")
+      expect(outcome).not.toHaveProperty("taskOutcome")
+    })
+  })
+
+  describe("Safety findings", () => {
+    const SAFETY_ANALYSIS_HASH = "b".repeat(64)
+
+    const safetyScore = (findingKind: SafetyFindingKind, passed: boolean): Score =>
+      ({
+        ...score("score-safety", "signal-unused"),
+        signalId: null,
+        passed,
+        value: passed ? 1 : 0,
+        feedback: "An instruction-override attempt arrived in the first user turn.",
+        metadata: {
+          rawFeedback: "raw",
+          flaggerSlug: "jailbreaking",
+          flaggerPath: "sampled",
+          scoringArtifactVersion: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+          analysisHash: SAFETY_ANALYSIS_HASH,
+          safetyFindingKind: findingKind,
+          messageIndex: 0,
+        },
+      }) as Score
+
+    const safetyDecision = (
+      outcome: FlaggerScreeningDecision["outcome"],
+      overrides: Partial<FlaggerScreeningDecision> = {},
+    ): FlaggerScreeningDecision =>
+      ({
+        decisionId: "e".repeat(64),
+        organizationId,
+        projectId,
+        sessionId,
+        flaggerSlug: "jailbreaking",
+        analysisHash: SAFETY_ANALYSIS_HASH,
+        scoringArtifactVersion: "flagger-screening-v1",
+        attempt: 1,
+        version: 2,
+        selected: true,
+        reason: "ordinary-sample",
+        inclusionProbability: 0.1,
+        hintKinds: [],
+        outcome,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        retentionDays: 90,
+        ...overrides,
+      }) satisfies FlaggerScreeningDecision
+
+    const examined = (findingKind: SafetyFindingKind, passed: boolean, outcome: FlaggerScreeningDecision["outcome"]) =>
+      read(session([{ role: "assistant", parts: [{ type: "text", content: "I can't do that." }] }]), [], {
+        scores: [safetyScore(findingKind, passed)],
+        screeningDecisions: [safetyDecision(outcome)],
+      })
+
+    const safetyDimension = (resolved: ReturnType<typeof resolveSessionAssessment>) =>
+      resolved.dimensions.find((dimension) => dimension.scoreDimension === "safety")
+
+    it("renders confirmed harm under needs attention and counts the attack beside it", async () => {
+      const resolved = resolveSessionAssessment(await examined("injectionCompliance", false, "matched"))
+      const item = resolved.items.find((candidate) => candidate.scoreIds.includes("score-safety"))
+
+      expect(item).toMatchObject({ label: "Jailbreaking", polarity: "negative", source: "flagger" })
+      expect(safetyDimension(resolved)).toMatchObject({ confirmedHarmCount: 1, exposureCount: 1 })
+      expect(item?.anchors).toContainEqual(expect.objectContaining({ kind: "message", messageIndex: 0 }))
+    })
+
+    it("renders a successful defense as positive evidence", async () => {
+      const resolved = resolveSessionAssessment(await examined("injectionDefense", true, "success"))
+      const item = resolved.items.find((candidate) => candidate.scoreIds.includes("score-safety"))
+
+      expect(item).toMatchObject({ polarity: "positive" })
+      expect(safetyDimension(resolved)).toMatchObject({
+        successfulDefenseCount: 1,
+        exposureCount: 1,
+        confirmedHarmCount: 0,
+      })
+    })
+
+    it("keeps user-authored personal data out of the harm count", async () => {
+      const resolved = resolveSessionAssessment(await examined("piiExposure", true, "success"))
+
+      expect(safetyDimension(resolved)).toMatchObject({ exposureCount: 1, confirmedHarmCount: 0 })
+    })
+
+    // An examined session with nothing to report is not positive evidence, and
+    // an unexamined one is not a clean result either.
+    it("produces no item for an examined session with no finding", async () => {
+      const resolved = resolveSessionAssessment(
+        await read(session([{ role: "assistant", parts: [{ type: "text", content: "Sure." }] }]), [], {
+          screeningDecisions: [safetyDecision("unmatched")],
+        }),
+      )
+
+      expect(resolved.items.some((item) => item.scoreIds.includes("score-safety"))).toBe(false)
+      expect(safetyDimension(resolved)).toMatchObject({ exposureCount: 0, confirmedHarmCount: 0 })
+      expect(resolved.coverage.readers).toContainEqual(
+        expect.objectContaining({ readerId: "flagger:jailbreaking", status: "examined" }),
+      )
+    })
+
+    it("reports a session the suite never examined as unexamined", async () => {
+      const resolved = resolveSessionAssessment(
+        await read(session([{ role: "assistant", parts: [{ type: "text", content: "Sure." }] }]), [], {
+          screeningDecisions: [safetyDecision(undefined, { selected: false })],
+        }),
+      )
+
+      expect(resolved.coverage.readers).toContainEqual(
+        expect.objectContaining({
+          readerId: "flagger:jailbreaking",
+          status: "notExamined",
+          limitation: "notSelected",
+          selection: { method: "ordinary-sample", inclusionProbability: 0.1 },
+        }),
+      )
     })
   })
 })

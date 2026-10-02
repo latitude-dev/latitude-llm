@@ -26,6 +26,7 @@ const makeSignal = ({ id, ...overrides }: Omit<Partial<Signal>, "id"> & { readon
   filters: null,
   assigneeId: null,
   priority: null,
+  bundleKey: null,
   centroid: null,
   clusteredAt: daysAgo(1),
   promotedAt: null,

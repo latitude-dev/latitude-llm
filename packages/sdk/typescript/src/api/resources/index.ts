@@ -1,5 +1,7 @@
 export * from "./account/client/requests/index.js";
 export * as account from "./account/index.js";
+export * from "./agentScore/client/requests/index.js";
+export * as agentScore from "./agentScore/index.js";
 export * from "./analytics/client/requests/index.js";
 export * as analytics from "./analytics/index.js";
 export * from "./annotations/client/requests/index.js";

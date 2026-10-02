@@ -4,6 +4,7 @@ import type { BaseClientOptions, BaseRequestOptions } from "../../../../BaseClie
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "../../../../BaseClient.js";
 import { mergeHeaders } from "../../../../core/headers.js";
 import * as core from "../../../../core/index.js";
+import { mergeAdditionalBodyParameters } from "../../../../core/requestBody.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
@@ -25,13 +26,15 @@ export class DatasetsClient {
     /**
      * Returns a cursor-paginated page of datasets in the project.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.ListDatasetsRequest} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.list("projectSlug")
@@ -117,13 +120,15 @@ export class DatasetsClient {
     /**
      * Creates an empty dataset in the project. The slug is derived from `name`.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.CreateDatasetBody} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.create("projectSlug", {
@@ -161,7 +166,7 @@ export class DatasetsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -203,7 +208,7 @@ export class DatasetsClient {
     /**
      * Returns one dataset by slug.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {Latitude.GetDatasetsRequest} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -211,6 +216,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.get("projectSlug", "datasetSlug")
@@ -287,13 +294,15 @@ export class DatasetsClient {
     /**
      * Deletes a dataset by slug.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {Latitude.DeleteDatasetsRequest} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.delete("projectSlug", "datasetSlug")
@@ -368,7 +377,7 @@ export class DatasetsClient {
     /**
      * Updates a dataset's `name` and/or `description`. Renaming regenerates the slug — clients should re-read the response or rely on the `id` for stable references.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {Latitude.UpdateDatasetBody} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -376,6 +385,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.update("projectSlug", "datasetSlug")
@@ -413,7 +424,7 @@ export class DatasetsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -455,7 +466,7 @@ export class DatasetsClient {
     /**
      * Returns a cursor-paginated page of rows.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {Latitude.ListRowsDatasetsRequest} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -463,6 +474,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.listRows("projectSlug", "datasetSlug")
@@ -550,7 +563,7 @@ export class DatasetsClient {
     /**
      * Appends one or more rows to the dataset.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {Latitude.InsertDatasetRowsBody} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -558,10 +571,14 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.insertRows("projectSlug", "datasetSlug", {
-     *         rows: [{}]
+     *         rows: [{
+     *                 input: null
+     *             }]
      *     })
      */
     public insertRows(
@@ -599,7 +616,7 @@ export class DatasetsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -641,7 +658,7 @@ export class DatasetsClient {
     /**
      * Deletes rows matching the supplied selection.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {Latitude.DeleteDatasetRowsBody} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -649,6 +666,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.deleteRows("projectSlug", "datasetSlug", {
@@ -693,7 +712,7 @@ export class DatasetsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -735,7 +754,7 @@ export class DatasetsClient {
     /**
      * Partially updates a single row. Only the cells you send are changed; omitted cells keep their current value. Use this to fill in an `expectedOutput` (or any other cell) after rows were imported. Bumps the dataset version.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {string} rowId - Stable row identifier (from `listDatasetRows`).
      * @param {Latitude.UpdateDatasetRowBody} request
@@ -744,6 +763,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.updateRow("projectSlug", "datasetSlug", "rowId")
@@ -785,7 +806,7 @@ export class DatasetsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -827,7 +848,7 @@ export class DatasetsClient {
     /**
      * Imports one row per trace matched by `traces`.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {Latitude.ImportRowsFromTracesBody} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -835,6 +856,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.importRowsFromTraces("projectSlug", "datasetSlug", {
@@ -879,7 +902,7 @@ export class DatasetsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -928,7 +951,7 @@ export class DatasetsClient {
      * - `"queued"` — the export was too large for the synchronous path AND a `recipient` was supplied. The CSV will be emailed to that address. The recipient must be a member of the requesting organization.
      * - `"too_large"` — the export was too large for the synchronous path AND no `recipient` was supplied. Body includes a `recommendedAction` describing how to recover (typically: ask the user for an email and retry with `recipient` set).
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {Latitude.ExportDatasetRowsBody} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -938,6 +961,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.NotFoundError}
      * @throws {@link Latitude.ContentTooLargeError}
      * @throws {@link Latitude.TooManyRequestsError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.exportRows("projectSlug", "datasetSlug")
@@ -977,7 +1002,7 @@ export class DatasetsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -1032,7 +1057,7 @@ export class DatasetsClient {
     /**
      * Returns the ordered active column schema — the built-in columns plus any custom columns. Pass `includeRemoved=true` to also return soft-removed columns (so they can be restored).
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {Latitude.ListColumnsDatasetsRequest} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -1040,6 +1065,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.listColumns("projectSlug", "datasetSlug")
@@ -1126,7 +1153,7 @@ export class DatasetsClient {
     /**
      * Adds a custom column. The column starts empty on every row; rows are written only when a cell is filled, so the dataset version does not change.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {Latitude.AddDatasetColumnBody} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -1134,6 +1161,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.addColumn("projectSlug", "datasetSlug", {
@@ -1175,7 +1204,7 @@ export class DatasetsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -1217,7 +1246,7 @@ export class DatasetsClient {
     /**
      * Removes a column (built-in or custom) from the active schema. Its data is preserved and the column can be re-added; this does not change the dataset version.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {string} identifier - Stable column identifier.
      * @param {Latitude.DeleteColumnDatasetsRequest} request
@@ -1225,6 +1254,8 @@ export class DatasetsClient {
      *
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.deleteColumn("projectSlug", "datasetSlug", "identifier")
@@ -1303,7 +1334,7 @@ export class DatasetsClient {
     /**
      * Renames a column. Works for both built-in and custom columns.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {string} identifier - Stable column identifier.
      * @param {Latitude.UpdateDatasetColumnBody} request
@@ -1312,6 +1343,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.updateColumn("projectSlug", "datasetSlug", "identifier", {
@@ -1355,7 +1388,7 @@ export class DatasetsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -1397,7 +1430,7 @@ export class DatasetsClient {
     /**
      * Sets the left-to-right order of columns. This is a metadata edit and does not change the dataset version.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {Latitude.ReorderDatasetColumnsBody} request
      * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -1405,6 +1438,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.reorderColumns("projectSlug", "datasetSlug", {
@@ -1446,7 +1481,7 @@ export class DatasetsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -1488,7 +1523,7 @@ export class DatasetsClient {
     /**
      * Restores a soft-removed column (built-in or custom) to the active schema, reconnecting its preserved data. Find removed identifiers via `listDatasetColumns` with `includeRemoved=true`.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
      * @param {string} identifier - Stable column identifier.
      * @param {Latitude.RestoreColumnDatasetsRequest} request
@@ -1497,6 +1532,8 @@ export class DatasetsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.datasets.restoreColumn("projectSlug", "datasetSlug", "identifier")

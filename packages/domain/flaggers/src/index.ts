@@ -11,11 +11,21 @@ export {
   FLAGGER_PROMPT_MAX_HINTS,
   FLAGGER_SAMPLED_POSITIVE_RATE_LIMIT,
   FLAGGER_SAMPLED_RATE_LIMIT,
+  FLAGGER_SAMPLING_SOURCES,
   FLAGGER_SCORING_ARTIFACT_VERSION,
   FLAGGER_SCREENING_ARTIFACT_VERSION,
   FLAGGER_SCREENING_OUTCOMES,
   FLAGGER_SCREENING_RETENTION_DAYS,
   FLAGGER_SCREENING_SELECTION_REASONS,
+  type FlaggerSamplingSource,
+  JEV_PRECLASSIFIER_DECISIONS,
+  JEV_PRECLASSIFIER_ENABLED,
+  JEV_PRECLASSIFIER_OPERATION_TIMEOUT_MS,
+  JEV_PRECLASSIFIER_POLICY_VERSION,
+  JEV_PRECLASSIFIER_RETENTION_DAYS,
+  JEV_PRECLASSIFIER_STATE_BUILDER_VERSION,
+  JEV_PRECLASSIFIER_STRATEGY_SLUGS,
+  JEV_PRECLASSIFIER_THRESHOLD,
 } from "./constants.ts"
 export {
   assistantTurnHasOutputContent,
@@ -68,6 +78,30 @@ export {
   flaggerScreeningSelectionSchema,
 } from "./entities/flagger-screening-decision.ts"
 export {
+  type JevPreclassifierDecision,
+  type JevPreclassifierObservation,
+  jevPreclassifierDecisionSchema,
+  jevPreclassifierObservationSchema,
+} from "./entities/jev-preclassifier-observation.ts"
+export { buildJudgmentVersion } from "./entities/judgment-version.ts"
+export { isSafetySuiteSlug, SAFETY_SUITE_KEY, SAFETY_SUITE_SLUGS } from "./entities/safety-suite.ts"
+export {
+  SAFETY_JUDGMENT_VERSION_PREFIX,
+  safetyJudgmentVersion,
+  writesSafetyAnnotation,
+} from "./entities/safety-verdict.ts"
+export {
+  isScoringTaskOutcomeVerdict,
+  TASK_OUTCOME_JUDGMENT_VERSION_PREFIX,
+  TASK_OUTCOME_VERDICTS,
+  type TaskOutcomeVerdict,
+  type TaskOutcomeVerdictKind,
+  taskOutcomeJudgmentVersion,
+  taskOutcomeVerdictKindSchema,
+  taskOutcomeVerdictSchema,
+} from "./entities/task-outcome-verdict.ts"
+export { FLAGGER_BUNDLE_KEY_MAX_LENGTH, flaggerBundleKey } from "./flagger-bundle-key.ts"
+export {
   DETERMINISTIC_FLAGGER_INSTRUCTIONS,
   FLAGGER_DISPLAY,
   type FlaggerDisplay,
@@ -105,6 +139,7 @@ export {
   type SuspiciousSnippet,
   scoreRefusalLikelihood,
   suppressorSlug,
+  taskFailureStrategy,
   toolCallErrorsStrategy,
   trashingStrategy,
   truncateExcerpt,
@@ -114,6 +149,7 @@ export { FLAGGER_STRATEGY_SLUGS } from "./flagger-strategies/types.ts"
 export type { ToolExpectedStatusContract } from "./helpers.ts"
 export {
   buildFlaggerFinding,
+  classifyToolError,
   collectOutputSchemaDamageFindings,
   collectToolCallErrorFindings,
   type DeterministicFlaggerMatch,
@@ -124,8 +160,10 @@ export {
   EMPTY_TOOL_EXPECTED_STATUS_CONTRACT,
   type OutputSchemaDamageFinding,
   type OutputSchemaDamageKind,
+  selectRepresentativeToolCallErrorFinding,
   type ToolCallErrorFinding,
   type ToolCallErrorFindingKind,
+  UNSPECIFIED_TOOL_ERROR_CLASS,
 } from "./helpers.ts"
 export {
   gatherSessionHintsUseCase,
@@ -142,6 +180,11 @@ export {
   type SessionHintGatherer,
   type SessionHintKind,
 } from "./hints/types.ts"
+export {
+  JEV_PRECLASSIFIER_STRATEGIES,
+  type JevPreclassifierStrategy,
+  type JevPreclassifierStrategySlug,
+} from "./jev-preclassifier-strategies.ts"
 export {
   FlaggerCoverageRepository,
   type FlaggerCoverageRepositoryShape,
@@ -161,6 +204,24 @@ export {
   type FlaggerScreeningDecisionRepositoryShape,
 } from "./ports/flagger-screening-decision-repository.ts"
 export {
+  JevPreclassifierObservationRepository,
+  type JevPreclassifierObservationRepositoryShape,
+} from "./ports/jev-preclassifier-observation-repository.ts"
+export {
+  JEV_SHADOW_PROVIDER_FAILURE_KINDS,
+  type JevDecisionProviderManyRequest,
+  JevShadowDecisionProvider,
+  type JevShadowDecisionProviderRequest,
+  type JevShadowDecisionProviderShape,
+  type JevShadowProviderAuditMetadata,
+  type JevShadowProviderFailureKind,
+  type JevShadowProviderResult,
+  type JevShadowQuestion,
+  jevShadowProviderAuditMetadataSchema,
+  jevShadowProviderResultSchema,
+} from "./ports/jev-shadow-decision-provider.ts"
+export {
+  FLAGGER_NO_REFLAG_TAG,
   isFlaggerGeneratedTrace,
   isReflagSuppressed,
   isUserCentricReflagInapplicable,
@@ -170,6 +231,7 @@ export {
   type ClassifySessionFlaggerInput,
   type ClassifySessionFlaggerResult,
   classifySessionFlaggerUseCase,
+  type JudgedSessionAnchors,
   loadFlaggerSessionContextUseCase,
 } from "./use-cases/classify-session-flagger.ts"
 export {
@@ -227,6 +289,11 @@ export {
   annotateTraceForFlaggerUseCase,
 } from "./use-cases/run-flagger-annotator.ts"
 export {
+  type RunJevPreclassifierInput,
+  type RunJevPreclassifierResult,
+  runJevPreclassifierUseCase,
+} from "./use-cases/run-jev-preclassifier.ts"
+export {
   type SaveFlaggerAnnotationError,
   type SaveFlaggerAnnotationInput,
   saveFlaggerAnnotationUseCase,
@@ -235,6 +302,7 @@ export {
   type CheckFlaggerLlmRateLimit,
   type FlaggerClassificationReason,
   type FlaggerClassificationRequest,
+  type PendingFlaggerClassificationRequest,
   type ScreenSessionFlaggersDeps,
   type ScreenSessionFlaggersError,
   type ScreenSessionFlaggersInput,
@@ -248,3 +316,9 @@ export {
   type UpdateFlaggerInput,
   updateFlaggerUseCase,
 } from "./use-cases/update-flagger.ts"
+export {
+  type UpsertFlaggerVerdictScoreInput,
+  type UpsertSafetyFindingScoreInput,
+  upsertFlaggerVerdictScore,
+  upsertSafetyFindingScore,
+} from "./use-cases/upsert-flagger-annotation-score.ts"

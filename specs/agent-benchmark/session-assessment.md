@@ -9,7 +9,7 @@ A project benchmark explains the agent across many sessions. A session assessmen
 happened in one session.
 
 One session does not have a dimension score. Reliability and Safety describe risk across repeated
-traffic. Outcome uses project-level examined Task Success judgments. Cost combines family
+traffic. Outcome uses project-level examined task-outcome judgments. Cost combines family
 rates across a selected population, and Speed compares observed critical-path time with a
 counterfactual. Compressing those different claims into five session numbers would imply precision
 the evidence does not have.
@@ -361,13 +361,13 @@ while others provide spend or time. Value evidence can also be positive:
 
 Readers do not generate a positive item merely because no defect was found.
 
-### Task Success
+### Task failure
 
-The `task-success` flagger judges the complete session and produces `success`, `failure`,
+The `task-failure` flagger judges the complete session and produces `success`, `failure`,
 `indeterminate`, or `notApplicable`. Success and failure become passed and failed system scores.
 Indeterminate and not-applicable decisions remain coverage facts and do not become scores.
 
-A failed Task Success score can enter normal signal discovery. A passed score never creates a
+A failed task-outcome score can enter normal signal discovery. A passed score never creates a
 signal. The assessment shows the verdict and its anchors when the flagger examined the session.
 
 ### Signals

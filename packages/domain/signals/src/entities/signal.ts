@@ -11,7 +11,13 @@ import {
   speedScoreEvidenceSchema,
 } from "@domain/shared"
 import { z } from "zod"
-import { SIGNAL_NAME_MAX_LENGTH, SIGNAL_PRIORITIES, SIGNAL_SOURCES, SIGNAL_STATES } from "../constants.ts"
+import {
+  SIGNAL_BUNDLE_KEY_MAX_LENGTH,
+  SIGNAL_NAME_MAX_LENGTH,
+  SIGNAL_PRIORITIES,
+  SIGNAL_SOURCES,
+  SIGNAL_STATES,
+} from "../constants.ts"
 
 // ---------------------------------------------------------------------------
 // SignalState
@@ -95,6 +101,7 @@ export const signalSchema = z.object({
   filters: filterSetSchema.nullish(), // FilterSet pre-gate for the evaluation; null/absent when unset
   assigneeId: cuidSchema.nullable(), // user (org member) manually assigned to triage this issue; null when unassigned
   priority: signalPrioritySchema.nullable(), // manual triage priority; null when unset
+  bundleKey: z.string().min(1).max(SIGNAL_BUNDLE_KEY_MAX_LENGTH).nullable(), // exact cross-session bucket a deterministic detector claimed; null for everything clustered by meaning. Unique per project among live issues.
   centroid: signalCentroidSchema.nullable(), // running weighted sum of clustered score feedback embeddings (discovered signals only); null for user-created evaluation-backed signals
   clusteredAt: z.date().nullable(), // last time the centroid/cluster state was refreshed (discovered signals only); authoritative decay anchor (not updatedAt)
   promotedAt: z.date().nullable(), // one-way latch: when the signal accumulated enough evidence to become real. Null = discovered but not yet promoted. Never cleared; user-created signals are born promoted.

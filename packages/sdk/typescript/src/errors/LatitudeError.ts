@@ -36,6 +36,10 @@ export class LatitudeError extends Error {
             this.cause = cause;
         }
     }
+
+    public get requestId(): string | undefined {
+        return this.rawResponse?.headers?.get("x-request-id") ?? undefined;
+    }
 }
 
 function buildMessage({

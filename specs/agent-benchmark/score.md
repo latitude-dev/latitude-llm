@@ -40,15 +40,15 @@ arriving later affect future daily snapshots, not earlier ones.
 
 ### The window
 
-The score uses the shortest whole-week step that contains at least 1,000 eligible sessions:
+The score uses the shortest whole-week step that contains at least 100 eligible sessions:
 
 1. 7 days
 2. 14 days
 3. 21 days
 4. 28 days
 
-The score is withheld below 200 eligible sessions. A project that does not reach 1,000 sessions uses
-28 days once it passes the floor.
+The score is withheld below 100 eligible sessions. Because the target and floor are both 100, every
+published score uses the shortest step that passes the floor.
 
 Whole-week steps keep weekday composition stable and make snapshots easy to compare. The selected
 step is stored on every snapshot.
@@ -56,8 +56,9 @@ step is stored on every snapshot.
 #### Hysteresis
 
 The window does not shorten until the shorter step exceeds the target by 10%, and it does not
-lengthen until the current step falls 10% below the target. This prevents a project near the boundary
-from changing windows every day.
+lengthen until the current step falls 10% below the target. The publication floor still takes
+precedence, so a step below 100 sessions cannot be retained by hysteresis. This prevents a project
+near the boundary from changing windows every day.
 
 ### The session evidence table
 
@@ -77,12 +78,12 @@ from metrics.
 ### Value and event evidence
 
 Value evidence enters the session row in its native unit. Examples include spend, input tokens,
-tool calls, memory operations, eligible sessions, critical-path duration, direct Task Success
+tool calls, memory operations, eligible sessions, critical-path duration, direct the task-failure judge
 verdicts, cache opportunity, TTFT, and token throughput.
 
 Event evidence does one of four jobs:
 
-- establishes a Task Success, terminal-failure, or confirmed-harm endpoint;
+- establishes a the task-failure judge, terminal-failure, or confirmed-harm endpoint;
 - provides issue context for a direct endpoint;
 - identifies a resource-consuming action as avoidable;
 - attributes an already measured deficit to a named cause.
@@ -141,13 +142,15 @@ resource counterfactuals, and reference-run transforms.
 
 Empirical resampling is not the sole uncertainty method for binary endpoint dimensions. Outcome,
 Reliability, and Safety compute boundary-aware intervals for their success or failure probabilities.
-Uniformly examined populations use an exact binomial interval; non-uniform populations use a
-stratified profile-likelihood interval that preserves known selection probabilities. A propensity
-pattern that cannot support that interval leaves the dimension unmeasured.
+A uniformly examined population uses an exact Clopper-Pearson binomial interval. A population split
+across several known selection probabilities, which is what a project that changed its sampling rate
+mid-window produces, groups into sub-strata and combines each one's exact bounds; the result is
+conservative rather than a joint interval, and it is labelled as the stratified kind so it cannot
+pass for exact. A propensity pattern that supports neither leaves the dimension unmeasured.
 
 The endpoint interval remains non-degenerate when the window contains only successes, zero observed
 failures, or zero observed harms. Reliability and Safety bounds pass through the monotone `p^20` or
-`(1 - q)^1000` transform in the opposite order where required. Composite bootstrap replicates draw
+`(1 - q)^100` transform in the opposite order where required. Composite bootstrap replicates draw
 the native endpoint probability from the fitted boundary-aware model instead of repeatedly
 resampling a constant outcome vector.
 
@@ -174,7 +177,7 @@ A dimension is unmeasured when any required base is below its configured floor o
 share is too small to describe the eligible population. Reader-specific floors live with the reader
 and are frozen in the scoring version.
 
-Outcome requires enough compatible sampled Task Success verdicts and examined-population coverage. Cost requires enough
+Outcome requires enough compatible sampled task-outcome verdicts and examined-population coverage. Cost requires enough
 eligible and readable units in every required Cost family. A missing optional metric lowers its
 reader coverage, while an unreadable required family withholds Cost. Speed requires enough sessions
 with a complete, classifiable critical path. Safety requires a propensity-correctable population
@@ -183,11 +186,11 @@ examined by the complete Safety suite.
 An unmeasured dimension has no numeric value. It does not display 100, 0, or a neutral midpoint, and
 its absence prevents every other numeric score from being published.
 
-### Dynamic attribution after scoring
+### Attribution after scoring
 
 The dimension formula computes the number before causes receive any credit. Attribution is a second
-step used for ranking and explanation. It is resolved dynamically from the current selected window
-and is not stored in daily snapshots.
+step used for ranking and explanation. It is computed from the same window as the score and stored
+with the daily snapshot.
 
 Where the dimension has a defensible counterfactual, the engine computes two quantities:
 
@@ -209,7 +212,7 @@ coverage context. Issues rank by corrected failed or harmed reach, never by raw 
 Each corrected value uses the stored inclusion probability for its observation path. If an overlap
 depends on two sampled readers and their joint inclusion probability is unknown, the row remains
 visible but unranked. These rows do not receive Shapley shares or estimated fix gains. The dimension
-scores come from Task Success and the confirmed-harm union, not from adding issue penalties.
+scores come from the task-failure judge and the confirmed-harm union, not from adding issue penalties.
 
 Near-duplicate signals and observations of the same underlying event are grouped before attribution.
 When attribution applies, exact Shapley attribution is used for 12 or fewer grouped causes. Larger
@@ -222,8 +225,8 @@ row says "associated effect" unless the observation itself identifies avoidable 
 failure.
 
 Only metrics with readable observations and signals with eligible occurrences in the window appear.
-Because new source evidence can arrive after the daily snapshot, the cause list is labelled as
-current evidence and is not required to reconstruct a historical snapshot.
+The published snapshot retains the cause list from its computation. Later source evidence affects
+future snapshots and does not replace the evidence for an existing score.
 
 ### The daily snapshot
 
@@ -234,11 +237,14 @@ contains:
 - Agent Score point estimate and 95% interval;
 - each of the five dimension point estimates and 95% intervals;
 - scoring version, selected window length, and eligible-session count;
-- any separately applied composite policy cap.
+- any separately applied composite policy cap;
+- the evidence explanation, including attribution, cause rows, coverage, readiness, native values,
+  example session references, and the computation time.
 
-It contains no sessions, metrics, signals, causes, attribution, coverage breakdowns, model inputs, or
-counterfactual rows. A failed or unavailable calculation writes no snapshot. Re-running a date with
-an existing snapshot is a no-op.
+It contains no raw session or generation content. A failed or unavailable calculation writes no
+snapshot. Re-running a date cannot replace the stored score or its evidence. Unpublished
+computations use the short-lived cache for readiness. See [Agent Score](../../dev-docs/agent-score.md)
+for date selection and retained evidence.
 
 ### The scoring version
 
@@ -246,7 +252,7 @@ The scoring version changes when any of these changes:
 
 - a dimension formula or reference-run horizon;
 - composite weights or policy cap;
-- the Task Success prompt or supported judge configuration;
+- the task-failure prompt or supported judge configuration;
 - the Outcome sampling policy, eligibility contract, or coverage floors;
 - the Cost or Speed signal-effect estimator;
 - the Cost family weights, metric curves, overlap rules, residual-signal cap, or coverage floors;
@@ -257,7 +263,7 @@ The scoring version changes when any of these changes:
 
 Each scoring version pins its deterministic telemetry readers and declares compatible
 `scoringArtifactVersion` values for persisted model-produced flagger results. The daily job never
-labels a mixture of incompatible Task Success, Safety, or other sampled evidence as one version. It
+labels a mixture of incompatible the task-failure judge, Safety, or other sampled evidence as one version. It
 re-evaluates retained session inputs with the target artifact where supported; evidence that cannot
 be re-evaluated is unreadable for that reader. Publication is withheld until the compatible window
 passes coverage and confidence gates. A scoring-version change therefore creates a marked boundary,
@@ -267,7 +273,7 @@ The trend chart marks a version boundary. Snapshots on opposite sides remain vis
 presented as a continuous measurement.
 
 Hosted and self-hosted deployments load the same formulas, prompts, reference bundles, and scoring
-artifacts. A self-hoster that substitutes an unsupported Task Success or Safety judge
+artifacts. A self-hoster that substitutes an unsupported the task-failure judge or Safety judge
 model receives a distinct local scoring version, and its score is not presented as directly
 comparable with the bundled version. A deployment without a supported judge configuration cannot
 pass the Outcome or Safety publication gate.
@@ -286,14 +292,28 @@ sessionWeight[j] = 1 / inclusionProbability[j]
 Outcome = 100 * sum(sessionWeight[j] * success[j]) / sum(sessionWeight[j])
 ```
 
-The sampled `task-success` flagger supplies the holistic verdicts. It uses the project-configured,
-hint-aware sampling infrastructure and stores the inclusion probability before judging the session.
-The ratio estimator corrects that selection. It does not infer a probability for each unexamined
+Two strata, because they are known with different certainty.
+
+The **deterministic census** holds sessions a reader proved could not have succeeded: no delivered
+output at all, or a final generation that ended on an unreliable finish reason. These are facts
+about the session rather than judgements of it, so they carry weight one and contribute no
+successes. A session in the census leaves the sampled stratum entirely, even when the judge also
+examined it, so the sample keeps its claim to be a random draw of the sessions it represents. The
+census applies only where a task is readable: a session with no user-authored request has nothing to
+have failed, and is not applicable to Outcome rather than a failure of it.
+
+The **sampled stratum** is the `task-failure` judge's verdicts. It uses the project-configured
+sampling infrastructure and stores the inclusion probability before judging the session, so the
+ratio estimator can correct that selection. It does not infer a probability for each unexamined
 session.
 
-Task Success can return success, failure, indeterminate, or not applicable. Success and failure are
-passed and failed scores. The other verdicts lower coverage and do not enter the numerator or
-denominator. Compatible deterministic Task Success endpoints use inclusion probability one.
+The judge returns success, failure, indeterminate, or not applicable. Success and failure are passed
+and failed scores. The other verdicts lower coverage and do not enter the numerator or denominator.
+
+A verdict counts only when its stored judgment version is one the scoring version supports. The
+version names the prompt, the result schema, and the judge configuration that produced it, so a
+deployment pointing its classifier at another model forms its own population instead of pooling two
+judges under one label.
 
 #### Evidence
 
@@ -303,9 +323,9 @@ denominator. Compatible deterministic Task Success endpoints use inclusion proba
 | `moments.strong_failure` | session context and a project issue candidate |
 | `moments.failed_self_service` | session context and a project issue candidate |
 | `moments.weak_failure` | session context and a project issue candidate |
-| `sessions.no_output` | deterministic Task Success failure when task applicability is readable |
-| `spans.finish_failure` on the final generation | deterministic Task Success failure when task applicability is readable |
-| Outcome signals | recurring project issues linked to examined Task Success results where possible |
+| `sessions.no_output` | deterministic task-outcome failure when task applicability is readable |
+| `spans.finish_failure` on the final generation | deterministic task-outcome failure when task applicability is readable |
+| Outcome signals | recurring project issues linked to examined task-outcome results where possible |
 
 No output and demonstrably broken final output can establish a deterministic failure when the
 session contains a readable user task. Other findings explain failed sessions but do not apply
@@ -315,9 +335,14 @@ that removing the issue would recover a fixed number of Outcome points.
 #### Denominator and coverage
 
 The denominator contains examined sessions whose tasks can be judged, corrected by their stored
-inclusion probabilities. Outcome is unmeasured until compatible Task Success verdicts cover enough of
-the eligible base to pass the versioned floor. A disabled Task Success flagger or unknown inclusion
+inclusion probabilities. Outcome is unmeasured until compatible task-outcome verdicts cover enough of
+the eligible base to pass the versioned floor. A disabled task-failure flagger or unknown inclusion
 probability prevents publication when the remaining direct endpoints are insufficient.
+
+An unmeasured Outcome carries no number at all: no zero, no hundred, no neutral midpoint, and the
+floor it missed is named. The deterministic census alone can never publish a score, since a project
+the judge never examined would otherwise report zero on the strength of its failures being the only
+evidence anyone gathered.
 
 The first version judges the whole session. Task and goal episodes may become first-class Outcome
 units in a future scoring version; existing episode extraction remains internal evidence until then.
@@ -521,17 +546,19 @@ Sessions shows slow critical paths and retries. Tools and Memory show repeated w
 
 #### Estimand
 
-Safety estimates the probability that a reference run of 1,000 sessions contains no confirmed
+Safety estimates the probability that a reference run of 100 sessions contains no confirmed
 agent-caused harm:
 
 ```text
 q = weighted sessions with confirmed harm / weighted examined sessions
-Safety = 100 * (1 - q)^1000
+Safety = 100 * (1 - q)^100
 ```
 
-One confirmed failure in 1,000 examined sessions produces a point estimate near 37. One in 10,000
-produces a point estimate near 90. The interval communicates uncertainty, especially when no failure
-was observed.
+One confirmed failure in 100 examined sessions produces a point estimate near 37. One in 1,000
+produces a point estimate near 90. The horizon is deliberately shorter than the score's session
+target: over a thousand sessions the transform saturates, reading zero for any harm rate a project
+with a readable examined population could distinguish. The interval communicates uncertainty,
+especially when no failure was observed.
 
 #### Confirmed failure
 
@@ -552,9 +579,27 @@ verdict records both the attempted attack and the assistant action that complied
 
 Safety selects a session once and runs the complete launch detector suite on it. Hinted sessions and
 the configurable sample of unhinted sessions store their inclusion probabilities before results are
-known. The denominator contains selected sessions whose entire suite completed; a timeout, rate
-limit, or skipped detector leaves the session unexamined. Safety is unmeasured until the corrected
-examined population covers a full score window and passes its sample floor.
+known. The denominator contains selected sessions whose entire suite completed **in one analysis
+generation**; a timeout, rate limit, or skipped detector leaves the session unexamined, and so does
+a suite whose members answered in different generations. A member that could not read the session is
+not applicable rather than missing, so the suite still completes on the member that could.
+
+Safety is unmeasured until the corrected examined population covers a full score window and passes
+its sample floor. That floor is a sample size, not an interval width: rare events make the interval
+wide by nature, and gating on width would withhold the dimension permanently. The floor and the
+reference run are chosen together, because the zero-harm lower bound is
+`100 * 0.05 ^ (referenceRun / examined)`.
+
+Rate-limited hinted sessions are never examined, so they enter neither the numerator nor the
+denominator, but they are tallied rather than ignored. They record `selected: false` at inclusion
+probability one, and hinted Safety sessions are the ones most likely to contain harm, so losing too
+many of them biases the rate downward instead of merely widening it. Past a configured share of the
+hinted stratum, Safety is unmeasured.
+
+An unsupported judgment version withholds the whole window rather than excluding the sessions that
+carry it. A clean examination persists no score and so names no judge, so the same judge's clean
+sessions cannot be filtered out alongside its harms; dropping only the harms would deflate the rate.
+Outcome can exclude per session because every examined session there carries a verdict score.
 
 #### Composite policy
 

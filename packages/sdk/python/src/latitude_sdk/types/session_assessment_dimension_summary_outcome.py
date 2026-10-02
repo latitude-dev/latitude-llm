@@ -24,11 +24,19 @@ class SessionAssessmentDimensionSummaryOutcome(UniversalBaseModel):
         FieldMetadata(alias="evidenceCounts"),
         pydantic.Field(alias="evidenceCounts", description="Evidence counts grouped by direction."),
     ]
+    """
+    Evidence counts grouped by direction.
+    """
+
     measurement_counts: typing_extensions.Annotated[
         SessionAssessmentDimensionSummaryOutcomeMeasurementCounts,
         FieldMetadata(alias="measurementCounts"),
         pydantic.Field(alias="measurementCounts", description="Evidence counts grouped by measurement state."),
     ]
+    """
+    Evidence counts grouped by measurement state.
+    """
+
     coverage: SessionAssessmentDimensionSummaryOutcomeCoverage = pydantic.Field()
     """
     Reader coverage for this dimension.
@@ -39,5 +47,8 @@ class SessionAssessmentDimensionSummaryOutcome(UniversalBaseModel):
         FieldMetadata(alias="taskOutcome"),
         pydantic.Field(alias="taskOutcome", default=None, description="Resolved task outcome when available."),
     ]
+    """
+    Resolved task outcome when available.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
