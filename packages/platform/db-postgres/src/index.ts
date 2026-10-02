@@ -23,6 +23,7 @@ export {
   ensureBillingUsageEventsPartitions,
   maintainBillingUsageEventsRetention,
 } from "./maintain-billing-usage-events.ts"
+export { cleanupPublishedOutboxEvents, OutboxCleanupError, type OutboxCleanupResult } from "./outbox-cleanup.ts"
 // Outbox consumer for reliable event publishing
 export {
   createPollingOutboxConsumer,
