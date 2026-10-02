@@ -1,7 +1,8 @@
-import { type CacheError, ProjectId, type RepositoryError } from "@domain/shared"
+import { type CacheError, ProjectId, type RepositoryError, SignalId } from "@domain/shared"
 import { type CryptoError, hash } from "@repo/utils"
 import { Effect } from "effect"
 import {
+  SIGNAL_DISCOVERY_BUNDLE_LOCK_KEY,
   SIGNAL_DISCOVERY_FEEDBACK_LOCK_KEY,
   SIGNAL_DISCOVERY_FEEDBACK_LOCK_TTL_SECONDS,
   SIGNAL_DISCOVERY_PROJECT_LOCK_KEY,
@@ -28,6 +29,8 @@ export interface AssignOrCreateSignalInput {
   readonly normalizedEmbedding: readonly number[]
   readonly rawFeedback?: string
   readonly rawNormalizedEmbedding?: readonly number[]
+  /** Set only by deterministic detectors; see `findBundledSignalId`. */
+  readonly bundleKey?: string
 }
 
 export type AssignOrCreateSignalResult =
@@ -81,6 +84,56 @@ const findAssignedSignalId = (
     return retrieval.matchedSignalId
   })
 
+/**
+ * The exact path, and the reason a repeat failure does not fan out into a pile of
+ * near-identical issues: a detector that already named the failure class matches on
+ * that name, not on an embedding of the sentence it wrote about it. Two occurrences
+ * of one broken tool differ in the ids and counts their messages quote, which is
+ * exactly what the embedding is sensitive to and the key is not.
+ */
+const findBundledSignalId = (input: AssignOrCreateSignalInput, bundleKey: string) =>
+  Effect.gen(function* () {
+    const signalRepository = yield* SignalRepository
+    const bundled = yield* signalRepository.findByBundleKey({
+      projectId: ProjectId(input.projectId),
+      bundleKey,
+    })
+    return bundled?.id ?? null
+  })
+
+/**
+ * The issue a bucket should adopt, chosen by vector search alone.
+ *
+ * Deliberately skips the rerank stage the fuzzy path uses. Rerank disambiguates
+ * issues by name and description, and a deterministic candidate's name is a
+ * placeholder built from one occurrence — so it scores two records of the *same*
+ * failure as barely related and the bucket opens a duplicate beside the issue it
+ * should have joined. Measured against the real pipeline: a 0.99-cosine match was
+ * rejected and duplicated.
+ *
+ * Taking the top admitted candidate is the same judgement `rerankSignalCandidates`
+ * already makes when the provider is unreachable — search thresholds have filtered
+ * to high-confidence matches, so the best-scored one is the best available.
+ */
+const findBundleAdoptionCandidateId = (input: AssignOrCreateSignalInput) =>
+  Effect.gen(function* () {
+    const signalRepository = yield* SignalRepository
+    const search = (feedback: string, normalizedEmbedding: readonly number[]) =>
+      signalRepository.hybridSearch({
+        projectId: ProjectId(input.projectId),
+        query: feedback,
+        normalizedEmbedding,
+        includeUnpromoted: true,
+      })
+
+    const enriched = yield* search(input.feedback, input.normalizedEmbedding)
+    if (enriched.length > 0) return enriched[0]?.signalId ?? null
+
+    if (input.rawFeedback === undefined || input.rawNormalizedEmbedding === undefined) return null
+    const raw = yield* search(input.rawFeedback, input.rawNormalizedEmbedding)
+    return raw[0]?.signalId ?? null
+  })
+
 const findAssignedSignalIdWithFallback = (input: AssignOrCreateSignalInput) =>
   Effect.gen(function* () {
     const feedbackAssignedSignalId = yield* findAssignedSignalId(input, {
@@ -121,17 +174,54 @@ export const assignOrCreateSignalUseCase = (input: AssignOrCreateSignalInput) =>
     yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
 
-    const feedbackHash = yield* hash(input.feedback)
+    const bundleKey = input.bundleKey
+    if (bundleKey !== undefined) yield* Effect.annotateCurrentSpan("bundleKey", bundleKey)
+
+    // The bucket, not the sentence: identical feedback is what the feedback lock
+    // serializes, and a deterministic detector's feedback is not identical across
+    // occurrences even when the failure is.
+    const outerLockKey =
+      bundleKey === undefined
+        ? SIGNAL_DISCOVERY_FEEDBACK_LOCK_KEY(yield* hash(input.feedback))
+        : SIGNAL_DISCOVERY_BUNDLE_LOCK_KEY(bundleKey)
+
+    // On a bundle miss, fall back to the fuzzy path once and adopt the key onto
+    // whatever it resolves to. Issues discovered before bundling existed carry no
+    // key, so an exact-only lookup would open a duplicate beside every one of
+    // them; adoption converges each bucket onto its existing issue on the first
+    // occurrence and takes the exact path from then on.
+    const findExistingSignalId = (candidateInput: AssignOrCreateSignalInput) =>
+      bundleKey === undefined
+        ? findAssignedSignalIdWithFallback(candidateInput)
+        : Effect.gen(function* () {
+            const bundled = yield* findBundledSignalId(candidateInput, bundleKey)
+            if (bundled !== null) return bundled
+
+            const fuzzy = yield* findBundleAdoptionCandidateId(candidateInput)
+            if (fuzzy === null) return null
+
+            // Accepted only if the key is actually claimed. A fuzzy match that
+            // already carries a different key *is* another bucket, and merging two
+            // buckets is the one thing an exact key exists to prevent — so a failed
+            // claim means this bucket opens its own issue instead.
+            const signalRepository = yield* SignalRepository
+            const adopted = yield* signalRepository.adoptBundleKey({
+              signalId: SignalId(fuzzy),
+              bundleKey,
+            })
+            yield* Effect.annotateCurrentSpan("bundleKeyAdopted", adopted)
+            return adopted ? fuzzy : null
+          })
 
     return yield* withSignalDiscoveryLock(
       {
         organizationId: input.organizationId,
         projectId: ProjectId(input.projectId),
-        lockKey: SIGNAL_DISCOVERY_FEEDBACK_LOCK_KEY(feedbackHash),
+        lockKey: outerLockKey,
         ttlSeconds: SIGNAL_DISCOVERY_FEEDBACK_LOCK_TTL_SECONDS,
       },
       Effect.gen(function* () {
-        const feedbackAssignedSignalId = yield* findAssignedSignalIdWithFallback(input)
+        const feedbackAssignedSignalId = yield* findExistingSignalId(input)
         if (feedbackAssignedSignalId !== null) {
           return yield* assignToSignal(input, feedbackAssignedSignalId)
         }
@@ -149,7 +239,7 @@ export const assignOrCreateSignalUseCase = (input: AssignOrCreateSignalInput) =>
               return { action: "skipped" as const, reason: eligibility.reason }
             }
 
-            const projectAssignedSignalId = yield* findAssignedSignalIdWithFallback(input)
+            const projectAssignedSignalId = yield* findExistingSignalId(input)
             if (projectAssignedSignalId !== null) {
               return yield* assignToSignal(input, projectAssignedSignalId)
             }

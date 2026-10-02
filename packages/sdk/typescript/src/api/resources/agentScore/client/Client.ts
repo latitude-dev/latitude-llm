@@ -25,13 +25,15 @@ export class AgentScoreClient {
     /**
      * Returns the project's published Agent Scores in a date range, oldest first. Days the project did not publish are absent from the list.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.HistoryAgentScoreRequest} request
      * @param {AgentScoreClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.agentScore.history("projectSlug")
@@ -113,15 +115,17 @@ export class AgentScoreClient {
     }
 
     /**
-     * Returns what explains the project's current Agent Score: ranked causes per dimension, and where Outcome failures and Safety harm concentrate. This is current evidence from the live window and does not reconstruct any stored score.
+     * Returns ranked causes per dimension and Outcome and Safety issue summaries for today's UTC date. Published scores retain the evidence from their original computation. When no retained explanation is available, the response may use matching evidence from another computation for the same date, or report an explicit absence.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.CausesAgentScoreRequest} request
      * @param {AgentScoreClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.agentScore.causes("projectSlug")
@@ -196,13 +200,15 @@ export class AgentScoreClient {
     /**
      * Returns the project's Agent Score for today: one number from 0 to 100 and the five dimensions behind it. A score is published only when every dimension meets its coverage and confidence floors, so a project can have no score for a day.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.GetAgentScoreRequest} request
      * @param {AgentScoreClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.agentScore.get("projectSlug")

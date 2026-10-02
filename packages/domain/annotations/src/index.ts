@@ -47,6 +47,12 @@ export {
   listTraceAnnotationsUseCase,
 } from "./use-cases/list-annotations.ts"
 export {
+  deleteApiAnnotationUseCase,
+  getApiAnnotationUseCase,
+  type UpdateApiAnnotationInput,
+  updateApiAnnotationUseCase,
+} from "./use-cases/manage-api-annotation.ts"
+export {
   type PublishAnnotationError,
   type PublishAnnotationInput,
   type PublishAnnotationResult,

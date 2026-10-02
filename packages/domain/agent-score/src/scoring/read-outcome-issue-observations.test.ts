@@ -2,6 +2,7 @@ import type { SignalWithLifecycle } from "@domain/signals"
 import { scoringEligibleSignalIds } from "@domain/signals"
 import { describe, expect, it } from "vitest"
 import type { SessionAssessmentItem, SessionDimensionEffect } from "../entities/session-assessment.ts"
+import type { ResolvedAssessmentItem } from "../resolver/resolve-assessment-findings.ts"
 import { readOutcomeIssueObservations } from "./read-outcome-issue-observations.ts"
 
 const outcomeEffect = (direction: SessionDimensionEffect["direction"]): SessionDimensionEffect => ({
@@ -30,6 +31,16 @@ const item = (overrides: Partial<SessionAssessmentItem> = {}): SessionAssessment
     ...overrides,
   }) as SessionAssessmentItem
 
+const resolvedItem = (
+  overrides: Partial<SessionAssessmentItem> = {},
+  observationProbability?: number,
+): ResolvedAssessmentItem => ({
+  item: item(overrides),
+  chronology: {},
+  independentHumanEvidence: false,
+  ...(observationProbability !== undefined ? { observationProbability } : {}),
+})
+
 const signal = (id: string, overrides: Partial<SignalWithLifecycle> = {}): SignalWithLifecycle =>
   ({
     id,
@@ -44,7 +55,7 @@ const signal = (id: string, overrides: Partial<SignalWithLifecycle> = {}): Signa
 describe("readOutcomeIssueObservations", () => {
   it("takes the item's group key, which already collapses a signal with its source score", () => {
     const observations = readOutcomeIssueObservations({
-      items: [item({ groupKey: "signal:refund-loop", signalIds: ["refund-loop"], label: "Refund-flow loop" })],
+      items: [resolvedItem({ groupKey: "signal:refund-loop", signalIds: ["refund-loop"], label: "Refund-flow loop" })],
       eligibleSignalIds: scoringEligibleSignalIds([signal("refund-loop")]),
     })
 
@@ -57,7 +68,7 @@ describe("readOutcomeIssueObservations", () => {
   // would say the failures are explained by there being failures.
   it("leaves the verdict itself out of the issue list", () => {
     const observations = readOutcomeIssueObservations({
-      items: [item({ metricId: "sessions.task_success", label: "Task failure" })],
+      items: [resolvedItem({ metricId: "sessions.task_success", label: "Task failure" })],
       eligibleSignalIds: new Set(),
     })
 
@@ -67,8 +78,10 @@ describe("readOutcomeIssueObservations", () => {
   it("ignores evidence that does not push Outcome down", () => {
     const observations = readOutcomeIssueObservations({
       items: [
-        item({ effects: [outcomeEffect("positive")] }),
-        item({ effects: [{ ...outcomeEffect("negative"), scoreDimension: "cost", role: "spendEfficiency" }] }),
+        resolvedItem({ effects: [outcomeEffect("positive")] }),
+        resolvedItem({
+          effects: [{ ...outcomeEffect("negative"), scoreDimension: "cost", role: "spendEfficiency" }],
+        }),
       ],
       eligibleSignalIds: new Set(),
     })
@@ -84,7 +97,7 @@ describe("readOutcomeIssueObservations", () => {
     ["user-created", { origin: "user" as const }],
   ])("drops a signal item that is %s", (_label, overrides) => {
     const observations = readOutcomeIssueObservations({
-      items: [item({ groupKey: "signal:s1", signalIds: ["s1"] })],
+      items: [resolvedItem({ groupKey: "signal:s1", signalIds: ["s1"] })],
       eligibleSignalIds: scoringEligibleSignalIds([signal("s1", overrides as Partial<SignalWithLifecycle>)]),
     })
 
@@ -93,17 +106,16 @@ describe("readOutcomeIssueObservations", () => {
 
   it("marks an item discovered from the verdict score as sharing its selection", () => {
     const observations = readOutcomeIssueObservations({
-      items: [item({ groupKey: "signal:s1", signalIds: ["s1"], scoreIds: ["verdict-score"] })],
+      items: [resolvedItem({ groupKey: "signal:s1", signalIds: ["s1"], scoreIds: ["verdict-score"] }, 0.1)],
       eligibleSignalIds: scoringEligibleSignalIds([signal("s1")]),
       verdictScoreIds: ["verdict-score"],
-      observationProbability: 0.1,
     })
 
     expect(observations[0]).toMatchObject({ sharesEndpointSelection: true, observationProbability: 0.1 })
   })
 
   it("leaves the probability absent when the reader's selection is unrecorded", () => {
-    const observations = readOutcomeIssueObservations({ items: [item()], eligibleSignalIds: new Set() })
+    const observations = readOutcomeIssueObservations({ items: [resolvedItem()], eligibleSignalIds: new Set() })
 
     expect(observations[0]).not.toHaveProperty("observationProbability")
   })

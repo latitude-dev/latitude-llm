@@ -197,6 +197,7 @@
         "group": "Observe",
         "pages": [
           "observability/overview",
+          "observability/agent-score",
           "observability/sessions",
           "observability/users",
           "observability/tools",

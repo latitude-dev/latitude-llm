@@ -4,6 +4,7 @@ import type { BaseClientOptions, BaseRequestOptions } from "../../../../BaseClie
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "../../../../BaseClient.js";
 import { mergeHeaders } from "../../../../core/headers.js";
 import * as core from "../../../../core/index.js";
+import { mergeAdditionalBodyParameters } from "../../../../core/requestBody.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
@@ -25,13 +26,15 @@ export class MonitorsClient {
     /**
      * Returns the project's monitors, system monitors first, then by most recent activity.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.ListMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.monitors.list("projectSlug")
@@ -116,13 +119,15 @@ export class MonitorsClient {
     /**
      * Creates a monitor with one rule. The slug is derived from `name`.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.CreateMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.monitors.create("projectSlug", {
@@ -130,7 +135,8 @@ export class MonitorsClient {
      *             trigger: "match",
      *             name: "name",
      *             target: {
-     *                 type: "savedSearch"
+     *                 type: "savedSearch",
+     *                 id: null
      *             },
      *             severity: "low"
      *         }
@@ -168,7 +174,7 @@ export class MonitorsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: _body,
+            body: mergeAdditionalBodyParameters(_body, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -210,13 +216,15 @@ export class MonitorsClient {
     /**
      * Returns live monitors matching the supplied target type and/or filter subset.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.ListMonitorsForTargetBody} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.monitors.listForTarget("projectSlug", {
@@ -259,7 +267,7 @@ export class MonitorsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -301,7 +309,7 @@ export class MonitorsClient {
     /**
      * Returns a single monitor by slug.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
      * @param {Latitude.GetMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -309,6 +317,8 @@ export class MonitorsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.monitors.get("projectSlug", "monitorSlug")
@@ -385,13 +395,15 @@ export class MonitorsClient {
     /**
      * Deletes a monitor. System monitors cannot be deleted.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
      * @param {Latitude.DeleteMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.monitors.delete("projectSlug", "monitorSlug")
@@ -466,7 +478,7 @@ export class MonitorsClient {
     /**
      * Updates a monitor's metadata and incident severity. Target, trigger, metric, and conditions are fixed after creation. System monitor edits are restricted.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
      * @param {Latitude.UpdateMonitorBody} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -475,6 +487,8 @@ export class MonitorsClient {
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.ForbiddenError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.monitors.update("projectSlug", "monitorSlug")
@@ -512,7 +526,7 @@ export class MonitorsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -556,7 +570,7 @@ export class MonitorsClient {
     /**
      * Returns the incidents opened by a monitor, most recent first. Each item's `notified` flag shows whether it triggered a notification.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
      * @param {Latitude.ListIncidentsMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -564,6 +578,8 @@ export class MonitorsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.monitors.listIncidents("projectSlug", "monitorSlug")
@@ -651,7 +667,7 @@ export class MonitorsClient {
     /**
      * Mutes a monitor so its incidents stop sending notifications. Allowed on all monitors.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
      * @param {Latitude.MuteMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -659,6 +675,8 @@ export class MonitorsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.monitors.mute("projectSlug", "monitorSlug")
@@ -735,7 +753,7 @@ export class MonitorsClient {
     /**
      * Lifts a monitor's mute so its incidents notify again.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
      * @param {Latitude.UnmuteMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -743,6 +761,8 @@ export class MonitorsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.monitors.unmute("projectSlug", "monitorSlug")

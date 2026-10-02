@@ -44,6 +44,7 @@ import { Route as BackofficeProjectsProjectIdRouteImport } from './routes/backof
 import { Route as BackofficeOrganizationsOrganizationIdRouteImport } from './routes/backoffice/organizations/$organizationId'
 import { Route as ApiObservabilityTestErrorRouteImport } from './routes/api/observability-test/error'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiAgentScoreRingDotpngRouteImport } from './routes/api/agent-score/ring[.]png'
 import { Route as AuthenticatedSettingsSectionRouteImport } from './routes/_authenticated/settings/$section'
 import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_authenticated/projects/$projectSlug'
 import { Route as Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport } from './routes/[.well-known]/openid-configuration/$'
@@ -293,6 +294,11 @@ const ApiObservabilityTestErrorRoute =
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentScoreRingDotpngRoute = ApiAgentScoreRingDotpngRouteImport.update({
+  id: '/api/agent-score/ring.png',
+  path: '/api/agent-score/ring.png',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedSettingsSectionRoute =
@@ -710,6 +716,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
   '/settings/$section': typeof AuthenticatedSettingsSectionRoute
+  '/api/agent-score/ring.png': typeof ApiAgentScoreRingDotpngRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
@@ -805,6 +812,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
   '/settings/$section': typeof AuthenticatedSettingsSectionRoute
+  '/api/agent-score/ring.png': typeof ApiAgentScoreRingDotpngRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
@@ -904,6 +912,7 @@ export interface FileRoutesById {
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
   '/_authenticated/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
   '/_authenticated/settings/$section': typeof AuthenticatedSettingsSectionRoute
+  '/api/agent-score/ring.png': typeof ApiAgentScoreRingDotpngRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
@@ -1004,6 +1013,7 @@ export interface FileRouteTypes {
     | '/.well-known/openid-configuration/$'
     | '/projects/$projectSlug'
     | '/settings/$section'
+    | '/api/agent-score/ring.png'
     | '/api/auth/$'
     | '/api/observability-test/error'
     | '/backoffice/organizations/$organizationId'
@@ -1099,6 +1109,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
     | '/settings/$section'
+    | '/api/agent-score/ring.png'
     | '/api/auth/$'
     | '/api/observability-test/error'
     | '/backoffice/organizations/$organizationId'
@@ -1197,6 +1208,7 @@ export interface FileRouteTypes {
     | '/.well-known/openid-configuration/$'
     | '/_authenticated/projects/$projectSlug'
     | '/_authenticated/settings/$section'
+    | '/api/agent-score/ring.png'
     | '/api/auth/$'
     | '/api/observability-test/error'
     | '/backoffice/organizations/$organizationId'
@@ -1289,6 +1301,7 @@ export interface RootRouteChildren {
   WrappedIdRoute: typeof WrappedIdRouteWithChildren
   ChooseOrganizationIndexRoute: typeof ChooseOrganizationIndexRoute
   WelcomeIndexRoute: typeof WelcomeIndexRoute
+  ApiAgentScoreRingDotpngRoute: typeof ApiAgentScoreRingDotpngRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiObservabilityTestErrorRoute: typeof ApiObservabilityTestErrorRoute
   IntegrationsGithubInstallRoute: typeof IntegrationsGithubInstallRoute
@@ -1546,6 +1559,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent-score/ring.png': {
+      id: '/api/agent-score/ring.png'
+      path: '/api/agent-score/ring.png'
+      fullPath: '/api/agent-score/ring.png'
+      preLoaderRoute: typeof ApiAgentScoreRingDotpngRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/settings/$section': {
@@ -2301,6 +2321,7 @@ const rootRouteChildren: RootRouteChildren = {
   WrappedIdRoute: WrappedIdRouteWithChildren,
   ChooseOrganizationIndexRoute: ChooseOrganizationIndexRoute,
   WelcomeIndexRoute: WelcomeIndexRoute,
+  ApiAgentScoreRingDotpngRoute: ApiAgentScoreRingDotpngRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiObservabilityTestErrorRoute: ApiObservabilityTestErrorRoute,
   IntegrationsGithubInstallRoute: IntegrationsGithubInstallRoute,

@@ -57,6 +57,10 @@ class CreateMonitorBodyEscalatingTarget(UniversalBaseModel):
             description="Saved-search id for saved-search monitors, or `null` for inline targets.",
         ),
     ]
+    """
+    Saved-search id for saved-search monitors, or `null` for inline targets.
+    """
+
     metric: typing.Optional[CreateMonitorBodyEscalatingTargetMetric] = pydantic.Field(default=None)
     """
     Default metric evaluated for this target.

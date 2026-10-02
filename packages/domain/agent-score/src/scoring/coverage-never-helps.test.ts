@@ -68,12 +68,33 @@ describe("unreconstructable critical paths", () => {
         excludedSessionCount: 9_980,
       },
       eligibleSessionCount: 10_000,
-      latencyReaderCoverage: [],
+      missingLatencyReferenceSessionCount: 0,
+      unreferencedLatencyModels: [],
       floors: LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.speed,
     })
 
     // A perfect Speed over twenty readable sessions is not a project that was fast.
     expect(result.coverage).toBe("unmeasured")
+  })
+})
+
+describe("sessions on a model with no latency reference", () => {
+  it("withhold Speed rather than dividing by the few sessions that could be judged", () => {
+    const result = gateSpeedWindow({
+      speed: {
+        observedNs: 1_000,
+        avoidableNs: 0,
+        speed: 100,
+        includedSessionCount: 100,
+        excludedSessionCount: 900,
+      },
+      eligibleSessionCount: 1_000,
+      missingLatencyReferenceSessionCount: 900,
+      unreferencedLatencyModels: [{ provider: "anthropic", model: "claude-fable-5", sessionCount: 900 }],
+      floors: LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.speed,
+    })
+
+    expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "latencyReferenceCoverage" })
   })
 })
 

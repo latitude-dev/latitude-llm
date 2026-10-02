@@ -46,7 +46,7 @@ class IncidentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time window. Returns incidents whose lifetime overlaps `[fromIso, toIso]`. Defaults to 7 days before `toIso`.
@@ -102,7 +102,7 @@ class IncidentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         incident_id : str
             Incident identifier.
@@ -165,7 +165,7 @@ class AsyncIncidentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time window. Returns incidents whose lifetime overlaps `[fromIso, toIso]`. Defaults to 7 days before `toIso`.
@@ -229,7 +229,7 @@ class AsyncIncidentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         incident_id : str
             Incident identifier.
