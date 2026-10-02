@@ -20,8 +20,9 @@ import {
   ELIGIBLE_PROJECTS_QUERY,
   ELIGIBLE_SESSION_AGE_HISTOGRAM_QUERY,
   ELIGIBLE_SESSION_IDS_QUERY,
+  eligibleSessionPartitionFrom,
+  eligibleSessionScopeParams,
   SESSION_END_DEBOUNCE_SECONDS,
-  SWEEP_PARTITION_GRACE_DAYS,
 } from "./eligible-sessions.ts"
 
 interface AgeRow {
@@ -74,14 +75,12 @@ export const ScoreWindowSourceLive = Layer.succeed(ScoreWindowSource, {
         .query(async (client) => {
           const result = await client.query({
             query: ELIGIBLE_SESSION_AGE_HISTOGRAM_QUERY,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              from: formatCHDate(daysBefore(to, longestStep)),
-              to: formatCHDate(to),
-              debounceSeconds: SESSION_END_DEBOUNCE_SECONDS,
-              noReflagTag: FLAGGER_NO_REFLAG_TAG,
-            },
+            query_params: eligibleSessionScopeParams({
+              organizationId,
+              projectId,
+              from: daysBefore(to, longestStep),
+              to,
+            }),
             format: "JSONEachRow",
           })
           return countsByStep({ rows: await result.json<AgeRow>(), stepDays })
@@ -96,14 +95,7 @@ export const ScoreWindowSourceLive = Layer.succeed(ScoreWindowSource, {
         .query(async (client) => {
           const result = await client.query({
             query: ELIGIBLE_SESSION_IDS_QUERY,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              from: formatCHDate(from),
-              to: formatCHDate(to),
-              debounceSeconds: SESSION_END_DEBOUNCE_SECONDS,
-              noReflagTag: FLAGGER_NO_REFLAG_TAG,
-            },
+            query_params: eligibleSessionScopeParams({ organizationId, projectId, from, to }),
             format: "JSONEachRow",
           })
           const rows = await result.json<SessionIdRow>()
@@ -123,7 +115,7 @@ export const ScoreProjectSweepSourceLive = Layer.succeed(ScoreProjectSweepSource
             query: ELIGIBLE_PROJECTS_QUERY,
             query_params: {
               from: formatCHDate(daysBefore(to, maxStepDays)),
-              partitionFrom: formatCHDate(daysBefore(to, maxStepDays + SWEEP_PARTITION_GRACE_DAYS)),
+              partitionFrom: formatCHDate(eligibleSessionPartitionFrom(to)),
               to: formatCHDate(to),
               debounceSeconds: SESSION_END_DEBOUNCE_SECONDS,
               noReflagTag: FLAGGER_NO_REFLAG_TAG,

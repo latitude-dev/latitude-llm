@@ -39,6 +39,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
     filters: null,
     assigneeId: null,
     priority: null,
+    bundleKey: null,
     centroid: {
       base: [1, 0],
       mass: 1,

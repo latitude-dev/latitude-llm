@@ -17,6 +17,10 @@ class SessionAssessment(UniversalBaseModel):
         FieldMetadata(alias="sessionId"),
         pydantic.Field(alias="sessionId", description="Session represented by this assessment."),
     ]
+    """
+    Session represented by this assessment.
+    """
+
     items: typing.List[SessionAssessmentItem] = pydantic.Field()
     """
     Chronological page of deduplicated evidence items.
@@ -31,6 +35,10 @@ class SessionAssessment(UniversalBaseModel):
             description="Opaque cursor for the next evidence page. Absent when there are no more items.",
         ),
     ]
+    """
+    Opaque cursor for the next evidence page. Absent when there are no more items.
+    """
+
     dimensions: typing.List[SessionAssessmentDimensionSummary] = pydantic.Field()
     """
     Complete summaries for all five Agent Score dimensions, repeated on every page.

@@ -17,8 +17,13 @@ export interface SessionWindowContribution {
   readonly speed: {
     readonly observedNs: number
     readonly avoidableNs: number
-    /** False when the session's critical path did not reconstruct; excluded from Speed entirely. */
+    /**
+     * False when the session's critical path did not reconstruct or a model on it has no latency
+     * reference; excluded from Speed entirely.
+     */
     readonly usableForDenominator: boolean
+    /** True when the path reconstructed and only a missing latency reference kept it out. */
+    readonly missingLatencyReference: boolean
   }
 }
 

@@ -14,7 +14,7 @@ export const flaggerScreeningCoverageLimitationSchema = z.enum(FLAGGER_SCREENING
 export type FlaggerScreeningCoverageLimitation = z.infer<typeof flaggerScreeningCoverageLimitationSchema>
 
 export const flaggerScreeningSelectionEvidenceSchema = z.object({
-  method: z.enum(["deterministic", "hinted", "uniform-sample", "ordinary-sample"]),
+  method: z.enum(["deterministic", "hinted", "jev-preclassifier", "uniform-sample", "ordinary-sample"]),
   inclusionProbability: z.number().min(0).max(1),
 })
 export type FlaggerScreeningSelectionEvidence = z.infer<typeof flaggerScreeningSelectionEvidenceSchema>

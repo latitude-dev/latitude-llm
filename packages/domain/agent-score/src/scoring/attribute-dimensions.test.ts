@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { LAUNCH_COST_SCORING_ARTIFACT } from "../artifacts/launch-cost-scoring-artifact.ts"
+import { CAUSE_EXAMPLE_SESSION_LIMIT } from "../constants.ts"
 import type { CostFamily } from "../entities/cost-evidence.ts"
 import { PROVISIONAL_COST_METRIC_CATALOG } from "../entities/cost-metric-catalog.ts"
 import { attributeCostWindow, attributeReliabilityWindow, attributeSpeedWindow } from "./attribute-dimensions.ts"
@@ -14,7 +15,7 @@ const contribution = (
   sessionId: "session",
   costUsableForDenominator: true,
   families: families.map((entry) => ({ ...entry, penalizedUnits: 0 })),
-  speed: { observedNs: 0, avoidableNs: 0, usableForDenominator: true },
+  speed: { observedNs: 0, avoidableNs: 0, usableForDenominator: true, missingLatencyReference: false },
 })
 
 const fold = (overrides: Partial<WindowFold>): WindowFold => ({ ...EMPTY_WINDOW_FOLD, ...overrides })
@@ -203,6 +204,20 @@ describe("attributeReliabilityWindow", () => {
 
     expect(result.rows.every((row) => row.attributedDeficit > 0)).toBe(true)
     expect(result.rows.every((row) => row.fixGain === 0)).toBe(true)
+  })
+
+  it("carries the sessions each cause ended, capped at the example limit", () => {
+    const result = attributeReliabilityWindow({ endpoints, referenceRunSessions: 20, observedScore: observed })
+
+    expect(result.rows.find((row) => row.causeId === "toolFailure")?.exampleSessionIds).toEqual([
+      "tool-0",
+      "tool-1",
+      "both-0",
+      "both-1",
+    ])
+    expect(
+      (result.rows.find((row) => row.causeId === "providerError")?.exampleSessionIds ?? []).length,
+    ).toBeLessThanOrEqual(CAUSE_EXAMPLE_SESSION_LIMIT)
   })
 
   it("attributes nothing when no session failed", () => {

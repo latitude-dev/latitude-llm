@@ -18,41 +18,73 @@ class MemoryRecordVersion(UniversalBaseModel):
             description="Kind of memory operation: `add`/`update`/`remove` (mutations), `read` (retrieval), or `store_create`/`store_delete` (store lifecycle).",
         ),
     ]
+    """
+    Kind of memory operation: `add`/`update`/`remove` (mutations), `read` (retrieval), or `store_create`/`store_delete` (store lifecycle).
+    """
+
     token_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokenCount"),
         pydantic.Field(alias="tokenCount", description="Tokens in the body produced by this version."),
     ]
+    """
+    Tokens in the body produced by this version.
+    """
+
     tokens_added: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensAdded"),
         pydantic.Field(alias="tokensAdded", description="Tokens added by this version versus its predecessor."),
     ]
+    """
+    Tokens added by this version versus its predecessor.
+    """
+
     tokens_removed: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensRemoved"),
         pydantic.Field(alias="tokensRemoved", description="Tokens removed by this version versus its predecessor."),
     ]
+    """
+    Tokens removed by this version versus its predecessor.
+    """
+
     span_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="spanId"),
         pydantic.Field(alias="spanId", description="Span that authored this version."),
     ]
+    """
+    Span that authored this version.
+    """
+
     trace_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="traceId"),
         pydantic.Field(alias="traceId", description="Trace the authoring span belongs to."),
     ]
+    """
+    Trace the authoring span belongs to.
+    """
+
     session_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="sessionId"),
         pydantic.Field(alias="sessionId", description="Session the authoring trace belongs to."),
     ]
+    """
+    Session the authoring trace belongs to.
+    """
+
     user_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="userId"),
         pydantic.Field(alias="userId", description="End-user attributed to the authoring span. Empty when none."),
     ]
+    """
+    End-user attributed to the authoring span. Empty when none.
+    """
+
     end_time: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="endTime"),
@@ -60,5 +92,8 @@ class MemoryRecordVersion(UniversalBaseModel):
             alias="endTime", description="ISO-8601 timestamp of the authoring span's end (the version ordering key)."
         ),
     ]
+    """
+    ISO-8601 timestamp of the authoring span's end (the version ordering key).
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

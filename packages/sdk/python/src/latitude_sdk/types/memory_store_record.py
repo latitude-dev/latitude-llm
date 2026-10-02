@@ -17,11 +17,19 @@ class MemoryStoreRecord(UniversalBaseModel):
             description="Record identifier (`gen_ai.memory.record.id`); opaque. The empty string is the unnamed record.",
         ),
     ]
+    """
+    Record identifier (`gen_ai.memory.record.id`); opaque. The empty string is the unnamed record.
+    """
+
     token_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokenCount"),
         pydantic.Field(alias="tokenCount", description="Tokens in the record's current body."),
     ]
+    """
+    Tokens in the record's current body.
+    """
+
     last_updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="lastUpdatedAt"),
@@ -29,5 +37,8 @@ class MemoryStoreRecord(UniversalBaseModel):
             alias="lastUpdatedAt", description="ISO-8601 timestamp of the version that produced the current body."
         ),
     ]
+    """
+    ISO-8601 timestamp of the version that produced the current body.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
