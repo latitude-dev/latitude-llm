@@ -3,12 +3,13 @@ import {
   type Invitation,
   inviteMemberUseCase,
   listMembersUseCase,
+  MembershipRepository,
   type MembershipRole,
   type MemberWithUser,
   removeMemberUseCase,
   updateMemberRoleUseCase,
 } from "@domain/organizations"
-import { MembershipId, UserId } from "@domain/shared"
+import { ForbiddenError, MembershipId, UserId } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { createRoute, z } from "@hono/zod-openapi"
 import {
@@ -24,7 +25,13 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
-import { jsonBody, openApiNoContentResponses, PROTECTED_SECURITY, typedResponses } from "../openapi/schemas.ts"
+import {
+  errorResponse,
+  jsonBody,
+  openApiNoContentResponses,
+  PROTECTED_SECURITY,
+  typedResponses,
+} from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 import { requireOAuthUserId } from "../utils/require-oauth.ts"
 
@@ -188,7 +195,7 @@ const inviteMember = memberEndpoint({
     sdkMethod: "invite",
     summary: "Invite a member",
     description:
-      "Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).",
+      "Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user). Only organization owners and admins can invite members.",
     security: PROTECTED_SECURITY,
     request: { body: jsonBody(InviteRequestSchema) },
     responses: typedResponses({ status: 201, schema: InvitedMemberSchema, description: "Invitation created" }),
@@ -198,6 +205,15 @@ const inviteMember = memberEndpoint({
   execute: (input, ctx) =>
     Effect.gen(function* () {
       const inviterUserId = yield* requireOAuthUserId(ctx.auth)
+
+      const membershipRepo = yield* MembershipRepository
+      const isAdmin = yield* membershipRepo.isAdmin(ctx.organization.id, inviterUserId)
+      if (!isAdmin) {
+        return yield* new ForbiddenError({
+          message: "Only organization owners and admins can invite members",
+        })
+      }
+
       const { email, role } = input.body
 
       const webUrl = yield* parseEnv("LAT_WEB_URL", "string")
@@ -285,16 +301,28 @@ const removeMember = memberEndpoint({
     sdkMethod: "remove",
     summary: "Remove a member",
     description:
-      "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.",
+      "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.",
     security: PROTECTED_SECURITY,
     request: { params: MemberIdParamsSchema },
-    responses: openApiNoContentResponses({ description: "Member removed" }),
+    responses: {
+      ...openApiNoContentResponses({ description: "Member removed" }),
+      403: errorResponse("Only organization owners and admins can remove members"),
+    },
   }),
   access: "destructive",
   rateLimitTier: "low",
   execute: (input, ctx) =>
     Effect.gen(function* () {
       const requestingUserId = yield* requireOAuthUserId(ctx.auth)
+
+      const membershipRepo = yield* MembershipRepository
+      const isAdmin = yield* membershipRepo.isAdmin(ctx.organization.id, requestingUserId)
+      if (!isAdmin) {
+        return yield* new ForbiddenError({
+          message: "Only organization owners and admins can remove members",
+        })
+      }
+
       yield* removeMemberUseCase({ membershipId: MembershipId(input.params.memberId), requestingUserId })
       return { status: 204 } as const
     }).pipe(withPostgres(MembershipRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),

@@ -41,6 +41,10 @@ impl AuthProvider for AnyAuthProvider {
         self.providers.iter().any(|p| p.has_credentials())
     }
 
+    fn has_stored_credentials(&self) -> bool {
+        self.providers.iter().any(|p| p.has_stored_credentials())
+    }
+
     fn inject_token_cache(&self, cli_name: &str) {
         for p in &self.providers {
             p.inject_token_cache(cli_name);
@@ -51,6 +55,13 @@ impl AuthProvider for AnyAuthProvider {
         self.providers
             .iter()
             .flat_map(|p| p.credential_hints())
+            .collect()
+    }
+
+    fn populated_credential_hints(&self) -> Vec<String> {
+        self.providers
+            .iter()
+            .flat_map(|p| p.populated_credential_hints())
             .collect()
     }
 
@@ -70,6 +81,13 @@ impl AuthProvider for AnyAuthProvider {
         // credentials for some scheme. Leaf providers (Bearer/Basic/Header)
         // ignore the endpoint, so this degenerates to `has_credentials()`
         // for them.
+        if crate::profiles::outranks_env() {
+            for provider in &self.providers {
+                if provider.has_stored_credentials() && provider.has_credentials_for(endpoint) {
+                    return provider.apply(request, endpoint);
+                }
+            }
+        }
         for provider in &self.providers {
             if provider.has_credentials_for(endpoint) {
                 return provider.apply(request, endpoint);
@@ -118,6 +136,14 @@ impl AuthProvider for AllAuthProvider {
         !self.providers.is_empty() && self.providers.iter().all(|p| p.has_credentials())
     }
 
+    fn has_stored_credentials(&self) -> bool {
+        !self.providers.is_empty()
+            && self
+                .providers
+                .iter()
+                .all(|p| p.has_stored_credentials())
+    }
+
     fn inject_token_cache(&self, cli_name: &str) {
         for p in &self.providers {
             p.inject_token_cache(cli_name);
@@ -128,6 +154,13 @@ impl AuthProvider for AllAuthProvider {
         self.providers
             .iter()
             .flat_map(|p| p.credential_hints())
+            .collect()
+    }
+
+    fn populated_credential_hints(&self) -> Vec<String> {
+        self.providers
+            .iter()
+            .flat_map(|p| p.populated_credential_hints())
             .collect()
     }
 
@@ -205,6 +238,14 @@ impl AuthProvider for LayeredAuthProvider {
         self.primary.has_credentials()
     }
 
+    fn has_stored_credentials(&self) -> bool {
+        // Same primary-only rule: a supplementary header is never what makes a
+        // profile's credentials "stored". Delegating rather than inheriting the
+        // trait default keeps this composite honest if it is ever nested inside
+        // an Any/Routing wrapper — today it is always the outermost one.
+        self.primary.has_stored_credentials()
+    }
+
     fn inject_token_cache(&self, cli_name: &str) {
         self.primary.inject_token_cache(cli_name);
         for layer in &self.layers {
@@ -218,6 +259,13 @@ impl AuthProvider for LayeredAuthProvider {
         // not a misconfiguration and shouldn't be reported as a missing
         // credential.
         self.primary.credential_hints()
+    }
+
+    fn populated_credential_hints(&self) -> Vec<String> {
+        // Same primary-only rule; without this override the composite fell
+        // back to the trait default, which returns the *unfiltered* hints and
+        // silently undid the filtering for every CLI wrapped in a layer.
+        self.primary.populated_credential_hints()
     }
 
     fn has_credentials_for(&self, endpoint: &EndpointAuthMetadata) -> bool {
@@ -299,6 +347,14 @@ impl AuthProvider for RoutingAuthProvider {
             || self.default.as_ref().is_some_and(|p| p.has_credentials())
     }
 
+    fn has_stored_credentials(&self) -> bool {
+        self.schemes.values().any(|p| p.has_stored_credentials())
+            || self
+                .default
+                .as_ref()
+                .is_some_and(|p| p.has_stored_credentials())
+    }
+
     fn inject_token_cache(&self, cli_name: &str) {
         for p in self.schemes.values() {
             p.inject_token_cache(cli_name);
@@ -316,6 +372,25 @@ impl AuthProvider for RoutingAuthProvider {
             .collect();
         if let Some(d) = &self.default {
             hints.extend(d.credential_hints());
+        }
+        hints
+    }
+
+    /// Same walk as [`credential_hints`](Self::credential_hints), filtered.
+    ///
+    /// Missing this override made the populated-hints filtering inert on the
+    /// most common configuration there is: a `RoutingAuthProvider` is built
+    /// whenever any operation declares per-operation `security:`, which on a
+    /// real spec means nearly every operation. The trait default returns the
+    /// unfiltered hints, so a 401 still named every declared source.
+    fn populated_credential_hints(&self) -> Vec<String> {
+        let mut hints: Vec<String> = self
+            .schemes
+            .values()
+            .flat_map(|p| p.populated_credential_hints())
+            .collect();
+        if let Some(d) = &self.default {
+            hints.extend(d.populated_credential_hints());
         }
         hints
     }
@@ -370,13 +445,35 @@ impl AuthProvider for RoutingAuthProvider {
             Some(reqs) => reqs,
         };
 
-        let satisfiable = requirements.iter().find(|req| {
-            req.keys().all(|name| {
-                self.schemes
-                    .get(name)
-                    .is_some_and(|p| p.has_credentials())
-            })
-        });
+        // With an explicitly named `--profile`, prefer a requirement this
+        // profile actually stored credentials for over the first merely
+        // satisfiable one. Without it, spec order decides as it always has —
+        // ambient selection (`<BIN>_PROFILE`, `profiles use`) must not start
+        // overriding env vars for existing users.
+        //
+        // `all(has_stored_credentials)` is deliberately strict: an AND
+        // requirement mixing a keyring-backed scheme with an env-backed one
+        // (bearer + a static account-id header) is never "all stored", so the
+        // preference doesn't engage for it and the fallthrough picks spec
+        // order. Loosening this to "any stored, all satisfiable" would cover
+        // that case but would also let one stored half of a requirement drag
+        // in an ambient other half — the same mixed-provenance trap
+        // `resolve_client_id` has to avoid. Left strict until a real API asks
+        // for it.
+        let satisfiable = if crate::profiles::outranks_env() {
+            requirements
+                .iter()
+                .find(|req| {
+                    req.keys().all(|name| {
+                        self.schemes
+                            .get(name)
+                            .is_some_and(|p| p.has_stored_credentials())
+                    })
+                })
+                .or_else(|| self.satisfiable_requirement(requirements))
+        } else {
+            self.satisfiable_requirement(requirements)
+        };
 
         let Some(requirement) = satisfiable else {
             // No declared requirement is satisfiable. Diverges from the TS
@@ -404,6 +501,21 @@ impl AuthProvider for RoutingAuthProvider {
     }
 }
 
+impl RoutingAuthProvider {
+    fn satisfiable_requirement<'a>(
+        &self,
+        requirements: &'a [HashMap<String, Vec<String>>],
+    ) -> Option<&'a HashMap<String, Vec<String>>> {
+        requirements.iter().find(|req| {
+            req.keys().all(|name| {
+                self.schemes
+                    .get(name)
+                    .is_some_and(|p| p.has_credentials())
+            })
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -411,7 +523,43 @@ mod tests {
 
     use crate::auth::credential::AuthCredentialSource;
     use crate::auth::schemes::{BearerAuthProvider, HeaderAuthProvider};
-    use crate::auth::test_helpers::{api_key, auth_header, bearer, header, req};
+    use crate::auth::test_helpers::{
+        api_key, auth_header, bearer, header, req, GlobalAuthStateGuard,
+    };
+    use crate::profiles::SelectionSource;
+
+    /// Install the global state one precedence test needs: a profile selected
+    /// by `source`, a keyring that either holds the stored bearer or doesn't,
+    /// and the env vars backing the basic scheme. The returned guard undoes
+    /// all of it on drop, panic included — keep it bound for the test's body.
+    fn precedence_state(source: SelectionSource, stored: bool) -> GlobalAuthStateGuard {
+        let mut guard = GlobalAuthStateGuard::new();
+        guard.install_profile("test", source);
+        if stored {
+            guard.install_keyring("compose-test", "oauth", "stored-token");
+        } else {
+            guard.install_empty_keyring();
+        }
+        guard
+            .set_env("FERN_COMPOSE_BASIC_USER", "user")
+            .set_env("FERN_COMPOSE_BASIC_PASSWORD", "password");
+        guard
+    }
+
+    fn basic_env_provider() -> DynAuthProvider {
+        Arc::new(crate::auth::schemes::BasicAuthProvider::new(
+            "basic",
+            AuthCredentialSource::from_env("FERN_COMPOSE_BASIC_USER"),
+            AuthCredentialSource::from_env("FERN_COMPOSE_BASIC_PASSWORD"),
+        ))
+    }
+
+    fn stored_bearer_provider() -> DynAuthProvider {
+        Arc::new(BearerAuthProvider::new(
+            "oauth",
+            AuthCredentialSource::keyring("compose-test", "oauth"),
+        ))
+    }
 
     // -------- AnyAuthProvider --------
 
@@ -426,6 +574,36 @@ mod tests {
         assert!(any.has_credentials());
         let r = any.apply(req(), &EndpointAuthMetadata::unspecified()).unwrap();
         assert_eq!(header(r, "x-api-key").as_deref(), Some("k"));
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn any_auth_prefers_stored_provider_for_named_profile() {
+        let _state = precedence_state(SelectionSource::Flag, true);
+        let any = AnyAuthProvider::new(vec![basic_env_provider(), stored_bearer_provider()]);
+
+        let r = any.apply(req(), &EndpointAuthMetadata::unspecified()).unwrap();
+        assert_eq!(auth_header(r).as_deref(), Some("Bearer stored-token"));
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn any_auth_prefers_first_provider_without_named_profile() {
+        let _state = precedence_state(SelectionSource::Active, true);
+        let any = AnyAuthProvider::new(vec![basic_env_provider(), stored_bearer_provider()]);
+
+        let r = any.apply(req(), &EndpointAuthMetadata::unspecified()).unwrap();
+        assert!(auth_header(r).unwrap().starts_with("Basic "));
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn any_auth_falls_back_when_named_profile_has_no_stored_provider() {
+        let _state = precedence_state(SelectionSource::Flag, false);
+        let any = AnyAuthProvider::new(vec![basic_env_provider(), stored_bearer_provider()]);
+
+        let r = any.apply(req(), &EndpointAuthMetadata::unspecified()).unwrap();
+        assert!(auth_header(r).unwrap().starts_with("Basic "));
     }
 
     #[tokio::test]
@@ -660,6 +838,51 @@ mod tests {
         let endpoint = EndpointAuthMetadata::with_requirements(vec![req_a]);
         let out = routing.apply(req(), &endpoint).unwrap();
         assert_eq!(header(out, "x-api-key").as_deref(), Some("k"));
+    }
+
+    fn precedence_routing() -> RoutingAuthProvider {
+        let mut schemes = HashMap::new();
+        schemes.insert("basic".to_string(), basic_env_provider());
+        schemes.insert("oauth".to_string(), stored_bearer_provider());
+        RoutingAuthProvider::new(schemes)
+    }
+
+    fn precedence_endpoint() -> EndpointAuthMetadata {
+        let mut basic = HashMap::new();
+        basic.insert("basic".to_string(), Vec::<String>::new());
+        let mut oauth = HashMap::new();
+        oauth.insert("oauth".to_string(), Vec::<String>::new());
+        EndpointAuthMetadata::with_requirements(vec![basic, oauth])
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn routing_prefers_stored_requirement_for_named_profile() {
+        let _state = precedence_state(SelectionSource::Flag, true);
+        let out = precedence_routing()
+            .apply(req(), &precedence_endpoint())
+            .unwrap();
+        assert_eq!(auth_header(out).as_deref(), Some("Bearer stored-token"));
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn routing_prefers_first_requirement_without_named_profile() {
+        let _state = precedence_state(SelectionSource::Active, true);
+        let out = precedence_routing()
+            .apply(req(), &precedence_endpoint())
+            .unwrap();
+        assert!(auth_header(out).unwrap().starts_with("Basic "));
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn routing_falls_back_when_named_profile_has_no_stored_requirement() {
+        let _state = precedence_state(SelectionSource::Flag, false);
+        let out = precedence_routing()
+            .apply(req(), &precedence_endpoint())
+            .unwrap();
+        assert!(auth_header(out).unwrap().starts_with("Basic "));
     }
 
     #[tokio::test]

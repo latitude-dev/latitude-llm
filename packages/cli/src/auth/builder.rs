@@ -208,6 +208,11 @@ fn describe_credential_source(src: &AuthCredentialSource) -> String {
         AuthCredentialSource::Keyring { service, account } => {
             format!("keyring {service}:{account}")
         }
+        AuthCredentialSource::KeyringField {
+            service,
+            account,
+            field,
+        } => format!("keyring {service}:{account} ({field})"),
         AuthCredentialSource::Missing => "(unbound)".to_string(),
     }
 }

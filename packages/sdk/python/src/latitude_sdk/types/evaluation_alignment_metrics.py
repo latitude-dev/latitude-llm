@@ -21,6 +21,10 @@ class EvaluationAlignmentMetrics(UniversalBaseModel):
             description="Headline score that judges how well the evaluation tracks human annotations.",
         ),
     ]
+    """
+    Headline score that judges how well the evaluation tracks human annotations.
+    """
+
     accuracy: float = pydantic.Field()
     """
     Accuracy: `(TP + TN) / total`.
@@ -56,6 +60,10 @@ class EvaluationAlignmentMetrics(UniversalBaseModel):
         FieldMetadata(alias="balancedAccuracy"),
         pydantic.Field(alias="balancedAccuracy", description="Balanced accuracy: mean of recall and specificity."),
     ]
+    """
+    Balanced accuracy: mean of recall and specificity.
+    """
+
     matthews_correlation_coefficient: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="matthewsCorrelationCoefficient"),
@@ -63,5 +71,8 @@ class EvaluationAlignmentMetrics(UniversalBaseModel):
             alias="matthewsCorrelationCoefficient", description="Matthews correlation coefficient, in `[-1, 1]`."
         ),
     ]
+    """
+    Matthews correlation coefficient, in `[-1, 1]`.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -45,7 +45,7 @@ class ExperimentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -95,7 +95,7 @@ class ExperimentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         name : str
             Human-readable name. Used to derive the slug.
@@ -140,7 +140,7 @@ class ExperimentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         experiment_slug : str
             Experiment slug (human-readable identifier within the project).
@@ -184,7 +184,7 @@ class ExperimentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         experiment_slug : str
             Experiment slug (human-readable identifier within the project).
@@ -237,7 +237,7 @@ class ExperimentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         experiment_slug : str
             Experiment slug (human-readable identifier within the project).
@@ -295,7 +295,7 @@ class AsyncExperimentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -353,7 +353,7 @@ class AsyncExperimentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         name : str
             Human-readable name. Used to derive the slug.
@@ -406,7 +406,7 @@ class AsyncExperimentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         experiment_slug : str
             Experiment slug (human-readable identifier within the project).
@@ -458,7 +458,7 @@ class AsyncExperimentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         experiment_slug : str
             Experiment slug (human-readable identifier within the project).
@@ -519,7 +519,7 @@ class AsyncExperimentsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         experiment_slug : str
             Experiment slug (human-readable identifier within the project).

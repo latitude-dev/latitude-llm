@@ -12,21 +12,37 @@ class MemoryRecordSummary(UniversalBaseModel):
     store_id: typing_extensions.Annotated[
         str, FieldMetadata(alias="storeId"), pydantic.Field(alias="storeId", description="Store the record belongs to.")
     ]
+    """
+    Store the record belongs to.
+    """
+
     record_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="recordId"),
         pydantic.Field(alias="recordId", description="Record the metrics are for."),
     ]
+    """
+    Record the metrics are for.
+    """
+
     read_tokens: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="readTokens"),
         pydantic.Field(alias="readTokens", description="Tokens read from this record across the session's retrievals."),
     ]
+    """
+    Tokens read from this record across the session's retrievals.
+    """
+
     tokens_added: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensAdded"),
         pydantic.Field(alias="tokensAdded", description="Tokens the session added to this record (endpoint diff)."),
     ]
+    """
+    Tokens the session added to this record (endpoint diff).
+    """
+
     tokens_removed: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensRemoved"),
@@ -34,5 +50,8 @@ class MemoryRecordSummary(UniversalBaseModel):
             alias="tokensRemoved", description="Tokens the session removed from this record (endpoint diff)."
         ),
     ]
+    """
+    Tokens the session removed from this record (endpoint diff).
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

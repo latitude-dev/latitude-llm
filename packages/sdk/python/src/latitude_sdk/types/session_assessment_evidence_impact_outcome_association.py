@@ -14,5 +14,8 @@ class SessionAssessmentEvidenceImpactOutcomeAssociation(UniversalBaseModel):
         FieldMetadata(alias="probabilityChange"),
         pydantic.Field(alias="probabilityChange", default=None, description="Modeled change in success probability."),
     ]
+    """
+    Modeled change in success probability.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
