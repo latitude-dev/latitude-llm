@@ -24,13 +24,40 @@ Customer and backoffice refresh actions start Temporal directly. They do not dep
 The Agent Score page uses one selected UTC date for the score, dimension values, evidence, and
 computation requirements. The date is stored in the route's `date` search parameter. Without a
 selected date, the page opens the latest published score through today. If no score exists, it
-opens today. The latest lookup has no history-range limit.
+opens today. The latest lookup has no history-range limit. The global `@repo/ui` `DateRangePicker`
+uses single-day mode here; selection and day arrows retain UTC date
+semantics and cannot advance beyond today. Displayed composite scores are floored to whole
+numbers; stored scores and dimension calculations retain their precision.
+
+The page reads the Temporal descriptions for both the scheduled and forced workflow IDs for the
+selected date. Any non-terminal execution is shown as an in-progress calculation, including after
+a reload or navigation back to the page. The page polls more often while work is active and keeps a
+lower-frequency check while it is idle so externally started calculations also appear. During a
+calculation, Refresh is disabled and the current score and evidence remain visible. The workflow
+run and status form a query marker, so score, history, and evidence reload when the execution
+changes state. Placeholder data is reused only for the same UTC date.
 
 A selected date uses an exact snapshot lookup. An unscored date never borrows an older score.
 The 7-day or 30-day history graph ends on the selected date. Missing days remain gaps. A published
 selected date shows the graph, even when today's computation is pending. Dates without a score
 show their computation requirements when available. Query keys include the selected date, so
 navigation cannot reuse another day's score or evidence while the next request loads.
+
+## Shareable score images
+
+The camera action in the vitality panel opens a snapshot modal with a PNG preview, Copy image,
+and Download PNG. The image captures the selected published score and its five dimensions at
+click time. Unpublished dates disable the action; missing dimensions display a dash. Copy and
+download use the same generated PNG. Clipboard failures show a toast, unsupported image copying
+leaves download available, and generation failures offer a retry.
+
+`agent-score-snapshot.ts` renders the 1270-square Figma composition to a 2540-square canvas export.
+It uses the original background PNGs and exported headline/branding assets from
+`public/agent-score-snapshot/`, plus locally served Inter fonts. No project data or generated
+images are uploaded. The export palette is separate from the dashboard: scores below 60 use red,
+60–79 use blue in place of yellow, and scores of 80 or more use green. The overall score selects
+the background; each disc uses its own solid score-band color without a gradient. The central number is floored and the smaller
+numbers use the page's dimension rounding.
 
 ## Published evidence
 
@@ -56,12 +83,73 @@ A forced calculation can refresh legacy cached evidence but cannot rewrite the p
 
 ## Evidence requirements
 
-`agent-score-v4-provisional` uses 50 eligible sessions for both the window target and publication
+`agent-score-v5-provisional` uses 50 eligible sessions for both the window target and publication
 minimum. Outcome requires 50 compatible verdicts, Reliability requires 50 readable sessions, Speed
 requires 50 complete critical paths, and Safety requires 50 compatible evaluations. Percentage
 coverage requirements are unchanged. Window selection still uses whole-week steps and hysteresis.
 Historical snapshots retain their original scoring versions; the trend marks a range that crosses
 versions.
+
+## Frozen latency references
+
+Speed loads the calibrated `latency-reference-v2-calibrated-20260921` artifact. It was built from
+the closed fleet window from 2026-06-23 through 2026-09-21 and the exclusive ingestion snapshot at
+2026-09-21 08:00 UTC, with a minimum of 200 observations and 5 organizations for every published
+cohort. The artifact contains detailed input/output token and streaming cohorts plus provider/model
+roll-ups. A detailed miss can use its exact provider/model roll-up. It never uses another model or a
+fleet-wide fallback.
+
+An exact provider/model pair that is absent from the artifact is unmeasured. A session with an
+applicable critical-path generation on that pair is excluded from both sides of the Speed ratio,
+because its generation time cannot be judged and counting it would read as necessary time. This
+includes a model introduced after the freeze and a model that has not reached the sample or
+organization gate. Speed then publishes over the remaining sessions if they still clear the complete
+critical-path floors (50 sessions and half of eligible sessions). When the excluded sessions are
+what took Speed below a floor, Speed is withheld with `latencyReferenceCoverage`, and the readiness
+panel names the unreferenced models with the most excluded sessions. Never borrowing another
+model's reference preserves score comparability and prevents a thin tenant-specific cohort from
+becoming a shared reference.
+
+Create a later freeze with `pnpm --filter @app/workers agent-score:calibrate-latency`. The command
+requires an inclusive `--since`, an exclusive `--until`, an exclusive `--ingested-until` snapshot,
+and a new `--artifact-version`. It writes the deterministic TypeScript artifact to stdout and the
+cohort and rejection report to stderr. A reviewed freeze replaces the bundled artifact and bumps
+the Agent Score scoring version. Score jobs never query live fleet distributions, so reference
+values change only through a reviewed release.
+Run this before a new model becomes score-bearing when the fleet already has enough evidence, and
+rerun it when `missingLatencyReference` coverage shows that active models have reached the gates.
+
+```bash
+pnpm --filter @app/workers agent-score:calibrate-latency -- \
+  --since 2026-06-23T00:00:00.000Z \
+  --until 2026-09-21T00:00:00.000Z \
+  --ingested-until 2026-09-21T08:00:00.000Z \
+  --artifact-version latency-reference-v2-calibrated-20260921 \
+  > packages/domain/agent-score/src/artifacts/launch-latency-reference-artifact.ts
+```
+
+## Weekly digest
+
+A separate repeatable schedule (`agent-score-digest:weekly`, Mondays at 08:00 UTC) emails each
+scored project's members its current score and how it moved over the week. It runs after the daily
+sweep has had time to land, so a project that published today is digested with today's number.
+
+Eligibility is the organisation's `agentScore` flag plus a published score inside the seven-day
+window. The second is a question only `agent_score_snapshots` can answer: the sweep's ClickHouse
+source reports which projects have enough traffic to attempt a score, and a project can clear the
+session floor every day while publishing nothing. A project whose newest score predates the window
+is not digested at all rather than sent a stale number.
+
+The digest never borrows an older score, and it does not assume the week is dense. Its baseline is
+the oldest snapshot still inside the window, because withheld days write no row and a fixed
+seven-day offset would usually land on a gap. It refuses to subtract across a scoring version bump
+or a window step change, since either makes the difference an artifact of the change rather than
+movement in the agent, and it marks a move whose confidence intervals overlap as one the evidence
+does not separate from noise.
+
+Delivery, recipients, per-user preferences and the three renderers are the notification system's:
+see [notifications.md](notifications.md) § Weekly Agent Score digest. Staff can send one immediately
+from **Project actions → Send weekly Agent Score digest** in the backoffice.
 
 ## Local seed data
 

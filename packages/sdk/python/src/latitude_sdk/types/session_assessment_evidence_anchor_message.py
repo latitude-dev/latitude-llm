@@ -14,11 +14,19 @@ class SessionAssessmentEvidenceAnchorMessage(UniversalBaseModel):
         FieldMetadata(alias="traceId"),
         pydantic.Field(alias="traceId", description="Trace containing the referenced message."),
     ]
+    """
+    Trace containing the referenced message.
+    """
+
     message_index: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="messageIndex"),
         pydantic.Field(alias="messageIndex", description="Zero-based message position in the trace conversation."),
     ]
+    """
+    Zero-based message position in the trace conversation.
+    """
+
     part_index: typing_extensions.Annotated[
         typing.Optional[int],
         FieldMetadata(alias="partIndex"),
@@ -26,6 +34,10 @@ class SessionAssessmentEvidenceAnchorMessage(UniversalBaseModel):
             alias="partIndex", default=None, description="Zero-based content-part position within the message."
         ),
     ]
+    """
+    Zero-based content-part position within the message.
+    """
+
     content_hash: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="contentHash"),
@@ -35,5 +47,8 @@ class SessionAssessmentEvidenceAnchorMessage(UniversalBaseModel):
             description="Stable hash used to recognize the referenced message content.",
         ),
     ]
+    """
+    Stable hash used to recognize the referenced message content.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

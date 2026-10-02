@@ -33,12 +33,14 @@ const projectId = ProjectId("project-1")
 const sessionId = SessionId("session-1")
 const traceId = TraceId("trace-1")
 const cutoff = new Date("2026-01-02T00:00:00.000Z")
+const traceStartTimeFrom = new Date("2025-01-01T00:00:00.000Z")
 const analysisHash = "a".repeat(64)
 const session = {
   organizationId,
   projectId,
   sessionId,
   traceIds: [traceId],
+  startTime: traceStartTimeFrom,
   outputMessages: [],
 } as unknown as SessionDetail
 
@@ -63,6 +65,7 @@ const otherSession = {
   projectId,
   sessionId: otherSessionId,
   traceIds: [otherTraceId],
+  startTime: new Date("2026-01-01T00:00:00.000Z"),
   outputMessages: [],
 } as unknown as SessionDetail
 
@@ -211,19 +214,19 @@ describe("SessionAssessmentBulkTelemetrySourceLive", () => {
     const spanRepository = createFakeSpanRepository({
       listByTraceIds: (input) => {
         reads.spans += 1
-        expect(input).toMatchObject({ traceIds: [traceId], startTimeTo: cutoff })
+        expect(input).toMatchObject({ traceIds: [traceId], startTimeFrom: traceStartTimeFrom, startTimeTo: cutoff })
         return Effect.succeed([])
       },
       listGenerationFactsByTraceIds: (input) => {
         reads.generations += 1
-        expect(input).toMatchObject({ traceIds: [traceId], startTimeTo: cutoff })
+        expect(input).toMatchObject({ traceIds: [traceId], startTimeFrom: traceStartTimeFrom, startTimeTo: cutoff })
         expect(input.contentBudget).toEqual(SESSION_ASSESSMENT_CONTENT_BUDGET)
         expect(input.sessionKeyByTraceId.get(traceId)).toBe(sessionId)
         return Effect.succeed([])
       },
       listToolCallFactsByTraceIds: (input) => {
         reads.toolCalls += 1
-        expect(input).toMatchObject({ traceIds: [traceId], startTimeTo: cutoff })
+        expect(input).toMatchObject({ traceIds: [traceId], startTimeFrom: traceStartTimeFrom, startTimeTo: cutoff })
         return Effect.succeed([])
       },
     }).repository

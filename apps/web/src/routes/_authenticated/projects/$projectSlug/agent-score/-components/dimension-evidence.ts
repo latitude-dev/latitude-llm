@@ -187,13 +187,24 @@ const issueRows = (
   })
 }
 
+const outcomeJudgedSessions = (explanation: Explanation): number | undefined => {
+  if (explanation.coverage.outcomeSampledSessions !== undefined) return explanation.coverage.outcomeSampledSessions
+
+  // `outcomeExaminedSessions` is no fallback: it adds the deterministic census, which no judge read.
+  const requirement = explanation.readiness?.dimensions
+    ?.find((entry) => entry.scoreDimension === "outcome")
+    ?.requirements.find((entry) => entry.kind === "threshold" && entry.metric === "outcomeEvaluations")
+  return requirement?.kind === "threshold" ? requirement.current : undefined
+}
+
 const endpointCoverage = (dimension: ScoreDimensionKey, explanation: Explanation): DimensionEvidenceRow | null => {
   const eligible = explanation.eligibleSessionCount
   if (dimension === "outcome") {
+    const judged = outcomeJudgedSessions(explanation)
     return coverageRow({
       id: "outcome:endpoint-coverage",
-      label: "Sessions evaluated for outcome",
-      covered: explanation.coverage.outcomeExaminedSessions,
+      label: judged === undefined ? "Sessions evaluated for outcome" : "Sessions directly evaluated for outcome",
+      covered: judged ?? explanation.coverage.outcomeExaminedSessions,
       total: eligible,
     })
   }
@@ -311,8 +322,27 @@ const addObservedCauses = (evidence: MutableEvidence, dimension: ScoreDimensionK
   }
 }
 
+/**
+ * Moment-derived issue rows, which attribution now covers with a measured effect.
+ *
+ * The key is `findingGroupKey`'s moment prefix. Keeping both would list the same conversation
+ * evidence twice — once grouped by the kind set a moment carried, once per kind with its points.
+ */
+const isMomentIssue = (issueKey: string): boolean => issueKey.startsWith("issue:moment:")
+
 const addIssues = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
-  if (dimension === "outcome") evidence.affected.push(...issueRows("outcome", explanation.issues.outcome))
+  if (dimension === "outcome") {
+    // Rows, not the entry: `computeAgentScore` attributes Outcome on every publishable window and
+    // stores an empty result when nothing degraded or the component never applied. Testing for the
+    // entry alone would drop moment evidence in exactly the windows that have nothing to replace it.
+    const hasOutcomeAttribution = explanation.attribution.some(
+      (entry) => entry.scoreDimension === "outcome" && entry.rows.length > 0,
+    )
+    const issues = hasOutcomeAttribution
+      ? explanation.issues.outcome.filter((issue) => !isMomentIssue(issue.issueKey))
+      : explanation.issues.outcome
+    evidence.affected.push(...issueRows("outcome", issues))
+  }
   if (dimension === "safety") {
     evidence.affected.push(...issueRows("safety:harm", explanation.issues.safety.confirmedHarm))
     evidence.context.push(
@@ -349,13 +379,32 @@ const addCostFamilies = (evidence: MutableEvidence, dimension: ScoreDimensionKey
   }
 }
 
+const addPublishedOutcomeEvidence = (evidence: MutableEvidence, explanation: Explanation): void => {
+  const judged = outcomeJudgedSessions(explanation)
+  if (judged === undefined || judged <= 0) return
+
+  const eligible = explanation.eligibleSessionCount
+  const share = eligible > 0 ? judged / eligible : 0
+  evidence.context.push({
+    id: "outcome:direct-evaluations",
+    label: "Sessions directly evaluated for outcome",
+    value: `${formatCount(judged)} of ${formatCount(eligible)}`,
+    description: `${formatPercent(share)} of the window, sampled at random`,
+    progress: 1,
+    tone: "neutral",
+  })
+}
+
 const addEndpointCoverage = (
   evidence: MutableEvidence,
   dimension: ScoreDimensionKey,
   snapshot: AgentScoreRecord | null,
   explanation: Explanation,
 ): void => {
-  if (snapshot?.dimensions[dimension]?.score !== undefined) return
+  if (snapshot?.dimensions[dimension]?.score !== undefined) {
+    if (dimension === "outcome") addPublishedOutcomeEvidence(evidence, explanation)
+    return
+  }
   const endpoint = endpointCoverage(dimension, explanation)
   if (!endpoint) return
   if (endpoint.tone !== "positive") evidence.coverageGaps.unshift(endpoint)

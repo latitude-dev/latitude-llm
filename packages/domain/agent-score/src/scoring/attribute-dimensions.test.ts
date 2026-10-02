@@ -15,7 +15,7 @@ const contribution = (
   sessionId: "session",
   costUsableForDenominator: true,
   families: families.map((entry) => ({ ...entry, penalizedUnits: 0 })),
-  speed: { observedNs: 0, avoidableNs: 0, usableForDenominator: true },
+  speed: { observedNs: 0, avoidableNs: 0, usableForDenominator: true, missingLatencyReference: false },
 })
 
 const fold = (overrides: Partial<WindowFold>): WindowFold => ({ ...EMPTY_WINDOW_FOLD, ...overrides })

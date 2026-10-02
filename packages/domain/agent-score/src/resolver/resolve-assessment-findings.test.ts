@@ -253,6 +253,7 @@ describe("assessment finding resolver", () => {
 
   it("groups conversation moments by semantic kind rather than occurrence id", () => {
     const moment = (evidenceKey: string, momentKinds: readonly string[]): AssessmentFinding => ({
+      momentLabels: momentKinds.map((kind) => ({ kind, confidence: 1 })),
       ...base,
       evidenceKey,
       source: "moment",

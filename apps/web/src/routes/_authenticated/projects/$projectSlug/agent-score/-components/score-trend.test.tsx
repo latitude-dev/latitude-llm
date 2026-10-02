@@ -86,6 +86,7 @@ describe("ScoreTrend", () => {
   it("uses the empty chart surface to show session progress", () => {
     render(
       <ScoreTrend
+        range="7d"
         endDate="2026-09-12"
         history={[]}
         explanation={sessionFloorExplanation}
@@ -105,6 +106,7 @@ describe("ScoreTrend", () => {
   it("shows all dimensions and the primary blocker for each unavailable score", () => {
     render(
       <ScoreTrend
+        range="7d"
         endDate="2026-09-12"
         history={[]}
         explanation={dimensionExplanation}
@@ -125,7 +127,14 @@ describe("ScoreTrend", () => {
 
   it("explains when readiness has not been calculated", () => {
     render(
-      <ScoreTrend endDate="2026-09-12" history={[]} explanation={null} isCurrentSnapshot={false} isLoading={false} />,
+      <ScoreTrend
+        range="7d"
+        endDate="2026-09-12"
+        history={[]}
+        explanation={null}
+        isCurrentSnapshot={false}
+        isLoading={false}
+      />,
     )
 
     expect(screen.getByText("Evidence has not been calculated yet")).toBeDefined()
@@ -135,6 +144,7 @@ describe("ScoreTrend", () => {
   it("shows selected-day requirements when that date has no score", () => {
     render(
       <ScoreTrend
+        range="7d"
         endDate="2026-09-12"
         history={[{ date: "2026-09-11", score: 66 } as never]}
         explanation={sessionFloorExplanation}
@@ -146,6 +156,6 @@ describe("ScoreTrend", () => {
     expect(screen.getByText("Requirements for this date")).toBeDefined()
     expect(screen.getByText("Sep 12, 2026 UTC")).toBeDefined()
     expect(screen.queryByText(/today/)).toBeNull()
-    expect(screen.queryByText("Score evolution")).toBeNull()
+    expect(screen.queryByRole("img", { name: "Agent vitality over the last 7 days" })).toBeNull()
   })
 })

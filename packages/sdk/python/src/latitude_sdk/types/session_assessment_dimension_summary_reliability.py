@@ -26,11 +26,19 @@ class SessionAssessmentDimensionSummaryReliability(UniversalBaseModel):
         FieldMetadata(alias="evidenceCounts"),
         pydantic.Field(alias="evidenceCounts", description="Evidence counts grouped by direction."),
     ]
+    """
+    Evidence counts grouped by direction.
+    """
+
     measurement_counts: typing_extensions.Annotated[
         SessionAssessmentDimensionSummaryReliabilityMeasurementCounts,
         FieldMetadata(alias="measurementCounts"),
         pydantic.Field(alias="measurementCounts", description="Evidence counts grouped by measurement state."),
     ]
+    """
+    Evidence counts grouped by measurement state.
+    """
+
     coverage: SessionAssessmentDimensionSummaryReliabilityCoverage = pydantic.Field()
     """
     Reader coverage for this dimension.
@@ -46,10 +54,17 @@ class SessionAssessmentDimensionSummaryReliability(UniversalBaseModel):
         FieldMetadata(alias="recoveredIncidentCount"),
         pydantic.Field(alias="recoveredIncidentCount", description="Number of recovered operational incidents."),
     ]
+    """
+    Number of recovered operational incidents.
+    """
+
     unrecovered_incident_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="unrecoveredIncidentCount"),
         pydantic.Field(alias="unrecoveredIncidentCount", description="Number of unrecovered operational incidents."),
     ]
+    """
+    Number of unrecovered operational incidents.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

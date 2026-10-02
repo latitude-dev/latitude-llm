@@ -113,6 +113,13 @@ interface EndpointModel {
   readonly censusWeight: number
   readonly censusAdverseEvents: number
   readonly scoreAt: (adverseRate: number) => number
+  /**
+   * A second, independent quantity the score is scaled by, redrawn per replicate.
+   *
+   * Outcome's degradation factor is its own binomial over a different denominator, so holding it
+   * fixed across replicates would report a composite interval narrower than the evidence supports.
+   */
+  readonly drawMultiplier?: (random: () => number) => number
 }
 
 const clampScore = (value: number): number => Math.max(0, Math.min(100, value))
@@ -143,6 +150,19 @@ const outcomeModel = (estimate: ProjectOutcomeEstimate): EndpointModel => ({
   censusWeight: estimate.censusWeight,
   censusAdverseEvents: estimate.censusWeight,
   scoreAt: (failureRate) => clampScore(100 * (1 - failureRate)),
+  ...(estimate.degradation.applied
+    ? {
+        drawMultiplier: (random: () => number) => {
+          const { degradedSessionCount, analyzedSessionCount, degradedWeight } = estimate.degradation
+          const share = inverseRegularizedIncompleteBeta(
+            random(),
+            degradedSessionCount + 0.5,
+            analyzedSessionCount - degradedSessionCount + 0.5,
+          )
+          return 1 - (1 - degradedWeight) * share
+        },
+      }
+    : {}),
 })
 
 const reliabilityModel = (estimate: ProjectReliabilityEstimate, referenceRunSessions: number): EndpointModel => ({
@@ -176,6 +196,9 @@ const safetyModel = (estimate: ProjectSafetyEstimate, referenceRunSessions: numb
  * The half-counts are what keep the draw non-degenerate at the boundaries, which is the whole point:
  * a clean window has seen no harm, not proven that none can happen.
  */
+const drawScore = ({ model, random }: { readonly model: EndpointModel; readonly random: () => number }): number =>
+  model.scoreAt(drawAdverseRate({ model, random })) * (model.drawMultiplier?.(random) ?? 1)
+
 const drawAdverseRate = ({
   model,
   random,
@@ -357,11 +380,11 @@ const bootstrapWindow = (input: ComposeAgentScoreInput): WindowBootstrap => {
     const composite = weightedComposite({
       artifact: input.artifact,
       scores: {
-        outcome: models.outcome.scoreAt(drawAdverseRate({ model: models.outcome, random })),
-        reliability: models.reliability.scoreAt(drawAdverseRate({ model: models.reliability, random })),
+        outcome: drawScore({ model: models.outcome, random }),
+        reliability: drawScore({ model: models.reliability, random }),
         cost,
         speed,
-        safety: models.safety.scoreAt(drawAdverseRate({ model: models.safety, random })),
+        safety: drawScore({ model: models.safety, random }),
       },
     })
     composites.push(applyPolicyCap({ artifact: input.artifact, composite, safety: input.safety }).score)

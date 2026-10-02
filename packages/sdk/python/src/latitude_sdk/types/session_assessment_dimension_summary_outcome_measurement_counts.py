@@ -28,5 +28,8 @@ class SessionAssessmentDimensionSummaryOutcomeMeasurementCounts(UniversalBaseMod
         FieldMetadata(alias="notMeasured"),
         pydantic.Field(alias="notMeasured", description="Number of effects without a numeric measurement."),
     ]
+    """
+    Number of effects without a numeric measurement.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
