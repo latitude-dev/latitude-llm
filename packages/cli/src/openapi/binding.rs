@@ -205,6 +205,18 @@ impl OpenApiBinding {
         self
     }
 
+    /// Register a global parameter that surfaces as a top-level CLI flag
+    /// and is injected into outgoing requests at the configured wire
+    /// location. Emitted by the TypeScript codegen layer
+    /// (`detectGlobalParams.ts`) from `ir.globalParameters`; delegates to
+    /// [`super::CliApp::global_parameter`], which merges these (with
+    /// precedence) over any params parsed from the spec's
+    /// `x-fern-global-parameters` extension.
+    pub fn global_parameter(mut self, param: crate::openapi::discovery::GlobalParameter) -> Self {
+        self.inner = self.inner.global_parameter(param);
+        self
+    }
+
     /// Mount all spec-derived subcommands under a namespace prefix.
     ///
     /// Without a namespace the generated commands are top-level:
@@ -266,12 +278,12 @@ impl OpenApiBinding {
     ) -> Result<super::app::BindingEntry, CliError> {
         let prepared = self.ensure_prepared()?;
         let mut doc_owned;
-        let doc = if self.inner.server_vars.is_empty() {
-            &prepared.doc
-        } else {
+        let doc = if self.inner.needs_server_var_resolution(&prepared.doc) {
             doc_owned = prepared.doc.clone();
             self.inner.apply_server_vars(&mut doc_owned, matches);
             &doc_owned
+        } else {
+            &prepared.doc
         };
 
         // Finalize CLI-arg-bound auth sources against parsed matches,
@@ -296,11 +308,25 @@ impl OpenApiBinding {
                 Some((h.header.clone(), val))
             })
             .collect();
+        let global_params: Vec<super::app::ResolvedGlobalParam> = doc
+            .global_parameters
+            .iter()
+            .filter_map(|p| {
+                let val = super::app::resolve_global_parameter_value(matches, p)?;
+                Some(super::app::ResolvedGlobalParam {
+                    name: p.name.clone(),
+                    location: p.location,
+                    target: p.target.clone(),
+                    value: val,
+                })
+            })
+            .collect();
         Ok(super::app::BindingEntry {
             doc: doc.clone(),
             auth_provider,
             http_config: prepared.http_config.clone(),
             global_headers,
+            global_params,
         })
     }
 
@@ -348,6 +374,127 @@ impl Binding for OpenApiBinding {
         let mut merged = bindings.to_vec();
         merged.extend(std::mem::take(&mut self.inner.auth_bindings));
         self.inner.auth_bindings = merged;
+    }
+
+    fn set_root_global_parameters(
+        &mut self,
+        params: &[crate::openapi::discovery::GlobalParameter],
+    ) {
+        // Root-level global parameters are prepended to the inner CliApp's
+        // builder_global_parameters. Any parameter the binding declared
+        // directly (via its own `.global_parameter()` call) takes priority
+        // and suppresses the same-named root parameter — mirroring how
+        // binding-level auth overrides root auth by scheme name.
+        let binding_names: std::collections::HashSet<String> = self
+            .inner
+            .builder_global_parameters
+            .iter()
+            .map(|p| p.name.clone())
+            .collect();
+        let mut merged: Vec<crate::openapi::discovery::GlobalParameter> = params
+            .iter()
+            .filter(|p| !binding_names.contains(&p.name))
+            .cloned()
+            .collect();
+        merged.extend(std::mem::take(&mut self.inner.builder_global_parameters));
+        self.inner.builder_global_parameters = merged;
+    }
+
+    fn parameter_specs(&self) -> Vec<crate::profiles::commands::ParameterSpec> {
+        // Best-effort: a spec that fails to prepare yields an empty
+        // vocabulary, which disables `--set` validation rather than making
+        // `profiles create` fail on an unrelated parse error.
+        let Ok(prepared) = self.ensure_prepared() else {
+            return Vec::new();
+        };
+        let mut specs = Vec::new();
+        collect_parameter_specs(&prepared.doc.parameters, &mut specs);
+        collect_parameter_specs_from_resources(&prepared.doc.resources, &mut specs);
+        specs
+    }
+
+    fn invoke_operation<'a>(
+        &'a self,
+        op_path: &'a [String],
+        params: &'a serde_json::Value,
+    ) -> BoxFuture<'a, Result<Option<serde_json::Value>, CliError>> {
+        Box::pin(async move {
+            let prepared = self.ensure_prepared()?;
+            // Strip the namespace prefix the same way `dispatch` does, so a
+            // caller names the operation as it appears on the command line.
+            let effective: &[String] = match &self.command_namespace {
+                Some(ns) if op_path.first().map(String::as_str) == Some(ns.as_str()) => &op_path[1..],
+                Some(_) if !op_path.is_empty() => return Ok(None),
+                _ => op_path,
+            };
+            let Some(method) = resolve_method_by_path(&prepared.doc, effective) else {
+                // Not ours — the caller tries the next binding.
+                return Ok(None);
+            };
+
+            let params_json = serde_json::to_string(params)
+                .map_err(|e| CliError::Validation(format!("Failed to serialize params: {e}")))?;
+            let params_json = params
+                .as_object()
+                .is_some_and(|o| !o.is_empty())
+                .then_some(params_json.as_str());
+
+            // Quiet: the caller decides what to print. Everything else is
+            // the default request shape — no pagination, no dry run, no
+            // output file.
+            let pipeline = crate::formatter::OutputPipeline {
+                quiet: true,
+                ..Default::default()
+            };
+            executor::execute_method(
+                &prepared.doc,
+                method,
+                params_json,
+                None,
+                &prepared.auth_provider,
+                None,
+                None,
+                None,
+                None,
+                false,
+                &executor::PaginationConfig::default(),
+                &pipeline,
+                true,
+                crate::cli_args::resolve_base_url_override_for(&self.inner.name)?.as_deref(),
+                &prepared.http_config,
+                false,
+                false,
+                true,
+                false,
+                &[],
+                &[],
+            )
+            .await
+        })
+    }
+
+    fn tenant_key_candidates(&self) -> Vec<String> {
+        let Ok(prepared) = self.ensure_prepared() else {
+            return Vec::new();
+        };
+        tenant_key_candidates(&prepared.doc)
+    }
+
+    fn server_variable_names(&self) -> Vec<String> {
+        let Ok(prepared) = self.ensure_prepared() else {
+            return Vec::new();
+        };
+        let mut names: std::collections::BTreeSet<String> = self
+            .inner
+            .server_var_names()
+            .into_iter()
+            .collect();
+        names.extend(
+            crate::openapi::app::collect_spec_server_variables(&prepared.doc)
+                .into_iter()
+                .map(|variable| variable.name),
+        );
+        names.into_iter().collect()
     }
 
     fn validate_auth(&self) -> Result<(), CliError> {
@@ -413,6 +560,10 @@ impl Binding for OpenApiBinding {
         // Register global --<name> flags for CLI-bound auth sources
         // so clap knows about them before parsing.
         let cli_auth_args = crate::auth::collect_binding_cli_args(&self.inner.auth_bindings);
+        // Reject before registering: an id the root already owns would be
+        // dropped by the merge and the credential would then resolve to the
+        // root flag's value. See `reject_reserved_auth_arg_ids`.
+        crate::app::reject_reserved_auth_arg_ids(&cli_auth_args)?;
         for arg_name in &cli_auth_args {
             let kebab = arg_name.replace('_', "-");
             cli = cli.arg(
@@ -481,14 +632,15 @@ impl Binding for OpenApiBinding {
             };
 
             // Apply server-variable substitutions to a local copy of the doc
-            // if any server vars are registered.
+            // when the generator registered server vars or the spec declares
+            // its own `servers[].variables` / `x-fern-default-url`.
             let mut doc_owned;
-            let doc = if self.inner.server_vars.is_empty() {
-                &prepared.doc
-            } else {
+            let doc = if self.inner.needs_server_var_resolution(&prepared.doc) {
                 doc_owned = prepared.doc.clone();
                 self.inner.apply_server_vars(&mut doc_owned, root_matches);
                 &doc_owned
+            } else {
+                &prepared.doc
             };
 
             // Walk the subcommand tree from root to find the target method.
@@ -511,13 +663,21 @@ impl Binding for OpenApiBinding {
             // performs blocking `std::fs::read` I/O. Wrap in `block_in_place`
             // so the tokio runtime can schedule other work while the thread is
             // parked on disk reads.
-            let params = tokio::task::block_in_place(|| {
+            let mut params = tokio::task::block_in_place(|| {
                 super::app::collect_params_from_flags(
                     matched_args,
                     method,
                     params_override,
                 )
             })?;
+            // Collect multipart/form-data parts from CLI flags for operations
+            // that declare a `multipart/form-data` body. `None` for all others.
+            // Runs before `params` is serialized: multipart fields live in
+            // `method.multipart_fields`, not `method.parameters`, so a field
+            // named in `--params` has no `location: body` to route on and
+            // would otherwise leak into the query string.
+            let multipart_parts =
+                super::app::collect_multipart_parts(method, matched_args, &mut params)?;
             let params_json_string = serde_json::to_string(&params)
                 .map_err(|e| CliError::Validation(format!("Failed to serialize params: {e}")))?;
             let params_json: Option<&str> = if params.is_empty() {
@@ -536,6 +696,27 @@ impl Binding for OpenApiBinding {
 
             let no_extract = matched_args.get_flag("no-extract");
             let no_retry = matched_args.get_flag("no-retry");
+            // `--retries` is resolved here rather than via clap's `.env()` /
+            // `default_value` because the flag is registered per operation, in
+            // `build_resource_command`, which has no access to the CLI name
+            // needed for `<PREFIX>_RETRIES`. Same precedence either way:
+            // flag > env > profile > whatever the spec declared.
+            crate::openapi::discovery::set_retries_override(
+                matched_args
+                    .try_get_one::<u32>("retries")
+                    .ok()
+                    .flatten()
+                    .copied()
+                    .or_else(|| {
+                        std::env::var(format!(
+                            "{}_RETRIES",
+                            crate::text::env_var_prefix(&self.inner.name)
+                        ))
+                        .ok()
+                        .and_then(|raw| raw.trim().parse::<u32>().ok())
+                    })
+                    .or_else(crate::profiles::retries),
+            );
             let no_stream = matched_args
                 .try_get_one::<bool>("no-stream")
                 .ok()
@@ -594,18 +775,34 @@ impl Binding for OpenApiBinding {
                 &params,
             )?;
 
+            let global_param_overrides = super::app::build_global_parameter_overrides(
+                matched_args,
+                doc,
+                method,
+                &params,
+            )?;
+
             // --base-url flag wins; otherwise {NAME}_BASE_URL env var.
             let base_url_override_owned =
                 crate::cli_args::resolve_base_url_override(root_matches, &self.inner.name)?;
             let base_url_override = base_url_override_owned.as_deref();
+
+            // --user-agent-suffix flag wins; otherwise {NAME}_USER_AGENT_SUFFIX
+            // env var (resolved inside HttpConfig). Apply the flag override to
+            // a clone so the client this request builds carries it.
+            let http_config = prepared.http_config.clone().with_user_agent_suffix_override(
+                crate::cli_args::resolve_user_agent_suffix_override(root_matches),
+            );
 
             // Read --output flag for binary response file writing. The literal
             // `-` is a stdout sentinel (curl/wget convention) and bypasses
             // path validation — handle_binary_response branches on it to
             // stream raw bytes to stdout instead of touching the filesystem.
             // Every other value flows through validate_safe_file_path, which
-            // rejects traversal, symlink escapes, and control characters
-            // per AGENTS.md.
+            // rejects control characters and requires the parent directory to
+            // exist, but does not sandbox the path to CWD — the file is
+            // written wherever the user points it (final-component symlinks
+            // are still refused at open time via O_NOFOLLOW).
             let output_path_owned = matched_args
                 .try_get_one::<String>("output")
                 .ok()
@@ -621,10 +818,6 @@ impl Binding for OpenApiBinding {
             } else {
                 output_path_buf.as_deref().and_then(|p| p.to_str())
             };
-
-            // Collect multipart/form-data parts from CLI flags for operations
-            // that declare a `multipart/form-data` body. `None` for all others.
-            let multipart_parts = super::app::collect_multipart_parts(method, matched_args)?;
 
             let pipeline = crate::formatter::OutputPipeline::from_matches(
                 root_matches,
@@ -667,12 +860,13 @@ impl Binding for OpenApiBinding {
                 &pipeline,
                 capture_output,
                 base_url_override,
-                &prepared.http_config,
+                &http_config,
                 no_extract,
                 no_retry,
                 no_stream,
                 debug,
                 &global_header_overrides,
+                &global_param_overrides,
             )
             .await?;
 
@@ -697,11 +891,15 @@ impl Binding for OpenApiBinding {
         let debug = matches.get_flag("debug");
         let base_url_override =
             crate::cli_args::resolve_base_url_override(matches, &self.inner.name)?;
+        let http_config = entry.http_config.with_user_agent_suffix_override(
+            crate::cli_args::resolve_user_agent_suffix_override(matches),
+        );
         let ctx = super::AppContext::new(
             entry.doc,
             entry.auth_provider,
-            entry.http_config,
+            http_config,
             entry.global_headers,
+            entry.global_params,
         ).with_quiet(quiet)
          .with_base_url_override(base_url_override)
          .with_debug(debug);
@@ -723,6 +921,12 @@ impl Binding for OpenApiBinding {
         let debug = matches.get_flag("debug");
         let base_url_override =
             crate::cli_args::resolve_base_url_override(matches, &self.inner.name)?;
+        let entry = super::app::BindingEntry {
+            http_config: entry.http_config.with_user_agent_suffix_override(
+                crate::cli_args::resolve_user_agent_suffix_override(matches),
+            ),
+            ..entry
+        };
         match existing {
             Some(ctx_box) => match ctx_box.downcast::<super::AppContext>() {
                 Ok(mut ctx) => {
@@ -740,6 +944,7 @@ impl Binding for OpenApiBinding {
                         entry.auth_provider,
                         entry.http_config,
                         entry.global_headers,
+                        entry.global_params,
                     ).with_quiet(quiet)
                      .with_base_url_override(base_url_override)
                      .with_debug(debug);
@@ -753,6 +958,7 @@ impl Binding for OpenApiBinding {
                     entry.auth_provider,
                     entry.http_config,
                     entry.global_headers,
+                    entry.global_params,
                 ).with_quiet(quiet)
                  .with_base_url_override(base_url_override)
                  .with_debug(debug);
@@ -768,6 +974,153 @@ impl Binding for OpenApiBinding {
 /// `Command::new(namespace)` wrapper, returning a rebuilt command whose
 /// sole subcommand is the namespace node. Global args, about, and
 /// after_help are preserved on the outer command.
+/// Walk `op_path` to the operation it names: every segment but the last is a
+/// resource, the last is the method.
+///
+/// The by-name counterpart to `resolve_method_from_matches`, which needs a
+/// parsed `ArgMatches` the direct-invocation path does not have.
+fn resolve_method_by_path<'a>(
+    doc: &'a crate::openapi::discovery::RestDescription,
+    op_path: &[String],
+) -> Option<&'a crate::openapi::discovery::RestMethod> {
+    let (method_name, resource_path) = op_path.split_last()?;
+    let mut resources = &doc.resources;
+    let mut current = None;
+    for segment in resource_path {
+        let resource = resources.get(segment)?;
+        resources = &resource.resources;
+        current = Some(resource);
+    }
+    current?.methods.get(method_name)
+}
+
+/// A path parameter has to appear in at least this share of operations, in a
+/// non-terminal position, to be offered as a profile field.
+///
+/// Two thirds rather than a bare majority: a tenant key is on *nearly* every
+/// path (Twilio's `AccountSid` is on ~87%), and the cost of a false positive
+/// — a flag on `profiles create` that nobody wants — is higher than the cost
+/// of a miss, which just leaves `--set` as the way in.
+const TENANT_KEY_MIN_SHARE: f64 = 0.66;
+
+/// Parameters that look like a tenant key, derived from the spec alone.
+///
+/// The signal is **non-terminal path position**, not raw frequency. A tenant
+/// key is structurally a prefix — `/Accounts/{AccountSid}/Messages` — with
+/// more path after it. Raw frequency alone misfires on the `{id}` of a plain
+/// REST API (`/users/{id}`, `/posts/{id}`): frequent, but always terminal,
+/// because it addresses the object rather than scoping it.
+///
+/// Known false positive: a templated API version (`/{version}/users`) is
+/// structurally identical to a tenant key and will be offered. That is
+/// tolerable only because the caller *proposes* these as flags rather than
+/// filling anything in — an unwanted flag costs nothing but its own help
+/// line, whereas silently populating a profile from a guess would not be
+/// recoverable.
+pub(crate) fn tenant_key_candidates(
+    doc: &crate::openapi::discovery::RestDescription,
+) -> Vec<String> {
+    let mut paths: Vec<&str> = Vec::new();
+    collect_method_paths(&doc.resources, &mut paths);
+    if paths.is_empty() {
+        return Vec::new();
+    }
+
+    let mut non_terminal: std::collections::BTreeMap<&str, usize> = Default::default();
+    for path in &paths {
+        let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+        // A `{name}` segment with more path after it. Deduplicated per path so
+        // one operation cannot vote twice for the same parameter.
+        let mut seen: std::collections::BTreeSet<&str> = Default::default();
+        for (index, segment) in segments.iter().enumerate() {
+            if index + 1 >= segments.len() {
+                continue;
+            }
+            if let Some(name) = segment
+                .strip_prefix('{')
+                .and_then(|rest| rest.strip_suffix('}'))
+            {
+                if seen.insert(name) {
+                    *non_terminal.entry(name).or_default() += 1;
+                }
+            }
+        }
+    }
+
+    let threshold = (paths.len() as f64) * TENANT_KEY_MIN_SHARE;
+    non_terminal
+        .into_iter()
+        .filter(|(_, count)| (*count as f64) >= threshold)
+        .map(|(name, _)| name.to_string())
+        .collect()
+}
+
+fn collect_method_paths<'a>(
+    resources: &'a std::collections::HashMap<String, crate::openapi::discovery::RestResource>,
+    out: &mut Vec<&'a str>,
+) {
+    for resource in resources.values() {
+        for method in resource.methods.values() {
+            out.push(method.path.as_str());
+        }
+        collect_method_paths(&resource.resources, out);
+    }
+}
+
+/// Collect both spellings of every parameter: the **wire** name (the map
+/// key, which is what `--schema` reports) and the **flag** name the user
+/// actually reads in `--help`.
+///
+/// Both are needed because they can differ. `x-fern-parameter-name` renames
+/// `filter_term` to `--search-query`; a user setting a profile default has
+/// only ever seen the latter, so rejecting it would be wrong — and accepting
+/// it silently without listing it would make the "did you mean" useless.
+///
+/// `enum_values` rides along so `profiles create --set user_type=admin` is
+/// rejected at write time rather than breaking every command that takes
+/// `--user-type`. `item_enum_values` is deliberately *not* consulted: those
+/// constrain an array's *elements*, and a profile default is a single
+/// scalar clap value.
+fn collect_parameter_specs(
+    parameters: &std::collections::HashMap<String, crate::openapi::discovery::MethodParameter>,
+    out: &mut Vec<crate::profiles::commands::ParameterSpec>,
+) {
+    use crate::profiles::commands::ParameterSpec;
+    for (wire_name, parameter) in parameters {
+        let accepted = commands::enum_accepted_values(parameter);
+        let spec = |name: String| match &accepted {
+            Some(values) => ParameterSpec::with_values(name, values.clone()),
+            None => ParameterSpec::unconstrained(name),
+        };
+        out.push(spec(wire_name.clone()));
+        if let Some(flag) = commands::resolve_param_flag_name(parameter, wire_name) {
+            if &flag != wire_name {
+                out.push(spec(flag));
+            }
+        }
+    }
+}
+
+/// Walk the resource tree collecting every operation's parameters.
+fn collect_parameter_specs_from_resources(
+    resources: &std::collections::HashMap<String, crate::openapi::discovery::RestResource>,
+    out: &mut Vec<crate::profiles::commands::ParameterSpec>,
+) {
+    for resource in resources.values() {
+        for method in resource.methods.values() {
+            collect_parameter_specs(&method.parameters, out);
+            // Multipart fields are not in `parameters` but do surface as
+            // per-field flags, so a profile may reasonably default one.
+            for field in &method.multipart_fields {
+                out.push(crate::profiles::commands::ParameterSpec::unconstrained(
+                    field.wire_name.clone(),
+                ));
+            }
+        }
+        collect_parameter_specs_from_resources(&resource.resources, out);
+    }
+}
+
 fn wrap_subcommands_under_namespace(cmd: clap::Command, namespace: &str) -> clap::Command {
     let subs: Vec<clap::Command> = cmd.get_subcommands().cloned().collect();
 
@@ -928,5 +1281,62 @@ mod tests {
     #[should_panic(expected = "collides with a reserved framework subcommand")]
     fn command_namespace_rejects_reserved_name() {
         OpenApiBinding::default().command_namespace("auth");
+    }
+
+    fn gp(name: &str, env: Option<&str>) -> crate::openapi::discovery::GlobalParameter {
+        crate::openapi::discovery::GlobalParameter {
+            name: name.into(),
+            parameter_name: None,
+            location: crate::openapi::discovery::GlobalParameterLocation::Query,
+            target: name.into(),
+            env: env.map(Into::into),
+            default: None,
+            optional: false,
+            apply: crate::openapi::discovery::GlobalParameterApplyMode::Auto,
+            docs: None,
+        }
+    }
+
+    #[test]
+    fn set_root_global_parameters_populates_binding() {
+        // Root-declared params (like `CliApp::global_parameter`) are handed
+        // to the binding via `set_root_global_parameters` and land in the
+        // inner CliApp's builder_global_parameters.
+        let mut binding = OpenApiBinding::new();
+        binding.set_root_global_parameters(&[gp("currency", Some("CURRENCY_ENV")), gp("region", None)]);
+        let names: Vec<&str> = binding
+            .inner
+            .builder_global_parameters
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect();
+        assert_eq!(names, vec!["currency", "region"]);
+    }
+
+    #[test]
+    fn set_root_global_parameters_binding_level_wins() {
+        // A parameter declared directly on the binding takes precedence over
+        // a same-named root parameter (dedup by name, binding wins), while
+        // root-only params are still merged in.
+        let binding = OpenApiBinding::new().global_parameter(gp("currency", Some("BINDING_ENV")));
+        let mut binding = binding;
+        binding.set_root_global_parameters(&[gp("currency", Some("ROOT_ENV")), gp("region", None)]);
+
+        let params = &binding.inner.builder_global_parameters;
+        let currency = params.iter().find(|p| p.name == "currency").unwrap();
+        assert_eq!(
+            currency.env.as_deref(),
+            Some("BINDING_ENV"),
+            "binding-level param must win over the same-named root param"
+        );
+        assert_eq!(
+            params.iter().filter(|p| p.name == "currency").count(),
+            1,
+            "no duplicate currency entry"
+        );
+        assert!(
+            params.iter().any(|p| p.name == "region"),
+            "root-only param must still be merged in"
+        );
     }
 }

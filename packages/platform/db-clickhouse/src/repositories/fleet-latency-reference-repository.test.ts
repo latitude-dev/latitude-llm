@@ -13,6 +13,8 @@ const ch = setupTestClickHouse()
 const READER_ORG = OrganizationId("org_fleet_reader")
 const SINCE = new Date("2026-01-01T00:00:00.000Z")
 const UNTIL = new Date("2026-02-01T00:00:00.000Z")
+const INGESTED_AT_UNTIL = new Date("2026-02-02T00:00:00.000Z")
+const WINDOW = { since: SINCE, until: UNTIL, ingestedAtUntil: INGESTED_AT_UNTIL }
 
 const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient>) =>
   Effect.runPromise(effect.pipe(Effect.provide(ChSqlClientLive(ch.client, READER_ORG))))
@@ -103,7 +105,7 @@ describe("FleetLatencyReferenceRepositoryLive", () => {
       ]),
     )
 
-    const samples = await withRepo((repo) => repo.listTtftSamples({ since: SINCE, until: UNTIL }))
+    const samples = await withRepo((repo) => repo.listTtftSamples(WINDOW))
     const cohort = cohortOf(samples, "from1kTo4k")
     const providerModel = cohortOf(samples, null)
 
@@ -135,7 +137,7 @@ describe("FleetLatencyReferenceRepositoryLive", () => {
       ]),
     )
 
-    const samples = await withRepo((repo) => repo.listTtftSamples({ since: SINCE, until: UNTIL }))
+    const samples = await withRepo((repo) => repo.listTtftSamples(WINDOW))
     const solo = samples.filter((sample) => sample.model === "private-deploy")
 
     expect(solo).not.toHaveLength(0)
@@ -152,7 +154,7 @@ describe("FleetLatencyReferenceRepositoryLive", () => {
       ]),
     )
 
-    const samples = await withRepo((repo) => repo.listTtftSamples({ since: SINCE, until: UNTIL }))
+    const samples = await withRepo((repo) => repo.listTtftSamples(WINDOW))
 
     expect(samples.map((sample) => sample.model)).not.toContain("unary-only")
     expect(samples.map((sample) => sample.model)).not.toContain("no-ttft")
@@ -177,13 +179,25 @@ describe("FleetLatencyReferenceRepositoryLive", () => {
       ]),
     )
 
-    const models = (await withRepo((repo) => repo.listTtftSamples({ since: SINCE, until: UNTIL }))).map(
-      (sample) => sample.model,
-    )
+    const models = (await withRepo((repo) => repo.listTtftSamples(WINDOW))).map((sample) => sample.model)
 
     expect(models).toContain("in-window")
     expect(models).not.toContain("before-window")
     expect(models).not.toContain("after-window")
+  })
+
+  it("excludes late ingestion so a freeze rerun sees the same snapshot", async () => {
+    await runCh(
+      insertJsonEachRow(ch.client, "spans", [
+        spanRow({ model: "on-time", ingested_at: "2026-02-01 12:00:00.000" }),
+        spanRow({ model: "late-backfill", ingested_at: "2026-02-03 00:00:00.000" }),
+      ]),
+    )
+
+    const models = (await withRepo((repo) => repo.listTtftSamples(WINDOW))).map((sample) => sample.model)
+
+    expect(models).toContain("on-time")
+    expect(models).not.toContain("late-backfill")
   })
 
   it("measures the generation rate after the first token and keys it on the output bucket", async () => {
@@ -208,7 +222,7 @@ describe("FleetLatencyReferenceRepositoryLive", () => {
       ]),
     )
 
-    const samples = await withRepo((repo) => repo.listThroughputSamples({ since: SINCE, until: UNTIL }))
+    const samples = await withRepo((repo) => repo.listThroughputSamples(WINDOW))
     const cohort = samples.find((sample) => sample.model === "rate-model" && sample.inputBucket !== null)
 
     expect(cohort).toMatchObject({
@@ -231,7 +245,7 @@ describe("FleetLatencyReferenceRepositoryLive", () => {
       ]),
     )
 
-    const samples = await withRepo((repo) => repo.listThroughputSamples({ since: SINCE, until: UNTIL }))
+    const samples = await withRepo((repo) => repo.listThroughputSamples(WINDOW))
 
     expect(samples.map((sample) => sample.model)).not.toContain("empty-output")
   })
@@ -244,7 +258,7 @@ describe("FleetLatencyReferenceRepositoryLive", () => {
       ]),
     )
 
-    const samples = await withRepo((repo) => repo.listThroughputSamples({ since: SINCE, until: UNTIL }))
+    const samples = await withRepo((repo) => repo.listThroughputSamples(WINDOW))
     const models = samples.map((sample) => sample.model)
 
     expect(models).not.toContain("ttft-equals-duration")

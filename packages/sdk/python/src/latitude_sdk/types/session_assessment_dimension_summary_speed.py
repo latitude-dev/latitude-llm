@@ -21,11 +21,19 @@ class SessionAssessmentDimensionSummarySpeed(UniversalBaseModel):
         FieldMetadata(alias="evidenceCounts"),
         pydantic.Field(alias="evidenceCounts", description="Evidence counts grouped by direction."),
     ]
+    """
+    Evidence counts grouped by direction.
+    """
+
     measurement_counts: typing_extensions.Annotated[
         SessionAssessmentDimensionSummarySpeedMeasurementCounts,
         FieldMetadata(alias="measurementCounts"),
         pydantic.Field(alias="measurementCounts", description="Evidence counts grouped by measurement state."),
     ]
+    """
+    Evidence counts grouped by measurement state.
+    """
+
     coverage: SessionAssessmentDimensionSummarySpeedCoverage = pydantic.Field()
     """
     Reader coverage for this dimension.
@@ -38,15 +46,26 @@ class SessionAssessmentDimensionSummarySpeed(UniversalBaseModel):
             alias="observedCriticalPathNs", default=None, description="Observed critical-path duration in nanoseconds."
         ),
     ]
+    """
+    Observed critical-path duration in nanoseconds.
+    """
+
     measured_avoidable_ns: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="measuredAvoidableNs"),
         pydantic.Field(alias="measuredAvoidableNs", default=None, description="Directly measured avoidable duration."),
     ]
+    """
+    Directly measured avoidable duration.
+    """
+
     estimated_avoidable_ns: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="estimatedAvoidableNs"),
         pydantic.Field(alias="estimatedAvoidableNs", default=None, description="Estimated avoidable duration."),
     ]
+    """
+    Estimated avoidable duration.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
