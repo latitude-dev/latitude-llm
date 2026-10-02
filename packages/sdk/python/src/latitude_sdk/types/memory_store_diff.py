@@ -16,6 +16,10 @@ class MemoryStoreDiff(UniversalBaseModel):
         FieldMetadata(alias="storeId"),
         pydantic.Field(alias="storeId", description="Store the diff was computed for."),
     ]
+    """
+    Store the diff was computed for.
+    """
+
     changes: typing.List[MemoryStoreChange] = pydantic.Field()
     """
     Per-record changes between the two points; unchanged records are pruned.
@@ -26,15 +30,26 @@ class MemoryStoreDiff(UniversalBaseModel):
         FieldMetadata(alias="tokensAdded"),
         pydantic.Field(alias="tokensAdded", description="Total tokens added across all changed records."),
     ]
+    """
+    Total tokens added across all changed records.
+    """
+
     tokens_removed: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensRemoved"),
         pydantic.Field(alias="tokensRemoved", description="Total tokens removed across all changed records."),
     ]
+    """
+    Total tokens removed across all changed records.
+    """
+
     records_changed: typing_extensions.Annotated[
         MemoryStoreDiffRecordsChanged,
         FieldMetadata(alias="recordsChanged"),
         pydantic.Field(alias="recordsChanged", description="Count of changed records per bucket."),
     ]
+    """
+    Count of changed records per bucket.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

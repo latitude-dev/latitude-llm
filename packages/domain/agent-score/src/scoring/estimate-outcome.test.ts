@@ -1,0 +1,274 @@
+import { describe, expect, it } from "vitest"
+import { LAUNCH_AGENT_SCORE_ARTIFACT } from "../artifacts/launch-agent-score-artifact.ts"
+import {
+  type EstimateProjectOutcomeInput,
+  estimateProjectOutcome,
+  type OutcomeSessionVerdict,
+} from "./estimate-outcome.ts"
+
+const VERSION = "task-failure-v1:amazon-bedrock/anthropic.claude-haiku-4-5"
+
+const verdicts = (input: {
+  readonly successes: number
+  readonly failures: number
+  readonly inclusionProbability: number
+  readonly judgmentVersion?: string
+  readonly prefix?: string
+}): OutcomeSessionVerdict[] =>
+  Array.from({ length: input.successes + input.failures }, (_, index) => ({
+    sessionId: `${input.prefix ?? "session"}-${index}`,
+    succeeded: index < input.successes,
+    inclusionProbability: input.inclusionProbability,
+    judgmentVersion: input.judgmentVersion ?? VERSION,
+  }))
+
+const estimate = (overrides: Partial<EstimateProjectOutcomeInput> = {}) =>
+  estimateProjectOutcome({
+    eligibleSessionCount: 2_000,
+    deterministicFailureSessionIds: [],
+    judgedSessions: verdicts({ successes: 160, failures: 40, inclusionProbability: 0.1 }),
+    supportedJudgmentVersions: [VERSION],
+    floors: LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.outcome,
+    ...overrides,
+  })
+
+describe("estimateProjectOutcome", () => {
+  describe("moment degradation", () => {
+    const DEGRADATION = LAUNCH_AGENT_SCORE_ARTIFACT.outcomeDegradation
+    /** Analyzed sessions, `degraded` of which a rule fired on. Only successes can be degraded. */
+    const analyzed = (input: { readonly analyzed: number; readonly degraded: number }) =>
+      new Map(
+        Array.from({ length: input.analyzed }, (_, index) => [
+          `session-${index}`,
+          index < input.degraded ? ["user_frustration"] : [],
+        ]),
+      )
+
+    const withDegradation = (input: { readonly analyzed: number; readonly degraded: number }) =>
+      estimate({
+        degradation: {
+          degradedKindsBySession: analyzed(input),
+          degradedWeight: DEGRADATION.degradedWeight,
+          minAnalyzedSessions: DEGRADATION.minAnalyzedSessions,
+        },
+      })
+
+    it("leaves the score untouched when nothing degraded", () => {
+      const baseline = estimate()
+      const result = withDegradation({ analyzed: 160, degraded: 0 })
+
+      expect(result.outcome).toBeCloseTo(baseline.outcome as number, 10)
+      expect(result.degradation).toMatchObject({ applied: true, degradedShare: 0 })
+    })
+
+    it("scales the score by the value a degraded session still delivered", () => {
+      const baseline = estimate().outcome as number
+      const result = withDegradation({ analyzed: 160, degraded: 80 })
+
+      // Half the analyzed successes degraded, each worth `degradedWeight` of a clean one.
+      const expected = baseline * (1 - (1 - DEGRADATION.degradedWeight) * 0.5)
+      expect(result.outcome).toBeCloseTo(expected, 10)
+      expect(result.degradation.degradedShare).toBeCloseTo(0.5, 10)
+    })
+
+    it("measures the degraded share against analyzed sessions, not the whole window", () => {
+      // 40 of 80 analyzed degraded is a half, even though 160 sessions were judged. Projecting onto
+      // the 80 nobody analyzed would report a quarter and understate what was actually seen.
+      const result = withDegradation({ analyzed: 80, degraded: 40 })
+
+      expect(result.degradation).toMatchObject({
+        applied: true,
+        analyzedSessionCount: 80,
+        degradedSessionCount: 40,
+      })
+      expect(result.degradation.degradedShare).toBeCloseTo(0.5, 10)
+    })
+
+    it("does not apply below the analyzed floor, and still publishes", () => {
+      const baseline = estimate().outcome as number
+      const result = withDegradation({ analyzed: 10, degraded: 10 })
+
+      expect(result.coverage).toBe("measured")
+      expect(result.outcome).toBeCloseTo(baseline, 10)
+      expect(result.degradation).toMatchObject({ applied: false, analyzedSessionCount: 10 })
+    })
+
+    it("keeps the interval finite when the component is off", () => {
+      const result = withDegradation({ analyzed: 0, degraded: 0 })
+
+      // A Clopper-Pearson on zero trials is [0, 1]; letting it through would widen Outcome until
+      // the confidence gate withheld every dimension.
+      expect(result.interval?.lower).toBeGreaterThan(0)
+      expect(result.interval).toEqual(estimate().interval)
+    })
+
+    it("widens the interval rather than only moving the point estimate", () => {
+      const baseline = estimate()
+      const result = withDegradation({ analyzed: 160, degraded: 80 })
+
+      expect(result.interval?.lower).toBeLessThan(baseline.interval?.lower as number)
+    })
+  })
+
+  it("reports the sampled success rate when the judge is the only evidence", () => {
+    const result = estimate()
+
+    expect(result.coverage).toBe("measured")
+    expect(result.outcome).toBeCloseTo(80, 10)
+    expect(result.intervalMethod).toBe("exactBinomial")
+    expect(result.interval?.lower).toBeLessThan(80)
+    expect(result.interval?.upper).toBeGreaterThan(80)
+    expect(result).toMatchObject({ sampledSessionCount: 200, deterministicSessionCount: 0, examinedSessionCount: 200 })
+  })
+
+  // The census is 1 session per session; the sample is 10 per session at 10%.
+  // 160 successes weigh 1600 against 400 sampled failures and 100 certain ones.
+  it("pulls the rate down by the deterministic census, weighting it as a census", () => {
+    const result = estimate({
+      deterministicFailureSessionIds: Array.from({ length: 100 }, (_, index) => `deterministic-${index}`),
+    })
+
+    expect(result.outcome).toBeCloseTo((100 * 1600) / (100 + 2000), 10)
+    expect(result).toMatchObject({ deterministicSessionCount: 100, sampledSessionCount: 200 })
+  })
+
+  // Counting a session twice would break the sample's claim to be a random draw
+  // of the sessions it represents.
+  it("removes a judged session that also has a deterministic endpoint", () => {
+    const judged = verdicts({ successes: 160, failures: 40, inclusionProbability: 0.1 })
+    const result = estimate({ judgedSessions: judged, deterministicFailureSessionIds: [judged[0]!.sessionId] })
+
+    expect(result.sampledSessionCount).toBe(199)
+    expect(result.deterministicSessionCount).toBe(1)
+    expect(result.excluded.deterministicEndpoint).toBe(1)
+  })
+
+  it("excludes a verdict from an unsupported judge and says so", () => {
+    const result = estimate({
+      judgedSessions: [
+        ...verdicts({ successes: 160, failures: 40, inclusionProbability: 0.1 }),
+        ...verdicts({ successes: 5, failures: 0, inclusionProbability: 0.1, judgmentVersion: "other", prefix: "old" }),
+      ],
+    })
+
+    expect(result.excluded.incompatibleJudgmentVersion).toBe(5)
+    expect(result.sampledSessionCount).toBe(200)
+    expect(result.outcome).toBeCloseTo(80, 10)
+  })
+
+  it("excludes a verdict whose selection probability is unusable", () => {
+    const result = estimate({
+      judgedSessions: [
+        ...verdicts({ successes: 160, failures: 40, inclusionProbability: 0.1 }),
+        ...verdicts({ successes: 3, failures: 0, inclusionProbability: 0, prefix: "unknown" }),
+      ],
+    })
+
+    expect(result.excluded.unknownInclusionProbability).toBe(3)
+    expect(result.sampledSessionCount).toBe(200)
+  })
+
+  it("weights sub-strata separately when the project changed its sampling rate", () => {
+    const result = estimate({
+      judgedSessions: [
+        ...verdicts({ successes: 80, failures: 20, inclusionProbability: 0.1, prefix: "early" }),
+        ...verdicts({ successes: 50, failures: 50, inclusionProbability: 0.5, prefix: "late" }),
+      ],
+    })
+
+    // 800 weighted successes from the 10% stratum, 100 from the 50% stratum,
+    // over 1000 + 200 total weight.
+    expect(result.outcome).toBeCloseTo((100 * 900) / 1200, 10)
+    expect(result.intervalMethod).toBe("stratifiedBinomial")
+  })
+
+  it("reports a wider interval for split strata than for one pooled stratum", () => {
+    const split = estimate({
+      judgedSessions: [
+        ...verdicts({ successes: 80, failures: 20, inclusionProbability: 0.1, prefix: "early" }),
+        ...verdicts({ successes: 80, failures: 20, inclusionProbability: 0.1000001, prefix: "late" }),
+      ],
+    })
+    const pooled = estimate({ judgedSessions: verdicts({ successes: 160, failures: 40, inclusionProbability: 0.1 }) })
+
+    expect(split.intervalMethod).toBe("stratifiedBinomial")
+    expect(split.interval!.upper - split.interval!.lower).toBeGreaterThan(
+      pooled.interval!.upper - pooled.interval!.lower,
+    )
+  })
+
+  it("keeps a non-degenerate interval when every judged session succeeded", () => {
+    const result = estimate({ judgedSessions: verdicts({ successes: 200, failures: 0, inclusionProbability: 0.1 }) })
+
+    expect(result.outcome).toBeCloseTo(100, 10)
+    expect(result.interval!.lower).toBeGreaterThan(0)
+    expect(result.interval!.lower).toBeLessThan(100)
+    expect(result.interval!.upper).toBeCloseTo(100, 10)
+  })
+
+  it("keeps a non-degenerate interval when every judged session failed", () => {
+    const result = estimate({ judgedSessions: verdicts({ successes: 0, failures: 200, inclusionProbability: 0.1 }) })
+
+    expect(result.outcome).toBe(0)
+    expect(result.interval!.lower).toBe(0)
+    expect(result.interval!.upper).toBeGreaterThan(0)
+  })
+
+  describe("when it cannot measure", () => {
+    it("names the examined floor and publishes no number", () => {
+      const result = estimate({ judgedSessions: verdicts({ successes: 8, failures: 2, inclusionProbability: 0.1 }) })
+
+      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" })
+      expect(result.outcome).toBeUndefined()
+      expect(result.interval).toBeUndefined()
+      expect(result.intervalMethod).toBeUndefined()
+    })
+
+    it("names the examined floor one verdict below it", () => {
+      const result = estimate({ judgedSessions: verdicts({ successes: 40, failures: 9, inclusionProbability: 0.08 }) })
+
+      expect(result.sampledSessionCount).toBe(49)
+      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" })
+    })
+
+    // Deterministic failures alone would otherwise publish a score of zero for a
+    // project the judge never looked at.
+    it("does not publish zero when only the deterministic census exists", () => {
+      const result = estimate({
+        judgedSessions: [],
+        deterministicFailureSessionIds: Array.from({ length: 500 }, (_, index) => `deterministic-${index}`),
+      })
+
+      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" })
+      expect(result.outcome).toBeUndefined()
+    })
+  })
+
+  describe("how much traffic the sample was drawn from", () => {
+    it("publishes the same score whatever the eligible base", () => {
+      const small = estimate({ eligibleSessionCount: 2_000 })
+      const large = estimate({ eligibleSessionCount: 100_000 })
+
+      expect(large.coverage).toBe("measured")
+      expect(large.outcome).toBe(small.outcome)
+    })
+
+    it("publishes for a large project whose judged share is far below five percent", () => {
+      const result = estimate({
+        eligibleSessionCount: 2_600,
+        judgedSessions: verdicts({ successes: 66, failures: 9, inclusionProbability: 0.08 }),
+      })
+
+      expect(result.sampledSessionCount / result.eligibleSessionCount).toBeLessThan(0.05)
+      expect(result.coverage).toBe("measured")
+      expect(result.outcome).toBeCloseTo(88, 10)
+    })
+
+    it("does not divide by an empty eligible base", () => {
+      const result = estimate({ eligibleSessionCount: 0 })
+
+      expect(result.coverage).toBe("measured")
+      expect(result.outcome).toBeCloseTo(80, 10)
+    })
+  })
+})

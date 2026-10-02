@@ -1,5 +1,7 @@
 import { FacetId, OrganizationId, ProjectId, SessionId, type TaxonomyClusterId } from "@domain/shared"
 import {
+  type ReassignTaxonomyObservationByIdInput,
+  TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   type TaxonomyCluster,
   type TaxonomyFacetProjection,
   type TaxonomyMomentObservation,
@@ -197,6 +199,7 @@ const storePlan = (overrides: Partial<StoredPlan> = {}) => {
 }
 
 const viewUpserts: TaxonomyViewAssignment[] = []
+const observationReassignments: ReassignTaxonomyObservationByIdInput[] = []
 
 // A live-window row the full-window reassignment can route: the only fields that
 // path reads are the id, session, embedding and start time.
@@ -220,6 +223,13 @@ const windowObservation = (index: number): TaxonomyMomentObservation => ({
   retentionDays: 90,
   indexedAt: now,
 })
+
+// Same row, but sitting below the fit floor relative to the [1, 0] leaf centroid, so
+// full-window routing must reject it instead of filing it on the nearest leaf.
+const belowFloorObservation = (index: number): TaxonomyMomentObservation => {
+  const cosine = TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD - 0.05
+  return { ...windowObservation(index), embedding: [cosine, Math.sqrt(1 - cosine ** 2)] }
+}
 
 // A cached facet projection: the row the projection-space window routes. Its
 // embedding is deliberately orthogonal to the observation embedding above, so a
@@ -259,9 +269,11 @@ const seedRepositories = (
     },
   })
   const observations = createFakeTaxonomyObservationRepository(window, {
-    reassignManyById: () => {
+    reassignManyById: ({ assignments }) => {
       calls.push("reassign")
-      return Effect.void
+      return Effect.sync(() => {
+        observationReassignments.push(...assignments)
+      })
     },
   })
   const viewAssignments = createFakeTaxonomyViewAssignmentRepository(
@@ -296,6 +308,7 @@ describe("taxonomy gardening publish activities", () => {
     redis.clear()
     calls.length = 0
     viewUpserts.length = 0
+    observationReassignments.length = 0
   })
 
   it("publishes in the same activity as the reassignment, reassign first", async () => {
@@ -456,6 +469,52 @@ describe("taxonomy gardening publish activities", () => {
     expect(result).toEqual(expect.objectContaining({ clustersDeprecated: 1, clustersActivated: 0 }))
   })
 
+  // The fit floor's own path through the activities (LAT-866): every other full-window
+  // fixture routes an exact-centroid or orthogonal embedding, so none of them reaches
+  // the rejection branch these two assert.
+  it("writes a below-floor observation as noise rather than filing it on the nearest leaf", async () => {
+    seedRepositories(publishedTree(), [windowObservation(1), belowFloorObservation(2)])
+    storePlan({
+      mode: "enforced",
+      deprecatedClusterIds: [],
+      supersededClusterIds: [OLD_ROOT, OLD_LEAF],
+      leafClusters: [{ clusterId: NEW_LEAF, centroid: [1, 0] }],
+      persistsAdaptiveTree: true,
+    })
+
+    const result = await reassignGardenTaxonomyObservationsActivity({ ...stepInput, planKey })
+
+    expect(result).toEqual(expect.objectContaining({ observationsReassigned: 1, observationsRejected: 1 }))
+    const rejected = observationReassignments.filter((row) => row.assignmentMethod === "noise")
+    expect(rejected).toHaveLength(1)
+    // Null, not the nearest leaf — the whole point of the floor on this path.
+    expect(rejected[0]?.assignedClusterId).toBeNull()
+    // The measured similarity survives the rejection, so the write is diagnosable.
+    expect(rejected[0]?.assignmentConfidence).toBeCloseTo(TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD - 0.05, 4)
+    expect(observationReassignments.filter((row) => row.assignmentMethod === "gardening_reassign")).toHaveLength(1)
+  })
+
+  it("writes the rejection into the view slice too on a scoped full-window plan", async () => {
+    seedRepositories(publishedTree(), [windowObservation(1), belowFloorObservation(2)])
+    storePlan({
+      customBehaviorId: BEHAVIOR,
+      mode: "enforced",
+      deprecatedClusterIds: [],
+      supersededClusterIds: [OLD_ROOT, OLD_LEAF],
+      leafClusters: [{ clusterId: NEW_LEAF, centroid: [1, 0] }],
+      persistsAdaptiveTree: true,
+    })
+
+    const result = await reassignGardenTaxonomyObservationsActivity({ ...stepInput, planKey })
+
+    expect(result).toEqual(expect.objectContaining({ observationsReassigned: 1, observationsRejected: 1 }))
+    const rejected = viewUpserts.filter((row) => row.assignmentMethod === "noise")
+    expect(rejected).toHaveLength(1)
+    expect(rejected[0]?.assignedClusterId).toBeNull()
+    // The global column must stay untouched for a view.
+    expect(observationReassignments).toHaveLength(0)
+  })
+
   // LAT-862 Part 2b: a facet lens's coverage is the projection cache, not the
   // 7-day sample, so its passes route `taxonomy_facet_projections`.
   const facetPlan = (overrides: Partial<StoredPlan> = {}) => leavesWithoutAdaptiveTree({ facetId: FACET, ...overrides })
@@ -575,6 +634,7 @@ describe("planGardenTaxonomyNamingActivity", () => {
     redis.clear()
     calls.length = 0
     viewUpserts.length = 0
+    observationReassignments.length = 0
   })
 
   it("plans the STAGED tree deepest-first and carries its sample member ids", async () => {

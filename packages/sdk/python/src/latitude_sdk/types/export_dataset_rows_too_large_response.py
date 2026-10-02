@@ -20,6 +20,10 @@ class ExportDatasetRowsTooLargeResponse(UniversalBaseModel):
         FieldMetadata(alias="rowCount"),
         pydantic.Field(alias="rowCount", description="Number of rows the export would have produced."),
     ]
+    """
+    Number of rows the export would have produced.
+    """
+
     threshold: int = pydantic.Field()
     """
     Maximum row count this endpoint will generate synchronously.
@@ -33,5 +37,8 @@ class ExportDatasetRowsTooLargeResponse(UniversalBaseModel):
             description="Instructions for the caller — typically an LLM — on how to recover: ask the end user for an email address and retry the same call with `recipient` set to it.",
         ),
     ]
+    """
+    Instructions for the caller — typically an LLM — on how to recover: ask the end user for an email address and retry the same call with `recipient` set to it.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

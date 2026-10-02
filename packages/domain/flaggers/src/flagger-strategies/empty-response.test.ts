@@ -74,9 +74,12 @@ describe("emptyResponseStrategy.detectDeterministically", () => {
       expect(emptyResponseStrategy.detectDeterministically?.(makeTrace([]))).toEqual({ kind: "unmatched" })
     })
 
-    it("no-match when the final assistant message has only reasoning (no text, no tool_call)", () => {
+    it("matches blank when the final assistant message has only reasoning", () => {
       const trace = makeTrace([user("solve this"), assistantReasoning("Let me think through the steps…")])
-      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "unmatched" })
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toMatchObject({
+        kind: "matched",
+        feedback: "Assistant response was empty or whitespace only",
+      })
     })
 
     it("no-match when the final assistant message has reasoning + tool_call (typical agentic step)", () => {
@@ -141,6 +144,11 @@ describe("emptyResponseStrategy.detectDeterministically", () => {
 
     it("is false when there are no output messages", () => {
       const trace = makeTrace([])
+      expect(emptyResponseStrategy.hasRequiredContext(trace)).toBe(false)
+    })
+
+    it("is false when output was captured without an assistant turn", () => {
+      const trace = makeTrace([user("hi")])
       expect(emptyResponseStrategy.hasRequiredContext(trace)).toBe(false)
     })
   })

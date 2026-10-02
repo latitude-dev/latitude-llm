@@ -340,7 +340,7 @@ client.projects.get(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -413,7 +413,7 @@ client.projects.delete(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -486,7 +486,7 @@ client.projects.update(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -511,6 +511,79 @@ client.projects.update(
 <dd>
 
 **flaggers:** `typing.Optional[UpdateProjectBodyFlaggers]` — Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.projects.<a href="src/latitude_sdk/projects/client.py">usage</a>(...) -> ProjectUsageResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the credits one project spent in the current billing period, broken down by product area.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.projects.usage(
+    project_slug="projectSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -593,7 +666,7 @@ client.scores.create(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -681,7 +754,7 @@ client.annotations.create(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -757,6 +830,276 @@ client.annotations.create(
 </dl>
 </details>
 
+<details><summary><code>client.annotations.<a href="src/latitude_sdk/annotations/client.py">get</a>(...) -> Annotation</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns an API-created annotation by its Latitude-generated identifier.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.annotations.get(
+    project_slug="projectSlug",
+    annotation_id="annotationId",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**annotation_id:** `str` — Latitude-generated annotation identifier returned when the annotation was created.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.annotations.<a href="src/latitude_sdk/annotations/client.py">delete</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Deletes an API-created annotation by its Latitude-generated identifier.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.annotations.delete(
+    project_slug="projectSlug",
+    annotation_id="annotationId",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**annotation_id:** `str` — Latitude-generated annotation identifier returned when the annotation was created.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.annotations.<a href="src/latitude_sdk/annotations/client.py">update</a>(...) -> Annotation</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Updates an API-created annotation while retaining its Latitude-generated identifier. Omitted fields keep their current values.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.annotations.update(
+    project_slug="projectSlug",
+    annotation_id="annotationId",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**annotation_id:** `str` — Latitude-generated annotation identifier returned when the annotation was created.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**value:** `typing.Optional[float]` — New normalized score value in [0, 1].
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**passed:** `typing.Optional[bool]` — New pass or fail verdict.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**feedback:** `typing.Optional[str]` — New free-text feedback explaining the score.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
 ## Traces
 <details><summary><code>client.traces.<a href="src/latitude_sdk/traces/client.py">list</a>(...) -> PaginatedTraces</code></summary>
 <dl>
@@ -811,7 +1154,7 @@ client.traces.list(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -932,7 +1275,7 @@ client.traces.analytics(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -1022,7 +1365,7 @@ client.traces.get(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -1104,7 +1447,7 @@ client.traces.list_spans(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -1187,7 +1530,7 @@ client.traces.get_span(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -1277,7 +1620,7 @@ client.traces.list_annotations(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -1376,7 +1719,7 @@ client.traces.get_annotation(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -1466,7 +1809,7 @@ client.traces.get_memory(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -1548,7 +1891,7 @@ client.traces.get_memory_changes(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -1635,7 +1978,7 @@ client.traces.export(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -1725,7 +2068,7 @@ client.tools.list(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -1822,7 +2165,7 @@ client.tools.histogram(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -1936,7 +2279,7 @@ client.tools.parameters(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -2059,7 +2402,7 @@ client.tools.context(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -2173,7 +2516,7 @@ client.tools.co_occurrence(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -2287,7 +2630,7 @@ client.tools.errors(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -2393,7 +2736,7 @@ client.tools.list_calls(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -2515,7 +2858,7 @@ client.tools.get(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -2621,7 +2964,7 @@ client.users.list(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -2750,7 +3093,7 @@ client.users.overview(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -2840,7 +3183,7 @@ client.users.activity(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -2947,7 +3290,7 @@ client.users.usage(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -3053,7 +3396,7 @@ client.users.signals(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -3143,7 +3486,7 @@ client.users.behaviours(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -3233,7 +3576,7 @@ client.users.memory_stores(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -3315,7 +3658,7 @@ client.users.get(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -3405,7 +3748,7 @@ client.saved_searches.list(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -3479,7 +3822,7 @@ client.saved_searches.create(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -3577,7 +3920,7 @@ client.saved_searches.get(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -3659,7 +4002,7 @@ client.saved_searches.delete(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -3741,7 +4084,7 @@ client.saved_searches.update(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -3847,7 +4190,7 @@ client.saved_searches.list_traces(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -3961,7 +4304,7 @@ client.signals.list(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -4106,7 +4449,7 @@ client.signals.create(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -4220,7 +4563,7 @@ client.signals.get(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -4302,7 +4645,7 @@ client.signals.delete(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -4384,7 +4727,7 @@ client.signals.update(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -4489,7 +4832,7 @@ client.signals.analytics(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -4579,7 +4922,7 @@ client.signals.trend(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -4677,7 +5020,7 @@ client.signals.list_traces(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -4777,7 +5120,7 @@ client.signals.resolve(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -4869,7 +5212,7 @@ client.signals.unresolve(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -4953,7 +5296,7 @@ client.signals.ignore(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -5037,7 +5380,7 @@ client.signals.unignore(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -5121,7 +5464,7 @@ client.signals.mute(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -5205,7 +5548,7 @@ client.signals.unmute(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -5287,7 +5630,7 @@ client.signals.monitor(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -5369,7 +5712,7 @@ client.signals.unmonitor(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -5452,7 +5795,7 @@ client.signals.submit_feedback(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -5566,7 +5909,7 @@ client.signals.export(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -5664,7 +6007,7 @@ client.incidents.list(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -5778,7 +6121,7 @@ client.incidents.resolve(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -5860,7 +6203,7 @@ client.datasets.list(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -5966,7 +6309,7 @@ client.datasets.create(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -6056,7 +6399,7 @@ client.datasets.get(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -6138,7 +6481,7 @@ client.datasets.delete(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -6220,7 +6563,7 @@ client.datasets.update(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -6318,7 +6661,7 @@ client.datasets.list_rows(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -6418,7 +6761,9 @@ client.datasets.insert_rows(
     project_slug="projectSlug",
     dataset_slug="datasetSlug",
     rows=[
-        InsertDatasetRowsBodyRowsItem()
+        InsertDatasetRowsBodyRowsItem(
+            input=None,
+        )
     ],
 )
 
@@ -6436,7 +6781,7 @@ client.datasets.insert_rows(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -6532,7 +6877,7 @@ client.datasets.delete_rows(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -6623,7 +6968,7 @@ client.datasets.update_row(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -6759,7 +7104,7 @@ client.datasets.import_rows_from_traces(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -6853,7 +7198,7 @@ client.datasets.export_rows(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -6951,7 +7296,7 @@ client.datasets.list_columns(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -7042,7 +7387,7 @@ client.datasets.add_column(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -7133,7 +7478,7 @@ client.datasets.delete_column(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -7225,7 +7570,7 @@ client.datasets.update_column(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -7326,7 +7671,7 @@ client.datasets.reorder_columns(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -7417,7 +7762,7 @@ client.datasets.restore_column(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -8104,7 +8449,7 @@ client.members.list()
 <dl>
 <dd>
 
-Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
+Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user). Only organization owners and admins can invite members.
 </dd>
 </dl>
 </dd>
@@ -8258,7 +8603,7 @@ client.members.get(
 <dl>
 <dd>
 
-Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.
+Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.
 </dd>
 </dl>
 </dd>
@@ -8455,7 +8800,7 @@ client.monitors.list(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -8540,6 +8885,7 @@ client.monitors.create(
         name="name",
         target=CreateMonitorBodyMatchTarget(
             type="savedSearch",
+            id=None,
         ),
         severity="low",
     ),
@@ -8559,7 +8905,7 @@ client.monitors.create(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -8648,7 +8994,7 @@ client.monitors.list_for_target(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -8738,7 +9084,7 @@ client.monitors.get(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -8820,7 +9166,7 @@ client.monitors.delete(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -8902,7 +9248,7 @@ client.monitors.update(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -9008,7 +9354,7 @@ client.monitors.list_incidents(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -9106,7 +9452,7 @@ client.monitors.mute(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -9188,7 +9534,7 @@ client.monitors.unmute(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -9278,7 +9624,7 @@ client.analytics.query(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -9360,7 +9706,7 @@ client.spans.query(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -9474,7 +9820,7 @@ client.experiments.list(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -9572,7 +9918,7 @@ client.experiments.create(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -9670,7 +10016,7 @@ client.experiments.get(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -9752,7 +10098,7 @@ client.experiments.update(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -9858,7 +10204,7 @@ client.experiments.delete(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -9940,7 +10286,7 @@ client.sessions.list(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -10061,7 +10407,7 @@ client.sessions.analytics(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -10151,7 +10497,7 @@ client.sessions.get(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -10160,6 +10506,96 @@ client.sessions.get(
 <dd>
 
 **session_id:** `str` — Session identifier lifted from instrumentation. Up to 128 characters.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.sessions.<a href="src/latitude_sdk/sessions/client.py">get_assessment</a>(...) -> SessionAssessment</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.sessions.get_assessment(
+    project_slug="projectSlug",
+    session_id="sessionId",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**session_id:** `str` — Session identifier lifted from instrumentation. Up to 128 characters.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**cursor:** `typing.Optional[str]` — Opaque cursor returned by a previous assessment page. Omit for the first page.
     
 </dd>
 </dl>
@@ -10233,7 +10669,7 @@ client.sessions.list_traces(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -10347,7 +10783,7 @@ client.sessions.list_signals(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -10430,7 +10866,7 @@ client.sessions.get_signal(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -10520,7 +10956,7 @@ client.sessions.get_memory(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -10610,7 +11046,7 @@ client.sessions.get_memory_changes(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -10700,7 +11136,7 @@ client.memory.list_stores(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -10806,7 +11242,7 @@ client.memory.get_store(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -10896,7 +11332,7 @@ client.memory.get_store_diff(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -10994,7 +11430,7 @@ client.memory.list_store_users(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -11077,7 +11513,7 @@ client.memory.get_record(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -11169,7 +11605,7 @@ client.memory.get_record_change(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -11268,7 +11704,7 @@ client.memory.list_record_reads(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -11367,7 +11803,7 @@ client.memory.list_record_users(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -11457,7 +11893,7 @@ client.imports.list(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -11536,7 +11972,7 @@ client.imports.create(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -11666,7 +12102,7 @@ client.imports.get(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -11748,7 +12184,7 @@ client.imports.cancel(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -11836,7 +12272,7 @@ client.imports.retry(
 <dl>
 <dd>
 
-**project_slug:** `str` — Project slug (human-readable identifier)
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>
@@ -11853,6 +12289,306 @@ client.imports.retry(
 <dd>
 
 **credentials:** `RetryImportBodyCredentials` — Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+## Usage
+<details><summary><code>client.usage.<a href="src/latitude_sdk/usage/client.py">get</a>() -> UsageResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the organization's credit usage for the current billing period, broken down by product area and by project.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.usage.get()
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+## AgentScore
+<details><summary><code>client.agent_score.<a href="src/latitude_sdk/agent_score/client.py">history</a>(...) -> AgentScoreHistory</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the project's published Agent Scores in a date range, oldest first. Days the project did not publish are absent from the list.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.agent_score.history(
+    project_slug="projectSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**from:** `typing.Optional[datetime.date]` — Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**to:** `typing.Optional[datetime.date]` — Inclusive end date as `YYYY-MM-DD`. Defaults to today.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.agent_score.<a href="src/latitude_sdk/agent_score/client.py">causes</a>(...) -> AgentScoreCauses</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns ranked causes per dimension and Outcome and Safety issue summaries for today's UTC date. Published scores retain the evidence from their original computation. When no retained explanation is available, the response may use matching evidence from another computation for the same date, or report an explicit absence.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.agent_score.causes(
+    project_slug="projectSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.agent_score.<a href="src/latitude_sdk/agent_score/client.py">get</a>(...) -> CurrentAgentScore</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the project's Agent Score for today: one number from 0 to 100 and the five dimensions behind it. A score is published only when every dimension meets its coverage and confidence floors, so a project can have no score for a day.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.agent_score.get(
+    project_slug="projectSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
     
 </dd>
 </dl>

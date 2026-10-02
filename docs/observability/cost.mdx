@@ -1,0 +1,46 @@
+---
+title: Cost
+description: See where your agent's spend goes, what caching saves, and which change moved your cost per session.
+---
+
+The **Cost** dashboard breaks down what your agent spends and where to recover money: spend over time, cost per session with the factors that moved it, per-model economics, and cache recommendations computed from your own traffic. Everything is derived from the telemetry you already send.
+
+<Frame caption="The Cost dashboard: pricing coverage, spend KPIs, cost over time, and the session cost decomposition.">
+  <img src="/images/observability/cost-dashboard.png" alt="Cost dashboard showing total spend, average per day and per trace, top spend model, a cost-over-time chart, and the cost-per-session section" />
+</Frame>
+
+## The dashboard
+
+The page opens with four KPIs for the selected time range: **Total spend** on billable LLM calls, **Avg per day** over completed days, **Avg per trace** across traces that contain at least one billable call, and the **Top spend model** with its share of spend. The **Cost over time** chart below shows spend per bucket, stacked by model on the **Total** tab, while the **Average** and **p95** tabs plot per-trace cost, so you can separate a traffic increase from an expensive tail.
+
+A badge next to the title reports pricing coverage, such as **100% priced**. When some usage recorded no cost because a model has no known pricing, the badge and the affected table rows say so, so a low total is never silently mistaken for a cheap week.
+
+## Cost per session
+
+The **Session** section divides spend by sessions and compares the result against the equal-length window before it. Alongside the headline figure, **Contributing changes** decomposes the movement into six factors, each with its own multiplier: **Tokens per call**, **Prompt vs output split**, **Traces per session**, **Prompt price**, **LLM calls per trace**, and **Output price**. When cost per session jumps, this is the panel that says whether prompts got longer, traces started retrying, or a price list changed.
+
+## Models
+
+**Model usage over time** plots each model's spend or token volume per bucket. **Spend against usage** compares every model's share of spend with its share of calls: a model taking a much larger share of the money than of the usage shows a warning multiplier, such as `3.2× avg`, so routing decisions have a number attached.
+
+## Cache economics
+
+The **Cache** section judges caching model by model from your traffic's own timing and flags three actionable situations, summed into a **Recommendations** card with an estimated saving:
+
+- **Cache it**: caching is off on calls where turning it on looks like it would pay for itself.
+- **Stop caching**: these calls pay to write a cache that expires before anything reads it.
+- **Investigate**: the calls arrive close enough together to reuse a cached prompt and miss anyway, so the prompt is where to look next.
+
+Models that are caching well, where no cache would pay off, or with too few calls to judge get no recommendation. Each model's bar shows its actual cache hit rate, with a pale extension marking the highest rate this traffic's own call cadence could have reached and a marker at the break-even rate where caching starts paying for itself on that model's prices. A **Cache lifetime** control replays the analysis under what-if lifetimes, from the provider-documented default up to a day, since a verdict can flip when entries live longer.
+
+Savings figures are estimates for the selected window, modeled from your token counts and each model's list prices, so they will not tie exactly to recorded spend.
+
+## Cost breakdown
+
+The **Cost breakdown** table splits spend by **Model**, **Provider**, **Operation**, or **Service**, with input, output, and cache-and-other costs, each dimension's share of the total, and its average per trace. Long tails collapse into an **Other** row, with a **Show all** control to list every dimension.
+
+## Related
+
+- [Token & cost tracking](./features/token-cost-tracking): How Latitude prices spans from telemetry
+- [Sessions](./sessions): The unit behind cost per session
+- [Experiments](../experiments/overview): Compare cost across slices of traffic

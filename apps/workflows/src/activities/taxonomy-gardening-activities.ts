@@ -25,6 +25,7 @@ import {
   type ReassignTaxonomyObservationByIdInput,
   routeObservationsToLeaves,
   type StagingLeafCluster,
+  TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
@@ -38,6 +39,7 @@ import {
   TaxonomyClusterRepository,
   type TaxonomyDimension,
   type TaxonomyNameQualityMetrics,
+  type TaxonomyObservationAssignmentMethod,
   TaxonomyObservationRepository,
   type TaxonomyRun,
   TaxonomyRunRepository,
@@ -67,8 +69,11 @@ import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clien
 import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 import { buildHierarchicalClustersInWorker } from "./taxonomy-clustering-worker.ts"
 import {
+  type AssignmentCoverageMetrics,
   adaptiveGardenRunFields,
   adaptiveSpanAttributes,
+  assignmentCoverageFields,
+  assignmentCoverageSpanAttributes,
   buildQualityFields,
   buildQualitySpanAttributes,
   nameQualityFields,
@@ -892,6 +897,12 @@ const routeProjectionWindowToStagingLeaves = (
     return { window, routed }
   })
 
+// Rejected rows are written too, so rows-written is not rows-assigned.
+const reassignmentCounts = (rows: readonly { readonly assignmentMethod: TaxonomyObservationAssignmentMethod }[]) => ({
+  observationsReassigned: rows.filter((row) => row.assignmentMethod !== "noise").length,
+  observationsRejected: rows.filter((row) => row.assignmentMethod === "noise").length,
+})
+
 const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
     const observations = yield* TaxonomyObservationRepository
@@ -899,7 +910,7 @@ const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput
     const assignments: ReassignTaxonomyObservationByIdInput[] = routed.map((assignment) => ({
       observationId: assignment.observationId,
       assignedClusterId: assignment.assignedClusterId,
-      assignmentMethod: "gardening_reassign" as const,
+      assignmentMethod: assignment.method,
       assignmentConfidence: assignment.confidence,
       reassignmentRunId: TaxonomyRunId(input.runId),
       indexedAt: new Date(input.now),
@@ -927,7 +938,7 @@ const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput
         })
       }
     }
-    return { observationsReassigned: assignments.length, windowSize: window.length }
+    return { ...reassignmentCounts(assignments), windowSize: window.length }
   }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
 
 // The view slice's full-window writer. A cohort routes the observation window; a
@@ -960,7 +971,7 @@ const reassignFullWindowScoped = (
           sessionId: row.sessionId,
           assignedClusterId: routed.assignedClusterId,
           assignmentConfidence: routed.confidence,
-          assignmentMethod: "gardening_reassign" as const,
+          assignmentMethod: routed.method,
           reassignmentRunId: TaxonomyRunId(input.runId),
           startTime: row.startTime,
           retentionDays: TAXONOMY_OBSERVATION_RETENTION_DAYS,
@@ -971,7 +982,7 @@ const reassignFullWindowScoped = (
     for (const batch of chunk(assignments, TAXONOMY_REASSIGNMENT_BATCH_SIZE)) {
       yield* assignmentsRepo.upsertMany(batch)
     }
-    return { observationsReassigned: assignments.length, windowSize: window.length }
+    return { ...reassignmentCounts(assignments), windowSize: window.length }
   }).pipe((effect) => withScopedReassignClickHouse(effect, input.organizationId))
 
 /**
@@ -1004,6 +1015,60 @@ const reassignmentTarget = (plan: StoredGardenTaxonomyPlan): ReassignmentTarget 
     : { kind: "fullWindowScoped", customBehaviorId: CustomBehaviorId(plan.customBehaviorId) }
 }
 
+// `getCounts` reads `taxonomy_observations`, which is the whole-project topic tree
+// only — a view's assignments live in the `taxonomy_view_assignments` slice. So this
+// is only meaningful for a global target; emitting it for a view would report the
+// project's coverage tagged with that view's id. Views have their own measure
+// (`TAXONOMY_LENS_COVERAGE_*`).
+const targetIsGlobal = (target: ReassignmentTarget): boolean =>
+  target.kind === "fullWindowGlobal" || target.kind === "sampleGlobal"
+
+const readWindowCoverage = (input: GardenTaxonomyReassignObservationsInput) =>
+  Effect.gen(function* () {
+    const observations = yield* TaxonomyObservationRepository
+    return yield* observations.getCounts({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      since: new Date(new Date(input.now).getTime() - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * 24 * 60 * 60_000),
+    })
+  }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
+
+// Measured AFTER this run's writes and before the catch-up pass, which can still
+// move the tail indexed during reassignment.
+const emitAssignmentCoverageTelemetry = (
+  input: GardenTaxonomyReassignObservationsInput,
+  plan: StoredGardenTaxonomyPlan,
+  reassigned: { readonly observationsReassigned: number; readonly observationsRejected?: number },
+) =>
+  Effect.gen(function* () {
+    const counts = yield* readWindowCoverage(input)
+    const metrics: AssignmentCoverageMetrics = {
+      mode: plan.mode ?? "off",
+      fitFloor: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+      routedFullWindow: planHasStagingLeaves(plan),
+      windowTotal: counts.total,
+      windowAssigned: counts.assigned,
+      windowNoise: counts.noise,
+      assignedShare: counts.total === 0 ? 0 : counts.assigned / counts.total,
+      observationsReassigned: reassigned.observationsReassigned,
+      observationsRejected: reassigned.observationsRejected ?? 0,
+    }
+    yield* Effect.sync(() =>
+      logger.info("Taxonomy assignment coverage", {
+        metric: "taxonomy.gardenTaxonomyWorkflow.assignmentCoverage",
+        ...assignmentCoverageFields(input, metrics),
+      }),
+    )
+    yield* Effect.gen(function* () {
+      // Same reason as the quality spans: APM sampling drops these low-volume traces otherwise.
+      yield* Effect.annotateCurrentSpan("manual.keep", true)
+      for (const [key, value] of Object.entries(assignmentCoverageSpanAttributes(input, metrics))) {
+        yield* Effect.annotateCurrentSpan(key, value)
+      }
+      // Renaming this span orphans its retention filter and span metrics, silently.
+    }).pipe(Effect.withSpan("taxonomy.gardenTaxonomyWorkflow.assignmentCoverage"))
+  })
+
 export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomyReassignObservationsInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow reassign observations",
@@ -1025,6 +1090,10 @@ export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomy
       // between it and the swap is a window where neither tree is visible. The
       // staged tree is already named by now, so activating it is safe.
       yield* publishStagedTree(input, plan)
+      // Best-effort: a coverage read that fails must not fail the publish it measures.
+      if (targetIsGlobal(target)) {
+        yield* emitAssignmentCoverageTelemetry(input, plan, reassigned).pipe(Effect.ignore)
+      }
       return reassigned
     }),
   )
@@ -1111,7 +1180,7 @@ const catchUpGlobal = (input: GardenTaxonomyDeprecateClustersInput, plan: Stored
     const assignments: ReassignTaxonomyObservationByIdInput[] = routed.map((assignment) => ({
       observationId: assignment.observationId,
       assignedClusterId: assignment.assignedClusterId,
-      assignmentMethod: "gardening_reassign" as const,
+      assignmentMethod: assignment.method,
       assignmentConfidence: assignment.confidence,
       reassignmentRunId: TaxonomyRunId(input.runId),
       indexedAt: new Date(input.now),
@@ -1123,7 +1192,7 @@ const catchUpGlobal = (input: GardenTaxonomyDeprecateClustersInput, plan: Stored
         assignments: batch,
       })
     }
-    return assignments.length
+    return reassignmentCounts(assignments).observationsReassigned
   }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
 
 // Confirm publication (a no-op when the reassign activity already swapped), then

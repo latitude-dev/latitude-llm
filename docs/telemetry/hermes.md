@@ -177,7 +177,7 @@ If you want trace structure without prompt, response, or tool content, set:
 LATITUDE_NO_CONTENT=true
 ```
 
-Structural-only traces still include timing, model, token usage, and run structure. Message content, tool input/output and memory bodies are omitted. For finer control — keeping content but masking one attribute — see [Privacy](#privacy).
+Structural-only traces still include timing, model, token usage, and run structure. Message content, tool input/output, memory bodies and provider error messages are omitted. For finer control — keeping content but masking one attribute — see [Privacy](#privacy).
 
 ## Disable or uninstall
 
@@ -366,7 +366,7 @@ By default Latitude receives what it needs to reconstruct a Hermes run: prompts,
 
 **Keeping a specific attribute local.** `LATITUDE_HERMES_REDACT_ATTRIBUTES` replaces the whole value of any attribute you name — for example `gen_ai.memory.records,gen_ai.tool.call.result`, or a pattern like `/^gen_ai\.tool\.call\./`. The attribute is still sent, with its value masked, so you can see what the plugin exported.
 
-**Structure only.** `LATITUDE_NO_CONTENT=true` drops every content-bearing attribute: you keep timing, model, token usage and run structure, and lose prompts, responses, tool I/O and memory bodies.
+**Structure only.** `LATITUDE_NO_CONTENT=true` drops every content-bearing attribute: you keep timing, model, token usage and run structure, and lose prompts, responses, tool I/O and memory bodies. Error text counts as content, because a provider often quotes the request it rejected — a failed call reports its status code and error type, not the provider's message.
 
 Telemetry runs for each turn until disabled or uninstalled. Disable it before working with material you do not want sent to Latitude.
 

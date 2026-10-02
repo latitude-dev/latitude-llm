@@ -68,6 +68,7 @@ export {
   type MemoryStoreUser,
   type MemoryUserStore,
 } from "./entities/memory-store.ts"
+export { countTokens } from "./entities/tokenizer.ts"
 export {
   MemoryAnalyticsRepository,
   type MemoryAnalyticsRepositoryShape,

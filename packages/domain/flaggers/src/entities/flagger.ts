@@ -3,7 +3,7 @@ import { z } from "zod"
 import { FLAGGER_STRATEGY_SLUGS, type FlaggerSlug } from "../flagger-strategies/types.ts"
 
 const flaggerStrategySlugs = new Set<string>(FLAGGER_STRATEGY_SLUGS)
-const flaggerSlugSchema: z.ZodType<FlaggerSlug> = z
+export const flaggerSlugSchema: z.ZodType<FlaggerSlug> = z
   .string()
   .refine((slug): slug is FlaggerSlug => flaggerStrategySlugs.has(slug))
 

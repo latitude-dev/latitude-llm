@@ -250,6 +250,35 @@ export const SessionAnalysisRepositoryLive = Layer.effect(
             })
             .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionAnalysisRepository.findLatest")))
         }),
+      listLatestBySessions: ({ organizationId, projectId, sessionIds, indexedAtTo }) =>
+        Effect.gen(function* () {
+          if (sessionIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${analysisColumns}
+                        FROM session_analyses
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND session_id IN {sessionIds:Array(String)}
+                          AND indexed_at <= {indexedAtTo:DateTime64(3)}
+                        ORDER BY session_id ASC, indexed_at DESC
+                        LIMIT 1 BY session_id`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  sessionIds: sessionIds.map(String),
+                  indexedAtTo: formatCHDate(indexedAtTo),
+                },
+                format: "JSONEachRow",
+              })
+              return ((await result.json()) as AnalysisRow[]).map(toDomainAnalysis)
+            })
+            .pipe(
+              Effect.mapError((error) => toRepositoryError(error, "SessionAnalysisRepository.listLatestBySessions")),
+            )
+        }),
       upsert: (analysis) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -303,6 +332,34 @@ export const SessionSemanticMomentRepositoryLive = Layer.effect(
               return ((await result.json()) as SemanticMomentRow[]).map(toDomainSemanticMoment)
             })
             .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionSemanticMomentRepository.listBySession")))
+        }),
+      listBySessions: ({ organizationId, projectId, sessionIds, indexedAtTo }) =>
+        Effect.gen(function* () {
+          if (sessionIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${semanticMomentColumns}
+                        FROM session_semantic_moments FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND session_id IN {sessionIds:Array(String)}
+                          AND indexed_at <= {indexedAtTo:DateTime64(3)}
+                        ORDER BY session_id ASC, first_message_index ASC, moment_id ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  sessionIds: sessionIds.map(String),
+                  indexedAtTo: formatCHDate(indexedAtTo),
+                },
+                format: "JSONEachRow",
+              })
+              return ((await result.json()) as SemanticMomentRow[]).map(toDomainSemanticMoment)
+            })
+            .pipe(
+              Effect.mapError((error) => toRepositoryError(error, "SessionSemanticMomentRepository.listBySessions")),
+            )
         }),
       listByTrace: ({ organizationId, projectId, traceId }) =>
         Effect.gen(function* () {
@@ -363,6 +420,32 @@ export const SessionMomentLabelRepositoryLive = Layer.effect(
               return ((await result.json()) as MomentLabelRow[]).map(toDomainMomentLabel)
             })
             .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionMomentLabelRepository.listBySession")))
+        }),
+      listBySessions: ({ organizationId, projectId, sessionIds, indexedAtTo }) =>
+        Effect.gen(function* () {
+          if (sessionIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${momentLabelColumns}
+                        FROM session_moment_labels FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND session_id IN {sessionIds:Array(String)}
+                          AND indexed_at <= {indexedAtTo:DateTime64(3)}
+                        ORDER BY session_id ASC, first_message_index ASC, kind ASC, label_id ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  sessionIds: sessionIds.map(String),
+                  indexedAtTo: formatCHDate(indexedAtTo),
+                },
+                format: "JSONEachRow",
+              })
+              return ((await result.json()) as MomentLabelRow[]).map(toDomainMomentLabel)
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionMomentLabelRepository.listBySessions")))
         }),
       listByMoment: ({ organizationId, projectId, sessionId, momentId }) =>
         Effect.gen(function* () {
