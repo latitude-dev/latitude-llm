@@ -20,5 +20,8 @@ class ToolParameterStatsResponse(UniversalBaseModel):
         FieldMetadata(alias="sampleSize"),
         pydantic.Field(alias="sampleSize", description="Number of recent calls the stats were computed over."),
     ]
+    """
+    Number of recent calls the stats were computed over.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

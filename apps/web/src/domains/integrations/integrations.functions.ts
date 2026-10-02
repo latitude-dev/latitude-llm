@@ -8,7 +8,8 @@
  * org isolation. Disconnect soft-revokes locally first, then makes a
  * best-effort `auth.revoke` call on Slack — local revoke is the
  * source of truth, so a Slack-side network or auth blip does not
- * block the user.
+ * block the user. The Slack-side revoke is skipped when the token is
+ * long-lived and another org still has the workspace connected.
  */
 import {
   configureSlackRouteUseCase,
@@ -32,13 +33,17 @@ import {
   SlackIntegrationId as SlackIntegrationIdBrand,
   type SqlClient,
 } from "@domain/shared"
-import { SlackIntegrationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  hasActiveSlackIntegrationForTeamAcrossOrgs,
+  SlackIntegrationRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
+import { getAdminPostgresClient, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 
 const logger = createLogger("slack-disconnect")
 
@@ -126,6 +131,13 @@ export const getActiveSlackIntegration = createServerFn({ method: "GET" }).handl
  * issues a best-effort `auth.revoke` against Slack. Idempotent: if no
  * active integration exists, returns `{ revoked: false }`.
  *
+ * With token rotation each install holds its own token pair, and
+ * `auth.revoke` only kills that one token. Without rotation every
+ * install in a workspace gets the same long-lived bot token, and
+ * revoking it deactivates the bot for all of them — so in that case
+ * the Slack-side revoke only runs once no other org holds an active
+ * install for the workspace.
+ *
  * Token plaintext (needed for the Slack-side revoke) only flows
  * through this server fn; it is **not** exposed over the wire — the
  * `SlackIntegrationRecord` projection in `getActiveSlackIntegration`
@@ -136,11 +148,12 @@ export const disconnectSlackIntegration = createServerFn({ method: "POST" }).han
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
 
+    const adminDb = getAdminPostgresClient().db
+
     return Effect.runPromise(
-      disconnectSlackIntegrationEffect.pipe(
-        withPostgres(SlackIntegrationRepositoryLive, client, organizationId),
-        withTracing,
-      ),
+      disconnectSlackIntegrationEffect({
+        isWorkspaceConnectedElsewhere: (teamId) => hasActiveSlackIntegrationForTeamAcrossOrgs(adminDb, teamId),
+      }).pipe(withPostgres(SlackIntegrationRepositoryLive, client, organizationId), withTracing),
     )
   },
 )
@@ -149,40 +162,51 @@ export const disconnectSlackIntegration = createServerFn({ method: "POST" }).han
  * Exported as a separate Effect so tests can run it against an
  * in-memory repository without going through `createServerFn`.
  */
-export const disconnectSlackIntegrationEffect: Effect.Effect<
-  { readonly revoked: boolean },
-  RepositoryError,
-  SlackIntegrationRepository | SqlClient
-> = Effect.gen(function* () {
-  const repo = yield* SlackIntegrationRepository
-  const active = yield* repo.findActiveByOrganizationId()
-  if (active === null) return { revoked: false } as const
+export const disconnectSlackIntegrationEffect = (deps: {
+  readonly isWorkspaceConnectedElsewhere: (teamId: string) => Effect.Effect<boolean, RepositoryError>
+}): Effect.Effect<{ readonly revoked: boolean }, RepositoryError, SlackIntegrationRepository | SqlClient> =>
+  Effect.gen(function* () {
+    const repo = yield* SlackIntegrationRepository
+    const active = yield* repo.findActiveByOrganizationId()
+    if (active === null) return { revoked: false } as const
 
-  yield* revokeSlackIntegrationUseCase({ id: active.id as SlackIntegrationId })
+    yield* revokeSlackIntegrationUseCase({ id: active.id as SlackIntegrationId })
 
-  // Best-effort Slack-side revoke. The try/catch lives inside the
-  // promise body so any failure (network blip, 401, rate limit, etc.)
-  // is logged and swallowed — the local soft-revoke stands as the
-  // source of truth.
-  //
-  // `@platform/slack` is loaded via a dynamic import so this module
-  // can be imported by the integrations page on the client without
-  // pulling `@slack/web-api` (which has a top-level `require("node:path")`)
-  // into the client bundle. The TanStack Start bundler can't statically
-  // prove that `createSlackClient` is reachable only from server-side
-  // handler bodies — keeping the import dynamic guarantees it.
-  yield* Effect.promise(async () => {
-    try {
-      const { createSlackClient } = await import("@platform/slack")
-      const slack = createSlackClient(active.botAccessToken, { timeoutMs: SLACK_REVOKE_TIMEOUT_MS })
-      await slack.auth.revoke({ test: false })
-    } catch (cause) {
-      logger.warn("Slack auth.revoke failed; local soft-revoke stands", cause)
+    const hasLongLivedToken = active.tokenExpiresAt === null || active.refreshToken === null
+    if (hasLongLivedToken) {
+      // Must run after our own soft-revoke so any remaining active install belongs to another org.
+      const sharedWithOtherOrgs = yield* deps.isWorkspaceConnectedElsewhere(active.teamId).pipe(
+        Effect.catchTag("RepositoryError", (cause) => {
+          logger.warn("Slack workspace sharing check failed; skipping auth.revoke to keep other orgs' bot alive", cause)
+          return Effect.succeed(true)
+        }),
+      )
+      if (sharedWithOtherOrgs) return { revoked: true } as const
     }
-  })
 
-  return { revoked: true } as const
-})
+    // Best-effort Slack-side revoke. The try/catch lives inside the
+    // promise body so any failure (network blip, 401, rate limit, etc.)
+    // is logged and swallowed — the local soft-revoke stands as the
+    // source of truth.
+    //
+    // `@platform/slack` is loaded via a dynamic import so this module
+    // can be imported by the integrations page on the client without
+    // pulling `@slack/web-api` (which has a top-level `require("node:path")`)
+    // into the client bundle. The TanStack Start bundler can't statically
+    // prove that `createSlackClient` is reachable only from server-side
+    // handler bodies — keeping the import dynamic guarantees it.
+    yield* Effect.promise(async () => {
+      try {
+        const { createSlackClient } = await import("@platform/slack")
+        const slack = createSlackClient(active.botAccessToken, { timeoutMs: SLACK_REVOKE_TIMEOUT_MS })
+        await slack.auth.revoke({ test: false })
+      } catch (cause) {
+        logger.warn("Slack auth.revoke failed; local soft-revoke stands", cause)
+      }
+    })
+
+    return { revoked: true } as const
+  })
 
 // Only slack-routable groups can be configured as routes — `personal`
 // kinds target one user and never broadcast to channels.

@@ -45,6 +45,7 @@ export function createEcs(
   imageTag: pulumi.Input<string>,
   albTargetGroupArns: Record<string, Output<string>>,
   temporalCloud: TemporalCloudConfig,
+  enableJevFlaggerPreclassifier: boolean,
 ): EcsOutput {
   const cluster = new aws.ecs.Cluster(`${name}-cluster`, {
     name: `${name}-cluster`,
@@ -197,6 +198,7 @@ export function createEcs(
       s3Bucket,
       imageTag,
       temporalCloud,
+      enableJevFlaggerPreclassifier,
     )
     taskDefinitions[serviceConfig.name] = taskDef
 
@@ -326,6 +328,7 @@ function createTaskDefinition(
   s3Bucket: S3Bucket,
   imageTag: pulumi.Input<string>,
   temporalCloud: TemporalCloudConfig,
+  enableJevFlaggerPreclassifier: boolean,
 ): EcsTaskDefinition {
   const owner = process.env.GHCR_OWNER ?? "latitude-dev"
 
@@ -354,6 +357,7 @@ function createTaskDefinition(
       secrets["clickhouse-password"].arn,
       secrets["clickhouse-db"].arn,
       secrets["voyage-api-key"].arn,
+      secrets["jev-api-key"].arn,
       secrets["mailgun-api-key"].arn,
       secrets["mailgun-domain"].arn,
       secrets["mailgun-from"].arn,
@@ -405,6 +409,7 @@ function createTaskDefinition(
         clickhousePasswordArn,
         clickhouseDbArn,
         voyageApiKeyArn,
+        jevApiKeyArn,
         mailgunApiKeyArn,
         mailgunDomainArn,
         mailgunFromArn,
@@ -472,6 +477,7 @@ function createTaskDefinition(
           { name: "LAT_TRUSTED_ORIGINS", value: trustedOrigins },
           { name: "LAT_CORS_ALLOWED_ORIGINS", value: webUrl },
           ...(config.name === "production" ? [{ name: "VITE_LAT_GTM_CONTAINER_ID", value: "GTM-5NWGV24H" }] : []),
+          { name: "LAT_JEV_FLAGGER_PRECLASSIFIER_ENABLED", value: String(enableJevFlaggerPreclassifier) },
           { name: "DD_TRACE_ENABLED", value: "true" },
           { name: "DD_ENV", value: config.name },
           { name: "DD_SERVICE", value: serviceConfig.name },
@@ -497,6 +503,7 @@ function createTaskDefinition(
           { name: "LAT_CLICKHOUSE_PASSWORD", valueFrom: clickhousePasswordArn },
           { name: "LAT_CLICKHOUSE_DB", valueFrom: clickhouseDbArn },
           { name: "LAT_VOYAGE_API_KEY", valueFrom: voyageApiKeyArn },
+          { name: "LAT_JEV_API_KEY", valueFrom: jevApiKeyArn },
           { name: "LAT_MAILGUN_API_KEY", valueFrom: mailgunApiKeyArn },
           { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
           { name: "LAT_MAILGUN_FROM", valueFrom: mailgunFromArn },

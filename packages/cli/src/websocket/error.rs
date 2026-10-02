@@ -60,11 +60,11 @@ pub fn map_handshake_error(err: tungstenite::Error) -> CliError {
                     "WebSocket endpoint not found (404): {}",
                     truncate(&body, 200),
                 )),
-                500..=599 => CliError::Api {
-                    code: status,
-                    message: format!("WebSocket upgrade failed: {}", truncate(&body, 200)),
-                    reason: "wsHandshakeServerError".into(),
-                },
+                500..=599 => CliError::api(
+                    status,
+                    format!("WebSocket upgrade failed: {}", truncate(&body, 200)),
+                    "wsHandshakeServerError",
+                ),
                 _ => CliError::Other(anyhow::anyhow!(
                     "WebSocket upgrade failed with status {status}: {}",
                     truncate(&body, 200),

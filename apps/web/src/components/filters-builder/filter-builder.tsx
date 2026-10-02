@@ -427,6 +427,24 @@ export function FilterBuilder({
       )
     }
     if (descriptor.kind === "text") {
+      const selectedValues = getInValues(value, descriptor.field)
+      if (selectedValues.length > 0) {
+        const staticItems = selectedValues.map((selectedValue) => ({ value: selectedValue, label: selectedValue }))
+        return (
+          <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove}>
+            <MultiSelectFilter
+              mode={mode}
+              projectId={projectId}
+              column={descriptor.field as DistinctColumn}
+              selected={selectedValues}
+              onChange={(values) => setField(descriptor.field, values.length > 0 ? [{ op: "in", value: values }] : [])}
+              staticItems={staticItems}
+              placeholder="Filter selected values..."
+              {...(portalContainer ? { portalContainer } : {})}
+            />
+          </FilterSection>
+        )
+      }
       return (
         <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove}>
           <DebouncedInput

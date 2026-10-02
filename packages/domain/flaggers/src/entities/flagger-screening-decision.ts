@@ -23,13 +23,13 @@ export const flaggerScreeningSelectionSchema = z.object({
   inclusionProbability: z.number().min(0).max(1).optional(),
   hintKinds: z.array(z.string().min(1)).readonly(),
   retentionDays: z.number().int().positive(),
+  attempt: z.number().int().positive(),
+  version: z.number().int().positive(),
 })
 
 export type FlaggerScreeningSelection = z.infer<typeof flaggerScreeningSelectionSchema>
 
 export const flaggerScreeningDecisionSchema = flaggerScreeningSelectionSchema.extend({
-  attempt: z.number().int().positive(),
-  version: z.number().int().positive(),
   outcome: flaggerScreeningOutcomeSchema.optional(),
   createdAt: z.date(),
 })

@@ -3,13 +3,13 @@
 import type * as Latitude from "../index.js";
 
 export interface AgentScoreCauses {
-    /** `notComputed` when the explanation has not been prepared yet; the scores are still valid. */
+    /** `notComputed` when no matching explanation is available for today; any published score remains valid. */
     status: AgentScoreCauses.Status;
     explanation: Latitude.AgentScoreExplanation | null;
 }
 
 export namespace AgentScoreCauses {
-    /** `notComputed` when the explanation has not been prepared yet; the scores are still valid. */
+    /** `notComputed` when no matching explanation is available for today; any published score remains valid. */
     export const Status = {
         Ready: "ready",
         NotComputed: "notComputed",

@@ -3,5 +3,5 @@
 import typing
 
 SessionAssessmentReaderCoveragePartiallyExaminedSelectionMethod = typing.Union[
-    typing.Literal["deterministic", "hinted", "uniform-sample", "ordinary-sample"], typing.Any
+    typing.Literal["deterministic", "hinted", "jev-preclassifier", "uniform-sample", "ordinary-sample"], typing.Any
 ]

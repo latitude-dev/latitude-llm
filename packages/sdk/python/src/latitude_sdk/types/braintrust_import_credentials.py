@@ -20,5 +20,8 @@ class BraintrustImportCredentials(UniversalBaseModel):
         FieldMetadata(alias="apiKey"),
         pydantic.Field(alias="apiKey", description="Braintrust API key with read access to the project."),
     ]
+    """
+    Braintrust API key with read access to the project.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
