@@ -14,5 +14,8 @@ class SessionAssessmentEvidenceDestinationScore(UniversalBaseModel):
         FieldMetadata(alias="scoreId"),
         pydantic.Field(alias="scoreId", description="Identifier of the destination score."),
     ]
+    """
+    Identifier of the destination score.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

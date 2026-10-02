@@ -183,6 +183,24 @@ export interface ScoreRepositoryShape {
     readonly traceId: TraceId
     readonly feedback: string
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
+  findPublishedSystemAnnotationByAnchor(input: {
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+    readonly flaggerSlug: string
+    readonly contentHash: string
+  }): Effect.Effect<Score | null, RepositoryError, SqlClient>
+  findPublishedSystemVerdictByGeneration(input: {
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+    readonly flaggerSlug: string
+    readonly analysisHash: string
+  }): Effect.Effect<Score | null, RepositoryError, SqlClient>
+  findPublishedSystemSafetyFindingByKind(input: {
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+    readonly flaggerSlug: string
+    readonly safetyFindingKind: string
+  }): Effect.Effect<Score | null, RepositoryError, SqlClient>
   /**
    * Published flagger-authored annotations for one session, newest first,
    * bounded by `limit`. Backs the flagger dedup lookups, which pass

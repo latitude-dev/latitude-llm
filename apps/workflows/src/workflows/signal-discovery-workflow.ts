@@ -35,6 +35,7 @@ export const signalDiscoveryWorkflow = async (input: {
             rawNormalizedEmbedding: embeddedScoreFeedback.rawNormalizedEmbedding,
           }
         : {}),
+      ...(embeddedScoreFeedback.bundleKey !== undefined ? { bundleKey: embeddedScoreFeedback.bundleKey } : {}),
     }),
   )
 
