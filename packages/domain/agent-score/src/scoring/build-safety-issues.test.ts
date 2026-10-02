@@ -1,4 +1,5 @@
 import type { SignalWithLifecycle } from "@domain/signals"
+import { scoringEligibleSignalIds } from "@domain/signals"
 import { describe, expect, it } from "vitest"
 import type { SessionAssessmentItem } from "../entities/session-assessment.ts"
 import { buildSafetyIssues, type SafetyIssueSession } from "./build-safety-issues.ts"
@@ -82,14 +83,14 @@ const session = (
   examinationProbability: options.probability ?? 0.1,
   observations: readSafetyIssueObservations({
     items: options.items,
-    signals: options.signals ?? [],
+    eligibleSignalIds: scoringEligibleSignalIds(options.signals ?? []),
     observationProbability: options.probability ?? 0.1,
   }),
 })
 
 describe("readSafetyIssueObservations", () => {
   it("ignores items that carry no Safety effect", () => {
-    const observations = readSafetyIssueObservations({ items: [nonSafetyItem()], signals: [] })
+    const observations = readSafetyIssueObservations({ items: [nonSafetyItem()], eligibleSignalIds: new Set() })
 
     expect(observations.confirmedHarm).toEqual([])
     expect(observations.exposure).toEqual([])
@@ -100,7 +101,7 @@ describe("readSafetyIssueObservations", () => {
   it("puts a harmed session's attack in the harm table only", () => {
     const observations = readSafetyIssueObservations({
       items: [item({ status: "confirmedHarm", extraStatus: "exposure" })],
-      signals: [],
+      eligibleSignalIds: new Set(),
     })
 
     expect(observations.confirmedHarm).toHaveLength(1)
@@ -108,7 +109,10 @@ describe("readSafetyIssueObservations", () => {
   })
 
   it("keeps a refused attack in the exposure table", () => {
-    const observations = readSafetyIssueObservations({ items: [item({ status: "exposure" })], signals: [] })
+    const observations = readSafetyIssueObservations({
+      items: [item({ status: "exposure" })],
+      eligibleSignalIds: new Set(),
+    })
 
     expect(observations.exposure).toHaveLength(1)
     expect(observations.confirmedHarm).toEqual([])
@@ -121,7 +125,7 @@ describe("readSafetyIssueObservations", () => {
   ])("drops an item whose only signal is $label", ({ overrides }) => {
     const observations = readSafetyIssueObservations({
       items: [item({ signalIds: ["signal-1"] })],
-      signals: [signal("signal-1", overrides as Partial<SignalWithLifecycle>)],
+      eligibleSignalIds: scoringEligibleSignalIds([signal("signal-1", overrides as Partial<SignalWithLifecycle>)]),
     })
 
     expect(observations.confirmedHarm).toEqual([])
@@ -130,7 +134,7 @@ describe("readSafetyIssueObservations", () => {
   it("keeps an item whose signal is eligible and names it", () => {
     const observations = readSafetyIssueObservations({
       items: [item({ signalIds: ["signal-1"] })],
-      signals: [signal("signal-1")],
+      eligibleSignalIds: scoringEligibleSignalIds([signal("signal-1")]),
     })
 
     expect(observations.confirmedHarm[0]).toMatchObject({ signalId: "signal-1" })
@@ -141,7 +145,7 @@ describe("readSafetyIssueObservations", () => {
   it("marks every observation as riding the suite's own draw", () => {
     const observations = readSafetyIssueObservations({
       items: [item()],
-      signals: [],
+      eligibleSignalIds: new Set(),
       observationProbability: 0.1,
     })
 
@@ -211,7 +215,7 @@ describe("buildSafetyIssues", () => {
       sessionId: "a",
       harmed: true,
       examinationProbability: 0.1,
-      observations: readSafetyIssueObservations({ items: [item()], signals: [] }),
+      observations: readSafetyIssueObservations({ items: [item()], eligibleSignalIds: new Set() }),
     }
     const { confirmedHarm } = buildSafetyIssues({ sessions: [unknown] })
 

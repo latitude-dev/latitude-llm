@@ -222,15 +222,89 @@ pub(crate) fn dump_streaming_note(status: u16, headers: &HeaderMap, extra_sensit
     eprintln!("< [streaming response — body not buffered]");
 }
 
+/// Status + headers for a response whose body this layer never reads.
+///
+/// The SDK-executor path (custom commands) hands the response straight to the
+/// generated SDK crate, which deserializes it — so buffering the body here to
+/// print it would either consume it or double the memory for every call. The
+/// request side, which is what you actually need when diagnosing "what did the
+/// CLI send?", is dumped in full.
+pub(crate) fn dump_response_headers_only(
+    status: u16,
+    latency_ms: u64,
+    headers: &HeaderMap,
+    extra_sensitive_headers: &[&str],
+) {
+    eprintln!(
+        "* {} in {}",
+        colorize(&format!("HTTP {status}"), "36"),
+        colorize(&format!("{latency_ms}ms"), "90"),
+    );
+    print_headers("<", headers, extra_sensitive_headers);
+    eprintln!("< [body consumed by the SDK client — not buffered for --debug]");
+}
+
 /// Returns true if the header name is sensitive and should be redacted.
 ///
 /// Checks the static denylist plus any spec-derived custom auth header names
 /// (e.g., `X-Custom-Auth` from an `apiKey in: header` security scheme).
-fn is_sensitive_header(name: &str, extra_sensitive: &[&str]) -> bool {
+pub(crate) fn is_sensitive_header(name: &str, extra_sensitive: &[&str]) -> bool {
     if REDACTED_HEADERS.iter().any(|&h| h.eq_ignore_ascii_case(name)) {
         return true;
     }
-    extra_sensitive.iter().any(|&h| h.eq_ignore_ascii_case(name))
+    if extra_sensitive.iter().any(|&h| h.eq_ignore_ascii_case(name)) {
+        return true;
+    }
+    name_looks_like_credential(name)
+}
+
+/// Substrings that mark a header name as carrying a credential.
+///
+/// [`REDACTED_HEADERS`] is an exact-match list of well-known names, and
+/// spec-declared `apiKey`-in-header schemes arrive via `extra_sensitive` — but
+/// neither covers the common case of a spec that models its credential as a
+/// plain header *parameter* with a vendor-specific name and no
+/// `securitySchemes` block at all. ElevenLabs' `xi-api-key` is exactly that: an
+/// explicit header parameter on 333 operations, invisible to both other
+/// mechanisms, and printed in full by `--debug` and `--dry-run` as a result.
+///
+/// Matching on substrings risks redacting something merely useful rather than
+/// secret; that trade is deliberate, since the cost is one unreadable value in a
+/// diagnostic dump versus a leaked key in a pasted bug report. `idempotency-key`
+/// is specifically *not* matched (`key` alone is not a pattern) because it is not
+/// a credential and is genuinely useful when debugging retries.
+const CREDENTIAL_NAME_PATTERNS: &[&str] = &[
+    "api-key",
+    "apikey",
+    "api_key",
+    "token",
+    "secret",
+    "password",
+    "passwd",
+    "credential",
+];
+
+/// Header-name prefixes that never carry a credential, checked before the
+/// pattern match below.
+///
+/// CORS response headers are the case that matters:
+/// `access-control-allow-credentials` is a routine browser-permissions flag
+/// (its value is literally `true`), but it contains the substring `credential`
+/// and so was being redacted — hiding something harmless and making `--debug`
+/// less useful for no gain.
+const NEVER_REDACTED_PREFIXES: &[&str] = &["access-control-"];
+
+fn name_looks_like_credential(name: &str) -> bool {
+    let lowered = name.to_ascii_lowercase();
+    if NEVER_REDACTED_PREFIXES
+        .iter()
+        .any(|prefix| lowered.starts_with(prefix))
+    {
+        return false;
+    }
+    CREDENTIAL_NAME_PATTERNS
+        .iter()
+        .any(|pattern| lowered.contains(pattern))
 }
 
 /// Emit each header to stderr, prefixed with `line_prefix` (typically `">"` or
@@ -1012,5 +1086,57 @@ mod tests {
             &json!({"id": "n1", "password": "should-be-redacted"}),
             &[],
         );
+    }
+
+    #[test]
+    fn vendor_specific_credential_headers_are_redacted_without_a_security_scheme() {
+        // The leak this closes: a spec can model its credential as a plain
+        // header parameter with a vendor-specific name and declare no
+        // `securitySchemes` at all, so neither the exact-match list nor the
+        // spec-derived names catch it. `--debug` and `--dry-run` printed it.
+        for name in [
+            "xi-api-key",
+            "XI-API-KEY",
+            "x-goog-api-key",
+            "My-Api_Key",
+            "x-refresh-token",
+            "x-client-secret",
+            "db-password",
+            "x-credential",
+        ] {
+            assert!(
+                is_sensitive_header(name, &[]),
+                "{name} should be treated as a credential"
+            );
+        }
+    }
+
+    #[test]
+    fn useful_non_credential_headers_stay_legible() {
+        // Over-redaction has a real cost when debugging, so headers that are
+        // merely useful must survive. `idempotency-key` is the one to protect:
+        // it contains "key" but is not a secret, and it matters when
+        // investigating retries.
+        for name in [
+            "idempotency-key",
+            // CORS response headers: `access-control-allow-credentials`
+            // contains "credential" but is a browser-permissions flag, not a
+            // secret. Redacting it hid something harmless.
+            "access-control-allow-credentials",
+            "access-control-allow-headers",
+            "content-type",
+            "content-length",
+            "accept",
+            "accept-encoding",
+            "user-agent",
+            "x-request-id",
+            "retry-after",
+            "host",
+        ] {
+            assert!(
+                !is_sensitive_header(name, &[]),
+                "{name} should not be redacted"
+            );
+        }
     }
 }

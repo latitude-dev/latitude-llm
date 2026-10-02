@@ -1,11 +1,11 @@
-import { SAFETY_SUITE_SLUGS } from "@domain/flaggers"
+import { type FlaggerScreeningOutcome, SAFETY_SUITE_SLUGS } from "@domain/flaggers"
 import { isConfirmedHarmFindingKind, type SafetyFindingKind, ScoreRepository } from "@domain/scores"
 import { type OrganizationId, type ProjectId, SessionId } from "@domain/shared"
 import { Effect } from "effect"
+import type { SafetyCoverageFloors } from "../entities/agent-score-artifact.ts"
 import { SafetyWindowDecisionSource } from "../ports/safety-window-source.ts"
 import {
   estimateProjectSafety,
-  type SafetyCoverageFloors,
   type SafetyMemberDecision,
   type SafetySessionExamination,
 } from "../scoring/estimate-safety.ts"
@@ -19,7 +19,8 @@ export interface EstimateProjectSafetyWindowInput {
   readonly from: Date
   readonly to: Date
   readonly supportedJudgmentVersions: readonly string[]
-  readonly floors?: SafetyCoverageFloors
+  readonly floors: SafetyCoverageFloors
+  readonly referenceRunSessions: number
   readonly confidenceLevel?: number
   readonly batchSize?: number
 }
@@ -28,6 +29,33 @@ interface SafetyScoreMetadata {
   readonly flaggerSlug?: string
   readonly safetyFindingKind?: SafetyFindingKind
   readonly scoringArtifactVersion?: string
+  readonly analysisHash?: string
+}
+
+const isCompletedOutcome = (outcome: FlaggerScreeningOutcome | undefined): boolean =>
+  outcome === "matched" || outcome === "unmatched" || outcome === "success" || outcome === "failure"
+
+const examinedAnalysisHash = (
+  decisions: readonly SafetyMemberDecision[],
+  suiteSlugs: readonly string[],
+): string | undefined => {
+  const bySlug = new Map(decisions.map((decision) => [decision.flaggerSlug, decision]))
+  const completed: SafetyMemberDecision[] = []
+
+  for (const slug of suiteSlugs) {
+    const decision = bySlug.get(slug)
+    if (!decision) return undefined
+    if (decision.outcome === "notApplicable") continue
+    if (!decision.selected || !isCompletedOutcome(decision.outcome)) return undefined
+    completed.push(decision)
+  }
+
+  if (completed.length === 0) return undefined
+
+  const generations = new Set(completed.map((decision) => decision.analysisHash))
+  if (generations.size > 1) return undefined
+
+  return completed[0]?.analysisHash
 }
 
 const batched = <Value>(values: readonly Value[], size: number): Value[][] => {
@@ -83,6 +111,16 @@ export const estimateProjectSafetyWindow = Effect.fn("agentScore.estimateProject
     { concurrency: 1 },
   )
 
+  // Only harm rows whose analysisHash matches the generation the suite examined
+  // count. Screening "matched" is not confirmed harm; a stale row left by Safety
+  // dedup after a clean re-screen must not depress the window.
+  const examinedGenerationBySession = new Map<string, string>()
+  for (const [sessionId, sessionDecisions] of decisionsBySession) {
+    const generation = examinedAnalysisHash(sessionDecisions, SAFETY_SUITE_SLUGS)
+    if (generation === undefined) continue
+    examinedGenerationBySession.set(sessionId, generation)
+  }
+
   // Harm unions per session: several detectors on one session are one harmed
   // session, and the judge behind each finding decides whether it can be pooled.
   const harmVersionsBySession = new Map<string, string[]>()
@@ -91,6 +129,11 @@ export const estimateProjectSafetyWindow = Effect.fn("agentScore.estimateProject
     const findingKind = metadata?.safetyFindingKind
     if (!findingKind || !isConfirmedHarmFindingKind(findingKind)) continue
     if (score.sessionId === null || !decisionsBySession.has(score.sessionId)) continue
+
+    const examinedGeneration = examinedGenerationBySession.get(score.sessionId)
+    if (examinedGeneration === undefined) continue
+    if (metadata?.analysisHash !== examinedGeneration) continue
+
     const versions = harmVersionsBySession.get(score.sessionId) ?? []
     versions.push(metadata?.scoringArtifactVersion ?? "")
     harmVersionsBySession.set(score.sessionId, versions)
@@ -109,7 +152,8 @@ export const estimateProjectSafetyWindow = Effect.fn("agentScore.estimateProject
     sessions,
     suiteSlugs: SAFETY_SUITE_SLUGS,
     supportedJudgmentVersions: input.supportedJudgmentVersions,
-    ...(input.floors ? { floors: input.floors } : {}),
+    floors: input.floors,
+    referenceRunSessions: input.referenceRunSessions,
     ...(input.confidenceLevel !== undefined ? { confidenceLevel: input.confidenceLevel } : {}),
   })
 })

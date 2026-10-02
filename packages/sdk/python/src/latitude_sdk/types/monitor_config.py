@@ -21,6 +21,10 @@ class MonitorConfig(UniversalBaseModel):
         FieldMetadata(alias="filterSet"),
         pydantic.Field(alias="filterSet", default=None, description="Filters applied by the monitor rule."),
     ]
+    """
+    Filters applied by the monitor rule.
+    """
+
     query: typing.Optional[str] = pydantic.Field(default=None)
     """
     Semantic query applied by inline monitor targets.

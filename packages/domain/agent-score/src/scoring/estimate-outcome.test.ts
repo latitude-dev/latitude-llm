@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { LAUNCH_AGENT_SCORE_ARTIFACT } from "../artifacts/launch-agent-score-artifact.ts"
 import {
   type EstimateProjectOutcomeInput,
   estimateProjectOutcome,
@@ -27,10 +28,88 @@ const estimate = (overrides: Partial<EstimateProjectOutcomeInput> = {}) =>
     deterministicFailureSessionIds: [],
     judgedSessions: verdicts({ successes: 160, failures: 40, inclusionProbability: 0.1 }),
     supportedJudgmentVersions: [VERSION],
+    floors: LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.outcome,
     ...overrides,
   })
 
 describe("estimateProjectOutcome", () => {
+  describe("moment degradation", () => {
+    const DEGRADATION = LAUNCH_AGENT_SCORE_ARTIFACT.outcomeDegradation
+    /** Analyzed sessions, `degraded` of which a rule fired on. Only successes can be degraded. */
+    const analyzed = (input: { readonly analyzed: number; readonly degraded: number }) =>
+      new Map(
+        Array.from({ length: input.analyzed }, (_, index) => [
+          `session-${index}`,
+          index < input.degraded ? ["user_frustration"] : [],
+        ]),
+      )
+
+    const withDegradation = (input: { readonly analyzed: number; readonly degraded: number }) =>
+      estimate({
+        degradation: {
+          degradedKindsBySession: analyzed(input),
+          degradedWeight: DEGRADATION.degradedWeight,
+          minAnalyzedSessions: DEGRADATION.minAnalyzedSessions,
+        },
+      })
+
+    it("leaves the score untouched when nothing degraded", () => {
+      const baseline = estimate()
+      const result = withDegradation({ analyzed: 160, degraded: 0 })
+
+      expect(result.outcome).toBeCloseTo(baseline.outcome as number, 10)
+      expect(result.degradation).toMatchObject({ applied: true, degradedShare: 0 })
+    })
+
+    it("scales the score by the value a degraded session still delivered", () => {
+      const baseline = estimate().outcome as number
+      const result = withDegradation({ analyzed: 160, degraded: 80 })
+
+      // Half the analyzed successes degraded, each worth `degradedWeight` of a clean one.
+      const expected = baseline * (1 - (1 - DEGRADATION.degradedWeight) * 0.5)
+      expect(result.outcome).toBeCloseTo(expected, 10)
+      expect(result.degradation.degradedShare).toBeCloseTo(0.5, 10)
+    })
+
+    it("measures the degraded share against analyzed sessions, not the whole window", () => {
+      // 40 of 80 analyzed degraded is a half, even though 160 sessions were judged. Projecting onto
+      // the 80 nobody analyzed would report a quarter and understate what was actually seen.
+      const result = withDegradation({ analyzed: 80, degraded: 40 })
+
+      expect(result.degradation).toMatchObject({
+        applied: true,
+        analyzedSessionCount: 80,
+        degradedSessionCount: 40,
+      })
+      expect(result.degradation.degradedShare).toBeCloseTo(0.5, 10)
+    })
+
+    it("does not apply below the analyzed floor, and still publishes", () => {
+      const baseline = estimate().outcome as number
+      const result = withDegradation({ analyzed: 10, degraded: 10 })
+
+      expect(result.coverage).toBe("measured")
+      expect(result.outcome).toBeCloseTo(baseline, 10)
+      expect(result.degradation).toMatchObject({ applied: false, analyzedSessionCount: 10 })
+    })
+
+    it("keeps the interval finite when the component is off", () => {
+      const result = withDegradation({ analyzed: 0, degraded: 0 })
+
+      // A Clopper-Pearson on zero trials is [0, 1]; letting it through would widen Outcome until
+      // the confidence gate withheld every dimension.
+      expect(result.interval?.lower).toBeGreaterThan(0)
+      expect(result.interval).toEqual(estimate().interval)
+    })
+
+    it("widens the interval rather than only moving the point estimate", () => {
+      const baseline = estimate()
+      const result = withDegradation({ analyzed: 160, degraded: 80 })
+
+      expect(result.interval?.lower).toBeLessThan(baseline.interval?.lower as number)
+    })
+  })
+
   it("reports the sampled success rate when the judge is the only evidence", () => {
     const result = estimate()
 
@@ -145,11 +224,11 @@ describe("estimateProjectOutcome", () => {
       expect(result.intervalMethod).toBeUndefined()
     })
 
-    it("names the coverage floor when the judged share is too thin", () => {
-      const result = estimate({ eligibleSessionCount: 100_000 })
+    it("names the examined floor one verdict below it", () => {
+      const result = estimate({ judgedSessions: verdicts({ successes: 40, failures: 9, inclusionProbability: 0.08 }) })
 
-      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "coverageFloor" })
-      expect(result.outcome).toBeUndefined()
+      expect(result.sampledSessionCount).toBe(49)
+      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" })
     })
 
     // Deterministic failures alone would otherwise publish a score of zero for a
@@ -163,12 +242,33 @@ describe("estimateProjectOutcome", () => {
       expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" })
       expect(result.outcome).toBeUndefined()
     })
+  })
+
+  describe("how much traffic the sample was drawn from", () => {
+    it("publishes the same score whatever the eligible base", () => {
+      const small = estimate({ eligibleSessionCount: 2_000 })
+      const large = estimate({ eligibleSessionCount: 100_000 })
+
+      expect(large.coverage).toBe("measured")
+      expect(large.outcome).toBe(small.outcome)
+    })
+
+    it("publishes for a large project whose judged share is far below five percent", () => {
+      const result = estimate({
+        eligibleSessionCount: 2_600,
+        judgedSessions: verdicts({ successes: 66, failures: 9, inclusionProbability: 0.08 }),
+      })
+
+      expect(result.sampledSessionCount / result.eligibleSessionCount).toBeLessThan(0.05)
+      expect(result.coverage).toBe("measured")
+      expect(result.outcome).toBeCloseTo(88, 10)
+    })
 
     it("does not divide by an empty eligible base", () => {
       const result = estimate({ eligibleSessionCount: 0 })
 
-      expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "coverageFloor" })
-      expect(result.outcome).toBeUndefined()
+      expect(result.coverage).toBe("measured")
+      expect(result.outcome).toBeCloseTo(80, 10)
     })
   })
 })

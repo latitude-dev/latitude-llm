@@ -4,6 +4,7 @@ import { ChSqlClient, OrganizationId, ProjectId, ScoreId, SessionId, SqlClient, 
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import { LAUNCH_AGENT_SCORE_ARTIFACT } from "../artifacts/launch-agent-score-artifact.ts"
 import { type SafetyWindowDecision, SafetyWindowDecisionSource } from "../ports/safety-window-source.ts"
 import { estimateProjectSafetyWindow } from "./estimate-project-safety.ts"
 
@@ -14,7 +15,7 @@ const FROM = new Date("2026-01-01T00:00:00.000Z")
 const TO = new Date("2026-01-08T00:00:00.000Z")
 const SUITE = ["jailbreaking", "pii-leakage"] as const
 
-const OPEN_FLOORS = { examinedSessions: 1, examinedShareOfEligible: 0, maxRateLimitedHintedShare: 1 }
+const OPEN_FLOORS = { examinedSessions: 1, maxRateLimitedHintedShare: 1 }
 
 const decision = (
   index: number,
@@ -37,7 +38,12 @@ const suiteDecisions = (index: number, overrides: Partial<SafetyWindowDecision> 
 
 const safetyScore = (
   index: number,
-  options: { readonly findingKind?: string; readonly version?: string; readonly slug?: string } = {},
+  options: {
+    readonly findingKind?: string
+    readonly version?: string
+    readonly slug?: string
+    readonly analysisHash?: string
+  } = {},
 ): Score =>
   ({
     id: ScoreId(`score-${index}`.padEnd(24, "x").slice(0, 24)),
@@ -59,6 +65,7 @@ const safetyScore = (
       flaggerPath: "sampled",
       safetyFindingKind: options.findingKind ?? "injectionCompliance",
       scoringArtifactVersion: options.version ?? VERSION,
+      analysisHash: options.analysisHash ?? `hash-${index}`,
     },
     error: null,
     errored: false,
@@ -109,7 +116,8 @@ const run = (input: {
       from: FROM,
       to: TO,
       supportedJudgmentVersions: [VERSION],
-      ...("floors" in input ? (input.floors ? { floors: input.floors } : {}) : { floors: OPEN_FLOORS }),
+      referenceRunSessions: LAUNCH_AGENT_SCORE_ARTIFACT.referenceRuns.safety,
+      floors: "floors" in input ? (input.floors ?? LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.safety) : OPEN_FLOORS,
       ...(input.batchSize !== undefined ? { batchSize: input.batchSize } : {}),
     }).pipe(Effect.provide(layer)),
   ).then((estimate) => ({ estimate, reads, suiteSlugsRead }))
@@ -137,6 +145,55 @@ describe("estimateProjectSafetyWindow", () => {
 
   // Exposure and defense are persisted the same way harm is, so the join has to
   // read the finding kind rather than the presence of a Safety score.
+  // The suite names which generation was examined; a harm score from an older
+  // generation is operational history, not this window's answer.
+  it("ignores harm from a generation the newest suite decisions do not name", async () => {
+    const { estimate } = await run({
+      decisions: examinedWindow(100).decisions,
+      scores: [safetyScore(0, { analysisHash: "an-older-generation" })],
+    })
+
+    expect(estimate.harmedSessionCount).toBe(0)
+  })
+
+  // Screening matched ≠ confirmed harm. Dedup can leave an old confirmed-harm
+  // row while G_new only re-screens matched; that stale row must not count.
+  it("does not treat screening matched plus a foreign-hash harm row as confirmed harm", async () => {
+    const { estimate } = await run({
+      decisions: [
+        ...suiteDecisions(0, { analysisHash: "generation-new", outcome: "matched" }),
+        ...Array.from({ length: 99 }, (_, index) => suiteDecisions(index + 1)).flat(),
+      ],
+      scores: [
+        safetyScore(0, {
+          analysisHash: "generation-old",
+          slug: "jailbreaking",
+          findingKind: "injectionCompliance",
+        }),
+      ],
+    })
+
+    expect(estimate.harmedSessionCount).toBe(0)
+  })
+
+  it("counts confirmed harm when the score analysisHash matches the examined generation", async () => {
+    const { estimate } = await run({
+      decisions: [
+        ...suiteDecisions(0, { analysisHash: "generation-new", outcome: "matched" }),
+        ...Array.from({ length: 99 }, (_, index) => suiteDecisions(index + 1)).flat(),
+      ],
+      scores: [
+        safetyScore(0, {
+          analysisHash: "generation-new",
+          slug: "jailbreaking",
+          findingKind: "injectionCompliance",
+        }),
+      ],
+    })
+
+    expect(estimate.harmedSessionCount).toBe(1)
+  })
+
   it("counts only confirmed harm, not exposure or a successful defense", async () => {
     const { estimate } = await run({
       decisions: examinedWindow(100).decisions,
@@ -182,12 +239,14 @@ describe("estimateProjectSafetyWindow", () => {
     expect(estimate.examinedSessionCount).toBe(9)
   })
 
-  // The default floors are what PR 6 freezes; the rest of this file opens them
-  // so the join is testable without a thousand fixtures.
-  it("publishes no number under the shipped floors when the window is small", async () => {
+  it("publishes under the shipped floors when a hundred sessions were examined", async () => {
     const layerRun = await run({ ...examinedWindow(100), floors: undefined })
 
-    expect(layerRun.estimate).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "examinedFloor" })
-    expect(layerRun.estimate.safety).toBeUndefined()
+    expect(layerRun.estimate).toMatchObject({
+      coverage: "measured",
+      examinedSessionCount: 100,
+      harmedSessionCount: 0,
+      safety: 100,
+    })
   })
 })

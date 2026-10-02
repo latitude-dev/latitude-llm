@@ -6,10 +6,8 @@ import { SEED_ORG_ID, SEED_OWNER_USER_ID } from "@domain/shared/seeding"
 import {
   closePostgres,
   createPostgresClient,
-  findActiveSlackIntegrationByTeamIdAcrossOrgs,
   SlackIntegrationRepositoryLive,
   SqlClientLive,
-  softRevokeSlackIntegrationAcrossOrgs,
 } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
@@ -26,12 +24,10 @@ Drives the Phase 1 OAuth exchange interactively:
   1. Prints the Slack authorize URL.
   2. Waits for you to paste the URL Slack redirects you to after
      approving (or just the \`code\` query value).
-  3. Exchanges the code, resolves any cross-org conflict, and persists
-     an encrypted slack_integrations row.
+  3. Exchanges the code and persists an encrypted slack_integrations row.
 
 If \`--code\` is passed, the prompt is skipped — useful for scripted
-runs. \`--force\` soft-revokes a conflicting active install in another
-Latitude organization before retrying. The redirect URI must match the
+runs. The redirect URI must match the
 one configured on the Slack app — the default mirrors the value baked
 into the manifest.
 
@@ -40,7 +36,6 @@ Options:
   --organization-id <id>    Target Latitude organization (default: SEED_ORG_ID — Acme)
   --user-id <id>            User credited as the installer (default: SEED_OWNER_USER_ID)
   --redirect-uri <url>      Override the OAuth redirect URI
-  --force                   Soft-revoke a conflicting active install first
   --help                    Show this help
 `.trim()
 
@@ -55,7 +50,6 @@ interface ParsedArgs {
   readonly organizationId: string
   readonly userId: string
   readonly redirectUri: string
-  readonly force: boolean
   readonly help: boolean
 }
 
@@ -66,7 +60,6 @@ const parseCliArgs = (): ParsedArgs => {
       "organization-id": { type: "string" },
       "user-id": { type: "string" },
       "redirect-uri": { type: "string" },
-      force: { type: "boolean", default: false },
       help: { type: "boolean", default: false },
     },
     strict: true,
@@ -78,7 +71,6 @@ const parseCliArgs = (): ParsedArgs => {
     organizationId: parsed.values["organization-id"] ?? SEED_ORG_ID,
     userId: parsed.values["user-id"] ?? SEED_OWNER_USER_ID,
     redirectUri: parsed.values["redirect-uri"] ?? DEFAULT_REDIRECT_URI,
-    force: parsed.values.force === true,
     help: parsed.values.help === true,
   }
 }
@@ -154,11 +146,7 @@ async function main(): Promise<void> {
     code = await promptForCode()
   }
 
-  // Phase 1 CLI uses the admin URL so cross-org lookups and the
-  // org-scoped install run on a single connection. With RLS not forced,
-  // the per-org repository queries still filter by organization_id in
-  // their WHERE clauses; the admin role just lets us reach across orgs
-  // for the conflict-resolution path.
+  // The admin role isn't subject to forced RLS; the per-org repository queries still filter by organization_id.
   const adminUrl = await Effect.runPromise(parseEnv("LAT_ADMIN_DATABASE_URL", "string"))
   const pgClient = createPostgresClient({ databaseUrl: adminUrl })
 
@@ -176,28 +164,6 @@ async function main(): Promise<void> {
     console.log(`  workspace:   ${oauth.teamName} (${oauth.teamId})`)
     console.log(`  bot user id: ${oauth.botUserId}`)
     console.log(`  scopes:      ${oauth.botTokenScopes}`)
-
-    const conflict = await Effect.runPromise(findActiveSlackIntegrationByTeamIdAcrossOrgs(pgClient.db, oauth.teamId))
-    if (conflict && conflict.organizationId !== args.organizationId) {
-      if (!args.force) {
-        // Throw rather than `process.exit(1)` so the outer `finally`
-        // closes the Postgres pool. `main().catch` maps the throw to
-        // exit code 1.
-        throw new Error(
-          `Workspace ${oauth.teamId} is already linked to organization ${conflict.organizationId}. ` +
-            `Re-run with --force to soft-revoke that install before continuing.`,
-        )
-      }
-      console.log(
-        `Force flag set — soft-revoking conflicting install ${conflict.id} in org ${conflict.organizationId}…`,
-      )
-      const revoked = await Effect.runPromise(
-        softRevokeSlackIntegrationAcrossOrgs(pgClient.db, conflict.id, new Date()),
-      )
-      if (!revoked) {
-        console.warn(`  (no row was revoked — it may have been cleared concurrently)`)
-      }
-    }
 
     const orgId = OrganizationId(args.organizationId)
     const installedByUserId = UserId(args.userId)

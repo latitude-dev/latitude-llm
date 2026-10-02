@@ -394,11 +394,14 @@ const limitation = z
     "truncatedContent",
     "unknownModelContext",
     "criticalPathUnavailable",
+    "missingLatencyReference",
   ])
   .describe("Reason the reader could not completely examine the session.")
 const selection = z
   .object({
-    method: z.enum(["deterministic", "hinted", "uniform-sample", "ordinary-sample"]).describe("Selection method."),
+    method: z
+      .enum(["deterministic", "hinted", "jev-preclassifier", "uniform-sample", "ordinary-sample"])
+      .describe("Selection method."),
     inclusionProbability: z.number().min(0).max(1).describe("Probability that this session was selected."),
   })
   .optional()

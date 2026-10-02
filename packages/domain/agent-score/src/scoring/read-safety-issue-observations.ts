@@ -1,4 +1,3 @@
-import { isSignalEligibleForScoring, type SignalWithLifecycle } from "@domain/signals"
 import type { SessionAssessmentItem } from "../entities/session-assessment.ts"
 import type { IssueObservation } from "./build-issue-rows.ts"
 
@@ -29,13 +28,12 @@ const safetyStatuses = (item: SessionAssessmentItem): readonly string[] =>
  */
 export const readSafetyIssueObservations = (input: {
   readonly items: readonly SessionAssessmentItem[]
-  readonly signals: readonly SignalWithLifecycle[]
+  /** Signals whose occurrences may inform a score, from `scoringEligibleSignalIds`. */
+  readonly eligibleSignalIds: ReadonlySet<string>
   /** The probability the Safety suite examined this session, which every one of its findings rode. */
   readonly observationProbability?: number
 }): SafetyIssueObservations => {
-  const eligibleSignalIds = new Set(
-    input.signals.filter(isSignalEligibleForScoring).map((signal) => signal.id as string),
-  )
+  const { eligibleSignalIds } = input
   const confirmedHarm: IssueObservation[] = []
   const exposure: IssueObservation[] = []
 

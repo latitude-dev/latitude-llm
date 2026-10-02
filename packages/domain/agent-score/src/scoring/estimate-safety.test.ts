@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest"
+import { LAUNCH_AGENT_SCORE_ARTIFACT } from "../artifacts/launch-agent-score-artifact.ts"
+import type { SafetyCoverageFloors } from "../entities/agent-score-artifact.ts"
 import {
   type EstimateProjectSafetyInput,
   estimateProjectSafety,
-  type SafetyCoverageFloors,
   type SafetyMemberDecision,
   type SafetySessionExamination,
 } from "./estimate-safety.ts"
@@ -13,7 +14,6 @@ const GENERATION = "a".repeat(64)
 
 const OPEN_FLOORS: SafetyCoverageFloors = {
   examinedSessions: 1,
-  examinedShareOfEligible: 0,
   maxRateLimitedHintedShare: 1,
 }
 
@@ -61,6 +61,7 @@ const estimate = (sessions: readonly SafetySessionExamination[], overrides: Part
     suiteSlugs: SUITE,
     supportedJudgmentVersions: [JUDGE],
     floors: OPEN_FLOORS,
+    referenceRunSessions: LAUNCH_AGENT_SCORE_ARTIFACT.referenceRuns.safety,
     ...overrides,
   })
 
@@ -264,13 +265,14 @@ describe("estimateProjectSafety coverage gates", () => {
     expect(result.interval).toBeUndefined()
   })
 
-  it("withholds a number when the examined population describes too little of the base", () => {
+  it("publishes when the examined population is a thin share of a large base", () => {
     const result = estimate(cleanSessions(10), {
-      eligibleSessionCount: 1_000,
-      floors: { ...OPEN_FLOORS, examinedShareOfEligible: 0.5 },
+      eligibleSessionCount: 100_000,
+      floors: { ...OPEN_FLOORS, examinedSessions: 10 },
     })
 
-    expect(result).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "coverageFloor" })
+    expect(result.coverage).toBe("measured")
+    expect(result.safety).toBeDefined()
   })
 
   // Hinted sessions are the ones most likely to contain harm, so losing them to

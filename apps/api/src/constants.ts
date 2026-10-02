@@ -18,6 +18,17 @@ export const API_SECURITY_SCHEME = {
   "x-fern-bearer": { name: "apiKey", env: "LATITUDE_API_KEY" },
 } as const
 
+export const API_GLOBAL_PARAMETERS = [
+  {
+    name: "projectSlug",
+    in: "path",
+    target: "projectSlug",
+    env: "LATITUDE_PROJECT_SLUG",
+    apply: "explicit",
+    docs: "Optional project slug used globally by project-scoped commands when `--project-slug` is omitted.",
+  },
+] as const
+
 export const MCP_INFO = {
   name: "Latitude",
   title: "Latitude",

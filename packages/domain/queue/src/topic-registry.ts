@@ -46,6 +46,10 @@ const _registry = {
     }
   }>(),
 
+  "outbox-cleanup": payloads<{
+    run: Record<string, never>
+  }>(),
+
   "organization-cleanup": payloads<{
     /** Fired by a daily cron — hard-deletes temporary orgs past their claim deadline. */
     reapExpired: Record<string, never>
@@ -153,6 +157,25 @@ const _registry = {
       readonly projectId: string
       readonly wrappedReportId: string
       readonly link: string
+    }
+    /**
+     * Producer step for the weekly Agent Score digest. Fired once per
+     * scored project by the digest fan-out. The consumer folds the
+     * window's snapshots into the digest, skips a project whose window
+     * turns out to hold no score, resolves recipients, and emits N
+     * `create-notification` tasks.
+     */
+    "request-agent-score-digest-notifications": {
+      readonly organizationId: string
+      readonly projectId: string
+      /** Inclusive UTC date bounds, `YYYY-MM-DD`, resolved once by the cron. */
+      readonly windowStart: string
+      readonly windowEnd: string
+      /**
+       * Set by the backoffice's manual send, never by the cron. Joins the idempotency key so each
+       * manual send notifies again instead of deduping into the week's earlier digest.
+       */
+      readonly manualRequestId?: string
     }
     /**
      * Producer step for issue assignments. Fired by the domain-events
@@ -873,6 +896,45 @@ const _registry = {
       readonly windowStartIso: string
       readonly windowEndIso: string
     }
+  }>(),
+
+  // Daily Agent Score. `sweep` is fired by a repeatable schedule; it resolves the projects with
+  // enough eligible traffic to publish and fans out one `snapshotProject` per project. The date is
+  // carried on the payload rather than derived at handler time so every project in one sweep is
+  // scored for the same UTC date, however long the fan-out takes to drain.
+  "agent-score": payloads<{
+    sweep: Record<string, never>
+    snapshotProject: {
+      readonly organizationId: string
+      readonly projectId: string
+      /** UTC date, `YYYY-MM-DD`. */
+      readonly date: string
+      /**
+       * ISO instant the window ends, resolved once by the sweep alongside the date.
+       *
+       * Carried for the same reason the date is: the sweep decides a project is eligible by reading
+       * a window that ends here, and a handler that resolved its own cutoff would score a window
+       * that had moved on since. Absent on a manually triggered run, which falls back to the end of
+       * the date or now, whichever is earlier.
+       */
+      readonly to?: string
+      /**
+       * Recompute even when the date already has a snapshot, to refresh the cached explanation.
+       *
+       * Never rewrites the score: the insert is conditional on the date being absent, so a forced
+       * run recomputes the evidence and leaves the published number exactly as it was.
+       */
+      readonly force?: boolean
+    }
+  }>(),
+
+  // Weekly Agent Score digest. `triggerWeeklyRun` is fired by a repeatable schedule; it resolves
+  // the window once, drops organisations without the flag and projects that published no score in
+  // it, and publishes one `request-agent-score-digest-notifications` per surviving project. Its own
+  // topic rather than a task on `agent-score`, because a queue's handlers are registered per topic
+  // and a second subscribe would replace the scoring worker's.
+  "agent-score-digest": payloads<{
+    triggerWeeklyRun: Record<string, never>
   }>(),
 
   sandboxes: payloads<{

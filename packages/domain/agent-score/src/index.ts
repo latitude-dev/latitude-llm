@@ -1,4 +1,95 @@
-export { SESSION_ASSESSMENT_CONTENT_BUDGET, SESSION_ASSESSMENT_RESOLVER_CONCURRENCY } from "./constants.ts"
+export {
+  buildLatencyReferenceArtifact,
+  LATENCY_SAMPLE_REJECTIONS,
+  type LatencyCohortSample,
+  type LatencyReferenceBuildReport,
+  type LatencySampleRejection,
+} from "./artifacts/build-latency-reference.ts"
+export { LAUNCH_AGENT_SCORE_ARTIFACT, LAUNCH_SCORING_VERSION } from "./artifacts/launch-agent-score-artifact.ts"
+export {
+  type LaunchArtifacts,
+  type ResolvedLaunchArtifacts,
+  resolveLaunchArtifacts,
+  validateLaunchArtifacts,
+} from "./artifacts/launch-artifacts.ts"
+export { LAUNCH_COST_ARTIFACT_VERSION, LAUNCH_COST_SCORING_ARTIFACT } from "./artifacts/launch-cost-scoring-artifact.ts"
+export {
+  LAUNCH_LATENCY_ARTIFACT_VERSION,
+  LAUNCH_LATENCY_MINIMUM_ORGANIZATION_COUNT,
+  LAUNCH_LATENCY_MINIMUM_SAMPLE_COUNT,
+  LAUNCH_LATENCY_REFERENCE_ARTIFACT,
+} from "./artifacts/launch-latency-reference-artifact.ts"
+export {
+  CAUSE_EXAMPLE_SESSION_LIMIT,
+  SESSION_ASSESSMENT_CONTENT_BUDGET,
+  SESSION_ASSESSMENT_RESOLVER_CONCURRENCY,
+} from "./constants.ts"
+export type {
+  AgentScoreCoverage,
+  AgentScoreNativeInputs,
+  AgentScoreResult,
+  AgentScoreStatus,
+  AgentScoreWindow,
+} from "./entities/agent-score.ts"
+export {
+  type AgentScoreArtifact,
+  agentScoreArtifactSchema,
+  type CompositePolicyCap,
+  type CostCoverageFloors,
+  compositePolicyCapSchema,
+  compositeWeightOf,
+  costCoverageFloorsSchema,
+  type DimensionCoverageFloors,
+  dimensionCoverageFloorsSchema,
+  LOCAL_SCORING_VERSION_PREFIX,
+  loadAgentScoreArtifact,
+  type OutcomeCoverageFloors,
+  outcomeCoverageFloorsSchema,
+  type ReliabilityCoverageFloors,
+  type ResolvedScoringVersion,
+  reliabilityCoverageFloorsSchema,
+  resolveScoringVersion,
+  type SafetyCoverageFloors,
+  type ScoreWindowSettings,
+  type ScoringJudge,
+  type SpeedCoverageFloors,
+  type SupportedJudgmentVersions,
+  safetyCoverageFloorsSchema,
+  scoreWindowSettingsSchema,
+  speedCoverageFloorsSchema,
+  supportedJudgmentVersionsSchema,
+} from "./entities/agent-score-artifact.ts"
+export {
+  AGENT_SCORE_EXPLANATION_TTL_SECONDS,
+  type AgentScoreExplanation,
+  agentScoreExplanationCacheKey,
+  agentScoreExplanationSchema,
+  toAgentScoreExplanation,
+} from "./entities/agent-score-explanation.ts"
+export {
+  AGENT_SCORE_AVAILABILITY_METRICS,
+  AGENT_SCORE_THRESHOLD_METRICS,
+  type AgentScoreAvailabilityRequirement,
+  type AgentScoreDimensionReadiness,
+  type AgentScoreReadiness,
+  type AgentScoreRequirement,
+  type AgentScoreThresholdRequirement,
+  agentScoreAvailabilityRequirementSchema,
+  agentScoreDimensionReadinessSchema,
+  agentScoreReadinessSchema,
+  agentScoreRequirementSchema,
+  agentScoreThresholdRequirementSchema,
+} from "./entities/agent-score-readiness.ts"
+export {
+  type AgentScoreSnapshot,
+  type AgentScoreSnapshotIdentity,
+  agentScoreSnapshotSchema,
+  type DimensionSnapshot,
+  dimensionSnapshotSchema,
+  type ScoreInterval,
+  scoreIntervalSchema,
+  utcDateOf,
+} from "./entities/agent-score-snapshot.ts"
 export {
   COST_ESTIMATOR_CHANNEL,
   COST_FAMILIES,
@@ -154,6 +245,11 @@ export type {
   NormalizedSessionCostEvidence,
 } from "./entities/session-assessment-input.ts"
 export {
+  type SyntheticAgentScoreSnapshotInput,
+  syntheticAgentScoreSnapshot,
+} from "./entities/synthetic-agent-score-snapshot.ts"
+export {
+  InvalidAgentScoreArtifactError,
   InvalidCostMetricCatalogError,
   InvalidCostScoringArtifactError,
   InvalidLatencyReferenceArtifactError,
@@ -164,6 +260,18 @@ export {
   encodeSessionAssessmentCursor,
   type SessionAssessmentPageCursor,
 } from "./pagination/session-assessment-cursor.ts"
+export {
+  type AgentScoreDigestCandidate,
+  type AgentScoreDigestScope,
+  AgentScoreDigestSource,
+  type AgentScoreDigestSourceShape,
+} from "./ports/agent-score-digest-source.ts"
+export {
+  type AgentScoreSnapshotHistoryScope,
+  type AgentScoreSnapshotLatestScope,
+  AgentScoreSnapshotRepository,
+  type AgentScoreSnapshotRepositoryShape,
+} from "./ports/agent-score-snapshot-repository.ts"
 export {
   type OutcomeWindowDecision,
   OutcomeWindowDecisionSource,
@@ -178,6 +286,16 @@ export {
   type SafetyWindowDecisions,
   type SafetyWindowScope,
 } from "./ports/safety-window-source.ts"
+export {
+  ScoreProjectSweepSource,
+  type ScoreProjectSweepSourceShape,
+  type ScoreSweepProject,
+  type ScoreSweepScope,
+  type ScoreWindowCountsScope,
+  type ScoreWindowSessionsScope,
+  ScoreWindowSource,
+  type ScoreWindowSourceShape,
+} from "./ports/score-window-source.ts"
 export {
   type SessionAssessmentBulkJudgmentScope,
   SessionAssessmentBulkJudgmentSource,
@@ -289,6 +407,28 @@ export { aggregateSessionCost, EMPTY_COST_FAMILY_DENOMINATORS } from "./scoring/
 export type { ArbitratedReading, CostAtomArbitration } from "./scoring/arbitrate-cost-atoms.ts"
 export { arbitrateCostAtoms } from "./scoring/arbitrate-cost-atoms.ts"
 export {
+  type AttributeDeficitInput,
+  type AttributionMethod,
+  attributeDeficit,
+  type CauseAttribution,
+  DEFAULT_ATTRIBUTION_ERROR_TARGET,
+  type DeficitAttribution,
+  EXACT_ATTRIBUTION_CAUSE_LIMIT,
+  MAX_ATTRIBUTION_PERMUTATIONS,
+} from "./scoring/attribute-deficit.ts"
+export {
+  ATTRIBUTED_DIMENSIONS,
+  attributeCostWindow,
+  attributeReliabilityWindow,
+  attributeSpeedWindow,
+  CAUSE_DESTINATIONS,
+  type CauseDestination,
+  type CauseEvidenceKind,
+  type DimensionAttribution,
+  type DimensionCauseRow,
+  EMPTY_DIMENSION_ATTRIBUTION,
+} from "./scoring/attribute-dimensions.ts"
+export {
   type BinomialInterval,
   clopperPearsonInterval,
   DEFAULT_CONFIDENCE_LEVEL,
@@ -305,12 +445,34 @@ export type {
 export { aggregateWindowCost, aggregateWindowSpeed, bootstrapWindow } from "./scoring/bootstrap-window.ts"
 export {
   buildIssueRows,
-  ISSUE_ROW_LIMIT,
   type IssueObservation,
   type IssueRow,
   type IssueSession,
 } from "./scoring/build-issue-rows.ts"
 export { buildSafetyIssues, type SafetyIssueSession, type SafetyIssues } from "./scoring/build-safety-issues.ts"
+export {
+  buildWindowIssues,
+  EMPTY_WINDOW_ISSUES,
+  readSessionIssueEvidence,
+  type SessionIssueEvidence,
+  type WindowIssues,
+} from "./scoring/build-window-issues.ts"
+export {
+  buildWindowSignalEffects,
+  EMPTY_WINDOW_SIGNAL_EFFECTS,
+  readSessionSignalEvidence,
+  type SessionSignalEvidence,
+  type WindowSignalEffects,
+} from "./scoring/build-window-signal-effects.ts"
+export {
+  type AgentScoreComposite,
+  type AgentScoreComposition,
+  type ComposeAgentScoreInput,
+  type CompositePolicyCapResult,
+  composeAgentScore,
+  DEFAULT_COMPOSITE_REPLICATES,
+  type DimensionResult,
+} from "./scoring/compose-agent-score.ts"
 export type {
   SpeedAvoidableClaim,
   SpeedClaimDropReason,
@@ -318,17 +480,27 @@ export type {
 } from "./scoring/compose-speed-counterfactual.ts"
 export { composeSpeedCounterfactual, SPEED_CLAIM_DROP_REASONS } from "./scoring/compose-speed-counterfactual.ts"
 export {
+  type DerivedSamplingRates,
+  deriveSamplingRates,
+  PROVISIONAL_SAMPLING_TARGETS,
+  type SamplingTargets,
+} from "./scoring/derive-sampling-rates.ts"
+export {
   type EstimateProjectOutcomeInput,
   estimateProjectOutcome,
   OUTCOME_EXCLUSION_REASONS,
-  type OutcomeCoverageFloors,
   type OutcomeExclusionReason,
   type OutcomeIntervalMethod,
   type OutcomeSessionVerdict,
   type OutcomeUnmeasuredReason,
-  PROVISIONAL_OUTCOME_COVERAGE_FLOORS,
   type ProjectOutcomeEstimate,
 } from "./scoring/estimate-outcome.ts"
+export {
+  type EstimateProjectReliabilityInput,
+  estimateProjectReliability,
+  type ProjectReliabilityEstimate,
+  type ReliabilityUnmeasuredReason,
+} from "./scoring/estimate-reliability.ts"
 export type {
   MatchedSession,
   ResidualEffect,
@@ -344,11 +516,8 @@ export {
 export {
   type EstimateProjectSafetyInput,
   estimateProjectSafety,
-  PROVISIONAL_SAFETY_COVERAGE_FLOORS,
   type ProjectSafetyEstimate,
   SAFETY_EXCLUSION_REASONS,
-  SAFETY_REFERENCE_RUN_SESSIONS,
-  type SafetyCoverageFloors,
   type SafetyExclusionReason,
   type SafetyMemberDecision,
   type SafetySessionExamination,
@@ -369,7 +538,7 @@ export {
   evaluateCostMetric,
   interpolateCostPenalty,
 } from "./scoring/evaluate-cost-curve.ts"
-export type { WindowFold } from "./scoring/fold-window-contributions.ts"
+export type { FamilyReadingCoverage, WindowFold } from "./scoring/fold-window-contributions.ts"
 export {
   EMPTY_WINDOW_FOLD,
   foldSessionContribution,
@@ -377,15 +546,63 @@ export {
 } from "./scoring/fold-window-contributions.ts"
 export type { LinkedSignalOccurrence, SignalLinkage, SignalOccurrence } from "./scoring/link-signal-occurrences.ts"
 export { linkSignalOccurrences } from "./scoring/link-signal-occurrences.ts"
+export {
+  type ObservedCauseMeasurement,
+  type ObservedDimensionCause,
+  observeDimensionCauses,
+} from "./scoring/observe-dimension-causes.ts"
 export { readOutcomeIssueObservations } from "./scoring/read-outcome-issue-observations.ts"
 export {
   readSafetyIssueObservations,
   type SafetyIssueObservations,
 } from "./scoring/read-safety-issue-observations.ts"
+export { survivalInterval, survivalOverReferenceRun } from "./scoring/reference-run.ts"
 export {
   hasDeterministicOutcomeFailure,
   selectDeterministicOutcomeFailures,
 } from "./scoring/select-outcome-endpoints.ts"
+export {
+  RELIABILITY_EXCLUSION_REASONS,
+  type ReliabilityExclusionReason,
+  type ReliabilitySessionEndpoint,
+  selectReliabilityEndpoint,
+  selectReliabilityEndpoints,
+} from "./scoring/select-reliability-endpoints.ts"
+export {
+  SCORE_WINDOW_REASONS,
+  type ScoreWindowReason,
+  type ScoreWindowSelection,
+  type ScoreWindowStepCount,
+  selectScoreWindow,
+} from "./scoring/select-score-window.ts"
+export {
+  type ReaderLimitation,
+  tallyWindowReaderCoverage,
+  type WindowReaderCoverage,
+} from "./scoring/tally-reader-coverage.ts"
+export {
+  type CostFamilyWindowCoverage,
+  type CostUnmeasuredReason,
+  type CostWindowGate,
+  gateCostWindow,
+  gateSpeedWindow,
+  type SpeedUnmeasuredReason,
+  type SpeedWindowGate,
+} from "./scoring/window-gates.ts"
+export {
+  AGENT_SCORE_DIGEST_WINDOW_DAYS,
+  type AgentScoreDigestComparison,
+  agentScoreDigestWindow,
+  type BuildWeeklyAgentScoreDigestResult,
+  buildWeeklyAgentScoreDigest,
+  runWeeklyAgentScoreDigest,
+  type WeeklyAgentScoreDigest,
+} from "./use-cases/build-weekly-digest.ts"
+export {
+  AGENT_SCORE_BATCH_SIZE,
+  type ComputeAgentScoreInput,
+  computeAgentScore,
+} from "./use-cases/compute-agent-score.ts"
 export {
   type EstimateProjectOutcomeWindowInput,
   estimateProjectOutcomeWindow,
@@ -396,6 +613,20 @@ export {
   estimateProjectSafetyWindow,
   SAFETY_FINDING_BATCH_SIZE,
 } from "./use-cases/estimate-project-safety.ts"
+export {
+  AGENT_SCORE_HISTORY_DEFAULT_DAYS,
+  type CurrentAgentScore,
+  getAgentScoreForDate,
+  getCurrentAgentScore,
+  getLatestAgentScore,
+  listAgentScoreHistory,
+} from "./use-cases/get-agent-score.ts"
+export {
+  type AgentScoreExplanationResult,
+  cacheAgentScoreExplanation,
+  getAgentScoreExplanation,
+  getLatestAgentScoreExplanation,
+} from "./use-cases/get-agent-score-explanation.ts"
 export {
   type GetSessionAssessmentInput,
   getSessionAssessment,
@@ -409,3 +640,10 @@ export type {
   ShadowResourceSample,
 } from "./use-cases/run-cost-speed-shadow.ts"
 export { runCostSpeedShadow, SHADOW_BATCH_SIZE } from "./use-cases/run-cost-speed-shadow.ts"
+export {
+  agentScoreSnapshotWorkflowId,
+  resolveScoringCutoff,
+  type SnapshotProjectInput,
+  type SnapshotProjectResult,
+  snapshotProjectAgentScore,
+} from "./use-cases/snapshot-project-agent-score.ts"

@@ -38,11 +38,13 @@ const session = (
   ({
     sessionId: SessionId("session-1"),
     hasReadableUserTask,
+    momentsAnalyzed: true,
     observedMicrocents: 0,
     observedDurationNs: 0,
     findings,
     readers: [],
     screeningDecisions: [],
+    scoringEligibleSignalIds: [],
   }) satisfies NormalizedSessionAssessmentInput
 
 describe("hasDeterministicOutcomeFailure", () => {

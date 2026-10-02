@@ -1,10 +1,11 @@
 import { type Score, ScoreRepository } from "@domain/scores"
 import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
+import type { OutcomeCoverageFloors } from "../entities/agent-score-artifact.ts"
 import { type OutcomeWindowDecision, OutcomeWindowDecisionSource } from "../ports/outcome-window-source.ts"
 import {
+  type EstimateProjectOutcomeInput,
   estimateProjectOutcome,
-  type OutcomeCoverageFloors,
   type OutcomeSessionVerdict,
 } from "../scoring/estimate-outcome.ts"
 
@@ -23,9 +24,11 @@ export interface EstimateProjectOutcomeWindowInput {
    * for the other dimensions anyway; this use-case does not read it again.
    */
   readonly deterministicFailureSessionIds?: readonly string[]
-  readonly floors?: OutcomeCoverageFloors
+  readonly floors: OutcomeCoverageFloors
   readonly confidenceLevel?: number
   readonly batchSize?: number
+  /** Degrading moment kinds per analyzed session, from the window pass. */
+  readonly degradation?: EstimateProjectOutcomeInput["degradation"]
 }
 
 interface VerdictMetadata {
@@ -126,7 +129,8 @@ export const estimateProjectOutcomeWindow = Effect.fn("agentScore.estimateProjec
     deterministicFailureSessionIds: input.deterministicFailureSessionIds ?? [],
     judgedSessions,
     supportedJudgmentVersions: input.supportedJudgmentVersions,
-    ...(input.floors ? { floors: input.floors } : {}),
+    floors: input.floors,
     ...(input.confidenceLevel !== undefined ? { confidenceLevel: input.confidenceLevel } : {}),
+    ...(input.degradation ? { degradation: input.degradation } : {}),
   })
 })

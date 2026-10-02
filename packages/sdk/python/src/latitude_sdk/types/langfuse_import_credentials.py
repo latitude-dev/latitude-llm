@@ -20,10 +20,17 @@ class LangfuseImportCredentials(UniversalBaseModel):
         FieldMetadata(alias="publicKey"),
         pydantic.Field(alias="publicKey", description="Langfuse project public key (`pk-lf-…`)."),
     ]
+    """
+    Langfuse project public key (`pk-lf-…`).
+    """
+
     secret_key: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="secretKey"),
         pydantic.Field(alias="secretKey", description="Langfuse project secret key (`sk-lf-…`)."),
     ]
+    """
+    Langfuse project secret key (`sk-lf-…`).
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -53,6 +53,7 @@ export namespace SessionAssessmentReaderCoverage {
             export const Method = {
                 Deterministic: "deterministic",
                 Hinted: "hinted",
+                JevPreclassifier: "jev-preclassifier",
                 UniformSample: "uniform-sample",
                 OrdinarySample: "ordinary-sample",
             } as const;
@@ -109,6 +110,7 @@ export namespace SessionAssessmentReaderCoverage {
             TruncatedContent: "truncatedContent",
             UnknownModelContext: "unknownModelContext",
             CriticalPathUnavailable: "criticalPathUnavailable",
+            MissingLatencyReference: "missingLatencyReference",
         } as const;
         export type Limitation = (typeof Limitation)[keyof typeof Limitation];
 
@@ -127,6 +129,7 @@ export namespace SessionAssessmentReaderCoverage {
             export const Method = {
                 Deterministic: "deterministic",
                 Hinted: "hinted",
+                JevPreclassifier: "jev-preclassifier",
                 UniformSample: "uniform-sample",
                 OrdinarySample: "ordinary-sample",
             } as const;
@@ -177,6 +180,7 @@ export namespace SessionAssessmentReaderCoverage {
             TruncatedContent: "truncatedContent",
             UnknownModelContext: "unknownModelContext",
             CriticalPathUnavailable: "criticalPathUnavailable",
+            MissingLatencyReference: "missingLatencyReference",
         } as const;
         export type Limitation = (typeof Limitation)[keyof typeof Limitation];
 
@@ -195,6 +199,7 @@ export namespace SessionAssessmentReaderCoverage {
             export const Method = {
                 Deterministic: "deterministic",
                 Hinted: "hinted",
+                JevPreclassifier: "jev-preclassifier",
                 UniformSample: "uniform-sample",
                 OrdinarySample: "ordinary-sample",
             } as const;

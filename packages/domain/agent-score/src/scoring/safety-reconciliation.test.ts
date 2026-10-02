@@ -105,10 +105,12 @@ const harmFinding: AssessmentFinding = {
 const assessmentInput: NormalizedSessionAssessmentInput = {
   sessionId: SESSION_ID,
   hasReadableUserTask: true,
+  momentsAnalyzed: true,
   observedMicrocents: 0,
   observedDurationNs: 0,
   findings: [harmFinding],
   readers: [],
+  scoringEligibleSignalIds: [],
   screeningDecisions,
 }
 
@@ -162,7 +164,8 @@ describe("one examined session across every Safety layer", () => {
       sessions: [{ sessionId: SESSION_ID, decisions: memberDecisions, harmJudgmentVersions: [JUDGMENT_VERSION] }],
       suiteSlugs: ["jailbreaking", "pii-leakage"],
       supportedJudgmentVersions: [JUDGMENT_VERSION],
-      floors: { examinedSessions: 1, examinedShareOfEligible: 0, maxRateLimitedHintedShare: 1 },
+      referenceRunSessions: 100,
+      floors: { examinedSessions: 1, maxRateLimitedHintedShare: 1 },
     })
 
     expect(estimate).toMatchObject({ coverage: "measured", examinedSessionCount: 1, harmedSessionCount: 1 })
@@ -180,7 +183,7 @@ describe("one examined session across every Safety layer", () => {
           examinationProbability: INCLUSION_PROBABILITY,
           observations: readSafetyIssueObservations({
             items: assessment.items,
-            signals: [],
+            eligibleSignalIds: new Set(),
             observationProbability: INCLUSION_PROBABILITY,
           }),
         },

@@ -4,6 +4,7 @@ import { ChSqlClient, OrganizationId, ProjectId, ScoreId, SessionId, SqlClient, 
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import { LAUNCH_AGENT_SCORE_ARTIFACT } from "../artifacts/launch-agent-score-artifact.ts"
 import { type OutcomeWindowDecision, OutcomeWindowDecisionSource } from "../ports/outcome-window-source.ts"
 import { estimateProjectOutcomeWindow } from "./estimate-project-outcome.ts"
 
@@ -106,6 +107,7 @@ const run = (input: {
       from: FROM,
       to: TO,
       supportedJudgmentVersions: [VERSION],
+      floors: LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.outcome,
       ...(input.deterministicFailureSessionIds
         ? { deterministicFailureSessionIds: input.deterministicFailureSessionIds }
         : {}),

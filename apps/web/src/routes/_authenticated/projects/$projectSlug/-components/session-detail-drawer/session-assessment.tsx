@@ -18,7 +18,7 @@ import {
   CircleHelpIcon,
   MessageSquareTextIcon,
 } from "lucide-react"
-import { type ReactNode, useState } from "react"
+import { useState } from "react"
 import {
   formatLifecycleLabel,
   getPrimaryLifecycleState,
@@ -30,6 +30,8 @@ import { useSignal } from "../../../../../../domains/signals/signals.collection.
 import { AnnotationCard } from "../annotations/annotation-card.tsx"
 import type { AnnotationSaveData } from "../annotations/annotation-list.tsx"
 import { isGlobalAnnotation } from "../annotations/hooks/use-annotation-navigation.ts"
+import { findingLabel, formatCompactCount } from "../finding-format.ts"
+import { FindingRow } from "../finding-row.tsx"
 import { ReadOnlyScoreCard } from "../scores/score-card.tsx"
 
 interface FindingGroup {
@@ -176,21 +178,6 @@ const groupAssessmentItems = (
     )
 }
 
-const COST_METRIC_LABELS: Readonly<Record<string, string>> = {
-  "cost.recoverable_spend_share": "Recoverable spend",
-  "cost.cache_gap": "Missed cache opportunity",
-  "context.redundant_input_share": "Redundant model input",
-  "context.avoidable_pressure": "Avoidable context pressure",
-  "tools.dead_surface": "Unused tool definitions",
-  "tools.repeated_call": "Repeated tool calls",
-  "tools.thrashing": "Tool-call loops",
-  "tools.structural_defect": "Recovered tool-call defects",
-  "memory.repeated_zero_hit": "Repeated empty memory searches",
-  "memory.noop_rewrite": "No-op memory writes",
-  "memory.reverted_write": "Reverted memory writes",
-  "recovery.recovered_incident_rate": "Recovered incidents",
-}
-
 const COVERAGE_LIMITATION_LABELS: Readonly<Record<string, string>> = {
   missingPricing: "some spend could not be priced",
   missingContent: "some model input was not captured",
@@ -200,9 +187,6 @@ const COVERAGE_LIMITATION_LABELS: Readonly<Record<string, string>> = {
   missingTelemetry: "some telemetry is missing",
   unmappedTelemetry: "some telemetry values are unrecognized",
 }
-
-const formatCompactCount = (value: number): string =>
-  value >= 1_000 ? `${(value / 1_000).toFixed(1)}k` : String(Math.round(value))
 
 const COST_UNIT_LABELS = {
   inputTokens: "tokens",
@@ -250,7 +234,7 @@ const costMetrics = (
     .filter((metric) => costMetricPolarity(metric) === polarity)
     .map((metric) => ({
       key: `cost-metric-${metric.metricId}`,
-      label: COST_METRIC_LABELS[metric.metricId] ?? metric.metricId,
+      label: findingLabel(metric.metricId),
       value: costMetricValue(metric),
     }))
 
@@ -433,54 +417,6 @@ const signalStateTextClass = (state: string | undefined, polarity: SessionAssess
     "text-muted-foreground":
       state === "ignored" || !["new", "escalating", "ongoing", "regressed", "resolved"].includes(state),
   })
-}
-
-function FindingRow({
-  label,
-  leading,
-  trailing,
-  expanded = false,
-  onToggle,
-}: {
-  readonly label: string
-  readonly leading: ReactNode
-  readonly trailing?: ReactNode
-  readonly expanded?: boolean
-  readonly onToggle?: (() => void) | undefined
-}) {
-  const expandable = onToggle !== undefined
-
-  return (
-    <div
-      className={cn("flex min-w-0 items-center transition-colors", {
-        "hover:bg-secondary/80": expandable,
-        "bg-secondary": expanded,
-      })}
-    >
-      <div className="flex w-10 shrink-0 items-center justify-center">{leading}</div>
-      {expandable ? (
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="h-auto min-w-0 flex-1 rounded-none bg-transparent px-0 py-3 pr-4 font-normal text-muted-foreground hover:bg-transparent"
-        >
-          <button type="button" aria-label={label} aria-expanded={expanded} onClick={onToggle}>
-            <span className="min-w-0 flex-1 truncate text-left">{label}</span>
-            {trailing}
-            <Icon icon={expanded ? ChevronDownIcon : ChevronRightIcon} size="xs" color="foregroundMuted" />
-          </button>
-        </Button>
-      ) : (
-        <div className="flex min-w-0 flex-1 items-center gap-3 py-3 pr-4">
-          <Text.H6 color="foregroundMuted" className="min-w-0 flex-1" ellipsis>
-            {label}
-          </Text.H6>
-          {trailing}
-        </div>
-      )}
-    </div>
-  )
 }
 
 function FindingMetricRow({

@@ -29,11 +29,23 @@ export const FEATURE_FLAGS = {
     description:
       "Project-scoped Cost section: spend over time, per-dimension cost breakdown, and the data-confidence figures (provider-verified share and unpriced usage).",
   },
+  agentScore: {
+    emoji: "📊",
+    name: "Agent Score",
+    description:
+      "Project-scoped Agent Score: one number from 0 to 100 over a rolling window, the five dimensions behind it, and what explains them. Published only when every dimension passes its floors.",
+  },
   adaptiveTaxonomyClustering: {
     emoji: "🌳",
     name: "Adaptive taxonomy clustering",
     description:
       "Builds every project's behaviour tree with node-relative adaptive clustering instead of the static builder. Takes effect on the organization's next gardening pass, either way.",
+  },
+  jevFlaggerPreclassifier: {
+    emoji: "🚦",
+    name: "Jev flagger preclassifier",
+    description:
+      "Runs Jev as a session-level pre-classifier that can gate LLM flaggers into classify when probability meets the threshold. Disabled by default.",
   },
 } as const satisfies Record<
   string,
