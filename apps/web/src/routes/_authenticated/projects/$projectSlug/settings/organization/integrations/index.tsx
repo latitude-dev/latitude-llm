@@ -44,11 +44,6 @@ function GlobalIntegrationsPage() {
   useMountEffect(() => {
     if (search.installed === "ok") {
       toast({ description: "Slack connected" })
-    } else if (search.error === "workspace_taken") {
-      toast({
-        variant: "destructive",
-        description: "This Slack workspace is already connected to another Latitude organization.",
-      })
     } else if (search.error === "oauth_failed") {
       toast({
         variant: "destructive",

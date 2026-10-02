@@ -100,10 +100,11 @@ If the flag has no DB row, eligibility comes back as `{ enabledForAll: false, or
 
 Feature flags do not necessarily suppress background computation. The `agentScore` flag gates the customer-facing
 navigation and page, while the daily sweep continues to calculate eligible projects across organizations. Staff can
-inspect the latest stored snapshot, its five dimensions, and matching cached cause evidence from the Backoffice project
+inspect the latest stored snapshot, its five dimensions, and matching stored cause evidence from the Backoffice project
 detail page regardless of flag state. The view is labelled with the organization's customer-access state and never
 triggers a recalculation. Cause evidence is only attached when its project, snapshot date, and scoring version match;
-an expired or missing explanation is reported explicitly instead of showing stale causes.
+published evidence survives cache expiry. Legacy snapshots can use matching cached evidence; a missing explanation
+is reported explicitly instead of showing causes from another date.
 
 ## Anti-patterns
 

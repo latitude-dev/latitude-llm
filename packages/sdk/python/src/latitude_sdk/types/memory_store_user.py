@@ -14,6 +14,10 @@ class MemoryStoreUser(UniversalBaseModel):
         FieldMetadata(alias="userId"),
         pydantic.Field(alias="userId", description="End-user identifier that accessed the store."),
     ]
+    """
+    End-user identifier that accessed the store.
+    """
+
     last_accessed_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="lastAccessedAt"),
@@ -21,5 +25,8 @@ class MemoryStoreUser(UniversalBaseModel):
             alias="lastAccessedAt", description="ISO-8601 timestamp of the user's most recent access (read or write)."
         ),
     ]
+    """
+    ISO-8601 timestamp of the user's most recent access (read or write).
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

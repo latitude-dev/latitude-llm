@@ -263,7 +263,7 @@ const ExplanationSchema = z
     computedAt: z
       .string()
       .describe(
-        "When this evidence was read, as an ISO-8601 timestamp. It explains present behaviour, not the stored score.",
+        "When this evidence was computed, as an ISO-8601 timestamp. Retained explanations keep the original score computation time.",
       ),
     scoringVersion: z.string().describe("Scoring version the evidence was read under."),
     windowDays: z.number().int().describe("Length in days of the window the evidence covers."),
@@ -285,8 +285,12 @@ const AgentScoreCausesSchema = z
   .object({
     status: z
       .enum(["ready", "notComputed"])
-      .describe("`notComputed` when the explanation has not been prepared yet; the scores are still valid."),
-    explanation: ExplanationSchema.nullable().describe("The evidence, or `null` when it is not ready."),
+      .describe(
+        "`notComputed` when no matching explanation is available for today; any published score remains valid.",
+      ),
+    explanation: ExplanationSchema.nullable().describe(
+      "Evidence for today's UTC date, retained with the published score when available, or `null` if unavailable.",
+    ),
   })
   .openapi("AgentScoreCauses")
 
@@ -339,13 +343,13 @@ const getAgentScoreCauses = agentScoreOperation({
     sdkMethod: "causes",
     summary: "Get Agent Score causes",
     description:
-      "Returns what explains the project's current Agent Score: ranked causes per dimension, and where Outcome failures and Safety harm concentrate. This is current evidence from the live window and does not reconstruct any stored score.",
+      "Returns ranked causes per dimension and Outcome and Safety issue summaries for today's UTC date. Published scores retain the evidence from their original computation. When no retained explanation is available, the response may use matching evidence from another computation for the same date, or report an explicit absence.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema },
     responses: typedResponses({
       status: 200,
       schema: AgentScoreCausesSchema,
-      description: "Current cause rows, or an explicit absence",
+      description: "Evidence for today, retained with the published score when available, or an explicit absence",
     }),
   }),
   access: "read-only",

@@ -200,8 +200,8 @@ Read them in this order:
 | Setting | Value |
 | --- | --- |
 | Window steps | 7, 14, 21, or 28 days, choosing the shortest step that reaches the target |
-| Session target | 200 eligible sessions |
-| Session floor | 200 eligible sessions |
+| Session target | 100 eligible sessions |
+| Session floor | 100 eligible sessions |
 | Reliability reference run | 20 sessions |
 | Safety reference run | 100 sessions |
 | Composite weights | Outcome 0.35, Reliability 0.25, Cost 0.15, Speed 0.15, Safety 0.10 |

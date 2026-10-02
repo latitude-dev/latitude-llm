@@ -63,6 +63,7 @@ export {
   AGENT_SCORE_EXPLANATION_TTL_SECONDS,
   type AgentScoreExplanation,
   agentScoreExplanationCacheKey,
+  agentScoreExplanationSchema,
   toAgentScoreExplanation,
 } from "./entities/agent-score-explanation.ts"
 export {
@@ -244,6 +245,10 @@ export type {
   NormalizedSessionCostEvidence,
 } from "./entities/session-assessment-input.ts"
 export {
+  type SyntheticAgentScoreSnapshotInput,
+  syntheticAgentScoreSnapshot,
+} from "./entities/synthetic-agent-score-snapshot.ts"
+export {
   InvalidAgentScoreArtifactError,
   InvalidCostMetricCatalogError,
   InvalidCostScoringArtifactError,
@@ -255,6 +260,12 @@ export {
   encodeSessionAssessmentCursor,
   type SessionAssessmentPageCursor,
 } from "./pagination/session-assessment-cursor.ts"
+export {
+  type AgentScoreDigestCandidate,
+  type AgentScoreDigestScope,
+  AgentScoreDigestSource,
+  type AgentScoreDigestSourceShape,
+} from "./ports/agent-score-digest-source.ts"
 export {
   type AgentScoreSnapshotHistoryScope,
   type AgentScoreSnapshotLatestScope,
@@ -579,6 +590,15 @@ export {
   type SpeedWindowGate,
 } from "./scoring/window-gates.ts"
 export {
+  AGENT_SCORE_DIGEST_WINDOW_DAYS,
+  type AgentScoreDigestComparison,
+  agentScoreDigestWindow,
+  type BuildWeeklyAgentScoreDigestResult,
+  buildWeeklyAgentScoreDigest,
+  runWeeklyAgentScoreDigest,
+  type WeeklyAgentScoreDigest,
+} from "./use-cases/build-weekly-digest.ts"
+export {
   AGENT_SCORE_BATCH_SIZE,
   type ComputeAgentScoreInput,
   computeAgentScore,
@@ -596,6 +616,7 @@ export {
 export {
   AGENT_SCORE_HISTORY_DEFAULT_DAYS,
   type CurrentAgentScore,
+  getAgentScoreForDate,
   getCurrentAgentScore,
   getLatestAgentScore,
   listAgentScoreHistory,
@@ -619,3 +640,10 @@ export type {
   ShadowResourceSample,
 } from "./use-cases/run-cost-speed-shadow.ts"
 export { runCostSpeedShadow, SHADOW_BATCH_SIZE } from "./use-cases/run-cost-speed-shadow.ts"
+export {
+  agentScoreSnapshotWorkflowId,
+  resolveScoringCutoff,
+  type SnapshotProjectInput,
+  type SnapshotProjectResult,
+  snapshotProjectAgentScore,
+} from "./use-cases/snapshot-project-agent-score.ts"

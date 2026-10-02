@@ -20,11 +20,19 @@ class SavedSearch(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this saved search."),
     ]
+    """
+    Organization that owns this saved search.
+    """
+
     project_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectId"),
         pydantic.Field(alias="projectId", description="Project this saved search belongs to."),
     ]
+    """
+    Project this saved search belongs to.
+    """
+
     slug: str = pydantic.Field()
     """
     URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug.
@@ -54,15 +62,26 @@ class SavedSearch(UniversalBaseModel):
             description="ISO-8601 timestamp at which the search was deleted. `null` while active.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the search was deleted. `null` while active.
+    """
+
     created_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
     ]
+    """
+    ISO-8601 timestamp of creation.
+    """
+
     updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="updatedAt"),
         pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last update."),
     ]
+    """
+    ISO-8601 timestamp of the last update.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

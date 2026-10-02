@@ -84,7 +84,7 @@ const contribution = (
   families: COST_FAMILIES.map((family) =>
     family === "spend" ? { family, ...spend } : { family, eligibleUnits: 0, penalizedUnits: 0 },
   ),
-  speed: { usableForDenominator: true, ...speed },
+  speed: { usableForDenominator: true, missingLatencyReference: false, ...speed },
 })
 
 describe("composeSpeedCounterfactual", () => {

@@ -478,9 +478,13 @@ export const resolveAssessmentFinding = (finding: AssessmentFinding): ResolvedAs
     },
     chronology: finding.chronology,
     independentHumanEvidence: finding.independentHumanEvidence,
+    // A deterministic reader and a human annotation see every session they apply to, so probability
+    // one is a fact about them. `moment` is deliberately absent: conversation analysis skips empty,
+    // too-short and non-conversation sessions, so a moment is certain only within the sessions that
+    // were analyzed, and its reader supplies that probability against that basis instead.
     ...(finding.observationProbability !== undefined
       ? { observationProbability: finding.observationProbability }
-      : finding.source === "metric" || finding.source === "moment" || finding.independentHumanEvidence
+      : finding.source === "metric" || finding.independentHumanEvidence
         ? { observationProbability: 1 }
         : {}),
   }

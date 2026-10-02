@@ -1,5 +1,14 @@
 import { CAUSE_EXAMPLE_SESSION_LIMIT } from "../constants.ts"
 
+/**
+ * The population an issue's reader could have seen.
+ *
+ * `eligible` is every scored session. `analyzed` is the subset conversation analysis ran on, which
+ * is smaller and selected deterministically on content rather than at random — so a count drawn
+ * from it cannot be compared with an eligible-basis count without dividing by its own denominator.
+ */
+export type IssueBasis = "eligible" | "analyzed"
+
 export interface IssueObservation {
   /** Identity of the issue, already collapsed: a signal and the score it was discovered from share one. */
   readonly issueKey: string
@@ -18,6 +27,8 @@ export interface IssueObservation {
    * endpoint's rather than a product.
    */
   readonly sharesEndpointSelection?: boolean
+  /** Defaults to `eligible`; readers that only run on a subset name theirs. */
+  readonly basis?: IssueBasis
 }
 
 export interface IssueSession {
@@ -41,6 +52,9 @@ export interface IssueRow {
   readonly examinedAdverseSessions: number
   /** False when a joint probability was unknown, so the row explains without claiming a position. */
   readonly ranked: boolean
+  readonly basis: IssueBasis
+  /** Sessions in this row's basis, so a rate can be read off the row rather than assumed. */
+  readonly basisSessionCount: number
   /**
    * Sessions somebody can open to see the issue, capped at `CAUSE_EXAMPLE_SESSION_LIMIT`.
    *
@@ -54,6 +68,7 @@ export interface IssueRow {
 
 interface IssueAccumulator {
   label: string
+  basis: IssueBasis
   signalIds: Set<string>
   estimatedReach: number
   estimatedAdverseReach: number
@@ -103,6 +118,8 @@ const recordExample = (issue: IssueAccumulator, sessionId: string, adverse: bool
  */
 export const buildIssueRows = (input: {
   readonly sessions: readonly IssueSession[]
+  /** Sessions each basis contains, so a row from a narrower reader is ranked on its own denominator. */
+  readonly basisSessionCounts?: Readonly<Partial<Record<IssueBasis, number>>>
   readonly rowLimit?: number
 }): readonly IssueRow[] => {
   const issues = new Map<string, IssueAccumulator>()
@@ -116,6 +133,7 @@ export const buildIssueRows = (input: {
 
       const issue = issues.get(observation.issueKey) ?? {
         label: observation.label,
+        basis: observation.basis ?? "eligible",
         signalIds: new Set<string>(),
         estimatedReach: 0,
         estimatedAdverseReach: 0,
@@ -151,11 +169,16 @@ export const buildIssueRows = (input: {
     }
   }
 
+  const basisCountOf = (basis: IssueBasis): number =>
+    input.basisSessionCounts?.[basis] ?? (basis === "eligible" ? input.sessions.length : 0)
+
   const rows = [...issues.entries()].map(([issueKey, issue]): IssueRow => {
     const ranked = issue.reachCorrected && issue.adverseReachCorrected
     return {
       issueKey,
       label: issue.label,
+      basis: issue.basis,
+      basisSessionCount: basisCountOf(issue.basis),
       signalIds: [...issue.signalIds],
       ...(issue.reachCorrected ? { estimatedReach: issue.estimatedReach } : {}),
       ...(issue.adverseReachCorrected ? { estimatedAdverseReach: issue.estimatedAdverseReach } : {}),
@@ -169,12 +192,21 @@ export const buildIssueRows = (input: {
   // Ranked rows lead, ordered by corrected adverse reach. An unranked row still
   // appears, because the issue is real even when its share of the failures
   // cannot be estimated, but it cannot claim a position it did not earn.
+  // Rate within basis, not raw reach. A moment row counts sessions out of the ones analysis ran on
+  // and a deterministic row counts them out of every eligible session, so comparing the two counts
+  // directly would rank the narrower reader last however concentrated its failures are.
+  const adverseRateOf = (row: IssueRow): number => {
+    const basisCount = row.basisSessionCount
+    if (basisCount <= 0) return 0
+    return (row.estimatedAdverseReach ?? row.examinedAdverseSessions) / basisCount
+  }
+
   const sorted = rows.sort((left, right) => {
     if (left.ranked !== right.ranked) return left.ranked ? -1 : 1
-    if (left.ranked) return (right.estimatedAdverseReach ?? 0) - (left.estimatedAdverseReach ?? 0)
-    // An unranked row may have no corrected reach either, so the raw count is
+    if (left.ranked) return adverseRateOf(right) - adverseRateOf(left)
+    // An unranked row may have no corrected reach either, so the raw share is
     // the only figure both sides are guaranteed to have.
-    return right.examinedSessions - left.examinedSessions
+    return adverseRateOf(right) - adverseRateOf(left)
   })
   return input.rowLimit === undefined ? sorted : sorted.slice(0, input.rowLimit)
 }

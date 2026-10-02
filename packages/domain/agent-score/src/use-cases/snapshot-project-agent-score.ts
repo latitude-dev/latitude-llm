@@ -1,23 +1,36 @@
-import {
-  type AgentScoreArtifact,
-  type AgentScoreResult,
-  AgentScoreSnapshotRepository,
-  type CostMetricCatalog,
-  type CostScoringArtifact,
-  cacheAgentScoreExplanation,
-  computeAgentScore,
-  type DimensionSnapshot,
-  deriveSamplingRates,
-  type LatencyReferenceArtifact,
-  type ScoringJudge,
-} from "@domain/agent-score"
 import { FlaggerRepository, SAFETY_SUITE_SLUGS } from "@domain/flaggers"
 import type { OrganizationId, ProjectId, ScoreDimension } from "@domain/shared"
 import { Effect } from "effect"
+import type { AgentScoreResult } from "../entities/agent-score.ts"
+import type { AgentScoreArtifact, ScoringJudge } from "../entities/agent-score-artifact.ts"
+import { toAgentScoreExplanation } from "../entities/agent-score-explanation.ts"
+import type { DimensionSnapshot } from "../entities/agent-score-snapshot.ts"
+import type { CostMetricCatalog } from "../entities/cost-metric-catalog.ts"
+import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
+import type { LatencyReferenceArtifact } from "../entities/latency-reference-artifact.ts"
+import { AgentScoreSnapshotRepository } from "../ports/agent-score-snapshot-repository.ts"
+import { deriveSamplingRates } from "../scoring/derive-sampling-rates.ts"
+import { computeAgentScore } from "./compute-agent-score.ts"
+import { cacheAgentScoreExplanation } from "./get-agent-score-explanation.ts"
 
 const TASK_OUTCOME_SLUG = "task-failure"
 
-interface SnapshotProjectInput {
+export const agentScoreSnapshotWorkflowId = ({
+  organizationId,
+  projectId,
+  date,
+  to,
+  force,
+}: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly date: string
+  readonly to?: string
+  readonly force?: boolean
+}): string =>
+  `agent-score:${organizationId}:${projectId}:${date}:${force ? `force:${to ?? "date-cutoff"}` : "scheduled"}`
+
+export interface SnapshotProjectInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   /** UTC date the sweep resolved, so every project in one run scores the same day. */
@@ -33,7 +46,7 @@ interface SnapshotProjectInput {
   readonly force?: boolean
 }
 
-type SnapshotProjectResult =
+export type SnapshotProjectResult =
   | { readonly status: "published"; readonly score: number }
   | { readonly status: "already-published" }
   | { readonly status: "refreshed"; readonly score: number }
@@ -148,6 +161,9 @@ export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")
     return { status: "withheld", reason: "missingDimensionScore" } satisfies SnapshotProjectResult
   }
 
+  const explanation = toAgentScoreExplanation({ result, date: input.date })
+  if (!explanation) return { status: "withheld", reason: "missingScoreEvidence" } satisfies SnapshotProjectResult
+
   const wrote = yield* snapshots.insertIfAbsent({
     organizationId: input.organizationId,
     projectId: input.projectId,
@@ -159,6 +175,7 @@ export const snapshotProjectAgentScore = Effect.fn("agentScore.snapshotProject")
     interval: result.composite.interval,
     dimensions: dimensions as Record<ScoreDimension, DimensionSnapshot>,
     ...(result.composite.policyCap?.applied ? { policyCap: result.composite.policyCap.cap } : {}),
+    explanation,
     createdAt: new Date(),
   })
 

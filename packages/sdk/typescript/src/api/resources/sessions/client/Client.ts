@@ -4,6 +4,7 @@ import type { BaseClientOptions, BaseRequestOptions } from "../../../../BaseClie
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "../../../../BaseClient.js";
 import { mergeHeaders } from "../../../../core/headers.js";
 import * as core from "../../../../core/index.js";
+import { mergeAdditionalBodyParameters } from "../../../../core/requestBody.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
@@ -25,13 +26,15 @@ export class SessionsClient {
     /**
      * Returns a cursor-paginated page of sessions in the project. A session groups the traces of one conversation. Combine `filters` with `query` (free-text semantic search) to narrow the result set. Session list rows exclude per-message LLM content — use `getSession` for the conversation view.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.ListSessionsBody} request
      * @param {SessionsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.sessions.list("projectSlug")
@@ -67,7 +70,7 @@ export class SessionsClient {
             contentType: "application/json",
             queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: mergeAdditionalBodyParameters(request, requestOptions?.additionalBodyParameters),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -109,13 +112,15 @@ export class SessionsClient {
     /**
      * Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.AnalyticsSessionsRequest} request
      * @param {SessionsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.sessions.analytics("projectSlug")
@@ -199,7 +204,7 @@ export class SessionsClient {
     /**
      * Returns a single session by id, including its `conversation`: the system instructions and the messages of the session's latest LLM completion, in OpenTelemetry GenAI format.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} sessionId - Session identifier lifted from instrumentation. Up to 128 characters.
      * @param {Latitude.GetSessionsRequest} request
      * @param {SessionsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -207,6 +212,8 @@ export class SessionsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.sessions.get("projectSlug", "sessionId")
@@ -283,7 +290,7 @@ export class SessionsClient {
     /**
      * Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} sessionId - Session identifier lifted from instrumentation. Up to 128 characters.
      * @param {Latitude.GetAssessmentSessionsRequest} request
      * @param {SessionsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -291,6 +298,8 @@ export class SessionsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.sessions.getAssessment("projectSlug", "sessionId")
@@ -377,7 +386,7 @@ export class SessionsClient {
     /**
      * Returns a cursor-paginated page of the traces that belong to the session. Rows match the trace list shape and exclude per-message LLM content — use `getTrace` for the full conversation view.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} sessionId - Session identifier lifted from instrumentation. Up to 128 characters.
      * @param {Latitude.ListTracesSessionsRequest} request
      * @param {SessionsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -385,6 +394,8 @@ export class SessionsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.sessions.listTraces("projectSlug", "sessionId")
@@ -472,7 +483,7 @@ export class SessionsClient {
     /**
      * Returns the signals that occurred in the session, including each signal's `scoreEvidence` and occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} sessionId - Session identifier lifted from instrumentation. Up to 128 characters.
      * @param {Latitude.ListSignalsSessionsRequest} request
      * @param {SessionsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -480,6 +491,8 @@ export class SessionsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.sessions.listSignals("projectSlug", "sessionId")
@@ -558,7 +571,7 @@ export class SessionsClient {
     /**
      * Returns one signal by slug, including its `scoreEvidence` and occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} sessionId - Session identifier lifted from instrumentation. Up to 128 characters.
      * @param {string} signalSlug - Signal slug.
      * @param {Latitude.GetSignalSessionsRequest} request
@@ -567,6 +580,8 @@ export class SessionsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.sessions.getSignal("projectSlug", "sessionId", "signalSlug")
@@ -647,7 +662,7 @@ export class SessionsClient {
     /**
      * Returns the session's memory footprint: per-record read, added, and removed token metrics plus session-wide totals. Pass `traceId` to restrict the footprint to a single trace of the session.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} sessionId - Session identifier lifted from instrumentation. Up to 128 characters.
      * @param {Latitude.GetMemorySessionsRequest} request
      * @param {SessionsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -655,6 +670,8 @@ export class SessionsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.sessions.getMemory("projectSlug", "sessionId")
@@ -739,7 +756,7 @@ export class SessionsClient {
     /**
      * Returns the memory writes the session made as per-record before/after diffs. Pass `traceId` to restrict to a single trace of the session.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} sessionId - Session identifier lifted from instrumentation. Up to 128 characters.
      * @param {Latitude.GetMemoryChangesSessionsRequest} request
      * @param {SessionsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -747,6 +764,8 @@ export class SessionsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.sessions.getMemoryChanges("projectSlug", "sessionId")

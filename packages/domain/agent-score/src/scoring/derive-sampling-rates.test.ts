@@ -4,7 +4,7 @@ import { deriveSamplingRates, PROVISIONAL_SAMPLING_TARGETS } from "./derive-samp
 
 describe("deriveSamplingRates", () => {
   it("examines everything on a project that reaches the session target", () => {
-    const rates = deriveSamplingRates({ eligibleSessions: 200 })
+    const rates = deriveSamplingRates({ eligibleSessions: 50 })
 
     expect(rates.safetySuitePercent).toBe(100)
     expect(rates.taskOutcomePercent).toBe(100)
