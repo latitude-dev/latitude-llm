@@ -20,7 +20,7 @@ import {
 } from "../constants.ts"
 import type { TaxonomyFacet } from "../entities/facet.ts"
 import { type TaxonomyFacetProjection, taxonomyFacetProjectionSchema } from "../entities/facet-projection.ts"
-import { normalizeTaxonomyEmbedding } from "../helpers.ts"
+import { normalizeTaxonomyEmbedding, stripLoneSurrogates } from "../helpers.ts"
 import { FacetProjectionRepository } from "../ports/facet-projection-repository.ts"
 
 /**
@@ -132,7 +132,7 @@ export const extractFacetProjectionsUseCase = (input: ExtractFacetProjectionsInp
 
       const extractOne = (sample: FacetExtractionSample) =>
         Effect.gen(function* () {
-          const conversation = sample.transcript.slice(0, FACET_EXTRACTION_INPUT_CHAR_CAP)
+          const conversation = stripLoneSurrogates(sample.transcript.slice(0, FACET_EXTRACTION_INPUT_CHAR_CAP))
           const analysisHash = yield* hash(`${facet.id}\0${facet.instructions}\0${conversation}`)
           const generated = yield* ai.generate({
             ...modelConfig,

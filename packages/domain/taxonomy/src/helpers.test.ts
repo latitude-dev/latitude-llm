@@ -11,6 +11,7 @@ import {
   normalizeTaxonomyCentroid,
   normalizeTaxonomyEmbedding,
   softmax,
+  stripLoneSurrogates,
   updateTaxonomyCentroid,
 } from "./helpers.ts"
 
@@ -195,5 +196,28 @@ describe("clamp", () => {
     expect(clamp(5, 1, 10)).toBe(5)
     expect(clamp(-1, 1, 10)).toBe(1)
     expect(clamp(11, 1, 10)).toBe(10)
+  })
+})
+
+describe("stripLoneSurrogates", () => {
+  it("leaves well-formed text, including intact surrogate pairs, untouched", () => {
+    expect(stripLoneSurrogates("hello world")).toBe("hello world")
+    expect(stripLoneSurrogates("an emoji: \u{1F600}")).toBe("an emoji: \u{1F600}")
+  })
+
+  it("replaces a lone leading (high) surrogate left by a mid-codepoint slice", () => {
+    const emoji = "\u{1F600}" // surrogate pair: \uD83D \uDE00
+    const slicedMidCodepoint = `before ${emoji}`.slice(0, "before ".length + 1) // keeps only \uD83D
+    expect(stripLoneSurrogates(slicedMidCodepoint)).toBe("before �")
+  })
+
+  it("replaces a lone trailing (low) surrogate left by a mid-codepoint slice", () => {
+    const emoji = "\u{1F600}" // surrogate pair: \uD83D \uDE00
+    const slicedMidCodepoint = `${emoji} after`.slice(1) // drops \uD83D, keeps \uDE00
+    expect(stripLoneSurrogates(slicedMidCodepoint)).toBe("� after")
+  })
+
+  it("replaces multiple lone surrogates independently", () => {
+    expect(stripLoneSurrogates("\uD800 and \uDFFF")).toBe("� and �")
   })
 })
