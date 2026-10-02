@@ -144,10 +144,24 @@ Better Auth's own `GET /api/auth/mcp/get-session` returns the raw `oauth_access_
 | Better Auth MCP plugin config | `apps/web/src/server/clients.ts` (`getBetterAuth`) |
 | Manifest emitter | `apps/api/scripts/emit-mcp.ts` |
 
+## Server instructions (Artifacts and skills)
+
+`MCP_INFO.instructions` in `apps/api/src/constants.ts` is emitted with the MCP manifest and tells
+connected agents where to find:
+
+- the full tool catalog (`https://docs.latitude.so/llms.txt`)
+- **Artifacts** — building self-contained HTML reports and refreshable dashboards from Latitude data
+  (`https://docs.latitude.so/more/artifacts.md`)
+- **Skills** — the published Latitude agent skills, including `latitude-artifacts`
+  (`https://docs.latitude.so/getting-started/skills.md`)
+
+See [`agent-data-access.md`](./agent-data-access.md#artifacts-agent-rendered-html) for the engineering
+model behind Artifacts.
+
 ## Related docs
 
 - [`api.md`](./api.md) — REST surface, middleware ring, rate-limit tiers.
 - [`sdk.md`](./sdk.md) — TS SDK generation pipeline.
 - [`authentication.md`](./authentication.md) — web-side Better Auth, sessions, social login.
-- [`agent-data-access.md`](./agent-data-access.md) — the `queryAnalytics` / `querySpans` read surface agents use to investigate and build dashboards.
+- [`agent-data-access.md`](./agent-data-access.md) — the `queryAnalytics` / `querySpans` read surface agents use to investigate and build Artifacts.
 - [`api-endpoints` skill](../.agents/skills/api-endpoints/SKILL.md) — how to add routes that surface as MCP tools.
