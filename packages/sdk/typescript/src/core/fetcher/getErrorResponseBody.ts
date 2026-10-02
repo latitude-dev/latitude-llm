@@ -1,4 +1,3 @@
-import { fromJson } from "../json.js";
 import { getResponseBody } from "./getResponseBody.js";
 
 export async function getErrorResponseBody(response: Response): Promise<unknown> {
@@ -17,13 +16,11 @@ export async function getErrorResponseBody(response: Response): Promise<unknown>
         case "application/problem+json":
         case "application/vnd.api+json":
         case "text/json": {
-            const text = await response.text();
-            return text.length > 0 ? fromJson(text) : undefined;
+            return getResponseBody(response);
         }
         default:
             if (contentType.startsWith("application/vnd.") && contentType.endsWith("+json")) {
-                const text = await response.text();
-                return text.length > 0 ? fromJson(text) : undefined;
+                return getResponseBody(response);
             }
 
             // Fallback to plain text if content type is not recognized
