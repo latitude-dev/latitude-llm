@@ -1,4 +1,5 @@
 import type { EventPayloads } from "@domain/events"
+import { sql } from "drizzle-orm"
 import { boolean, index, jsonb, text } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, tzTimestamp } from "../schemaHelpers.ts"
 
@@ -25,5 +26,7 @@ export const outboxEvents = latitudeSchema.table(
   (t) => [
     index("outbox_events_workspace_id_idx").on(t.organizationId),
     index("outbox_events_aggregate_type_idx").on(t.aggregateType),
+    index("outbox_events_unpublished_idx").on(t.createdAt).where(sql`${t.published} = false`),
+    index("outbox_events_published_at_idx").on(t.publishedAt).where(sql`${t.published} = true`),
   ],
 )

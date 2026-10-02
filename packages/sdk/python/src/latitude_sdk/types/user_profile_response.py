@@ -16,6 +16,10 @@ class UserProfileResponse(UniversalBaseModel):
             alias="userId", description="The end-user's identifier, as reported on their traces' `user_id`."
         ),
     ]
+    """
+    The end-user's identifier, as reported on their traces' `user_id`.
+    """
+
     user_email: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="userEmail"),
@@ -24,21 +28,37 @@ class UserProfileResponse(UniversalBaseModel):
             description="Latest non-empty email seen on the user's traces. Empty when never reported.",
         ),
     ]
+    """
+    Latest non-empty email seen on the user's traces. Empty when never reported.
+    """
+
     first_seen_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="firstSeenAt"),
         pydantic.Field(alias="firstSeenAt", description="ISO-8601 timestamp of the user's first trace ever."),
     ]
+    """
+    ISO-8601 timestamp of the user's first trace ever.
+    """
+
     last_seen_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="lastSeenAt"),
         pydantic.Field(alias="lastSeenAt", description="ISO-8601 timestamp of the user's most recent trace ever."),
     ]
+    """
+    ISO-8601 timestamp of the user's most recent trace ever.
+    """
+
     trace_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="traceCount"),
         pydantic.Field(alias="traceCount", description="Lifetime traces attributed to the user."),
     ]
+    """
+    Lifetime traces attributed to the user.
+    """
+
     session_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="sessionCount"),
@@ -46,6 +66,10 @@ class UserProfileResponse(UniversalBaseModel):
             alias="sessionCount", description="Distinct sessions in which the user produced at least one trace."
         ),
     ]
+    """
+    Distinct sessions in which the user produced at least one trace.
+    """
+
     error_session_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="errorSessionCount"),
@@ -53,35 +77,62 @@ class UserProfileResponse(UniversalBaseModel):
             alias="errorSessionCount", description="Of `sessionCount`, sessions with at least one errored trace."
         ),
     ]
+    """
+    Of `sessionCount`, sessions with at least one errored trace.
+    """
+
     tokens_total: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensTotal"),
         pydantic.Field(alias="tokensTotal", description="Total tokens across the user's traces."),
     ]
+    """
+    Total tokens across the user's traces.
+    """
+
     tokens_input: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensInput"),
         pydantic.Field(alias="tokensInput", description="Input (prompt) tokens across the user's traces."),
     ]
+    """
+    Input (prompt) tokens across the user's traces.
+    """
+
     tokens_output: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tokensOutput"),
         pydantic.Field(alias="tokensOutput", description="Output (completion) tokens across the user's traces."),
     ]
+    """
+    Output (completion) tokens across the user's traces.
+    """
+
     cost_total_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costTotalMicrocents"),
         pydantic.Field(alias="costTotalMicrocents", description="Total cost across the user's traces, in microcents."),
     ]
+    """
+    Total cost across the user's traces, in microcents.
+    """
+
     avg_duration_ns: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="avgDurationNs"),
         pydantic.Field(alias="avgDurationNs", description="Mean per-trace duration, in nanoseconds."),
     ]
+    """
+    Mean per-trace duration, in nanoseconds.
+    """
+
     active_days: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="activeDays"),
         pydantic.Field(alias="activeDays", description="Distinct UTC days with at least one trace."),
     ]
+    """
+    Distinct UTC days with at least one trace.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

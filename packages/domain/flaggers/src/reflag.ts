@@ -31,7 +31,7 @@ const NESTED_CONVERSATION_SAMPLE_TAGS: readonly string[] = [
   ...AI_GENERATE_TELEMETRY_TAGS.signalDetails,
 ]
 
-const FLAGGER_NO_REFLAG_TAG: string = AI_GENERATE_TELEMETRY_TAGS.flaggerNoReflag[0]
+export const FLAGGER_NO_REFLAG_TAG: string = AI_GENERATE_TELEMETRY_TAGS.flaggerNoReflag[0]
 
 /**
  * True when the trace was produced by a flagger's own LLM call (classify/draft).

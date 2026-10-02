@@ -28,9 +28,9 @@ import { emptyTokenAnalytics } from "./trace-repository.ts"
  */
 export interface SessionRepositoryShape {
   /**
-   * Baseline percentiles across every session in the project. Intentionally
-   * ignores user filters — the goal is a stable "what's normal for this
-   * project" reference.
+   * Baseline percentiles across every LLM-active session in the project.
+   * Intentionally ignores user filters beyond the session list's default
+   * LLM-activity eligibility.
    */
   getCohortBaseline(input: {
     readonly organizationId: OrganizationId

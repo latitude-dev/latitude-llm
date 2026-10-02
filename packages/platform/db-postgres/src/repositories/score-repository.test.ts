@@ -757,6 +757,195 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(countsByTraceId.has(TraceId("cccccccccccccccccccccccccccccccc"))).toBe(false)
   })
 
+  // The flagger dedup helpers page this lookup at 200 newest-first. Without the
+  // slug filter a busy session's other detectors push the row a helper is
+  // looking for out of that window, and it writes a duplicate.
+  it("finds one flagger's published annotation past a page filled by another's", async () => {
+    const organizationId = "ffffffffffffffffffffbbbb"
+    const traceId = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaac")
+    const projectId = ProjectId("ffffffffffffffffffffbbbb")
+    const sessionId = SessionId("busy-session")
+
+    const write = (flaggerSlug: string, feedback: string) =>
+      Effect.runPromise(
+        writeScoreUseCase({
+          projectId,
+          sourceType: "annotation",
+          sourceId: "SYSTEM",
+          sessionId,
+          traceId,
+          value: 0,
+          passed: false,
+          feedback,
+          metadata: { rawFeedback: feedback, flaggerSlug, flaggerPath: "sampled" },
+        }).pipe(createWriteProvider(database, organizationId)),
+      )
+
+    await write("jailbreaking", "An instruction-override attempt arrived.")
+    for (const index of [0, 1, 2]) await write("tool-call-errors", `Tool failure ${index}`)
+
+    const listed = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.listPublishedSystemAnnotationsBySession({
+          projectId,
+          sessionId,
+          flaggerSlug: "jailbreaking",
+          limit: 2,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(listed.map((score) => score.feedback)).toEqual(["An instruction-override attempt arrived."])
+  })
+
+  it("omits a flagger's positive reference verdict from a listing that asks for it", async () => {
+    const organizationId = "ffffffffffffffffffffcccc"
+    const traceId = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+    const projectId = ProjectId("ffffffffffffffffffffcccc")
+
+    const write = (input: {
+      readonly sourceId: string
+      readonly passed: boolean
+      readonly feedback: string
+      readonly flaggerSlug?: string
+    }) =>
+      Effect.runPromise(
+        writeScoreUseCase({
+          projectId,
+          sourceType: "annotation",
+          sourceId: input.sourceId,
+          traceId,
+          value: input.passed ? 1 : 0,
+          passed: input.passed,
+          feedback: input.feedback,
+          metadata: {
+            rawFeedback: input.feedback,
+            ...(input.flaggerSlug ? { flaggerSlug: input.flaggerSlug, flaggerPath: "sampled" } : {}),
+          },
+        }).pipe(createWriteProvider(database, organizationId)),
+      )
+
+    await write({ sourceId: "SYSTEM", passed: true, feedback: "Task completed", flaggerSlug: "task-failure" })
+    await write({ sourceId: "SYSTEM", passed: false, feedback: "Task not completed", flaggerSlug: "task-failure" })
+    // A Safety measurement is the same kind of row: persisted because the score
+    // needs it, not because a reviewer has anything to act on.
+    await write({ sourceId: "SYSTEM", passed: true, feedback: "The agent refused", flaggerSlug: "jailbreaking" })
+    await write({ sourceId: "UI", passed: true, feedback: "A reviewer liked this" })
+
+    const listed = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.listByTraceId({
+          projectId,
+          traceId,
+          source: "annotation",
+          options: { draftMode: "include", omitFlaggerReferenceVerdicts: true },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(listed.items.map((score) => score.feedback).sort()).toEqual(["A reviewer liked this", "Task not completed"])
+  })
+
+  // Excluding after pagination would let the hidden verdict spend the page
+  // budget, returning one row where two were asked for and available.
+  it("spends the page budget on rows the caller can actually see", async () => {
+    const organizationId = "ffffffffffffffffffffdddd"
+    const traceId = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab")
+    const projectId = ProjectId("ffffffffffffffffffffdddd")
+
+    for (const [index, feedback] of ["Reviewer note one", "Reviewer note two"].entries()) {
+      await Effect.runPromise(
+        writeScoreUseCase({
+          projectId,
+          sourceType: "annotation",
+          sourceId: "SYSTEM",
+          traceId,
+          value: 1,
+          passed: true,
+          feedback: `Verdict ${index}`,
+          metadata: { rawFeedback: "raw", flaggerSlug: "task-failure", flaggerPath: "sampled" },
+        }).pipe(createWriteProvider(database, organizationId)),
+      )
+      await Effect.runPromise(
+        writeScoreUseCase({
+          projectId,
+          sourceType: "annotation",
+          sourceId: "UI",
+          traceId,
+          value: 0,
+          passed: false,
+          feedback,
+          metadata: { rawFeedback: feedback },
+        }).pipe(createWriteProvider(database, organizationId)),
+      )
+    }
+
+    const page = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.listByTraceId({
+          projectId,
+          traceId,
+          source: "annotation",
+          options: { draftMode: "include", limit: 2, omitFlaggerReferenceVerdicts: true },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(page.items).toHaveLength(2)
+    expect(page.items.every((score) => !score.passed)).toBe(true)
+  })
+
+  // A flagger's positive reference verdict is a measurement, not something a
+  // reviewer left on the trace, so it must not show up as a positive annotation.
+  it("omits a flagger's positive reference verdict from the annotation counts", async () => {
+    const organizationId = "ffffffffffffffffffffbbbb"
+    const traceId = TraceId("dddddddddddddddddddddddddddddddd")
+    const projectId = ProjectId("ffffffffffffffffffffbbbb")
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        traceId,
+        value: 1,
+        passed: true,
+        feedback: "The task was completed.",
+        metadata: { rawFeedback: "raw", flaggerSlug: "task-failure", flaggerPath: "sampled" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId,
+        sourceType: "annotation",
+        sourceId: "UI",
+        traceId,
+        value: 1,
+        passed: true,
+        feedback: "A reviewer liked this",
+        metadata: { rawFeedback: "A reviewer liked this" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const counts = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.countAnnotationsByTraceIds({
+          projectId,
+          traceIds: [traceId],
+          source: "annotation",
+          options: { draftMode: "include" },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(counts[0]).toMatchObject({ positiveCount: 1, negativeCount: 0 })
+  })
+
   it("counts every score source by trace when source is omitted, except absent evaluations", async () => {
     const organizationId = "dddddddddddddddddddddddd"
     const mixedTraceId = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
@@ -1052,6 +1241,204 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(found?.id).toBe(target.id)
     expect(found?.sourceId).toBe("SYSTEM")
     expect(found?.traceId).toBe(traceId1)
+  })
+
+  it("findPublishedSystemAnnotationByAnchor finds anchors outside the 200-row session scan window", async () => {
+    const organizationId = "anchoranchoranchoranchor"
+    const sessionId = "session-busy-anchor"
+    const anchorHash = "1".repeat(64)
+
+    const anchored = await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        sessionId,
+        value: 0,
+        passed: false,
+        feedback: "Original anchored finding",
+        metadata: {
+          rawFeedback: "Original anchored finding",
+          flaggerSlug: "frustration",
+          contentHash: anchorHash,
+        },
+        draftedAt: null,
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: new Date("2020-01-01T00:00:00.000Z") })
+      .where(eq(scoresTable.id, anchored.id as string))
+
+    await Effect.runPromise(
+      Effect.forEach(
+        Array.from({ length: 200 }, (_, index) => index),
+        (index) =>
+          writeScoreUseCase({
+            projectId: annotationProjectId,
+            sourceType: "annotation",
+            sourceId: "SYSTEM",
+            sessionId,
+            value: 0,
+            passed: false,
+            feedback: `Filler finding ${index}`,
+            metadata: {
+              rawFeedback: `Filler finding ${index}`,
+              flaggerSlug: "frustration",
+              contentHash: `${(index + 2).toString(16).padStart(64, "0")}`,
+            },
+            draftedAt: null,
+          }),
+      ).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const found = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.findPublishedSystemAnnotationByAnchor({
+          projectId: annotationProjectId,
+          sessionId: sessionId as SessionId,
+          flaggerSlug: "frustration",
+          contentHash: anchorHash,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(found).not.toBeNull()
+    expect(found?.id).toBe(anchored.id)
+  })
+
+  it("findPublishedSystemVerdictByGeneration finds verdicts outside the 200-row session scan window", async () => {
+    const organizationId = "v".repeat(24)
+    const sessionId = "session-busy-verdict"
+    const analysisHash = "a".repeat(64)
+
+    const verdict = await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        sessionId,
+        value: 0,
+        passed: false,
+        feedback: "The task failed.",
+        metadata: {
+          rawFeedback: "The task failed.",
+          flaggerSlug: "task-failure",
+          analysisHash,
+        },
+        draftedAt: null,
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: new Date("2020-01-01T00:00:00.000Z") })
+      .where(eq(scoresTable.id, verdict.id as string))
+
+    await Effect.runPromise(
+      Effect.forEach(
+        Array.from({ length: 200 }, (_, index) => index),
+        (index) =>
+          writeScoreUseCase({
+            projectId: annotationProjectId,
+            sourceType: "annotation",
+            sourceId: "SYSTEM",
+            sessionId,
+            value: 0,
+            passed: false,
+            feedback: `Filler finding ${index}`,
+            metadata: {
+              rawFeedback: `Filler finding ${index}`,
+              flaggerSlug: "frustration",
+              contentHash: `${(index + 2).toString(16).padStart(64, "0")}`,
+            },
+            draftedAt: null,
+          }),
+      ).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const found = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.findPublishedSystemVerdictByGeneration({
+          projectId: annotationProjectId,
+          sessionId: sessionId as SessionId,
+          flaggerSlug: "task-failure",
+          analysisHash,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(found).not.toBeNull()
+    expect(found?.id).toBe(verdict.id)
+  })
+
+  it("findPublishedSystemSafetyFindingByKind finds findings outside the 200-row session scan window", async () => {
+    const organizationId = "w".repeat(24)
+    const sessionId = "session-busy-safety-finding"
+    const safetyFindingKind = "injectionAttempt"
+
+    const finding = await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        sessionId,
+        value: 0,
+        passed: false,
+        feedback: "An override was attempted.",
+        metadata: {
+          rawFeedback: "An override was attempted.",
+          flaggerSlug: "jailbreaking",
+          safetyFindingKind,
+        },
+        draftedAt: null,
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: new Date("2020-01-01T00:00:00.000Z") })
+      .where(eq(scoresTable.id, finding.id as string))
+
+    await Effect.runPromise(
+      Effect.forEach(
+        Array.from({ length: 200 }, (_, index) => index),
+        (index) =>
+          writeScoreUseCase({
+            projectId: annotationProjectId,
+            sourceType: "annotation",
+            sourceId: "SYSTEM",
+            sessionId,
+            value: 0,
+            passed: false,
+            feedback: `Filler finding ${index}`,
+            metadata: {
+              rawFeedback: `Filler finding ${index}`,
+              flaggerSlug: "jailbreaking",
+              contentHash: `${(index + 2).toString(16).padStart(64, "0")}`,
+            },
+            draftedAt: null,
+          }),
+      ).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const found = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.findPublishedSystemSafetyFindingByKind({
+          projectId: annotationProjectId,
+          sessionId: sessionId as SessionId,
+          flaggerSlug: "jailbreaking",
+          safetyFindingKind,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(found).not.toBeNull()
+    expect(found?.id).toBe(finding.id)
   })
 
   it("listFlaggerSlugsBySignalId returns distinct flagger slugs ordered most-recent-first and filters out drafts, non-SYSTEM annotations, and other signals", async () => {

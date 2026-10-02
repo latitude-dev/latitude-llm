@@ -93,7 +93,7 @@ Repository reads are cutoff-aware and perform those steps in that order. A decis
 
 Public coverage deliberately hides internal policy subreasons: disabled flaggers, suppressor decisions, unprovisioned flaggers, and missing required context all become `skipped`. Sampling losses are `notSelected`; rate-limit rejection is `rateLimited`; a terminal error is `executionFailed`; an initial selection without a terminal revision is `pending`; and no compatible decision is `missingTelemetry`. Only a selected decision with a non-error terminal outcome is `examined`.
 
-`FlaggerCoverageRepository` provides the organization- and project-scoped window aggregate used by Settings. The eligible base is settled, non-simulation sessions with LLM activity, using the same five-minute session-end debounce as screening. `examinedSessions` includes selected terminal non-error decisions; `readableSessions` additionally requires a positive inclusion probability and excludes policy skips and rate limits. Missing decisions and unknown probabilities stay visible and never count as readable.
+`FlaggerCoverageRepository` provides the organization- and project-scoped window aggregate used by Settings. The eligible base is settled, non-simulation sessions with LLM activity, using the same five-minute session-end debounce as screening. Every reader first finds candidate session ids behind one shared partition floor, then restores their complete aggregates before applying eligibility so older fragments cannot hide exclusions. Coverage and the Agent Score window therefore count the same sessions. `examinedSessions` includes selected terminal non-error decisions; `readableSessions` additionally requires a positive inclusion probability and excludes policy skips and rate limits. Missing decisions and unknown probabilities stay visible and never count as readable.
 
 Flagger Settings keeps configuration as the primary task and presents coverage as secondary feedback inside each enabled flagger row. The collapsed state reports how many eligible sessions were examined over the fixed 28-day window; detailed selection paths, unavailable observations, readable evidence, findings, and sampling-data completeness are progressively disclosed. Normal activity stays visually muted, while concrete operational limits such as rate limiting receive warning treatment. A positive `matched` or `failure` decision contributes to the finding count. `calibrationReadyFindings` is the subset with usable selection evidence; it reports readiness, not a score or confidence estimate. Detailed deterministic sub-kinds remain dynamically calculated source facts and are not persisted by this aggregate.
 
@@ -126,7 +126,7 @@ Hints (`src/hints/`) are cheap, deterministic, session-scoped evidence — gathe
 | span-errors | `span:error` | `session.errorCount > 0` |
 | tool-errors | `tool:error` (≤10, anchored) | `collectToolCallErrorFindings` |
 | tool-loop | `tool:loop` | one tool ≥60% of ≥5 calls (`findDominantToolUsage`) |
-| analytical-outliers | `outlier:duration/ttft/tokens/cost` | session value ≥ project p90 (`getCohortBaseline`, gated ≥30 samples, Redis-cached 15 min per project) |
+| analytical-outliers | `outlier:duration/ttft/tokens/cost` | session value ≥ the LLM-active project cohort's p90 (`getCohortBaseline`, gated ≥30 samples, Redis-cached 15 min per project) |
 | moment-labels | `moment:<kind>` (10 kinds, anchored to the label range) | `SessionMomentLabelRepository`, pinned to the latest **analyzed** generation |
 | frustration/refusal/deferral/injection/nsfw/pii patterns | `pattern:*` | strategy-tuned regex/scoring extractors (the pattern extractors used by jailbreaking/nsfw/pii prompts are shared with their strategies) — a regex miss drops the hint, so `jailbreaking`/`nsfw` evidence prompts fall back to the real conversation text rather than an empty block |
 
@@ -149,8 +149,6 @@ classifySessionFlagger ──(matched?)──► draftSessionFlaggerAnnotation �
 - **Adversarial review**: a second classifier call approves or rejects the proposed annotation — the primary precision guard.
 - On a confirmed match the use-case computes the **`contentHash`** (below) and returns it with the session metadata the draft/save steps need.
 
-Models resolve per stage via `resolveGenerationConfig` (`LAT_AI_FLAGGER_{CLASSIFIER,EXTRACTOR,ANNOTATOR}_*` env overrides): classifier haiku t0/512, extractor + annotator minimax. The classifier's feedback is normally final; the annotator LLM only runs as a fallback for a match without feedback text.
-
 ## Scores, anchors, and dedup
 
 Both the deterministic matched path and the LLM save path funnel through `upsertFlaggerAnnotationScore`: a row in the `scores` table with `sourceType: "annotation"`, `sourceId: "SYSTEM"`, `value: 0`, `passed: false`, `metadata: { rawFeedback, flaggerSlug, messageIndex?, contentHash?, flaggerTraceId? }`. The row's `sessionId` is the flagged session and its `traceId` is the session's latest output trace, so trace-level surfaces stay coherent.
@@ -165,6 +163,30 @@ The anchor dedup is a select-then-insert without a DB unique constraint: a narro
 Context compaction mirrors the moments stance: the analyzed window is the last responsive span's input (post-compaction that is the summary + subsequent turns). Pre-compaction windows that settled earlier already got their own screening pass, and the anchor dedup makes passes additive.
 
 `writeScoreUseCase` emits `ScoreCreated` → signal discovery clusters by feedback embedding (per project, not per slug — the annotator prompt is tuned to produce similar text for similar issues) → signals with `source: "flagger"` are auto-monitored → escalation → incidents. See [`./signals.md`](./signals.md).
+
+### Bundle keys: deterministic detections skip the embedding
+
+A deterministic detector names the failure class outright, so re-deriving the grouping from an embedding of the sentence it wrote is both wasteful and wrong: the sentence quotes ids, retry counts and paths that differ between two occurrences of one broken integration, and that is exactly what the embedding is sensitive to. One tool failing the same way all day would fragment into a pile of near-identical issues.
+
+So every deterministic finding carries a **bundle key** (`flaggerBundleKey`, `@domain/flaggers/flagger-bundle-key.ts`), stored on the score as `metadata.flaggerBundleKey` and claimed by the issue it creates. Discovery matches on it exactly and never runs hybrid search or rerank for such a score — see [`./signals.md`](./signals.md#deterministic-bundling). Shapes:
+
+| Finding | Key |
+| --- | --- |
+| `tool-call-errors` / `error` | `tool-call-errors:error:{toolName}:{errorClass}` |
+| `tool-call-errors` / `malformed`, `duplicate`, `undeclared` | `tool-call-errors:{kind}:{toolName}` |
+| `tool-call-errors` / `unknown-id` | `tool-call-errors:unknown-id:any-tool` |
+| `output-schema-validation` | `output-schema-validation:{kind}:{generationPosition}` |
+| `empty-response`, `trashing`, `low-cache-hit-rate` | `{slug}:{kind}` |
+
+`errorClass` comes from `classifyToolError`: a declared HTTP status (`http-503`) first, then the vendor's own `code`/`type` (`econnreset`), and only then the message with ids, hashes, urls, paths, quoted payloads and digits stripped. Recovery state is deliberately **not** in the key — whether the agent worked past a failing tool varies run to run, the broken tool does not.
+
+Model-authored judgements get no key and keep clustering by meaning, which is the only thing that groups differently-worded verdicts.
+
+### Recovered tool errors are reported, not suppressed
+
+`collectToolCallErrorFindings` marks a tool error `recovered` when the session made successful progress afterwards and still delivered a usable completion. That mark drives Reliability scoring ([`../specs/agent-benchmark/flaggers.md`](../specs/agent-benchmark/flaggers.md)) but no longer decides whether the finding reaches discovery: a retried-past integration failure is still an integration failure, and its owner is the only person who can fix it.
+
+`selectRepresentativeToolCallErrorFinding` therefore picks the first defect the run did *not* work through and falls back to the first recovered one, so the issue is anchored on the worst evidence in the session while never going silent. Volume is answered by the bundle key above and by the promotion gate, and the levers for a genuinely unwanted detector are the per-project flagger toggle, issue mute, and issue ignore — all reversible, unlike a detection that was never recorded.
 
 ## Grading a flagger's own decisions
 

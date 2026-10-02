@@ -116,6 +116,84 @@ pub trait Binding: Send + Sync {
     /// Default: no-op. Bindings that support root-level auth override this.
     fn set_root_auth(&mut self, _bindings: &[(String, SchemeBinding)]) {}
 
+    /// Receive root-level global parameters. Called by `CliApp` before
+    /// `build_command()` so the binding can register them as top-level
+    /// flags and inject them into outgoing requests. Mirrors
+    /// [`set_root_auth`](Self::set_root_auth): global parameters are
+    /// declared once at the root and shared across all bindings, and each
+    /// binding grabs them here.
+    ///
+    /// Default: no-op. Bindings that support global parameters override this.
+    fn set_root_global_parameters(
+        &mut self,
+        _params: &[crate::openapi::discovery::GlobalParameter],
+    ) {
+    }
+
+    /// Every operation parameter this binding accepts — one entry per
+    /// spelling it answers to (wire name and, when they differ, the flag
+    /// name `--help` shows), each carrying the values an enum constrains it
+    /// to.
+    ///
+    /// Consumed by `profiles create --set <KEY>=<VALUE>`, which validates
+    /// both halves: a key no operation accepts is a silently-ignored
+    /// default, and a value no operation accepts makes every command
+    /// carrying that parameter fail on a flag the caller never passed.
+    ///
+    /// Default: empty, which disables that validation. A binding that
+    /// cannot enumerate its surface must not make `--set` unusable.
+    fn parameter_specs(&self) -> Vec<crate::profiles::commands::ParameterSpec> {
+        Vec::new()
+    }
+
+    /// Invoke one operation directly, outside the clap dispatch path.
+    ///
+    /// `op_path` is the command path (`["iam", "keys", "remove"]`) and
+    /// `params` a JSON object of parameter name → value, exactly the shape
+    /// `--params` accepts. Returns the decoded response, or `Ok(None)` when
+    /// the operation produced no body.
+    ///
+    /// Exists because some framework-owned commands need to call the API on
+    /// the user's behalf — `profiles remove --revoke` deleting the key it
+    /// created — and they have no `ArgMatches` for the target operation to
+    /// hand to [`dispatch`](Self::dispatch). Everything downstream (auth,
+    /// retries, TLS, base-URL resolution) is the same stack a normal
+    /// invocation uses; only the argument source differs.
+    ///
+    /// Returns `Ok(None)` from the default implementation, meaning "this
+    /// binding does not own that path" — the caller should try the next.
+    fn invoke_operation<'a>(
+        &'a self,
+        _op_path: &'a [String],
+        _params: &'a serde_json::Value,
+    ) -> BoxFuture<'a, Result<Option<serde_json::Value>, CliError>> {
+        Box::pin(async { Ok(None) })
+    }
+
+    /// Parameters that look like a tenant key: ones this binding scopes most
+    /// of its operations by.
+    ///
+    /// Consumed by `profiles create`, which gives each its own `--<name>`
+    /// flag so the commonest profile field is not stuck behind
+    /// `--set <name>=<value>`.
+    ///
+    /// Default: empty, which surfaces no such flags.
+    fn tenant_key_candidates(&self) -> Vec<String> {
+        Vec::new()
+    }
+
+    /// Every server-URL template variable name this binding declares —
+    /// both generator-registered (`server_var(...)`) and spec-declared
+    /// (`servers[].variables`).
+    ///
+    /// Consumed by `profiles create`, which validates `--server-var` keys
+    /// against it and registers a convenience `--<name>` flag per entry.
+    ///
+    /// Default: empty.
+    fn server_variable_names(&self) -> Vec<String> {
+        Vec::new()
+    }
+
     /// Validate that all auth schemes referenced by the binding's spec
     /// have a corresponding entry in the auth bindings. Returns `Ok(())`
     /// if validation passes, or `Err(CliError::Validation(...))` listing

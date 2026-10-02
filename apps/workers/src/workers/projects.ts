@@ -4,15 +4,11 @@ import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { OutboxEventWriterLive, type PostgresClient, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
-import { Data, Effect, Layer } from "effect"
+import { Effect, Layer } from "effect"
 import { getPostgresClient } from "../clients.ts"
 import { provisionFlaggers } from "../services/provisioning.ts"
 
 const logger = createLogger("projects")
-
-class FirstTraceUpdateError extends Data.TaggedError("FirstTraceUpdateError")<{
-  readonly cause: unknown
-}> {}
 
 interface ProjectsDeps {
   consumer: QueueConsumer
@@ -71,14 +67,7 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
         // outside the outbox transaction — a crash between the two is
         // acceptable: the next TracesIngested check will re-emit the event
         // (PostHog dedupe absorbs it) and then set the column.
-        yield* Effect.tryPromise({
-          try: () =>
-            pgClient.pool.query(
-              "UPDATE latitude.projects SET first_trace_at = now() WHERE id = $1 AND first_trace_at IS NULL",
-              [payload.projectId],
-            ),
-          catch: (cause) => new FirstTraceUpdateError({ cause }),
-        })
+        yield* repo.markFirstTraceAt(ProjectId(payload.projectId), new Date())
 
         logger.info("First trace milestone recorded", {
           organizationId: payload.organizationId,
@@ -91,6 +80,12 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
           OrganizationId(payload.organizationId),
         ),
         withTracing,
+        Effect.tapError((error) =>
+          Effect.sync(() => {
+            logger.error(`First trace milestone failed for project ${payload.projectId}`, error)
+          }),
+        ),
+        // `ignore`, not `catchCause`: a defect must still fail the job rather than log as a completed run.
         Effect.ignore,
       ),
   })

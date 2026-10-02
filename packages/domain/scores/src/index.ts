@@ -31,14 +31,20 @@ export {
   type EvaluationScoreMetadata,
   evaluationScoreMetadataSchema,
   evaluationScoreSchema,
+  type FlaggerBundleKey,
   type FlaggerFindingKey,
   type FlaggerPath,
+  flaggerBundleKeySchema,
   flaggerFindingKeySchema,
   flaggerPathSchema,
+  isConfirmedHarmFindingKind,
+  SAFETY_FINDING_KINDS,
+  type SafetyFindingKind,
   type Score,
   type ScoreMetadata,
   type ScoreSourceType,
   type ScoringArtifactVersion,
+  safetyFindingKindSchema,
   scoreMetadataSchemas,
   scoreSchema,
   scoreSourceTypeSchema,
@@ -107,6 +113,10 @@ export {
   listTraceScoresInputSchema,
   listTraceScoresUseCase,
 } from "./use-cases/list-trace-scores.ts"
+export {
+  type ReplaceScoreAnalyticsInput,
+  replaceScoreAnalyticsUseCase,
+} from "./use-cases/replace-score-analytics.ts"
 export {
   type SyncScoreAnalyticsInput,
   syncScoreAnalyticsUseCase,

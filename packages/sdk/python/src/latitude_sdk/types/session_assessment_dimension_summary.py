@@ -8,6 +8,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .session_assessment_cost_family_summary import SessionAssessmentCostFamilySummary
 from .session_assessment_dimension_summary_cost_coverage import SessionAssessmentDimensionSummaryCostCoverage
 from .session_assessment_dimension_summary_cost_evidence_counts import (
     SessionAssessmentDimensionSummaryCostEvidenceCounts,
@@ -139,6 +140,7 @@ class SessionAssessmentDimensionSummary_Cost(UniversalBaseModel):
         FieldMetadata(alias="estimatedAvoidableMicrocents"),
         pydantic.Field(alias="estimatedAvoidableMicrocents", default=None),
     ]
+    families: typing.List[SessionAssessmentCostFamilySummary]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
