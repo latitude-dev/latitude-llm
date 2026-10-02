@@ -20,21 +20,37 @@ class ImportRunStats(UniversalBaseModel):
             alias="recordsFetched", description="Rows read from the platform, including spans later skipped."
         ),
     ]
+    """
+    Rows read from the platform, including spans later skipped.
+    """
+
     sessions_imported: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="sessionsImported"),
         pydantic.Field(alias="sessionsImported", description="Distinct sessions among the imported traces."),
     ]
+    """
+    Distinct sessions among the imported traces.
+    """
+
     traces_imported: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="tracesImported"),
         pydantic.Field(alias="tracesImported", description="Traces imported. One imported trace bills one credit."),
     ]
+    """
+    Traces imported. One imported trace bills one credit.
+    """
+
     spans_imported: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="spansImported"),
         pydantic.Field(alias="spansImported", description="Spans written across all imported traces."),
     ]
+    """
+    Spans written across all imported traces.
+    """
+
     spans_skipped: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="spansSkipped"),
@@ -42,5 +58,8 @@ class ImportRunStats(UniversalBaseModel):
             alias="spansSkipped", description="Spans skipped because they carried no usable trace or span id."
         ),
     ]
+    """
+    Spans skipped because they carried no usable trace or span id.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -17,7 +17,7 @@ import { LatitudeObservabilityTestError } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import * as activities from "./activities/index.ts"
-import { getClickhouseClient, getPostgresClient, getRedisClient } from "./clients.ts"
+import { closeJevShadowPostgresClient, getClickhouseClient, getPostgresClient, getRedisClient } from "./clients.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
 
@@ -85,6 +85,7 @@ const bootstrap = async () => {
 
   const config = loadTemporalConfig()
   let shutdownTemporal: (() => Promise<void>) | undefined
+  let shutdownPromise: Promise<void> | undefined
 
   const start = async () => {
     await waitForRedisClientReady(getRedisClient())
@@ -116,24 +117,45 @@ const bootstrap = async () => {
     process.exit(1)
   })
 
-  const handleShutdown = async (signal: string) => {
-    logger.info(`Received ${signal}, shutting down workflows worker...`)
-    ready = false
-    healthServer.close()
-
+  const closeDuringShutdown = async (resource: string, close: () => Promise<void>) => {
     try {
-      if (shutdownTemporal) {
-        await shutdownTemporal()
-      } else {
-        await runPromise
-      }
+      await close()
     } catch (error) {
-      logger.error("Error during shutdown (worker may not have started)", error)
+      logger.error(`Failed to close ${resource} during shutdown`, error)
     }
+  }
 
-    await shutdownObservability()
-    await getClickhouseClient().close()
-    process.exit(0)
+  const handleShutdown = (signal: string): Promise<void> => {
+    shutdownPromise ??= (async () => {
+      logger.info(`Received ${signal}, shutting down workflows worker...`)
+      ready = false
+
+      try {
+        healthServer.close()
+      } catch (error) {
+        logger.error("Failed to close health server during shutdown", error)
+      }
+
+      try {
+        if (shutdownTemporal) {
+          await shutdownTemporal()
+        } else {
+          await runPromise
+        }
+      } catch (error) {
+        logger.error("Error during shutdown (worker may not have started)", error)
+      }
+
+      await closeDuringShutdown("Jev shadow Postgres client", closeJevShadowPostgresClient)
+      await closeDuringShutdown("observability", shutdownObservability)
+      await closeDuringShutdown("ClickHouse client", () => getClickhouseClient().close())
+      process.exit(0)
+    })().catch((error) => {
+      logger.error("Unexpected workflows shutdown error", error)
+      process.exit(1)
+    })
+
+    return shutdownPromise
   }
 
   process.on("SIGTERM", () => {

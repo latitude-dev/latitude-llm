@@ -3,6 +3,7 @@ import {
   SESSION_ASSESSMENT_PAGE_SIZE,
   sessionAssessmentSchema,
   sessionDimensionEffectSchema,
+  sessionDimensionSummarySchema,
   sessionEvidenceAnchorSchema,
   sessionEvidenceImpactSchema,
   sessionReaderCoverageSchema,
@@ -74,6 +75,13 @@ describe("session assessment contracts", () => {
           coverage: "partial",
           observedMicrocents: 100,
           measuredAvoidableMicrocents: 20,
+          families: [
+            { family: "spend", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+            { family: "context", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+            { family: "tools", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+            { family: "memory", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+            { family: "recovery", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+          ],
         },
         {
           scoreDimension: "speed",
@@ -157,5 +165,67 @@ describe("session assessment contracts", () => {
         }),
       ),
     ).toHaveLength(4)
+  })
+
+  it("carries a Cost family evaluation on Cost evidence only", () => {
+    const costEvaluation = {
+      family: "context",
+      measurementState: "measured",
+      rawValue: 0.42,
+      rawUnit: "inputTokens",
+      nativeImpact: { unit: "inputTokens", point: 1_200, upper: 2_000, interpretation: "identificationBound" },
+    }
+
+    expect(
+      sessionDimensionEffectSchema.parse({
+        scoreDimension: "cost",
+        role: "spendEfficiency",
+        direction: "negative",
+        measurement: "estimated",
+        benchmarkUse: "modeled",
+        costEvaluation,
+      }),
+    ).toMatchObject({ costEvaluation })
+    expect(() =>
+      sessionDimensionEffectSchema.parse({
+        scoreDimension: "speed",
+        role: "criticalPathEfficiency",
+        direction: "negative",
+        measurement: "estimated",
+        benchmarkUse: "modeled",
+        costEvaluation,
+      }),
+    ).toThrow()
+  })
+
+  it("requires every Cost family exactly once in the Cost dimension summary", () => {
+    const summary = {
+      scoreDimension: "cost",
+      evidenceCounts: { positive: 0, negative: 0, context: 0 },
+      measurementCounts: { observed: 0, estimated: 0, notMeasured: 0 },
+      coverage: "notExamined",
+      families: [
+        { family: "spend", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+        { family: "context", measurementState: "partial", observedItemCount: 1, metrics: [] },
+        { family: "tools", measurementState: "notApplicable", observedItemCount: 0, metrics: [] },
+        { family: "memory", measurementState: "unmeasured", observedItemCount: 0, metrics: [] },
+        { family: "recovery", measurementState: "measured", observedItemCount: 2, metrics: [] },
+      ],
+    }
+
+    expect(sessionDimensionSummarySchema.parse(summary)).toMatchObject({ families: summary.families })
+    expect(
+      sessionDimensionSummarySchema.safeParse({ ...summary, families: summary.families.slice(0, 4) }).success,
+    ).toBe(false)
+    expect(
+      sessionDimensionSummarySchema.safeParse({
+        ...summary,
+        families: [
+          ...summary.families,
+          { family: "spend", measurementState: "measured", observedItemCount: 1, metrics: [] },
+        ],
+      }).success,
+    ).toBe(false)
+    expect(sessionDimensionSummarySchema.safeParse({ ...summary, families: [] }).success).toBe(false)
   })
 })

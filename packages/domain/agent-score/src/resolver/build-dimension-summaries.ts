@@ -1,6 +1,17 @@
 import { SCORE_DIMENSIONS, type ScoreDimension } from "@domain/shared"
+import {
+  COST_FAMILIES,
+  type CostFamilyMeasurementState,
+  type CostMetricMeasurementState,
+} from "../entities/cost-evidence.ts"
+import {
+  type CostMetricReading,
+  type SessionCostMetricEvidence,
+  toSessionCostMetricEvidence,
+} from "../entities/cost-metric-reading.ts"
 import type {
   SessionAssessmentItem,
+  SessionCostFamilySummary,
   SessionDimensionEffect,
   SessionDimensionSummary,
 } from "../entities/session-assessment.ts"
@@ -12,6 +23,14 @@ export interface BuildSessionDimensionSummariesInput {
   readonly coverage?: Partial<Readonly<Record<ScoreDimension, SessionDimensionCoverage>>>
   readonly observedMicrocents?: number
   readonly observedCriticalPathNs?: number
+  /** Cost readings for the session. Family measurement state comes from these when present. */
+  readonly costReadings?: readonly CostMetricReading[]
+  readonly avoidable?: {
+    readonly measuredMicrocents?: number
+    readonly estimatedMicrocents?: number
+    readonly measuredNs?: number
+    readonly estimatedNs?: number
+  }
 }
 
 const effectsForDimension = (
@@ -38,6 +57,78 @@ const sumKnown = (values: readonly (number | undefined)[]): number | undefined =
   return known.length > 0 ? known.reduce((total, value) => total + value, 0) : undefined
 }
 
+const familyMeasurementStateOf = (states: readonly CostMetricMeasurementState[]): CostFamilyMeasurementState => {
+  const measured = states.includes("measured")
+  const unmeasured = states.includes("unmeasured")
+  if (measured && unmeasured) return "partial"
+  if (measured) return "measured"
+  if (unmeasured || states.length === 0) return "unmeasured"
+  return "notApplicable"
+}
+
+/**
+ * One summary per family, including only aggregate session-safe metric evidence.
+ */
+const buildCostFamilySummaries = ({
+  costEffects,
+  costReadings,
+}: {
+  readonly costEffects: readonly SessionDimensionEffect[]
+  readonly costReadings: readonly CostMetricReading[] | undefined
+}): SessionCostFamilySummary[] =>
+  COST_FAMILIES.map((family) => {
+    const observedItemCount = costEffects.filter((effect) => effect.costEvaluation?.family === family).length
+    const metrics: SessionCostMetricEvidence[] =
+      costReadings?.filter((reading) => reading.family === family).map(toSessionCostMetricEvidence) ?? []
+    const states =
+      costReadings === undefined
+        ? costEffects.flatMap((effect) =>
+            effect.costEvaluation?.family === family ? [effect.costEvaluation.measurementState] : [],
+          )
+        : metrics.map((metric) => metric.measurementState)
+    return { family, measurementState: familyMeasurementStateOf(states), observedItemCount, metrics }
+  })
+
+/**
+ * The composed avoidable numbers when the Speed counterfactual and Cost readers ran, and the
+ * per-effect sums otherwise.
+ *
+ * A composed total is preferred because it has already been deduplicated and capped; summing the
+ * effects is only the fallback for a session read before those evaluators existed.
+ */
+const resolveAvoidable = ({
+  costEffects,
+  speedEffects,
+  avoidable,
+}: {
+  readonly costEffects: readonly SessionDimensionEffect[]
+  readonly speedEffects: readonly SessionDimensionEffect[]
+  readonly avoidable: BuildSessionDimensionSummariesInput["avoidable"]
+}) => {
+  const spendOf = (measurement: SessionDimensionEffect["measurement"]) =>
+    sumKnown(
+      costEffects.map((effect) =>
+        effect.measurement === measurement && effect.impact?.kind === "spend"
+          ? effect.impact.avoidableMicrocents
+          : undefined,
+      ),
+    )
+  const durationOf = (measurement: SessionDimensionEffect["measurement"]) =>
+    sumKnown(
+      speedEffects.map((effect) =>
+        effect.measurement === measurement && effect.impact?.kind === "duration"
+          ? effect.impact.avoidableNs
+          : undefined,
+      ),
+    )
+  return {
+    measuredAvoidableMicrocents: avoidable?.measuredMicrocents ?? spendOf("observed"),
+    estimatedAvoidableMicrocents: avoidable?.estimatedMicrocents ?? spendOf("estimated"),
+    measuredAvoidableNs: avoidable?.measuredNs ?? durationOf("observed"),
+    estimatedAvoidableNs: avoidable?.estimatedNs ?? durationOf("estimated"),
+  }
+}
+
 const baseSummary = <Dimension extends ScoreDimension>(
   dimension: Dimension,
   effects: readonly SessionDimensionEffect[],
@@ -56,6 +147,8 @@ export const buildSessionDimensionSummaries = ({
   coverage,
   observedMicrocents,
   observedCriticalPathNs,
+  costReadings,
+  avoidable,
 }: BuildSessionDimensionSummariesInput): SessionDimensionSummary[] => {
   const effects = new Map(SCORE_DIMENSIONS.map((dimension) => [dimension, effectsForDimension(items, dimension)]))
   const outcomeEffects = effects.get("outcome") ?? []
@@ -86,30 +179,8 @@ export const buildSessionDimensionSummaries = ({
     effect.impact?.kind === "incident" ? [effect.impact.status] : [],
   )
 
-  const measuredAvoidableMicrocents = sumKnown(
-    costEffects.map((effect) =>
-      effect.measurement === "observed" && effect.impact?.kind === "spend"
-        ? effect.impact.avoidableMicrocents
-        : undefined,
-    ),
-  )
-  const estimatedAvoidableMicrocents = sumKnown(
-    costEffects.map((effect) =>
-      effect.measurement === "estimated" && effect.impact?.kind === "spend"
-        ? effect.impact.avoidableMicrocents
-        : undefined,
-    ),
-  )
-  const measuredAvoidableNs = sumKnown(
-    speedEffects.map((effect) =>
-      effect.measurement === "observed" && effect.impact?.kind === "duration" ? effect.impact.avoidableNs : undefined,
-    ),
-  )
-  const estimatedAvoidableNs = sumKnown(
-    speedEffects.map((effect) =>
-      effect.measurement === "estimated" && effect.impact?.kind === "duration" ? effect.impact.avoidableNs : undefined,
-    ),
-  )
+  const { measuredAvoidableMicrocents, estimatedAvoidableMicrocents, measuredAvoidableNs, estimatedAvoidableNs } =
+    resolveAvoidable({ costEffects, speedEffects, avoidable })
   const safetyStatuses = safetyEffects.flatMap((effect) =>
     effect.impact?.kind === "safety" ? [effect.impact.status] : [],
   )
@@ -134,6 +205,7 @@ export const buildSessionDimensionSummaries = ({
     },
     {
       ...baseSummary("cost", costEffects, coverage),
+      families: buildCostFamilySummaries({ costEffects, costReadings }),
       ...(observedMicrocents !== undefined ? { observedMicrocents } : {}),
       ...(measuredAvoidableMicrocents !== undefined ? { measuredAvoidableMicrocents } : {}),
       ...(estimatedAvoidableMicrocents !== undefined ? { estimatedAvoidableMicrocents } : {}),

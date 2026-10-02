@@ -75,6 +75,8 @@ const flaggerCoverageInputSchema = z
 type FlaggerCoverageRecord = {
   readonly fromIso: string
   readonly toIso: string
+  readonly recordingSinceIso: string | null
+  readonly sessionsBeforeRecording: number
   readonly rows: readonly FlaggerCoverageRow[]
 }
 
@@ -142,6 +144,8 @@ export const getProjectFlaggerCoverage = createServerFn({ method: "GET" })
     return {
       fromIso: report.from.toISOString(),
       toIso: report.to.toISOString(),
+      recordingSinceIso: report.recordingSince?.toISOString() ?? null,
+      sessionsBeforeRecording: report.sessionsBeforeRecording,
       rows: FLAGGER_STRATEGY_SLUGS.map(
         (flaggerSlug) =>
           rowsBySlug.get(flaggerSlug) ??

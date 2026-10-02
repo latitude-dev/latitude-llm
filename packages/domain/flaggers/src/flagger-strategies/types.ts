@@ -26,6 +26,7 @@ export const FLAGGER_STRATEGY_SLUGS = [
   "output-schema-validation",
   "empty-response",
   "low-cache-hit-rate",
+  "task-failure",
 ] as const
 
 export type FlaggerSlug = (typeof FLAGGER_STRATEGY_SLUGS)[number]
@@ -66,6 +67,19 @@ export interface FlaggerStrategy {
   readonly annotator?: FlaggerAnnotatorContext
 
   readonly details?: FlaggerDisplayDetails
+
+  /**
+   * Marks a strategy whose classifier answers with a structured verdict instead
+   * of a matched/unmatched detection. The classifier builds the matching
+   * generation schema and output contract for each one, and only the verdicts
+   * that propose an annotation go through the adversarial review. Absent means
+   * the ordinary detection contract.
+   *
+   * The two Safety contracts are separate because their fields are: injection
+   * judges an attack and the assistant's response to it, while PII judges who
+   * authored the personal data.
+   */
+  readonly verdictContract?: "taskOutcome" | "safetyInjection" | "safetyPii"
 
   /**
    * Whether this strategy classifies ONLY the evaluated agent's own assistant
