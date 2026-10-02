@@ -68,21 +68,20 @@ export async function makePassthroughRequest(
     let effectiveInit: RequestInit | undefined = init;
     if (input instanceof Request) {
         url = input.url;
-        // If no explicit init provided, extract properties from the Request object
-        if (init == null) {
-            effectiveInit = {
-                method: input.method,
-                headers: Object.fromEntries(input.headers.entries()),
-                body: input.body,
-                signal: input.signal,
-                credentials: input.credentials,
-                cache: input.cache as RequestCache,
-                redirect: input.redirect,
-                referrer: input.referrer,
-                integrity: input.integrity,
-                mode: input.mode,
-            };
-        }
+        // Let the platform apply Fetch's RequestInit-over-Request merge rules.
+        const request = init == null ? input : new Request(input, init);
+        effectiveInit = {
+            method: request.method,
+            headers: request.headers,
+            body: request.body,
+            signal: request.signal,
+            credentials: request.credentials,
+            cache: request.cache as RequestCache,
+            redirect: request.redirect,
+            referrer: request.referrer,
+            integrity: request.integrity,
+            mode: request.mode,
+        };
     } else {
         url = input instanceof URL ? input.toString() : input;
     }
