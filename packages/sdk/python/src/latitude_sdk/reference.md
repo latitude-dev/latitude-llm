@@ -8603,7 +8603,7 @@ client.members.get(
 <dl>
 <dd>
 
-Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.
+Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.
 </dd>
 </dl>
 </dd>

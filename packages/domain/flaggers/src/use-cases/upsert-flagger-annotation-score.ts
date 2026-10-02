@@ -1,4 +1,5 @@
 import {
+  type AnnotationScore,
   type FlaggerFindingKey,
   type FlaggerPath,
   type SafetyFindingKind,
@@ -217,18 +218,12 @@ const findSafetyFindingByKind = (input: {
 }) =>
   Effect.gen(function* () {
     const scoreRepository = yield* ScoreRepository
-    const published = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
+    return yield* scoreRepository.findPublishedSystemSafetyFindingByKind({
       projectId: input.projectId,
       sessionId: input.sessionId as SessionId,
       flaggerSlug: input.flaggerSlug,
+      safetyFindingKind: input.safetyFindingKind,
     })
-
-    return (
-      published.find((score) => {
-        const metadata = score.metadata as { flaggerSlug?: string; safetyFindingKind?: string } | null
-        return metadata?.flaggerSlug === input.flaggerSlug && metadata?.safetyFindingKind === input.safetyFindingKind
-      }) ?? null
-    )
   })
 
 export interface UpsertSafetyFindingScoreInput extends FlaggerScoreInput {
@@ -255,6 +250,31 @@ export const upsertSafetyFindingScore = (input: UpsertSafetyFindingScoreInput) =
     })
 
     if (existing !== null) {
+      if (input.analysisHash !== undefined) {
+        const existingMetadata = existing.metadata as { analysisHash?: string } | null
+        if (existingMetadata?.analysisHash !== input.analysisHash) {
+          const scoreRepository = yield* ScoreRepository
+          // Re-read before save so a concurrent assignSignalIfUnowned is not
+          // clobbered by spreading a stale in-memory row (full upsert writes signalId).
+          const current = yield* scoreRepository.findById(existing.id)
+          if (current.sourceType === "annotation") {
+            const currentMetadata = current.metadata as { analysisHash?: string }
+            if (currentMetadata.analysisHash !== input.analysisHash) {
+              const refreshed = {
+                ...current,
+                traceId: input.traceId,
+                feedback: input.feedback,
+                metadata: {
+                  ...current.metadata,
+                  ...flaggerScoreMetadata(input),
+                },
+                updatedAt: new Date(),
+              } satisfies AnnotationScore
+              yield* scoreRepository.save(refreshed)
+            }
+          }
+        }
+      }
       return { status: "existing", scoreId: existing.id } satisfies FlaggerScoreResult
     }
 

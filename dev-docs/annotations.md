@@ -34,6 +34,26 @@ Rationale:
 - API clients retain the generated annotation id and use `GET`, `PATCH`, and `DELETE /v1/projects/:projectSlug/annotations/:annotationId` for its lifecycle
 - PATCH updates the same Postgres and ClickHouse score id, clears prior signal ownership, and emits an `AnnotationUpdated` event so discovery and alignment reprocess the current value
 
+### Project-scoped vs trace-scoped reads
+
+Writes and id-keyed lifecycle stay on the **annotations** resource:
+
+| Method | Path | Role |
+| --- | --- | --- |
+| `POST` | `/v1/projects/:projectSlug/annotations` | Create a published annotation (trace resolved by id or filters). |
+| `GET` | `/v1/projects/:projectSlug/annotations/:annotationId` | Fetch one API-created annotation by its stable id. |
+| `PATCH` | `/v1/projects/:projectSlug/annotations/:annotationId` | Update an API-created annotation in place. |
+| `DELETE` | `/v1/projects/:projectSlug/annotations/:annotationId` | Delete an API-created annotation. |
+
+Read-only listing for everything pinned to a conversation lives under **traces** (same `AnnotationSchema`, including drafts the UI has not published yet):
+
+| Method | Path | Role |
+| --- | --- | --- |
+| `GET` | `/v1/projects/:projectSlug/traces/:traceId/annotations` | Cursor-paginated list (`limit`, `cursor` offset token). |
+| `GET` | `/v1/projects/:projectSlug/traces/:traceId/annotations/:annotationId` | Fetch one annotation on that trace by id. |
+
+Use trace routes when building a feedback UI around a session or trace without prefetching ids. Use project routes when the client already holds the annotation id from `POST` and needs to mutate it. OAuth attribution on create follows the same rule as other human-actor endpoints: an OAuth bearer sets `annotatorId`; an API key does not.
+
 ## Draft Annotations
 
 Annotations can exist as drafts in two main ways:

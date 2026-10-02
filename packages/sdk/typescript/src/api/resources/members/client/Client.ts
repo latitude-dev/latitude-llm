@@ -252,13 +252,14 @@ export class MembersClient {
     }
 
     /**
-     * Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.
+     * Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.
      *
      * @param {string} memberId - Membership identifier.
      * @param {Latitude.RemoveMembersRequest} request
      * @param {MembersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.ForbiddenError}
      * @throws {@link Latitude.NotFoundError}
      * @throws {@link errors.LatitudeError}
      * @throws {@link errors.LatitudeTimeoutError}
@@ -312,6 +313,8 @@ export class MembersClient {
                         _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
+                case 403:
+                    throw new Latitude.ForbiddenError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 404:
                     throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
