@@ -1,14 +1,13 @@
 import type { NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
-import { resolveSessionAssessmentItems } from "../resolver/resolve-assessment-findings.ts"
+import { resolveSessionAssessmentItemsWithChronology } from "../resolver/resolve-assessment-findings.ts"
 import type { IssueObservation } from "./build-issue-rows.ts"
-import { buildIssueRows, ISSUE_ROW_LIMIT, type IssueRow, type IssueSession } from "./build-issue-rows.ts"
+import { buildIssueRows, type IssueRow, type IssueSession } from "./build-issue-rows.ts"
 import { buildSafetyIssues, type SafetyIssues } from "./build-safety-issues.ts"
 import type { ProjectOutcomeEstimate } from "./estimate-outcome.ts"
 import type { ProjectSafetyEstimate } from "./estimate-safety.ts"
 import { readOutcomeIssueObservations } from "./read-outcome-issue-observations.ts"
 import { readSafetyIssueObservations, type SafetyIssueObservations } from "./read-safety-issue-observations.ts"
 
-const TASK_OUTCOME_SLUG = "task-failure"
 const SAFETY_SUITE_SLUGS: readonly string[] = ["jailbreaking", "pii-leakage"]
 
 /** One session's issue observations, kept rather than its whole assessment. */
@@ -16,6 +15,8 @@ export interface SessionIssueEvidence {
   readonly sessionId: string
   readonly outcome: readonly IssueObservation[]
   readonly safety: SafetyIssueObservations
+  /** Whether conversation analysis ran, which is the denominator moment-derived rows are read against. */
+  readonly momentsAnalyzed: boolean
 }
 
 const decisionProbability = (
@@ -37,26 +38,26 @@ const decisionProbability = (
  * Only the observations survive the batch; the items they came from do not.
  */
 export const readSessionIssueEvidence = (session: NormalizedSessionAssessmentInput): SessionIssueEvidence => {
-  const items = resolveSessionAssessmentItems(session.findings)
+  const items = resolveSessionAssessmentItemsWithChronology(session.findings)
   const eligibleSignalIds = new Set(session.scoringEligibleSignalIds)
   // A signal discovered from the verdict score rode the verdict's own draw. Without this the two
   // probabilities multiply and the issue's reach comes out an order of magnitude too large.
   const verdictScoreIds = session.findings.flatMap((finding) =>
     finding.kind === "taskOutcome" ? [...finding.scoreIds] : [],
   )
-  const outcomeProbability = decisionProbability(session, [TASK_OUTCOME_SLUG])
   const safetyProbability = decisionProbability(session, SAFETY_SUITE_SLUGS)
 
   return {
     sessionId: session.sessionId,
+    momentsAnalyzed: session.momentsAnalyzed,
     outcome: readOutcomeIssueObservations({
       items,
       eligibleSignalIds,
       verdictScoreIds,
-      ...(outcomeProbability !== undefined ? { observationProbability: outcomeProbability } : {}),
+      momentsAnalyzed: session.momentsAnalyzed,
     }),
     safety: readSafetyIssueObservations({
-      items,
+      items: items.map(({ item }) => item),
       eligibleSignalIds,
       ...(safetyProbability !== undefined ? { observationProbability: safetyProbability } : {}),
     }),
@@ -85,7 +86,7 @@ export const buildWindowIssues = ({
   evidence,
   outcome,
   safety,
-  rowLimit = ISSUE_ROW_LIMIT,
+  rowLimit,
 }: {
   readonly evidence: readonly SessionIssueEvidence[]
   readonly outcome: ProjectOutcomeEstimate
@@ -117,8 +118,22 @@ export const buildWindowIssues = ({
     observations: byId.get(examined.sessionId)?.safety ?? { confirmedHarm: [], exposure: [] },
   }))
 
+  // Only the sessions the estimator used, and only the analyzed ones among them: a moment row that
+  // divided by every judged session would report a rate for a population its reader never saw.
+  const outcomeSessionIds = new Set(outcomeSessions.map((session) => session.sessionId))
+  const analyzedSessionCount = evidence.filter(
+    (session) => session.momentsAnalyzed && outcomeSessionIds.has(session.sessionId),
+  ).length
+
   return {
-    outcome: buildIssueRows({ sessions: outcomeSessions, rowLimit }),
-    safety: buildSafetyIssues({ sessions: safetySessions, rowLimit }),
+    outcome: buildIssueRows({
+      sessions: outcomeSessions,
+      basisSessionCounts: { eligible: outcomeSessions.length, analyzed: analyzedSessionCount },
+      ...(rowLimit !== undefined ? { rowLimit } : {}),
+    }),
+    safety: buildSafetyIssues({
+      sessions: safetySessions,
+      ...(rowLimit !== undefined ? { rowLimit } : {}),
+    }),
   }
 }

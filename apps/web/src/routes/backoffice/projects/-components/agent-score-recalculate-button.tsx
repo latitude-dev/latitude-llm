@@ -55,7 +55,7 @@ export function AgentScoreRecalculateButton({ projectId, projectName }: AgentSco
             description={
               <Text.H5 color="foregroundMuted">
                 Recompute today's Agent Score for <span className="font-medium text-foreground">{projectName}</span> and
-                refresh the cause rows and coverage the page shows.
+                refresh the evidence for the latest displayed score.
               </Text.H5>
             }
           />
@@ -66,7 +66,7 @@ export function AgentScoreRecalculateButton({ projectId, projectName }: AgentSco
             </Text.H5>
             <Alert
               variant="warning"
-              description="A score already published for today will not change. The stored score records what was published on that date; only the evidence explaining it is refreshed. A day with no score can still gain one."
+              description="Published scores will not change. Stored scores record what was published on each date; only their evidence is refreshed. Today can still gain a score if none has been published yet."
             />
           </Modal.Body>
           <Modal.Footer>

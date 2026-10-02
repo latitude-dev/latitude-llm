@@ -4,8 +4,8 @@ import { LAUNCH_COST_SCORING_ARTIFACT } from "../artifacts/launch-cost-scoring-a
 import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
 import type { WindowSpeedAggregate } from "./bootstrap-window.ts"
-import type { FamilyReadingCoverage, WindowFold } from "./fold-window-contributions.ts"
-import { gateCostWindow, gateSpeedWindow } from "./window-gates.ts"
+import { EMPTY_WINDOW_FOLD, type FamilyReadingCoverage, type WindowFold } from "./fold-window-contributions.ts"
+import { gateCostWindow, gateSpeedWindow, UNREFERENCED_LATENCY_MODEL_LIMIT } from "./window-gates.ts"
 
 const COST_FLOORS = LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.cost
 const SPEED_FLOORS = LAUNCH_AGENT_SCORE_ARTIFACT.dimensionFloors.speed
@@ -18,12 +18,9 @@ const familyCoverage = (
   ) as Record<CostFamily, FamilyReadingCoverage>
 
 const fold = (overrides: Partial<WindowFold> = {}): WindowFold => ({
-  contributions: [],
+  ...EMPTY_WINDOW_FOLD,
   foldedSessionCount: 1_000,
-  withheldSessionCount: 0,
   familyCoverage: familyCoverage(),
-  costCauseUnits: new Map(),
-  speedCauseNs: new Map(),
   ...overrides,
 })
 
@@ -97,17 +94,25 @@ const speedAggregate = (overrides: Partial<WindowSpeedAggregate> = {}): WindowSp
   ...overrides,
 })
 
+type SpeedGateInput = Parameters<typeof gateSpeedWindow>[0]
+
+const gateSpeed = (
+  overrides: Omit<SpeedGateInput, "missingLatencyReferenceSessionCount" | "unreferencedLatencyModels"> &
+    Partial<Pick<SpeedGateInput, "missingLatencyReferenceSessionCount" | "unreferencedLatencyModels">>,
+) => gateSpeedWindow({ missingLatencyReferenceSessionCount: 0, unreferencedLatencyModels: [], ...overrides })
+
 describe("gateSpeedWindow", () => {
   it("publishes when enough critical paths reconstructed", () => {
-    expect(
-      gateSpeedWindow({ speed: speedAggregate(), eligibleSessionCount: 1_000, floors: SPEED_FLOORS }),
-    ).toMatchObject({ coverage: "measured", completeSessionCount: 800 })
+    expect(gateSpeed({ speed: speedAggregate(), eligibleSessionCount: 1_000, floors: SPEED_FLOORS })).toMatchObject({
+      coverage: "measured",
+      completeSessionCount: 800,
+    })
   })
 
   it("withholds below the complete-path session floor", () => {
     expect(
-      gateSpeedWindow({
-        speed: speedAggregate({ includedSessionCount: 50 }),
+      gateSpeed({
+        speed: speedAggregate({ includedSessionCount: 49 }),
         eligibleSessionCount: 1_000,
         floors: SPEED_FLOORS,
       }),
@@ -116,7 +121,7 @@ describe("gateSpeedWindow", () => {
 
   it("withholds when the reconstructed sessions describe too little of the base", () => {
     expect(
-      gateSpeedWindow({
+      gateSpeed({
         speed: speedAggregate({ includedSessionCount: 300, excludedSessionCount: 9_700 }),
         eligibleSessionCount: 10_000,
         floors: SPEED_FLOORS,
@@ -126,11 +131,73 @@ describe("gateSpeedWindow", () => {
 
   it("withholds when there is no observed time to divide by", () => {
     expect(
-      gateSpeedWindow({
+      gateSpeed({
         speed: speedAggregate({ observedNs: 0, avoidableNs: 0 }),
         eligibleSessionCount: 1_000,
         floors: SPEED_FLOORS,
       }),
     ).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "noObservedTime" })
+  })
+
+  it("publishes over the judged sessions when a few ran through an unreferenced model", () => {
+    const gpt5Mini = { provider: "openai", model: "gpt-5-mini", sessionCount: 10 }
+    expect(
+      gateSpeed({
+        speed: speedAggregate({ includedSessionCount: 790, excludedSessionCount: 210 }),
+        eligibleSessionCount: 1_000,
+        missingLatencyReferenceSessionCount: 10,
+        unreferencedLatencyModels: [gpt5Mini],
+        floors: SPEED_FLOORS,
+      }),
+    ).toEqual({
+      coverage: "measured",
+      completeSessionCount: 790,
+      incompleteSessionCount: 210,
+      completeShareOfEligible: 0.79,
+      missingLatencyReferenceSessionCount: 10,
+      unreferencedLatencyModels: [gpt5Mini],
+    })
+  })
+
+  it("blames the missing references when they are what took Speed below a floor", () => {
+    expect(
+      gateSpeed({
+        speed: speedAggregate({ includedSessionCount: 300, excludedSessionCount: 700 }),
+        eligibleSessionCount: 1_000,
+        missingLatencyReferenceSessionCount: 600,
+        unreferencedLatencyModels: [{ provider: "anthropic", model: "claude-fable-5", sessionCount: 600 }],
+        floors: SPEED_FLOORS,
+      }),
+    ).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "latencyReferenceCoverage" })
+  })
+
+  it("keeps the structural reason when references alone would not clear the floor", () => {
+    expect(
+      gateSpeed({
+        speed: speedAggregate({ includedSessionCount: 300, excludedSessionCount: 700 }),
+        eligibleSessionCount: 1_000,
+        missingLatencyReferenceSessionCount: 100,
+        unreferencedLatencyModels: [{ provider: "anthropic", model: "claude-fable-5", sessionCount: 100 }],
+        floors: SPEED_FLOORS,
+      }),
+    ).toMatchObject({ coverage: "unmeasured", unmeasuredReason: "completePathCoverageFloor" })
+  })
+
+  it("names the models with the most excluded sessions first, up to the limit", () => {
+    const models = Array.from({ length: UNREFERENCED_LATENCY_MODEL_LIMIT + 2 }, (_, index) => ({
+      provider: "openai",
+      model: `model-${String(index).padStart(2, "0")}`,
+      sessionCount: index + 1,
+    }))
+    const gate = gateSpeed({
+      speed: speedAggregate(),
+      eligibleSessionCount: 1_000,
+      missingLatencyReferenceSessionCount: 100,
+      unreferencedLatencyModels: models,
+      floors: SPEED_FLOORS,
+    })
+
+    expect(gate.unreferencedLatencyModels).toHaveLength(UNREFERENCED_LATENCY_MODEL_LIMIT)
+    expect(gate.unreferencedLatencyModels[0]).toEqual(models.at(-1))
   })
 })

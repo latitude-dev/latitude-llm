@@ -19,6 +19,10 @@ class AgentScoreCauseRow(UniversalBaseModel):
             alias="causeId", description="Stable identifier of the metric, claim or finding kind behind this row."
         ),
     ]
+    """
+    Stable identifier of the metric, claim or finding kind behind this row.
+    """
+
     label: str = pydantic.Field()
     """
     Human-readable name for the cause.
@@ -32,6 +36,10 @@ class AgentScoreCauseRow(UniversalBaseModel):
             description="Points of the dimension's deficit attributed to this cause. Attributed deficits across a dimension add up; they are not a prediction of what fixing it returns.",
         ),
     ]
+    """
+    Points of the dimension's deficit attributed to this cause. Attributed deficits across a dimension add up; they are not a prediction of what fixing it returns.
+    """
+
     fix_gain: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="fixGain"),
@@ -40,6 +48,10 @@ class AgentScoreCauseRow(UniversalBaseModel):
             description="Points the dimension would recover if this cause alone disappeared. Fix gains overlap between causes and must never be summed.",
         ),
     ]
+    """
+    Points the dimension would recover if this cause alone disappeared. Fix gains overlap between causes and must never be summed.
+    """
+
     evidence: AgentScoreCauseRowEvidence = pydantic.Field()
     """
     `measured` when the reader observed the effect directly; `associated` when it was estimated from matched comparison sessions and no causal claim is made.
@@ -53,6 +65,10 @@ class AgentScoreCauseRow(UniversalBaseModel):
             description="The effect in the dimension's own terms, which is what the row shows beside the points.",
         ),
     ]
+    """
+    The effect in the dimension's own terms, which is what the row shows beside the points.
+    """
+
     observation_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="observationCount"),
@@ -61,6 +77,10 @@ class AgentScoreCauseRow(UniversalBaseModel):
             description="Independent observations behind the row. Coverage context, not a score.",
         ),
     ]
+    """
+    Independent observations behind the row. Coverage context, not a score.
+    """
+
     destination: typing.Optional[AgentScoreCauseRowDestination] = pydantic.Field(default=None)
     """
     Product section that owns this evidence, or `null` when nothing specific can be opened.

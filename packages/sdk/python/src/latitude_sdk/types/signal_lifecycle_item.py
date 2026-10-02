@@ -14,6 +14,10 @@ class SignalLifecycleItem(UniversalBaseModel):
         FieldMetadata(alias="signalId"),
         pydantic.Field(alias="signalId", description="Signal this entry applies to."),
     ]
+    """
+    Signal this entry applies to.
+    """
+
     resolved_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="resolvedAt"),
@@ -23,6 +27,10 @@ class SignalLifecycleItem(UniversalBaseModel):
             description="ISO-8601 timestamp at which the signal was resolved, or `null`.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the signal was resolved, or `null`.
+    """
+
     ignored_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="ignoredAt"),
@@ -32,6 +40,10 @@ class SignalLifecycleItem(UniversalBaseModel):
             description="ISO-8601 timestamp at which the signal was ignored, or `null`.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the signal was ignored, or `null`.
+    """
+
     regressed_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="regressedAt"),
@@ -41,6 +53,10 @@ class SignalLifecycleItem(UniversalBaseModel):
             description="ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`.
+    """
+
     muted_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="mutedAt"),
@@ -50,11 +66,19 @@ class SignalLifecycleItem(UniversalBaseModel):
             description="ISO-8601 timestamp at which notifications were muted, or `null`. Ignoring a signal also mutes it.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which notifications were muted, or `null`. Ignoring a signal also mutes it.
+    """
+
     updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="updatedAt"),
         pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last update."),
     ]
+    """
+    ISO-8601 timestamp of the last update.
+    """
+
     changed: bool = pydantic.Field()
     """
     `true` when this call changed the signal, `false` when it was already in that state.

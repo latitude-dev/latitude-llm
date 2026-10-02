@@ -133,7 +133,7 @@ run_migrations() {
 
 run_optional_seeds() {
   if [ "${LAT_CLOUD_SEED_DATABASES:-1}" = "1" ]; then
-    info "Seeding Postgres and ClickHouse defaults (LAT_CLOUD_SEED_DATABASES=1)."
+    info "Seeding Postgres, ClickHouse, and Agent Score defaults (LAT_CLOUD_SEED_DATABASES=1)."
 
     if [ "$did_pg_reset" = "0" ]; then
       pnpm --filter @platform/db-postgres pg:seed
@@ -146,6 +146,8 @@ run_optional_seeds() {
     else
       info "Skipping ch:seed because ch:reset already seeded ClickHouse."
     fi
+
+    pnpm seed:agent-score
 
     return
   fi

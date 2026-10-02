@@ -12,7 +12,7 @@ import { getSessionAssessment } from "../use-cases/get-session-assessment.ts"
 import { readSessionAssessmentBatch, readSessionAssessmentInputBatch } from "./read-session-assessment-batch.ts"
 
 /**
- * A streaming call the frozen latency reference covers, slower than its published expectation.
+ * A streaming call the frozen latency reference covers, slower than its calibrated expectation.
  *
  * Present so the parity comparison actually exercises the artifact. Without a generation the latency
  * readers are not applicable, both paths agree on nothing, and the test would keep passing if the
@@ -22,10 +22,10 @@ const makeGeneration = (traceId: string): SessionGenerationFact =>
   ({
     traceId: TraceId(traceId),
     spanId: SpanId("generation"),
-    parentSpanId: "",
+    parentSpanId: "root",
     operation: "chat",
     provider: "openai",
-    model: "gpt-4o",
+    model: "gpt-5.6-sol",
     responseModel: "",
     startTime: new Date("2026-01-01T00:00:00.000Z"),
     endTime: new Date("2026-01-01T00:00:03.000Z"),
@@ -39,7 +39,7 @@ const makeGeneration = (traceId: string): SessionGenerationFact =>
     costTotalMicrocents: 1_000,
     costSource: "estimated",
     costPricedProvider: "openai",
-    costPricedModel: "gpt-4o",
+    costPricedModel: "gpt-5.6-sol",
     isStreaming: true,
     timeToFirstTokenNs: 1_500_000_000,
     finishReasons: ["stop"],
@@ -55,6 +55,15 @@ const makeGeneration = (traceId: string): SessionGenerationFact =>
     modelContextState: "known",
     modelContextLimitTokens: 128_000,
   }) as unknown as SessionGenerationFact
+
+const makeRoot = (traceId: string): SessionGenerationFact => ({
+  ...makeGeneration(traceId),
+  spanId: SpanId("root"),
+  parentSpanId: "",
+  operation: "invoke_agent",
+  provider: "",
+  model: "",
+})
 
 const makeSession = (sessionId: string, traceId: string): SessionDetail =>
   ({
@@ -223,7 +232,7 @@ describe("readSessionAssessmentBatch", () => {
             sessions.map((session) => ({
               session,
               spans: [],
-              generations: [makeGeneration("trace-1")],
+              generations: [makeRoot("trace-1"), makeGeneration("trace-1")],
               toolCalls: [],
               memoryEvents: [],
               moments: { moments: [], labels: [] },
@@ -250,6 +259,7 @@ describe("readSessionAssessmentBatch", () => {
     const ttft = assessment?.readers.find((reader) => reader.readerId === "spans.ttft")
     expect(ttft).toMatchObject({ applicable: true, totalCount: 1, readableCount: 1 })
     expect(ttft?.limitation).toBeUndefined()
+    expect(assessment?.costEvidence?.unreferencedLatencyModels).toEqual([])
   })
 
   it("keeps normalized facts and resolved semantics byte-identical between single and bulk reads", async () => {
@@ -265,7 +275,10 @@ describe("readSessionAssessmentBatch", () => {
             .map((session) => ({
               session,
               spans: [],
-              generations: [makeGeneration(session.traceIds[0] ?? "trace-1")],
+              generations: [
+                makeRoot(session.traceIds[0] ?? "trace-1"),
+                makeGeneration(session.traceIds[0] ?? "trace-1"),
+              ],
               toolCalls: [],
               memoryEvents: [],
               moments: { moments: [], labels: [] },

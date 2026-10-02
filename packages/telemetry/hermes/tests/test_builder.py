@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List
 
-from helpers import by_name, span_attrs
+from helpers import attr_map, by_name, span_attrs
 
 from latitude_telemetry_hermes.builder import _Builder
 from latitude_telemetry_hermes.config import reset_config
 from latitude_telemetry_hermes.model import _Span
+from latitude_telemetry_hermes.otlp import _build_otlp
 
 _MESSAGES = [
     {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "ls"}]},
@@ -301,6 +303,30 @@ def test_a_stream_that_ends_unfinished_is_recorded():
     b.on_pre_api_request(**_turn())
     b.on_stream_end(turn_id="turn-1", iteration=1, final_text="", finished=False, error="connection reset")
     assert span_attrs(b.on_post_api_request(**_post()), "llm_request")["hermes.stream.error"] == "connection reset"
+
+
+def test_a_failed_generation_carries_no_error_text_with_capture_disabled():
+    """A provider error often quotes the request it rejected, so it is content."""
+    b = _Builder()
+    b.on_stream_start(turn_id="turn-1", iteration=1, session_id="sess-1")
+    b.on_pre_api_request(**_turn())
+    b.on_stream_end(turn_id="turn-1", iteration=1, final_text="", finished=False, error="stream died mid-prompt: ls")
+    spans = b.on_api_request_error(
+        **_turn(),
+        status_code=400,
+        retryable=False,
+        reason="invalid_request",
+        error={"type": "invalid_request_error", "message": "invalid prompt: 'my secret plan'"},
+    )
+
+    encoded = json.dumps(_build_otlp(spans, allow_content=False))
+    assert "my secret plan" not in encoded
+    assert "stream died mid-prompt" not in encoded
+
+    generation = next(s for s in _build_otlp(spans, allow_content=False)["resourceSpans"][0]["scopeSpans"][0]["spans"])
+    assert generation["status"]["code"] == 2
+    assert "message" not in generation["status"]
+    assert attr_map(generation["attributes"])["error.type"] == "invalid_request"
 
 
 def test_the_route_reaches_metadata_even_when_the_turn_was_framed_first():

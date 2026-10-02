@@ -25,3 +25,13 @@ export const SESSION_ASSESSMENT_CONTENT_BUDGET = {
  * largest session.
  */
 export const SESSION_ASSESSMENT_RESOLVER_CONCURRENCY = 16
+
+/**
+ * How many session ids a cause or issue row carries as examples.
+ *
+ * A sample rather than the set: the window's per-session findings are folded away as each batch
+ * lands, and nothing stores which sessions a cause touched, so a row can offer a way in without
+ * claiming to enumerate its reach. Twenty is enough to recognize a pattern and short enough to
+ * travel in a filter the sessions list accepts.
+ */
+export const CAUSE_EXAMPLE_SESSION_LIMIT = 20

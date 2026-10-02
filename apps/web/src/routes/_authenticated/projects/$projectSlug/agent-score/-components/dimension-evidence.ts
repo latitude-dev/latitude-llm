@@ -22,12 +22,18 @@ export interface DimensionEvidenceRow {
   readonly label: string
   readonly description?: string
   readonly value: string
+  readonly valueKind?: "scorePoints"
   readonly progress: number
   readonly tone: EvidenceTone
   readonly details?: readonly DimensionEvidenceDetail[]
   readonly signalId?: string
   /** Product section that owns this evidence, so a row leads somewhere that can act on it. */
   readonly destination?: CauseDestination
+  /**
+   * Sessions the row can open when no section owns it, which is how a finding says which sessions
+   * it happened in. A sample the window kept, never the row's whole reach.
+   */
+  readonly exampleSessionIds?: readonly string[]
 }
 
 export interface DimensionEvidence {
@@ -38,7 +44,12 @@ export interface DimensionEvidence {
 }
 
 const clamp = (value: number): number => Math.max(0, Math.min(1, value))
-const MIN_VISIBLE_SCORE_IMPACT = 0.05
+
+const issueValue = (observed: number): string => `${formatCount(observed)} ${observed === 1 ? "session" : "sessions"}`
+
+/** Example sessions only when there are some, so a row without them stays inert rather than linking nowhere. */
+const withExamples = (sessionIds: readonly string[] | undefined): { exampleSessionIds?: readonly string[] } =>
+  sessionIds?.length ? { exampleSessionIds: sessionIds } : {}
 
 const DIMENSION_LABELS: Readonly<Record<ScoreDimensionKey, string>> = {
   outcome: "Outcome",
@@ -91,7 +102,10 @@ const formatAttributedCount = (value: number): string =>
 
 const formatNative = (effect: { readonly value: number; readonly unit: string }): string => {
   if (effect.unit === "nanoseconds") return formatDuration(effect.value)
-  if (effect.unit === "sessions") return `${formatCount(Math.round(effect.value))} sessions`
+  if (effect.unit === "sessions") {
+    const sessions = Math.round(effect.value)
+    return `${formatCount(sessions)} ${sessions === 1 ? "session" : "sessions"}`
+  }
   if (effect.unit === "microcents" || effect.unit === "spend") return formatPrice(effect.value / 100_000_000)
   if (effect.unit === "context") return `${formatAttributedCount(effect.value)} tokens`
   if (effect.unit === "tools") return `${formatAttributedCount(effect.value)} call equivalents`
@@ -164,24 +178,33 @@ const issueRows = (
       id: `${prefix}:${issue.issueKey}`,
       label: findingLabel(issue.label),
       ...(description ? { description } : {}),
-      value:
-        estimated === undefined
-          ? `${formatCount(observed)} observed`
-          : `${formatCount(Math.round(estimated))} sessions`,
+      value: issueValue(observed),
       progress: clamp((estimated ?? observed) / maximum),
       tone: "negative" as const,
       ...(issue.signalIds[0] ? { signalId: issue.signalIds[0] } : {}),
+      ...withExamples(issue.exampleSessionIds),
     }
   })
+}
+
+const outcomeJudgedSessions = (explanation: Explanation): number | undefined => {
+  if (explanation.coverage.outcomeSampledSessions !== undefined) return explanation.coverage.outcomeSampledSessions
+
+  // `outcomeExaminedSessions` is no fallback: it adds the deterministic census, which no judge read.
+  const requirement = explanation.readiness?.dimensions
+    ?.find((entry) => entry.scoreDimension === "outcome")
+    ?.requirements.find((entry) => entry.kind === "threshold" && entry.metric === "outcomeEvaluations")
+  return requirement?.kind === "threshold" ? requirement.current : undefined
 }
 
 const endpointCoverage = (dimension: ScoreDimensionKey, explanation: Explanation): DimensionEvidenceRow | null => {
   const eligible = explanation.eligibleSessionCount
   if (dimension === "outcome") {
+    const judged = outcomeJudgedSessions(explanation)
     return coverageRow({
       id: "outcome:endpoint-coverage",
-      label: "Sessions evaluated for outcome",
-      covered: explanation.coverage.outcomeExaminedSessions,
+      label: judged === undefined ? "Sessions evaluated for outcome" : "Sessions directly evaluated for outcome",
+      covered: judged ?? explanation.coverage.outcomeExaminedSessions,
       total: eligible,
     })
   }
@@ -231,7 +254,7 @@ const createEvidence = (): MutableEvidence => ({ affected: [], coverageGaps: [],
 
 const addAttribution = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
   const attribution = explanation.attribution.find((entry) => entry.scoreDimension === dimension)
-  const affectedRows = (attribution?.rows ?? []).filter((row) => row.attributedDeficit > MIN_VISIBLE_SCORE_IMPACT)
+  const affectedRows = (attribution?.rows ?? []).filter((row) => row.attributedDeficit > 0)
   const maximumDeficit = Math.max(1, ...affectedRows.map((row) => row.attributedDeficit))
   for (const row of affectedRows) {
     const description = findingDescription(row.causeId)
@@ -250,6 +273,7 @@ const addAttribution = (evidence: MutableEvidence, dimension: ScoreDimensionKey,
       tone: "negative",
       ...(row.signalId ? { signalId: row.signalId } : {}),
       ...(row.destination ? { destination: row.destination } : {}),
+      ...withExamples(row.exampleSessionIds),
     })
   }
   if (attribution && attribution.residual > 0.05) {
@@ -258,14 +282,67 @@ const addAttribution = (evidence: MutableEvidence, dimension: ScoreDimensionKey,
       label: "Other score impact",
       description: "This portion of the score shortfall could not be assigned to a specific metric or signal.",
       value: `${attribution.residual.toFixed(1)} score points`,
+      valueKind: "scorePoints",
       progress: clamp(attribution.residual / Math.max(1, attribution.totalDeficit)),
       tone: "negative",
     })
   }
 }
 
+const addObservedCauses = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
+  const causes = explanation.observedCauses.filter((cause) => cause.scoreDimension === dimension)
+  const maximum = Math.max(1, ...causes.map((cause) => cause.observationCount))
+  for (const cause of causes) {
+    const description = findingDescription(cause.causeId) ?? findingDescription(cause.label)
+    const row: DimensionEvidenceRow = {
+      id: `${dimension}:observed:${cause.causeId}`,
+      label: cause.signalId ? cause.label : findingLabel(cause.label),
+      ...(description ? { description } : {}),
+      value: formatNative(cause.nativeEffect),
+      progress: clamp(cause.observationCount / maximum),
+      tone: cause.measurement === "notMeasured" ? "neutral" : "negative",
+      details: [
+        { label: "Scoring window", value: `Last ${formatCount(explanation.window.stepDays)} days` },
+        {
+          label: "Evidence",
+          value:
+            cause.measurement === "measured"
+              ? "Directly measured"
+              : cause.measurement === "associated"
+                ? "Observed association"
+                : "Effect not measured yet",
+        },
+      ],
+      ...(cause.signalId ? { signalId: cause.signalId } : {}),
+      ...(cause.destination ? { destination: cause.destination } : {}),
+      ...withExamples(cause.exampleSessionIds),
+    }
+    if (cause.measurement === "notMeasured") evidence.context.push(row)
+    else evidence.affected.push(row)
+  }
+}
+
+/**
+ * Moment-derived issue rows, which attribution now covers with a measured effect.
+ *
+ * The key is `findingGroupKey`'s moment prefix. Keeping both would list the same conversation
+ * evidence twice — once grouped by the kind set a moment carried, once per kind with its points.
+ */
+const isMomentIssue = (issueKey: string): boolean => issueKey.startsWith("issue:moment:")
+
 const addIssues = (evidence: MutableEvidence, dimension: ScoreDimensionKey, explanation: Explanation): void => {
-  if (dimension === "outcome") evidence.affected.push(...issueRows("outcome", explanation.issues.outcome))
+  if (dimension === "outcome") {
+    // Rows, not the entry: `computeAgentScore` attributes Outcome on every publishable window and
+    // stores an empty result when nothing degraded or the component never applied. Testing for the
+    // entry alone would drop moment evidence in exactly the windows that have nothing to replace it.
+    const hasOutcomeAttribution = explanation.attribution.some(
+      (entry) => entry.scoreDimension === "outcome" && entry.rows.length > 0,
+    )
+    const issues = hasOutcomeAttribution
+      ? explanation.issues.outcome.filter((issue) => !isMomentIssue(issue.issueKey))
+      : explanation.issues.outcome
+    evidence.affected.push(...issueRows("outcome", issues))
+  }
   if (dimension === "safety") {
     evidence.affected.push(...issueRows("safety:harm", explanation.issues.safety.confirmedHarm))
     evidence.context.push(
@@ -302,13 +379,32 @@ const addCostFamilies = (evidence: MutableEvidence, dimension: ScoreDimensionKey
   }
 }
 
+const addPublishedOutcomeEvidence = (evidence: MutableEvidence, explanation: Explanation): void => {
+  const judged = outcomeJudgedSessions(explanation)
+  if (judged === undefined || judged <= 0) return
+
+  const eligible = explanation.eligibleSessionCount
+  const share = eligible > 0 ? judged / eligible : 0
+  evidence.context.push({
+    id: "outcome:direct-evaluations",
+    label: "Sessions directly evaluated for outcome",
+    value: `${formatCount(judged)} of ${formatCount(eligible)}`,
+    description: `${formatPercent(share)} of the window, sampled at random`,
+    progress: 1,
+    tone: "neutral",
+  })
+}
+
 const addEndpointCoverage = (
   evidence: MutableEvidence,
   dimension: ScoreDimensionKey,
   snapshot: AgentScoreRecord | null,
   explanation: Explanation,
 ): void => {
-  if (snapshot?.dimensions[dimension]?.score !== undefined) return
+  if (snapshot?.dimensions[dimension]?.score !== undefined) {
+    if (dimension === "outcome") addPublishedOutcomeEvidence(evidence, explanation)
+    return
+  }
   const endpoint = endpointCoverage(dimension, explanation)
   if (!endpoint) return
   if (endpoint.tone !== "positive") evidence.coverageGaps.unshift(endpoint)
@@ -366,7 +462,8 @@ export function buildDimensionEvidence({
   readonly explanation: Explanation
 }): DimensionEvidence {
   const evidence = createEvidence()
-  addAttribution(evidence, dimension, explanation)
+  if (explanation.publication.status === "published") addAttribution(evidence, dimension, explanation)
+  else addObservedCauses(evidence, dimension, explanation)
   addIssues(evidence, dimension, explanation)
   addCostFamilies(evidence, dimension, explanation)
   addEndpointCoverage(evidence, dimension, snapshot, explanation)

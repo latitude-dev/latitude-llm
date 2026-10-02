@@ -53,6 +53,7 @@ const session = ({
   stratum = "openai/gpt-5|from4kTo16k|streaming|medium",
   avoidableNs = 0,
   scoringEligibleSignalIds,
+  unreferencedLatencyModels = [],
 }: {
   readonly sessionId: string
   readonly findings?: readonly AssessmentFinding[]
@@ -60,10 +61,12 @@ const session = ({
   readonly stratum?: string
   readonly avoidableNs?: number
   readonly scoringEligibleSignalIds?: readonly string[]
+  readonly unreferencedLatencyModels?: readonly { readonly provider: string; readonly model: string }[]
 }): NormalizedSessionAssessmentInput =>
   ({
     sessionId: SessionId(sessionId),
     hasReadableUserTask: true,
+    momentsAnalyzed: true,
     observedMicrocents: 0,
     observedDurationNs: 0,
     findings,
@@ -76,6 +79,7 @@ const session = ({
       denominators: EMPTY_COST_FAMILY_DENOMINATORS,
       observedCriticalPathNs: 1_000_000,
       criticalPathComplete: true,
+      unreferencedLatencyModels,
       measuredAvoidableNs: avoidableNs,
       estimatedAvoidableNs: 0,
       measuredAvoidableMicrocents: 0,
@@ -92,6 +96,7 @@ describe("readSessionSignalEvidence", () => {
 
     expect(evidence.linkedSignalIds).toEqual(["signal-1"])
     expect(evidence.unlinkedSignalIds).toEqual([])
+    expect(evidence.signals).toEqual([{ signalId: "signal-1", label: "Signal", scoreDimensions: ["cost"] }])
   })
 
   it("leaves an occurrence unlinked when nothing already charges its evidence", () => {
@@ -154,11 +159,13 @@ const evidenceFor = ({
   clean,
   exposedShare,
   cleanShare,
+  exposedUnreferenced = false,
 }: {
   readonly exposed: number
   readonly clean: number
   readonly exposedShare: number
   readonly cleanShare: number
+  readonly exposedUnreferenced?: boolean
 }): SessionSignalEvidence[] => [
   ...Array.from({ length: exposed }, (_, index) =>
     readSessionSignalEvidence(
@@ -167,6 +174,7 @@ const evidenceFor = ({
         findings: [signalFinding("signal-x", "unlinked.finding")],
         readings: [reading({ adverseUnits: exposedShare * 10 })],
         avoidableNs: 400_000,
+        ...(exposedUnreferenced ? { unreferencedLatencyModels: [{ provider: "openai", model: "gpt-5-mini" }] } : {}),
       }),
     ),
   ),
@@ -232,8 +240,18 @@ describe("buildWindowSignalEffects", () => {
   it("estimates Speed in nanoseconds and shares no cap with Cost", () => {
     const result = build(evidenceFor({ exposed: 30, clean: 30, exposedShare: 0.5, cleanShare: 0.5 }))
 
-    expect(result.avoidableNs).toBeGreaterThan(0)
+    expect(result.avoidableNs).toBeCloseTo(5_400_000, 6)
     expect(result.avoidableNs).toBeGreaterThan(LAUNCH_COST_SCORING_ARTIFACT.residualSignalCap)
+  })
+
+  it("fits Speed only over sessions Speed itself counts, while Cost still sees them", () => {
+    const result = build(
+      evidenceFor({ exposed: 30, clean: 30, exposedShare: 0.8, cleanShare: 0.2, exposedUnreferenced: true }),
+    )
+
+    expect(result.avoidableNs).toBe(0)
+    expect(result.speedResiduals).toEqual([])
+    expect(result.costPenalty).toBeGreaterThan(0)
   })
 
   it("does not compare across workloads, so a bigger stratum is not read as an effect", () => {
