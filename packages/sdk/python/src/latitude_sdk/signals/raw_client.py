@@ -66,7 +66,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -184,7 +184,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         name : str
             Human-readable name. Used to derive the slug.
@@ -292,7 +292,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -371,7 +371,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -416,7 +416,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -522,7 +522,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
@@ -614,7 +614,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -709,7 +709,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -803,7 +803,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -897,7 +897,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -987,7 +987,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -1077,7 +1077,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -1167,7 +1167,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -1257,7 +1257,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -1343,7 +1343,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -1422,7 +1422,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -1468,7 +1468,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -1575,7 +1575,7 @@ class RawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         recipient : str
             Email address the download link is sent to. Must belong to a member of the requesting organization.
@@ -1696,7 +1696,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -1814,7 +1814,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         name : str
             Human-readable name. Used to derive the slug.
@@ -1922,7 +1922,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -2001,7 +2001,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -2046,7 +2046,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -2152,7 +2152,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_iso : typing.Optional[dt.datetime]
             Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
@@ -2244,7 +2244,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -2339,7 +2339,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -2433,7 +2433,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -2527,7 +2527,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -2617,7 +2617,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -2707,7 +2707,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -2797,7 +2797,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -2887,7 +2887,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_ids : typing.Sequence[str]
             Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
@@ -2973,7 +2973,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -3052,7 +3052,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -3098,7 +3098,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         signal_slug : str
             Signal slug.
@@ -3205,7 +3205,7 @@ class AsyncRawSignalsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         recipient : str
             Email address the download link is sent to. Must belong to a member of the requesting organization.

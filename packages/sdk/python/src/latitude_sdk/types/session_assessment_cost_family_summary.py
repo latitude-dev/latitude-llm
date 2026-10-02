@@ -26,11 +26,19 @@ class SessionAssessmentCostFamilySummary(UniversalBaseModel):
             description="Aggregate measurement state across this family's metrics. This is not a health label.",
         ),
     ]
+    """
+    Aggregate measurement state across this family's metrics. This is not a health label.
+    """
+
     observed_item_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="observedItemCount"),
         pydantic.Field(alias="observedItemCount", description="Evidence items carrying this family."),
     ]
+    """
+    Evidence items carrying this family.
+    """
+
     metrics: typing.List[SessionAssessmentCostMetricEvidence] = pydantic.Field()
     """
     Aggregate session-safe readings for this family's metrics.
@@ -43,5 +51,8 @@ class SessionAssessmentCostFamilySummary(UniversalBaseModel):
             alias="nativeImpact", default=None, description="Family impact in its own unit, when aggregated."
         ),
     ]
+    """
+    Family impact in its own unit, when aggregated.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

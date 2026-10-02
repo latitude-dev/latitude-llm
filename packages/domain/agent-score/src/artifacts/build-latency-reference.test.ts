@@ -105,8 +105,8 @@ describe("buildLatencyReferenceArtifact", () => {
     expect(expectation.provenance).toBe("unmeasured")
   })
 
-  it("reproduces the same artifact from the same samples and gates", () => {
+  it("reproduces the same artifact when the source returns samples in another order", () => {
     const samples = [sample(), sample({ model: "gpt-5" })]
-    expect(build({ ttftSamples: samples }).artifact).toEqual(build({ ttftSamples: samples }).artifact)
+    expect(build({ ttftSamples: samples }).artifact).toEqual(build({ ttftSamples: [...samples].reverse() }).artifact)
   })
 })

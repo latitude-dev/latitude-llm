@@ -129,7 +129,7 @@ class MembersClient:
 
     def remove(self, member_id: str, *, request_options: typing.Optional[RequestOptions] = None) -> None:
         """
-        Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.
+        Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.
 
         Parameters
         ----------
@@ -333,7 +333,7 @@ class AsyncMembersClient:
 
     async def remove(self, member_id: str, *, request_options: typing.Optional[RequestOptions] = None) -> None:
         """
-        Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.
+        Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.
 
         Parameters
         ----------

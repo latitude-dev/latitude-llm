@@ -25,7 +25,13 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
-import { jsonBody, openApiNoContentResponses, PROTECTED_SECURITY, typedResponses } from "../openapi/schemas.ts"
+import {
+  errorResponse,
+  jsonBody,
+  openApiNoContentResponses,
+  PROTECTED_SECURITY,
+  typedResponses,
+} from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 import { requireOAuthUserId } from "../utils/require-oauth.ts"
 
@@ -295,16 +301,28 @@ const removeMember = memberEndpoint({
     sdkMethod: "remove",
     summary: "Remove a member",
     description:
-      "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.",
+      "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.",
     security: PROTECTED_SECURITY,
     request: { params: MemberIdParamsSchema },
-    responses: openApiNoContentResponses({ description: "Member removed" }),
+    responses: {
+      ...openApiNoContentResponses({ description: "Member removed" }),
+      403: errorResponse("Only organization owners and admins can remove members"),
+    },
   }),
   access: "destructive",
   rateLimitTier: "low",
   execute: (input, ctx) =>
     Effect.gen(function* () {
       const requestingUserId = yield* requireOAuthUserId(ctx.auth)
+
+      const membershipRepo = yield* MembershipRepository
+      const isAdmin = yield* membershipRepo.isAdmin(ctx.organization.id, requestingUserId)
+      if (!isAdmin) {
+        return yield* new ForbiddenError({
+          message: "Only organization owners and admins can remove members",
+        })
+      }
+
       yield* removeMemberUseCase({ membershipId: MembershipId(input.params.memberId), requestingUserId })
       return { status: 204 } as const
     }).pipe(withPostgres(MembershipRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
