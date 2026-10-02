@@ -25,13 +25,15 @@ export class UsersClient {
     /**
      * Returns a page of the project's identified end-users over the range, each with trace, session, token, and cost metrics, plus cost aggregates across every matching user. The range defaults to the trailing 30 days.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.ListUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.users.list("projectSlug")
@@ -120,13 +122,15 @@ export class UsersClient {
     /**
      * Returns project-wide end-user aggregates over the range — unique and new users, identified vs total traces and sessions — plus a per-bucket activity histogram. The range defaults to the trailing 30 days.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.OverviewUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.users.overview("projectSlug")
@@ -210,7 +214,7 @@ export class UsersClient {
     /**
      * Returns the end-user's per-bucket session activity across the range, oldest first. The range defaults to the trailing 30 days.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} userId - End-user identifier. URL-encode values containing special characters.
      * @param {Latitude.ActivityUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -218,6 +222,8 @@ export class UsersClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.users.activity("projectSlug", "userId")
@@ -304,7 +310,7 @@ export class UsersClient {
     /**
      * Returns the end-user's top values of a usage dimension — `model`, `provider`, or `tool` — ranked by distinct trace count.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} userId - End-user identifier. URL-encode values containing special characters.
      * @param {Latitude.UsageUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -312,6 +318,8 @@ export class UsersClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.users.usage("projectSlug", "userId", {
@@ -400,7 +408,7 @@ export class UsersClient {
     /**
      * Returns the signals that occurred on the end-user's traces, most recent occurrence first. Occurrence counts are scoped to the user; signal identity and lifecycle states are the project's.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} userId - End-user identifier. URL-encode values containing special characters.
      * @param {Latitude.SignalsUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -408,6 +416,8 @@ export class UsersClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.users.signals("projectSlug", "userId")
@@ -492,7 +502,7 @@ export class UsersClient {
     /**
      * Returns the behaviour clusters observed on the end-user's sessions, most frequent first. Counts are scoped to the user; cluster identity comes from the project taxonomy.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} userId - End-user identifier. URL-encode values containing special characters.
      * @param {Latitude.BehavioursUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -500,6 +510,8 @@ export class UsersClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.users.behaviours("projectSlug", "userId")
@@ -584,7 +596,7 @@ export class UsersClient {
     /**
      * Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Capped at the 1000 most recent stores. Each store links to the memory browsing operations under the `memory` group.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} userId - End-user identifier. URL-encode values containing special characters.
      * @param {Latitude.MemoryStoresUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -592,6 +604,8 @@ export class UsersClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.users.memoryStores("projectSlug", "userId")
@@ -668,7 +682,7 @@ export class UsersClient {
     /**
      * Returns the lifetime profile of one end-user — trace, session, token, cost, and activity rollups across all of the user's traces (not range-bound).
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} userId - End-user identifier. URL-encode values containing special characters.
      * @param {Latitude.GetUsersRequest} request
      * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -676,6 +690,8 @@ export class UsersClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.users.get("projectSlug", "userId")

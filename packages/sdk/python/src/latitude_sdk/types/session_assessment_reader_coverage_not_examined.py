@@ -23,6 +23,10 @@ class SessionAssessmentReaderCoverageNotExamined(UniversalBaseModel):
         FieldMetadata(alias="readerId"),
         pydantic.Field(alias="readerId", description="Stable identifier of the evidence reader."),
     ]
+    """
+    Stable identifier of the evidence reader.
+    """
+
     label: str = pydantic.Field()
     """
     Human-readable reader name.
@@ -33,6 +37,10 @@ class SessionAssessmentReaderCoverageNotExamined(UniversalBaseModel):
         FieldMetadata(alias="scoreDimensions"),
         pydantic.Field(alias="scoreDimensions", description="Dimensions the reader can inform."),
     ]
+    """
+    Dimensions the reader can inform.
+    """
+
     limitation: SessionAssessmentReaderCoverageNotExaminedLimitation = pydantic.Field()
     """
     Reason the reader could not completely examine the session.

@@ -21,18 +21,28 @@ path = "cli/latitude/main.rs"
 [features]
 # TLS backend selection.
 #
-#   default = ["native-tls"]
-#       Uses the OS's native TLS stack (Secure Transport on macOS, SChannel on
+# The backend is chosen per target by the `[target.'cfg(...)'.dependencies]`
+# tables below, so a plain `cargo build` produces a working binary for every
+# target we distribute: musl targets get rustls (a static binary cannot link
+# the system OpenSSL), everything else gets the platform's native stack.
+# `default` is therefore empty — a non-empty default would re-enable
+# native-tls on musl and break the build, including under build systems that
+# offer no way to pass per-target cargo flags (cargo-dist).
+#
+# The two features remain as explicit overrides:
+#
+#   native-tls   (cargo build --features native-tls)
+#       The OS's native TLS stack (Secure Transport on macOS, SChannel on
 #       Windows, OpenSSL on Linux). Honors the OS keychain / cert store —
 #       what users typically expect for an interactive CLI.
 #
-#   ["rustls"]   (cargo build --no-default-features --features rustls)
-#       Uses the pure-Rust rustls crate with Mozilla's bundled webpki roots.
-#       Produces self-contained static binaries that don't depend on system
-#       OpenSSL — preferred for distribution to varied Linux servers, scratch
-#       Docker images, and cross-compiled musl/ARM builds. Does NOT read the
-#       OS keychain; users must use `<NAME>_CA_BUNDLE` for custom roots.
-default = ["native-tls"]
+#   rustls       (cargo build --features rustls)
+#       The pure-Rust rustls crate. Produces self-contained binaries that
+#       don't depend on system OpenSSL — preferred for distribution to varied
+#       Linux servers, scratch Docker images, and cross-compiled musl/ARM
+#       builds. Does NOT read the OS keychain; users must use
+#       `<NAME>_CA_BUNDLE` for custom roots.
+default = []
 native-tls = ["reqwest/native-tls", "tokio-tungstenite/native-tls"]
 rustls = ["reqwest/rustls-tls-native-roots", "tokio-tungstenite/rustls-tls-native-roots"]
 
@@ -49,7 +59,40 @@ futures-util = "0.3"
 httpdate = "1"
 libc = "0.2"
 percent-encoding = "2.3.2"
-reqwest = { version = "0.12", features = ["json", "multipart", "stream"], default-features = false }
+# `gzip` is not used by this crate directly — it is declared so the shipped
+# Cargo.lock contains the gzip dependency closure. The generated API SDK crate
+# enables `reqwest/gzip`, and because Cargo unifies features across a workspace
+# reqwest is built with it regardless; without it declared here the lock is
+# missing `async-compression` & friends and the generated output fails
+# `cargo build --locked` / `cargo audit`. See patchCargoToml.ts, which inserts
+# the generated crates into the lock but cannot resolve their registry closure.
+reqwest = { version = "0.12", features = ["json", "multipart", "stream", "gzip"], default-features = false }
+
+# --- Lock-closure-only dependencies ---
+#
+# Not used by this crate. They are declared `optional` and enabled by no
+# feature, so they never enter the build graph — but Cargo.lock records the
+# whole dependency graph regardless of features, so declaring them here pins
+# them (and their transitive closure) in the shipped lock.
+#
+# Why that is needed: the generated model/SDK crates depend on these, and
+# `patchCargoToml.ts` inserts those crates into the lock as workspace members
+# without being able to resolve their registry closure. Any package they need
+# that is absent from this lock makes the generated output fail
+# `cargo build --locked`, `cargo metadata --locked` and `cargo audit` — which
+# fails silently in the sense that the build still works, so dependency
+# auditing is quietly disabled instead of erroring.
+#
+# Versions must match what the model generator emits (see
+# generators/rust/model). If a generated crate gains a dependency, add it here.
+chrono = { version = "0.4", features = ["serde"], optional = true }
+num-bigint = { version = "0.4", features = ["serde"], optional = true }
+ordered-float = { version = "4.5", features = ["serde"], optional = true }
+# Added by the generated SDK crate for specs with server-sent events (see
+# AbstractRustGeneratorContext, which declares these two behind an `sse` feature).
+reqwest-sse = { version = "0.1", optional = true }
+pin-project = { version = "1.1", optional = true }
+
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_json_path = "0.7"
@@ -58,7 +101,11 @@ secrecy = "0.10"
 serde_qs = "1.1.1"
 sha2 = "0.10"
 thiserror = "2"
-keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "vendored"] }
+# Format-preserving TOML for `profiles.toml`. `toml_edit` rather than `toml`
+# because an older binary must round-trip a file written by a newer one
+# without dropping the fields (or the user's comments) it does not
+# understand — see `profiles::store`.
+toml_edit = "0.22"
 webbrowser = "1"
 rand = "0.8"
 tokio = { version = "1", features = ["full"] }
@@ -70,6 +117,24 @@ tracing-appender = "0.2"
 unicode-normalization = "0.1.25"
 form_urlencoded = "1"
 jmespath = "0.3"
+
+# Per-target TLS backend (see [features] above). Cargo unions the features
+# requested here with those in [dependencies], so each table only names the
+# TLS feature; the rest of the reqwest/tungstenite feature set stays in one
+# place.
+[target.'cfg(target_env = "musl")'.dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots"] }
+tokio-tungstenite = { version = "0.24", default-features = false, features = ["rustls-tls-native-roots"] }
+
+[target.'cfg(not(target_env = "musl"))'.dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["native-tls"] }
+tokio-tungstenite = { version = "0.24", default-features = false, features = ["native-tls"] }
+# The OS keyring backend, absent on musl: `sync-secret-service` reaches D-Bus
+# through libdbus, which cannot be linked into a static binary. A musl build
+# is a static/container build, where secret-service is unreachable anyway, so
+# those binaries use the file-backed credential store (see ADR-0008 and the
+# matching `cfg(not(target_env = "musl"))` gates in src/auth/keyring_store.rs).
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "vendored"] }
 
 [package.metadata.dist]
 dist = true

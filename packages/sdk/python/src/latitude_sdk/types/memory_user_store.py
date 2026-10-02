@@ -16,6 +16,10 @@ class MemoryUserStore(UniversalBaseModel):
             alias="storeId", description="Store the user accessed. The empty string is the unattributed bucket."
         ),
     ]
+    """
+    Store the user accessed. The empty string is the unattributed bucket.
+    """
+
     last_accessed_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="lastAccessedAt"),
@@ -23,5 +27,8 @@ class MemoryUserStore(UniversalBaseModel):
             alias="lastAccessedAt", description="ISO-8601 timestamp of the user's most recent access to the store."
         ),
     ]
+    """
+    ISO-8601 timestamp of the user's most recent access to the store.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

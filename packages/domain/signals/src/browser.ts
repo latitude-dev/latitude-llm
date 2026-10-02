@@ -1,6 +1,7 @@
 // Re-exported so `@domain/monitors` can size its saved-search seasonal window
 // to the same history as the issue detector without depending on `@domain/scores`.
 export { SEASONAL_HISTORY_WEEKS } from "@domain/scores"
+export { bundleKeyFromScore } from "./bundle-key.ts"
 export {
   CANDIDATE_EXPIRY_IDLE_DAYS,
   CANDIDATE_EXPIRY_SWEEP_LIMIT,
@@ -25,6 +26,7 @@ export {
   ESCALATION_THRESHOLD_FACTOR,
   MIN_SEASONAL_SAMPLES,
   NEW_SIGNAL_AGE_DAYS,
+  SIGNAL_BUNDLE_KEY_MAX_LENGTH,
   SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL,
   SIGNAL_DETAILS_MAX_OCCURRENCES,
   SIGNAL_DIMENSION_MIN_RATE_ELEVATION,
