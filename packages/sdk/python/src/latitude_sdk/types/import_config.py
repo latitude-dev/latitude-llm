@@ -18,31 +18,55 @@ class ImportConfig(UniversalBaseModel):
         FieldMetadata(alias="sourceProjectId"),
         pydantic.Field(alias="sourceProjectId", description="Id of the project on the platform the import reads from."),
     ]
+    """
+    Id of the project on the platform the import reads from.
+    """
+
     source_project_name: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="sourceProjectName"),
         pydantic.Field(alias="sourceProjectName", description="Name of the platform project, as shown in Latitude."),
     ]
+    """
+    Name of the platform project, as shown in Latitude.
+    """
+
     source_region: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="sourceRegion"),
         pydantic.Field(alias="sourceRegion", description="Platform region the import runs against."),
     ]
+    """
+    Platform region the import runs against.
+    """
+
     range_from: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="rangeFrom"),
         pydantic.Field(alias="rangeFrom", description="ISO-8601 start of the imported time range (inclusive)."),
     ]
+    """
+    ISO-8601 start of the imported time range (inclusive).
+    """
+
     range_to: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="rangeTo"),
         pydantic.Field(alias="rangeTo", description="ISO-8601 end of the imported time range (exclusive)."),
     ]
+    """
+    ISO-8601 end of the imported time range (exclusive).
+    """
+
     max_traces: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="maxTraces"),
         pydantic.Field(alias="maxTraces", description="Most traces this import will bring in, newest first."),
     ]
+    """
+    Most traces this import will bring in, newest first.
+    """
+
     session_metadata_key: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="sessionMetadataKey"),
@@ -52,5 +76,8 @@ class ImportConfig(UniversalBaseModel):
             description="LangSmith only: run metadata key that groups traces into sessions. `null` elsewhere.",
         ),
     ]
+    """
+    LangSmith only: run metadata key that groups traces into sessions. `null` elsewhere.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

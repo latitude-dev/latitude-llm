@@ -1754,9 +1754,18 @@ release carrying those PRs has been out for a window.
   P6-3: family weights, piecewise curves, caps, coverage floors, tokenizer bounds, and residual-signal
   policy. Publish the calibration report and pin the artifact version. Later production recalibration
   requires a new scoring version.
-- [ ] **P6-54** Build, inspect, and freeze the latency reference from P6-4, and record its cohort
+- [x] **P6-54** Build, inspect, and freeze the latency reference from P6-4, and record its cohort
   coverage and fallback rate. A cohort that cannot be published falls back explicitly and lowers Speed
   coverage rather than silently using a neighbouring cohort's expectation.
+
+  The `latency-reference-v2-calibrated-20260921` freeze uses the closed 2026-06-23 to 2026-09-21
+  fleet window, an exclusive 2026-09-21 08:00 UTC ingestion snapshot, a 200-observation gate, and a
+  5-organization tenant-spread gate. TTFT had 1,281,691 candidate readings: 21 detailed cohorts
+  cover 78.75%, and 11 provider/model roll-ups cover 83.75%.
+  Throughput had 5,742,411 candidate readings: 233 detailed cohorts cover 74.46%, and 28 roll-ups
+  cover 77.94%. Calls outside those exact pairs remain unmeasured. The repeatable
+  `agent-score:calibrate-latency` command emits the deterministic artifact and rejection report for
+  later reviewed freezes; a later freeze requires a new scoring version.
 - [ ] **P6-55** Close D6's open number: choose the target examined count per window for the Outcome
   judge and the Safety suite against measured traffic and measured flagger cost, and record the
   resulting rate distribution across representative projects.

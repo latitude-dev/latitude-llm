@@ -1,5 +1,5 @@
 import type { AgentScoreExplanation } from "@domain/agent-score"
-import { date, doublePrecision, integer, jsonb, uniqueIndex, varchar } from "drizzle-orm/pg-core"
+import { date, doublePrecision, index, integer, jsonb, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, tzTimestamp } from "../schemaHelpers.ts"
 
 export const agentScoreSnapshots = latitudeSchema.table(
@@ -38,5 +38,8 @@ export const agentScoreSnapshots = latitudeSchema.table(
   (t) => [
     organizationRLSPolicy("agent_score_snapshots"),
     uniqueIndex("agent_score_snapshots_project_date_idx").on(t.organizationId, t.projectId, t.date),
+    // The weekly digest sweep reads a date range across every organization, which the unique index
+    // cannot serve because organization leads it.
+    index("agent_score_snapshots_date_idx").on(t.date),
   ],
 )

@@ -26,11 +26,19 @@ class ActiveMember(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization this membership belongs to."),
     ]
+    """
+    Organization this membership belongs to.
+    """
+
     user_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="userId"),
         pydantic.Field(alias="userId", description="Identifier of the user the membership represents."),
     ]
+    """
+    Identifier of the user the membership represents.
+    """
+
     role: ActiveMemberRole = pydantic.Field()
     """
     Member's role within the organization.
@@ -56,5 +64,8 @@ class ActiveMember(UniversalBaseModel):
         FieldMetadata(alias="joinedAt"),
         pydantic.Field(alias="joinedAt", description="ISO-8601 timestamp at which the user joined the organization."),
     ]
+    """
+    ISO-8601 timestamp at which the user joined the organization.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

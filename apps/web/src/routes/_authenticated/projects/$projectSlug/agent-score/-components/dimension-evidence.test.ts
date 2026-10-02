@@ -44,7 +44,31 @@ const explanation = {
     },
     readers: [],
   },
+  readiness: {
+    sessionRequirement: {},
+    dimensions: [
+      {
+        scoreDimension: "outcome",
+        requirements: [{ kind: "threshold", metric: "outcomeEvaluations", current: 0, required: 50, met: false }],
+      },
+    ],
+  },
 } as unknown as Explanation
+
+const withOutcomeEvaluations = (current: number) => ({
+  readiness: {
+    sessionRequirement: {},
+    dimensions: [
+      {
+        scoreDimension: "outcome",
+        requirements: [{ kind: "threshold", metric: "outcomeEvaluations", current, required: 50, met: true }],
+      },
+    ],
+  },
+})
+
+/** An explanation stored before either the judged count or the readiness row existed. */
+const withoutJudgedCount = { readiness: { sessionRequirement: {}, dimensions: [] } }
 
 describe("buildDimensionEvidence", () => {
   it("keeps missing coverage separate from causes", () => {
@@ -52,9 +76,106 @@ describe("buildDimensionEvidence", () => {
 
     expect(evidence.affected).toEqual([])
     expect(evidence.coverageGaps).toEqual([
-      expect.objectContaining({ label: "Sessions evaluated for outcome", value: "0%", progress: 1 }),
+      expect.objectContaining({ label: "Sessions directly evaluated for outcome", value: "0%", progress: 1 }),
     ])
     expect(evidence.coverageGaps[0]).not.toHaveProperty("description")
+  })
+
+  it("counts the judged sample rather than the census in the outcome coverage row", () => {
+    const evidence = buildDimensionEvidence({
+      dimension: "outcome",
+      snapshot: null,
+      explanation: {
+        ...explanation,
+        coverage: { ...explanation.coverage, outcomeExaminedSessions: 90, outcomeSampledSessions: 75 },
+      } as unknown as Explanation,
+    })
+
+    expect(evidence.coverageGaps[0]).toMatchObject({ value: "75%" })
+  })
+
+  it("reads the judged sample off readiness when coverage does not report it", () => {
+    const evidence = buildDimensionEvidence({
+      dimension: "outcome",
+      snapshot: null,
+      explanation: {
+        ...explanation,
+        coverage: { ...explanation.coverage, outcomeExaminedSessions: 90 },
+        ...withOutcomeEvaluations(75),
+      } as unknown as Explanation,
+    })
+
+    expect(evidence.coverageGaps[0]).toMatchObject({
+      label: "Sessions directly evaluated for outcome",
+      value: "75%",
+    })
+  })
+
+  it("stops claiming direct evaluation when no judged count can be recovered", () => {
+    const evidence = buildDimensionEvidence({
+      dimension: "outcome",
+      snapshot: null,
+      explanation: {
+        ...explanation,
+        coverage: { ...explanation.coverage, outcomeExaminedSessions: 90 },
+        ...withoutJudgedCount,
+      } as unknown as Explanation,
+    })
+
+    expect(evidence.coverageGaps[0]).toMatchObject({ label: "Sessions evaluated for outcome", value: "90%" })
+  })
+
+  it("reports the judged sample as context once outcome has published", () => {
+    const evidence = buildDimensionEvidence({
+      dimension: "outcome",
+      snapshot: { dimensions: { outcome: { score: 88 } } } as unknown as Snapshot,
+      explanation: {
+        ...explanation,
+        eligibleSessionCount: 2_600,
+        coverage: { ...explanation.coverage, outcomeExaminedSessions: 90, outcomeSampledSessions: 75 },
+      } as unknown as Explanation,
+    })
+
+    expect(evidence.coverageGaps).toEqual([])
+    expect(evidence.context).toContainEqual(
+      expect.objectContaining({
+        id: "outcome:direct-evaluations",
+        label: "Sessions directly evaluated for outcome",
+        value: "75 of 2,600",
+      }),
+    )
+  })
+
+  it("counts only the judged sample in the published context row, never the census", () => {
+    const published = (coverage: object, readiness: object) =>
+      buildDimensionEvidence({
+        dimension: "outcome",
+        snapshot: { dimensions: { outcome: { score: 88 } } } as unknown as Snapshot,
+        explanation: {
+          ...explanation,
+          eligibleSessionCount: 2_600,
+          coverage: { ...explanation.coverage, ...coverage },
+          ...readiness,
+        } as unknown as Explanation,
+      })
+
+    const recovered = published({ outcomeExaminedSessions: 90 }, withOutcomeEvaluations(75))
+    expect(recovered.context).toContainEqual(expect.objectContaining({ value: "75 of 2,600" }))
+
+    const unrecoverable = published({ outcomeExaminedSessions: 90 }, withoutJudgedCount)
+    expect(unrecoverable.context).not.toContainEqual(expect.objectContaining({ id: "outcome:direct-evaluations" }))
+  })
+
+  it("survives an explanation stored without a readiness block", () => {
+    const { readiness: _readiness, ...withoutReadiness } = explanation as Record<string, unknown>
+
+    expect(() =>
+      buildDimensionEvidence({
+        dimension: "outcome",
+        snapshot: { dimensions: { outcome: { score: 88 } } } as unknown as Snapshot,
+        explanation: withoutReadiness as unknown as Explanation,
+      }),
+    ).not.toThrow()
   })
 
   it("keeps family summaries out of causes and unreadable cost in coverage", () => {
@@ -266,6 +387,121 @@ describe("buildDimensionEvidence", () => {
     expect(evidence.context).toEqual([
       expect.objectContaining({ label: "Prompt injection exposure", value: "2 sessions" }),
     ])
+  })
+
+  describe("moment degradation", () => {
+    const momentAttribution = {
+      scoreDimension: "outcome",
+      rows: [
+        {
+          causeId: "moment:user_frustration",
+          label: "user_frustration",
+          evidence: "associated",
+          nativeEffect: { value: 320, unit: "sessions" },
+          observationCount: 320,
+          attributedDeficit: 4.2,
+          fixGain: 3.1,
+        },
+      ],
+      residual: 0,
+      totalDeficit: 4.2,
+      explainedDeficit: 4.2,
+      method: "exact",
+    }
+
+    const momentIssue = {
+      issueKey: "issue:moment:user_frustration",
+      label: "Users showed frustration",
+      signalIds: [],
+      examinedSessions: 320,
+      examinedAdverseSessions: 40,
+      ranked: true,
+      basis: "analyzed",
+      basisSessionCount: 400,
+    }
+
+    it("shows a degrading kind with its measured effect on the score", () => {
+      const withMoments = {
+        ...explanation,
+        attribution: [momentAttribution],
+        issues: { ...explanation.issues, outcome: [momentIssue] },
+      } as unknown as Explanation
+
+      const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withMoments })
+
+      expect(evidence.affected).toEqual([
+        expect.objectContaining({
+          label: "Users showed frustration",
+          value: "320 sessions",
+          details: expect.arrayContaining([
+            // Association, never measurement: the rule firing is observed, but that those sessions
+            // would otherwise have been clean is the model's claim.
+            { label: "Associated impact on Outcome score", value: "−4.2 points" },
+          ]),
+        }),
+      ])
+    })
+
+    it("does not list the same conversation evidence twice", () => {
+      const withMoments = {
+        ...explanation,
+        attribution: [momentAttribution],
+        issues: { ...explanation.issues, outcome: [momentIssue] },
+      } as unknown as Explanation
+
+      const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withMoments })
+
+      expect(evidence.affected).toHaveLength(1)
+    })
+
+    it("keeps moment rows when attribution ran but found nothing to attribute", () => {
+      // The shape production actually produces: `computeAgentScore` attributes Outcome on every
+      // publishable window, so an entry is always present and is empty whenever nothing degraded.
+      const emptyAttribution = {
+        ...explanation,
+        attribution: [{ ...momentAttribution, rows: [], residual: 0, totalDeficit: 0, explainedDeficit: 0 }],
+        issues: { ...explanation.issues, outcome: [momentIssue] },
+      } as unknown as Explanation
+
+      const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: emptyAttribution })
+
+      expect(evidence.affected).toHaveLength(1)
+      expect(evidence.affected[0]?.label).toBe("Users showed frustration")
+    })
+
+    it("keeps moment rows when no outcome attribution was computed", () => {
+      // Below the analyzed floor there is no attribution, and the rows are still worth showing as
+      // the uncounted evidence they have always been.
+      const withoutAttribution = {
+        ...explanation,
+        issues: { ...explanation.issues, outcome: [momentIssue] },
+      } as unknown as Explanation
+
+      const evidence = buildDimensionEvidence({
+        dimension: "outcome",
+        snapshot: null,
+        explanation: withoutAttribution,
+      })
+
+      expect(evidence.affected).toHaveLength(1)
+      expect(evidence.affected[0]?.details).toBeUndefined()
+    })
+
+    it("leaves other outcome issues alone", () => {
+      const withBoth = {
+        ...explanation,
+        attribution: [momentAttribution],
+        issues: {
+          ...explanation.issues,
+          outcome: [momentIssue, { ...momentIssue, issueKey: "issue:no-output:blank", label: "sessions.no_output" }],
+        },
+      } as unknown as Explanation
+
+      const evidence = buildDimensionEvidence({ dimension: "outcome", snapshot: null, explanation: withBoth })
+
+      expect(evidence.affected).toEqual(expect.arrayContaining([expect.objectContaining({ label: "No output" })]))
+      expect(evidence.affected).toHaveLength(2)
+    })
   })
 
   it("turns internal metric identifiers and units into readable findings", () => {

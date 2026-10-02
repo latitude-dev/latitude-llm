@@ -17,6 +17,10 @@ class AgentScoreDimensionAttribution(UniversalBaseModel):
         FieldMetadata(alias="scoreDimension"),
         pydantic.Field(alias="scoreDimension", description="Dimension explained."),
     ]
+    """
+    Dimension explained.
+    """
+
     rows: typing.List[AgentScoreCauseRow] = pydantic.Field()
     """
     Causes, most responsible first.
@@ -32,6 +36,10 @@ class AgentScoreDimensionAttribution(UniversalBaseModel):
         FieldMetadata(alias="totalDeficit"),
         pydantic.Field(alias="totalDeficit", description="The dimension's whole distance from healthy, in points."),
     ]
+    """
+    The dimension's whole distance from healthy, in points.
+    """
+
     method: AgentScoreDimensionAttributionMethod = pydantic.Field()
     """
     `sampled` when there were too many causes to attribute exactly.
@@ -46,5 +54,8 @@ class AgentScoreDimensionAttribution(UniversalBaseModel):
             description="Standard error of the sampled shares in points, or `null` when attribution was exact.",
         ),
     ]
+    """
+    Standard error of the sampled shares in points, or `null` when attribution was exact.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

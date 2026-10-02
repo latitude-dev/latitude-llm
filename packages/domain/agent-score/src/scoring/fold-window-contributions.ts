@@ -2,9 +2,20 @@ import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostMetricCatalog } from "../entities/cost-metric-catalog.ts"
 import type { CostMetricReading } from "../entities/cost-metric-reading.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
-import type { NormalizedSessionAssessmentInput } from "../entities/session-assessment-input.ts"
+import type {
+  LatencyModel,
+  NormalizedSessionAssessmentInput,
+  NormalizedSessionCostEvidence,
+} from "../entities/session-assessment-input.ts"
 import { aggregateSessionCost, type CostFamilyDenominators } from "./aggregate-session-cost.ts"
 import type { SessionWindowContribution } from "./bootstrap-window.ts"
+
+const missesLatencyReference = (evidence: NormalizedSessionCostEvidence | undefined): boolean =>
+  evidence?.criticalPathComplete === true && evidence.unreferencedLatencyModels.length > 0
+
+/** Whether a session enters Speed at all: its path reconstructed and every model on it is referenced. */
+export const isSpeedUsable = (evidence: NormalizedSessionCostEvidence | undefined): boolean =>
+  evidence?.criticalPathComplete === true && evidence.unreferencedLatencyModels.length === 0
 
 /**
  * One session reduced to the numbers a window needs, and nothing else.
@@ -31,6 +42,7 @@ export const foldSessionContribution = ({
     denominators,
   })
   const evidence = session.costEvidence
+  const missingLatencyReference = missesLatencyReference(evidence)
 
   return {
     sessionId: session.sessionId,
@@ -43,7 +55,8 @@ export const foldSessionContribution = ({
     speed: {
       observedNs: evidence?.observedCriticalPathNs ?? 0,
       avoidableNs: (evidence?.measuredAvoidableNs ?? 0) + (evidence?.estimatedAvoidableNs ?? 0),
-      usableForDenominator: evidence?.criticalPathComplete ?? false,
+      usableForDenominator: isSpeedUsable(evidence),
+      missingLatencyReference,
     },
   }
 }
@@ -77,6 +90,12 @@ export interface WindowFold {
    */
   readonly costCauseUnits: ReadonlyMap<string, { readonly family: CostFamily; readonly penalizedUnits: number }>
   readonly speedCauseNs: ReadonlyMap<string, number>
+  /** Models kept out of Speed for lacking a latency reference, with the sessions each excluded. */
+  readonly unreferencedLatencyModels: ReadonlyMap<string, UnreferencedLatencyModel>
+}
+
+export interface UnreferencedLatencyModel extends LatencyModel {
+  readonly sessionCount: number
 }
 
 const emptyFamilyCoverage = (): Record<CostFamily, FamilyReadingCoverage> =>
@@ -92,6 +111,7 @@ export const EMPTY_WINDOW_FOLD: WindowFold = {
   familyCoverage: emptyFamilyCoverage(),
   costCauseUnits: new Map(),
   speedCauseNs: new Map(),
+  unreferencedLatencyModels: new Map(),
 }
 
 /**
@@ -135,6 +155,16 @@ const recordSpeedCauses = (speedCauseNs: Map<string, number>, avoidableNsByCause
   }
 }
 
+const recordUnreferencedModels = (
+  unreferenced: Map<string, UnreferencedLatencyModel>,
+  models: readonly LatencyModel[],
+) => {
+  for (const { provider, model } of models) {
+    const key = `${provider} ${model}`
+    unreferenced.set(key, { provider, model, sessionCount: (unreferenced.get(key)?.sessionCount ?? 0) + 1 })
+  }
+}
+
 /**
  * Adds one batch's contributions to a running fold.
  *
@@ -157,6 +187,7 @@ export const foldWindowBatch = ({
   const added: SessionWindowContribution[] = []
   const costCauseUnits = new Map(fold.costCauseUnits)
   const speedCauseNs = new Map(fold.speedCauseNs)
+  const unreferencedLatencyModels = new Map(fold.unreferencedLatencyModels)
   const familyCoverage = emptyFamilyCoverage()
   for (const family of COST_FAMILIES) {
     familyCoverage[family] = { ...fold.familyCoverage[family] }
@@ -194,10 +225,14 @@ export const foldWindowBatch = ({
         denominators,
       })
     }
-    if (session.costEvidence?.criticalPathComplete) {
+    const contribution = foldSessionContribution({ session, denominators, artifact, catalog })
+    if (session.costEvidence && contribution.speed.usableForDenominator) {
       recordSpeedCauses(speedCauseNs, session.costEvidence.avoidableNsByCause)
     }
-    added.push(foldSessionContribution({ session, denominators, artifact, catalog }))
+    if (session.costEvidence && contribution.speed.missingLatencyReference) {
+      recordUnreferencedModels(unreferencedLatencyModels, session.costEvidence.unreferencedLatencyModels)
+    }
+    added.push(contribution)
   }
 
   return {
@@ -207,5 +242,6 @@ export const foldWindowBatch = ({
     familyCoverage,
     costCauseUnits,
     speedCauseNs,
+    unreferencedLatencyModels,
   }
 }

@@ -25,13 +25,15 @@ export class IncidentsClient {
     /**
      * Returns incidents in the project, ordered from oldest to newest. The time window defaults to the trailing 7 days.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {Latitude.ListIncidentsRequest} request
      * @param {IncidentsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.incidents.list("projectSlug")
@@ -122,7 +124,7 @@ export class IncidentsClient {
     /**
      * Resolves (closes) an ongoing incident. An already-closed incident is returned unchanged. If the incident's condition triggers again, a new incident will be opened.
      *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} projectSlug - Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
      * @param {string} incidentId - Incident identifier.
      * @param {Latitude.ResolveIncidentsRequest} request
      * @param {IncidentsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -130,6 +132,8 @@ export class IncidentsClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link errors.LatitudeError}
+     * @throws {@link errors.LatitudeTimeoutError}
      *
      * @example
      *     await client.incidents.resolve("projectSlug", "incidentId")

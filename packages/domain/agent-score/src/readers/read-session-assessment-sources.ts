@@ -707,6 +707,7 @@ const readMomentFindings = (facts: SessionMomentFacts): AssessmentFinding[] => {
         independentHumanEvidence: false,
         kind: "moment",
         momentKinds: [...new Set(labels.map((label) => label.kind))],
+        momentLabels: labels.map((label) => ({ kind: label.kind, confidence: label.confidence })),
       },
     ]
   })
@@ -974,12 +975,14 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       ],
       screeningDecisions: input.screeningDecisions,
       scoringEligibleSignalIds: [...scoringEligibleSignalIds(input.signals)],
+      momentsAnalyzed: input.moments.analysisStatus === "analyzed",
       costEvidence: {
         readings: costEvidence.readings,
         workloadStratum: costEvidence.workloadStratum,
         denominators: costEvidence.denominators,
         observedCriticalPathNs: costEvidence.criticalPath.observedNs,
         criticalPathComplete: costEvidence.criticalPath.completeness === "complete",
+        unreferencedLatencyModels: costEvidence.unreferencedLatencyModels,
         measuredAvoidableNs: costEvidence.speed.measuredAvoidableNs,
         estimatedAvoidableNs: costEvidence.speed.estimatedAvoidableNs,
         measuredAvoidableMicrocents: 0,
