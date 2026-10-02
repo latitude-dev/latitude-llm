@@ -131,7 +131,58 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
             score.draftedAt === null,
         ) ?? null,
       ),
-    listPublishedSystemAnnotationsBySession: ({ projectId, sessionId, limit = 200 }) =>
+    findPublishedSystemAnnotationByAnchor: ({ projectId, sessionId, flaggerSlug, contentHash }) =>
+      Effect.succeed(
+        [...scores.values()].find((score) => {
+          if (
+            score.projectId !== projectId ||
+            score.sourceType !== "annotation" ||
+            score.sourceId !== "SYSTEM" ||
+            score.sessionId !== sessionId ||
+            score.draftedAt !== null
+          ) {
+            return false
+          }
+
+          const metadata = score.metadata as { flaggerSlug?: string; contentHash?: string } | null
+          return metadata?.flaggerSlug === flaggerSlug && metadata?.contentHash === contentHash
+        }) ?? null,
+      ),
+    findPublishedSystemVerdictByGeneration: ({ projectId, sessionId, flaggerSlug, analysisHash }) =>
+      Effect.succeed(
+        [...scores.values()].find((score) => {
+          if (
+            score.projectId !== projectId ||
+            score.sourceType !== "annotation" ||
+            score.sourceId !== "SYSTEM" ||
+            score.sessionId !== sessionId ||
+            score.draftedAt !== null
+          ) {
+            return false
+          }
+
+          const metadata = score.metadata as { flaggerSlug?: string; analysisHash?: string } | null
+          return metadata?.flaggerSlug === flaggerSlug && metadata?.analysisHash === analysisHash
+        }) ?? null,
+      ),
+    findPublishedSystemSafetyFindingByKind: ({ projectId, sessionId, flaggerSlug, safetyFindingKind }) =>
+      Effect.succeed(
+        [...scores.values()].find((score) => {
+          if (
+            score.projectId !== projectId ||
+            score.sourceType !== "annotation" ||
+            score.sourceId !== "SYSTEM" ||
+            score.sessionId !== sessionId ||
+            score.draftedAt !== null
+          ) {
+            return false
+          }
+
+          const metadata = score.metadata as { flaggerSlug?: string; safetyFindingKind?: string } | null
+          return metadata?.flaggerSlug === flaggerSlug && metadata?.safetyFindingKind === safetyFindingKind
+        }) ?? null,
+      ),
+    listPublishedSystemAnnotationsBySession: ({ projectId, sessionId, flaggerSlug, limit = 200 }) =>
       Effect.succeed(
         [...scores.values()]
           .filter(
@@ -140,7 +191,9 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
               score.sourceType === "annotation" &&
               score.sourceId === "SYSTEM" &&
               score.sessionId === sessionId &&
-              score.draftedAt === null,
+              score.draftedAt === null &&
+              (flaggerSlug === undefined ||
+                (score.metadata as { flaggerSlug?: string } | null)?.flaggerSlug === flaggerSlug),
           )
           .slice(0, limit),
       ),

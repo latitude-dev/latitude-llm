@@ -22,7 +22,7 @@ describe("flagger coverage", () => {
       positiveFindings: 0,
       calibrationReadyFindings: 0,
       unknownSelectionProbability: 0,
-      missingTelemetry: 12,
+      unscreenedSessions: 12,
     })
   })
 
@@ -32,7 +32,9 @@ describe("flagger coverage", () => {
       projectId: ProjectId("p".repeat(24)),
       from: new Date("2026-09-01T00:00:00.000Z"),
       to: new Date("2026-09-07T00:00:00.000Z"),
+      recordingSince: new Date("2026-09-01T00:00:00.000Z"),
       eligibleSessions: 4,
+      sessionsBeforeRecording: 0,
       rows: [
         {
           ...emptyFlaggerCoverageRow({ flaggerSlug: "empty-response", eligibleSessions: 4 }),
@@ -43,7 +45,7 @@ describe("flagger coverage", () => {
           positiveFindings: 2,
           calibrationReadyFindings: 1,
           unknownSelectionProbability: 1,
-          missingTelemetry: 0,
+          unscreenedSessions: 0,
         },
       ],
     })

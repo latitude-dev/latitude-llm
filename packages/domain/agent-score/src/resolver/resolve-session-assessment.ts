@@ -14,6 +14,30 @@ import {
   resolveSessionAssessmentItemsWithChronology,
 } from "./resolve-assessment-findings.ts"
 
+/**
+ * Speed's observed denominator is the reconstructed critical path, not the session's active
+ * execution time. An incomplete reconstruction reports nothing rather than substituting a duration
+ * that would read as necessary time.
+ */
+const summaryInputs = (input: NormalizedSessionAssessmentInput) => {
+  const evidence = input.costEvidence
+  return {
+    observedMicrocents: input.observedMicrocents,
+    ...(evidence
+      ? {
+          ...(evidence.criticalPathComplete ? { observedCriticalPathNs: evidence.observedCriticalPathNs } : {}),
+          costReadings: evidence.readings,
+          avoidable: {
+            measuredMicrocents: evidence.measuredAvoidableMicrocents,
+            estimatedMicrocents: evidence.estimatedAvoidableMicrocents,
+            measuredNs: evidence.measuredAvoidableNs,
+            estimatedNs: evidence.estimatedAvoidableNs,
+          },
+        }
+      : { observedCriticalPathNs: input.observedDurationNs }),
+  }
+}
+
 export const resolveSessionAssessment = (input: NormalizedSessionAssessmentInput): SessionAssessment => {
   const items = resolveSessionAssessmentItems(input.findings)
   const coverage = buildSessionAssessmentCoverage(input)
@@ -23,8 +47,7 @@ export const resolveSessionAssessment = (input: NormalizedSessionAssessmentInput
     dimensions: buildSessionDimensionSummaries({
       items,
       coverage: coverage.dimensions,
-      observedMicrocents: input.observedMicrocents,
-      observedCriticalPathNs: input.observedDurationNs,
+      ...summaryInputs(input),
     }),
     coverage: coverage.coverage,
   }
@@ -62,8 +85,7 @@ export const resolveSessionAssessmentPage = (
     dimensions: buildSessionDimensionSummaries({
       items: allItems,
       coverage: coverage.dimensions,
-      observedMicrocents: input.observedMicrocents,
-      observedCriticalPathNs: input.observedDurationNs,
+      ...summaryInputs(input),
     }),
     coverage: coverage.coverage,
   }

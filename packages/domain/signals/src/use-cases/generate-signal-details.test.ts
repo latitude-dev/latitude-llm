@@ -32,6 +32,7 @@ const makeCandidate = (): Signal => ({
   filters: null,
   assigneeId: null,
   priority: null,
+  bundleKey: null,
   centroid: null,
   clusteredAt: null,
   feedback: null,

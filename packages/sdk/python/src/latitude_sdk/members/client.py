@@ -64,7 +64,7 @@ class MembersClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> InvitedMember:
         """
-        Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
+        Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user). Only organization owners and admins can invite members.
 
         Parameters
         ----------
@@ -129,7 +129,7 @@ class MembersClient:
 
     def remove(self, member_id: str, *, request_options: typing.Optional[RequestOptions] = None) -> None:
         """
-        Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.
+        Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.
 
         Parameters
         ----------
@@ -252,7 +252,7 @@ class AsyncMembersClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> InvitedMember:
         """
-        Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
+        Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user). Only organization owners and admins can invite members.
 
         Parameters
         ----------
@@ -333,7 +333,7 @@ class AsyncMembersClient:
 
     async def remove(self, member_id: str, *, request_options: typing.Optional[RequestOptions] = None) -> None:
         """
-        Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.
+        Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication. Only organization owners and admins can remove members.
 
         Parameters
         ----------

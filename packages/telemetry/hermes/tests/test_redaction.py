@@ -8,7 +8,8 @@ from helpers import attr_map
 
 import latitude_telemetry_hermes.redact as redact
 from latitude_telemetry_hermes.config import reset_config
-from latitude_telemetry_hermes.otlp import _encode_attrs
+from latitude_telemetry_hermes.model import _Span
+from latitude_telemetry_hermes.otlp import _build_otlp, _encode_attrs
 
 
 def _fake_hermes_redactor(monkeypatch) -> None:
@@ -39,6 +40,22 @@ def test_secrets_nested_inside_a_message_array_are_masked(monkeypatch):
     messages = [{"role": "user", "parts": [{"type": "text", "content": "use sk-live-abc123"}]}]
     out = _encode({"gen_ai.input.messages:gated": messages})
     assert "sk-live-abc123" not in out["gen_ai.input.messages"]
+
+
+def test_a_secret_in_a_status_message_is_masked(monkeypatch):
+    _fake_hermes_redactor(monkeypatch)
+    span = _Span(
+        trace_id="t",
+        span_id="s",
+        parent_span_id="",
+        name="llm_request",
+        start_ms=1000,
+        end_ms=1100,
+        outcome="error",
+        error_message="401 from https://api.openai.com (key sk-live-abc123)",
+    )
+    encoded = _build_otlp([span])["resourceSpans"][0]["scopeSpans"][0]["spans"][0]
+    assert "sk-live-abc123" not in encoded["status"]["message"]
 
 
 def test_structural_attributes_are_left_alone(monkeypatch):

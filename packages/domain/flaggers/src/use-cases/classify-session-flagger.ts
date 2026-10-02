@@ -1,3 +1,4 @@
+import type { SafetyFindingKind } from "@domain/scores"
 import { NotFoundError, OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { SessionRepository, SpanRepository } from "@domain/spans"
 import { Effect } from "effect"
@@ -20,25 +21,43 @@ export interface ClassifySessionFlaggerInput {
   readonly sessionId: string
   readonly flaggerSlug: string
   readonly hints?: readonly SessionHint[] | undefined
+  /** Screening generation this classification belongs to; persisted on the written score. */
+  readonly analysisHash?: string | undefined
 }
 
+/**
+ * Everything a persisted judgement needs beyond the outcome itself. Shared by
+ * the negative annotation path and by a verdict flagger's positive result,
+ * which is a published score with no annotation to draft.
+ */
+export interface JudgedSessionAnchors {
+  readonly feedback?: string | undefined
+  readonly messageIndex?: number | undefined
+  /** Latitude trace of the classification generation, so the saved score can point back at the decision. */
+  readonly flaggerTraceId?: string | undefined
+  readonly contentHash: string
+  readonly latestTraceId: string
+  readonly sessionStartedAt: string
+  readonly simulationId: string | null
+  readonly scoringArtifactVersion: string
+  readonly analysisHash?: string | undefined
+  /** Present for Safety detectors; it decides both the score's polarity and its identity. */
+  readonly safetyFindingKind?: SafetyFindingKind | undefined
+}
+
+/**
+ * `matched` stays the annotation discriminant: it is true only when there is a
+ * negative annotation to draft and publish. `outcome` carries the finer
+ * screening vocabulary, so a verdict flagger's `success` is a real judgement
+ * with anchors even though it writes no annotation.
+ */
 export type ClassifySessionFlaggerResult =
   | {
       readonly matched: false
       readonly outcome: "unmatched" | "indeterminate" | "notApplicable"
     }
-  | {
-      readonly matched: true
-      readonly feedback?: string | undefined
-      readonly messageIndex?: number | undefined
-      /** Latitude trace of the classification generation, so the saved annotation can point back at the decision. */
-      readonly flaggerTraceId?: string | undefined
-      readonly contentHash: string
-      readonly latestTraceId: string
-      readonly sessionStartedAt: string
-      readonly simulationId: string | null
-      readonly scoringArtifactVersion: string
-    }
+  | ({ readonly matched: false; readonly outcome: "success" } & JudgedSessionAnchors)
+  | ({ readonly matched: true; readonly outcome: "matched" | "failure" } & JudgedSessionAnchors)
 
 // Fails NotFoundError when the session is missing or has no traces: the scores
 // CH sync stores trace_id as FixedString(32), so a fabricated non-trace anchor
@@ -132,7 +151,15 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     hints: input.hints,
   })
 
-  if (!result.matched) {
+  // A verdict flagger's `success` and a Safety detector's non-negative finding
+  // need the same anchors as a match: both persist a passed score.
+  // `indeterminate` and `notApplicable` persist nothing and stay coverage
+  // decisions.
+  if (result.verdict === "indeterminate" || result.verdict === "notApplicable") {
+    return { matched: false, outcome: result.verdict } satisfies ClassifySessionFlaggerResult
+  }
+
+  if (!result.matched && result.verdict === undefined && result.safetyFindingKind === undefined) {
     return {
       matched: false,
       outcome: result.classificationOutcome ?? "unmatched",
@@ -141,9 +168,7 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
 
   const contentHash = yield* computeFlaggerAnchorContentHash(context.conversation, result.messageIndex)
   const session = context.session
-
-  return {
-    matched: true,
+  const anchors = {
     feedback: result.feedback,
     messageIndex: result.messageIndex,
     flaggerTraceId: result.flaggerTraceId,
@@ -151,6 +176,22 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     latestTraceId: context.latestTraceId,
     sessionStartedAt: session.startTime.toISOString(),
     simulationId: session.simulationId === "" ? null : session.simulationId,
-    scoringArtifactVersion: FLAGGER_SCORING_ARTIFACT_VERSION,
+    // A verdict reports the judge that produced it; detection flaggers share
+    // the one classification artifact version.
+    scoringArtifactVersion: result.judgmentVersion ?? FLAGGER_SCORING_ARTIFACT_VERSION,
+    ...(input.analysisHash !== undefined ? { analysisHash: input.analysisHash } : {}),
+    ...(result.safetyFindingKind !== undefined ? { safetyFindingKind: result.safetyFindingKind } : {}),
+  } satisfies JudgedSessionAnchors
+
+  // A defense and user-authored exposure are measurements: examined, persisted,
+  // and not an annotation anyone has to act on.
+  if (result.verdict === "success" || (result.safetyFindingKind !== undefined && !result.matched)) {
+    return { matched: false, outcome: "success", ...anchors } satisfies ClassifySessionFlaggerResult
+  }
+
+  return {
+    matched: true,
+    outcome: result.verdict === "failure" ? "failure" : "matched",
+    ...anchors,
   } satisfies ClassifySessionFlaggerResult
 })

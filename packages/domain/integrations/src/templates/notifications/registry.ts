@@ -1,3 +1,4 @@
+import { agentScoreWeeklyDigestRenderer } from "./agent-score-weekly-digest.ts"
 import { billingLimitReachedRenderer } from "./billing-limit-reached.ts"
 import { customMessageRenderer } from "./custom-message.ts"
 import { destinationQuarantinedRenderer } from "./destination-quarantined.ts"
@@ -21,6 +22,7 @@ export const NOTIFICATION_SLACK_RENDERERS: SlackNotificationRendererRegistry = {
   "incident.opened": incidentOpenedRenderer,
   "incident.closed": incidentClosedRenderer,
   "wrapped.report": wrappedReportRenderer,
+  "agent-score.weekly-digest": agentScoreWeeklyDigestRenderer,
   "custom.message": customMessageRenderer,
   "issue.assigned": signalAssignedRenderer,
   "signal.discovered": signalDiscoveredRenderer,

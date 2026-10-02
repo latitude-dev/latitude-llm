@@ -1,8 +1,7 @@
 import { generateId, OrganizationId, SlackIntegrationId, SqlClient, type SqlClientShape, UserId } from "@domain/shared"
-import { Cause, Effect, Exit, Layer } from "effect"
+import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { SlackIntegration } from "../entities/slack-integration.ts"
-import { SlackIntegrationConflictError } from "../errors.ts"
 import { SlackIntegrationRepository } from "../ports/slack-integration-repository.ts"
 import { InMemorySlackIntegrationRepositoryLive } from "../testing/in-memory-slack-integration-repository.ts"
 import { installSlackIntegrationUseCase } from "./install-slack-integration.ts"
@@ -103,21 +102,18 @@ describe("installSlackIntegrationUseCase", () => {
     expect(stillActive?.id).toBe(fresh.id)
   })
 
-  it("fails with SlackIntegrationConflictError when the workspace is owned by another org", async () => {
+  it("installs a workspace that another org has already connected", async () => {
     const otherOrgInstall = seedExisting({ organizationId: ORG_B })
     const repoLayer = InMemorySlackIntegrationRepositoryLive({
       organizationId: ORG_A,
       seed: [otherOrgInstall],
     })
 
-    const exit = await Effect.runPromiseExit(
+    const fresh = await Effect.runPromise(
       installSlackIntegrationUseCase(baseInput()).pipe(Effect.provide(repoLayer), Effect.provide(NoopSqlClient)),
     )
 
-    expect(Exit.isFailure(exit)).toBe(true)
-    if (Exit.isFailure(exit)) {
-      const failReason = exit.cause.reasons.find(Cause.isFailReason)
-      expect(failReason?.error).toBeInstanceOf(SlackIntegrationConflictError)
-    }
+    expect(fresh.organizationId).toBe(ORG_A)
+    expect(fresh.teamId).toBe(otherOrgInstall.teamId)
   })
 })

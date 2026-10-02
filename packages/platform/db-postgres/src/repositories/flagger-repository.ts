@@ -9,7 +9,7 @@ import {
 } from "@domain/flaggers"
 import { RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
 import { createLogger } from "@repo/observability"
-import { and, asc, eq, inArray, sql } from "drizzle-orm"
+import { and, asc, eq, inArray, ne, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { flaggers } from "../schema/flaggers.ts"
@@ -161,6 +161,34 @@ export const FlaggerRepositoryLive = Layer.effect(
             )
         }),
 
+      applyDerivedSampling: ({ projectId, rates }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const now = new Date()
+
+          const updated = yield* Effect.forEach(
+            rates,
+            (rate) =>
+              sqlClient.query((db, organizationId) =>
+                db
+                  .update(flaggers)
+                  .set({ sampling: rate.sampling, samplingSource: "derived" as const, updatedAt: now })
+                  .where(
+                    and(
+                      eq(flaggers.organizationId, organizationId),
+                      eq(flaggers.projectId, projectId),
+                      eq(flaggers.slug, rate.slug),
+                      ne(flaggers.samplingSource, "user"),
+                    ),
+                  )
+                  .returning({ id: flaggers.id }),
+              ),
+            { concurrency: 1 },
+          ).pipe(Effect.mapError((cause) => new RepositoryError({ operation: "applyDerivedSampling", cause })))
+
+          return updated.reduce((total, rows) => total + rows.length, 0)
+        }),
+
       update: ({ projectId, slug, enabled, sampling }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -172,7 +200,8 @@ export const FlaggerRepositoryLive = Layer.effect(
                 .update(flaggers)
                 .set({
                   ...(enabled !== undefined ? { enabled } : {}),
-                  ...(sampling !== undefined ? { sampling } : {}),
+                  // A rate somebody chose is a decision; the sweep reads this and stays out.
+                  ...(sampling !== undefined ? { sampling, samplingSource: "user" as const } : {}),
                   updatedAt: now,
                 })
                 .where(
