@@ -53,10 +53,14 @@ export interface ExtractFacetProjectionsResult {
 }
 
 const facetExtractionSchema = z.object({
-  /** True when the conversation does not clearly answer what the instructions ask for. */
-  unclear: z.boolean(),
-  /** One-sentence answer; empty when `unclear`. */
-  answer: z.string(),
+  /**
+   * True when the conversation does not clearly answer what the instructions ask
+   * for. Optional because models routinely omit it when confidently answering
+   * (only setting it when true) rather than always stating `unclear: false`.
+   */
+  unclear: z.boolean().optional().default(false),
+  /** One-sentence answer; empty when `unclear`. Optional for the same reason. */
+  answer: z.string().optional().default(""),
 })
 
 /**
