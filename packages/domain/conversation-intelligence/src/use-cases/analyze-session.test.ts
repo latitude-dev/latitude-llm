@@ -1341,6 +1341,32 @@ describe("analyzeSessionUseCase", () => {
     expect(prompt.match(/<\/conversation_data>/g)).toHaveLength(1)
     expect(prompt).toContain("\\u003c/conversation_data\\u003e")
   })
+
+  it("sanitizes a pre-existing lone surrogate in the classifier transcript when the full conversation fits without truncation", async () => {
+    const frustratedUserMessage = "\uD800 This is frustrating and still unresolved."
+    const { ai, generated } = createAdjudicationAi({
+      embeddingForText: (text) => {
+        if (text.toLowerCase().includes("frustrat")) return [1, 0]
+        return [-1, 0]
+      },
+      acceptedCandidateIds: (prompt) => candidatesFromPrompt(prompt).map((candidate) => candidate.id),
+    })
+    const { effect } = runUseCase({
+      session: makeSessionWithMessages([
+        message("user", "Can you help me update my billing email?"),
+        message("assistant", "Sure, open account settings and choose Profile."),
+        message("user", frustratedUserMessage),
+        message("assistant", "I'm sorry, I will correct that now."),
+      ]),
+      ai,
+    })
+
+    await Effect.runPromise(effect)
+
+    const prompt = generated[0]?.prompt ?? ""
+    expect(prompt.length).toBeGreaterThan(0)
+    expect(prompt).not.toMatch(LONE_SURROGATE_PATTERN)
+  })
 })
 
 describe("middleTruncate", () => {
@@ -1359,5 +1385,10 @@ describe("middleTruncate", () => {
   it("returns the original value unchanged when it already fits", () => {
     const value = "😀".repeat(10)
     expect(middleTruncateForTesting(value, value.length)).toBe(value)
+  })
+
+  it("sanitizes a lone surrogate already present in the input when nothing needs truncating", () => {
+    const value = "\uD800 hello"
+    expect(middleTruncateForTesting(value, value.length)).not.toMatch(LONE_SURROGATE_PATTERN)
   })
 })
