@@ -46,6 +46,10 @@ const _registry = {
     }
   }>(),
 
+  "outbox-cleanup": payloads<{
+    run: Record<string, never>
+  }>(),
+
   "organization-cleanup": payloads<{
     /** Fired by a daily cron — hard-deletes temporary orgs past their claim deadline. */
     reapExpired: Record<string, never>
