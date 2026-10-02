@@ -5,6 +5,8 @@ import * as errors from "../../errors/index.js";
 import type * as Latitude from "../index.js";
 
 export class ForbiddenError extends errors.LatitudeError {
+    public declare readonly body: Latitude.Error_;
+
     constructor(body: Latitude.Error_, rawResponse?: core.RawResponse) {
         super({
             message: "ForbiddenError",

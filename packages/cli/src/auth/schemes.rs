@@ -52,8 +52,16 @@ impl AuthProvider for BearerAuthProvider {
         self.token.resolve().is_some()
     }
 
+    fn has_stored_credentials(&self) -> bool {
+        self.token.has_stored_value()
+    }
+
     fn credential_hints(&self) -> Vec<String> {
         self.token.credential_hints()
+    }
+
+    fn populated_credential_hints(&self) -> Vec<String> {
+        self.token.populated_credential_hints()
     }
 
     fn apply(
@@ -61,7 +69,10 @@ impl AuthProvider for BearerAuthProvider {
         request: reqwest::RequestBuilder,
         _endpoint: &EndpointAuthMetadata,
     ) -> Result<reqwest::RequestBuilder, CliError> {
-        let Some(token) = self.token.resolve() else {
+        // `try_resolve`, not `resolve`: a credential the user stored but the
+        // CLI could not read (a denied keychain prompt) must fail here rather
+        // than sending the request unauthenticated.
+        let Some(token) = self.token.try_resolve()? else {
             return Ok(request);
         };
         // Avoid `RequestBuilder::bearer_auth` — it panics on tokens with
@@ -168,9 +179,25 @@ impl AuthProvider for BasicAuthProvider {
         }
     }
 
+    fn has_stored_credentials(&self) -> bool {
+        match self.mode {
+            BasicAuthMode::Full => {
+                self.username.has_stored_value() && self.password.has_stored_value()
+            }
+            BasicAuthMode::UsernameOnly => self.username.has_stored_value(),
+            BasicAuthMode::PasswordOnly => self.password.has_stored_value(),
+        }
+    }
+
     fn credential_hints(&self) -> Vec<String> {
         let mut hints = self.username.credential_hints();
         hints.extend(self.password.credential_hints());
+        hints
+    }
+
+    fn populated_credential_hints(&self) -> Vec<String> {
+        let mut hints = self.username.populated_credential_hints();
+        hints.extend(self.password.populated_credential_hints());
         hints
     }
 
@@ -179,8 +206,10 @@ impl AuthProvider for BasicAuthProvider {
         request: reqwest::RequestBuilder,
         _endpoint: &EndpointAuthMetadata,
     ) -> Result<reqwest::RequestBuilder, CliError> {
-        let u = self.username.resolve();
-        let p = self.password.resolve();
+        // See the note on the bearer path: an unreadable credential is an
+        // auth failure, not an absent one.
+        let u = self.username.try_resolve()?;
+        let p = self.password.try_resolve()?;
 
         // In Full mode both must be present; in partial modes the
         // omitted half is sent as the empty string.
@@ -253,6 +282,10 @@ impl AuthProvider for HeaderAuthProvider {
         self.token.resolve().is_some()
     }
 
+    fn has_stored_credentials(&self) -> bool {
+        self.token.has_stored_value()
+    }
+
     fn credential_hints(&self) -> Vec<String> {
         self.token.credential_hints()
     }
@@ -262,7 +295,10 @@ impl AuthProvider for HeaderAuthProvider {
         request: reqwest::RequestBuilder,
         _endpoint: &EndpointAuthMetadata,
     ) -> Result<reqwest::RequestBuilder, CliError> {
-        let Some(token) = self.token.resolve() else {
+        // `try_resolve`, not `resolve`: a credential the user stored but the
+        // CLI could not read (a denied keychain prompt) must fail here rather
+        // than sending the request unauthenticated.
+        let Some(token) = self.token.try_resolve()? else {
             return Ok(request);
         };
         let value = if self.bearer_prefix {

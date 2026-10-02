@@ -28,10 +28,17 @@ class ToolsAnalyticsTotals(UniversalBaseModel):
         FieldMetadata(alias="tracesWithToolCalls"),
         pydantic.Field(alias="tracesWithToolCalls", description="Traces with at least one tool call (any tool)."),
     ]
+    """
+    Traces with at least one tool call (any tool).
+    """
+
     sessions_with_tool_calls: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="sessionsWithToolCalls"),
         pydantic.Field(alias="sessionsWithToolCalls", description="Sessions with at least one tool call (any tool)."),
     ]
+    """
+    Sessions with at least one tool call (any tool).
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
