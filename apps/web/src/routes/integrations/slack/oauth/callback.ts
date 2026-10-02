@@ -1,4 +1,4 @@
-import { installSlackIntegrationUseCase, SlackIntegrationConflictError } from "@domain/integrations"
+import { installSlackIntegrationUseCase } from "@domain/integrations"
 import { SlackIntegrationRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { exchangeOAuthCode, loadSlackConfig } from "@platform/slack"
@@ -22,7 +22,7 @@ import { consumeSlackOAuthState } from "../../../../server/slack-oauth-state.ts"
 
 const logger = createLogger("slack-oauth-callback")
 
-type FlashStatus = "installed=ok" | "error=workspace_taken" | "error=oauth_failed"
+type FlashStatus = "installed=ok" | "error=oauth_failed"
 
 const DEFAULT_RETURN_PATH = "/?next=integrations"
 
@@ -42,21 +42,6 @@ export const buildPostInstallRedirect = (input: {
 
 const redirectToSettings = (status: FlashStatus, webUrl: string): Response =>
   buildPostInstallRedirect({ returnTo: null, status, webUrl })
-
-/**
- * `Effect.runPromise` wraps domain failures in a `FiberFailure` whose
- * `cause` carries the actual tagged error. Walk one level deep — the
- * direct `instanceof` check handles cases where the caller already
- * unwrapped (e.g. via Effect.either) and the `_tag` check handles the
- * common FiberFailure shape.
- *
- * Exported for unit testing.
- */
-export const isWorkspaceConflict = (cause: unknown): boolean => {
-  if (cause instanceof SlackIntegrationConflictError) return true
-  const inner = (cause as { cause?: { _tag?: string } })?.cause
-  return inner?._tag === "SlackIntegrationConflictError"
-}
 
 export const Route = createFileRoute("/integrations/slack/oauth/callback")({
   server: {
@@ -139,14 +124,6 @@ export const Route = createFileRoute("/integrations/slack/oauth/callback")({
 
           return buildPostInstallRedirect({ returnTo: stateEntry.returnTo, status: "installed=ok", webUrl })
         } catch (cause) {
-          if (isWorkspaceConflict(cause)) {
-            logger.info("slack workspace already claimed by another organization")
-            return buildPostInstallRedirect({
-              returnTo: stateEntry.returnTo,
-              status: "error=workspace_taken",
-              webUrl,
-            })
-          }
           logger.error("slack oauth callback failed", cause)
           return buildPostInstallRedirect({
             returnTo: stateEntry.returnTo,

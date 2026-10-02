@@ -1,11 +1,12 @@
 import { type AgentScoreSnapshot, AgentScoreSnapshotRepository, type DimensionSnapshot } from "@domain/agent-score"
 import { SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
-import { and, asc, between, eq } from "drizzle-orm"
+import { and, asc, between, desc, eq, getTableColumns, lte } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { agentScoreSnapshots } from "../schema/agent-score-snapshots.ts"
 
-type Row = typeof agentScoreSnapshots.$inferSelect
+type Row = Omit<typeof agentScoreSnapshots.$inferSelect, "explanation">
+const { explanation: _explanation, ...snapshotColumns } = getTableColumns(agentScoreSnapshots)
 
 const dimension = (score: number, lower: number, upper: number): DimensionSnapshot => ({
   score,
@@ -32,7 +33,11 @@ const toDomain = (row: Row): AgentScoreSnapshot => ({
   createdAt: row.createdAt,
 })
 
-const toInsertRow = (snapshot: AgentScoreSnapshot) => ({
+/**
+ * Includes the snapshot's own `organizationId`; the write below overrides it with the connection
+ * scope. `AdminAgentScoreHistoryRepositoryLive` is the one caller that keeps it — see its header.
+ */
+export const toAgentScoreSnapshotInsertRow = (snapshot: AgentScoreSnapshot) => ({
   organizationId: snapshot.organizationId,
   projectId: snapshot.projectId,
   date: snapshot.date,
@@ -58,6 +63,7 @@ const toInsertRow = (snapshot: AgentScoreSnapshot) => ({
   safetyLower: snapshot.dimensions.safety.interval.lower,
   safetyUpper: snapshot.dimensions.safety.interval.upper,
   policyCap: snapshot.policyCap ?? null,
+  explanation: snapshot.explanation ?? null,
   createdAt: snapshot.createdAt,
 })
 
@@ -67,10 +73,10 @@ export const AgentScoreSnapshotRepositoryLive = Layer.succeed(AgentScoreSnapshot
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
       // `doNothing` on the unique key rather than a read-then-write: two workers racing the same
       // date must not both decide the row is absent, and a stored score is never corrected anyway.
-      const inserted = yield* sqlClient.query((db) =>
+      const inserted = yield* sqlClient.query((db, organizationId) =>
         db
           .insert(agentScoreSnapshots)
-          .values(toInsertRow(snapshot))
+          .values({ ...toAgentScoreSnapshotInsertRow(snapshot), organizationId })
           .onConflictDoNothing({
             target: [agentScoreSnapshots.organizationId, agentScoreSnapshots.projectId, agentScoreSnapshots.date],
           })
@@ -95,15 +101,35 @@ export const AgentScoreSnapshotRepositoryLive = Layer.succeed(AgentScoreSnapshot
           )
           .limit(1),
       )
-      return row ? toDomain(row) : null
+      return row ? { ...toDomain(row), ...(row.explanation === null ? {} : { explanation: row.explanation }) } : null
     }).pipe(Effect.mapError((error) => toRepositoryError(error, "AgentScoreSnapshotRepository.findByDate"))),
+
+  findLatest: ({ organizationId, projectId, throughDate }) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      const [row] = yield* sqlClient.query((db) =>
+        db
+          .select()
+          .from(agentScoreSnapshots)
+          .where(
+            and(
+              eq(agentScoreSnapshots.organizationId, organizationId),
+              eq(agentScoreSnapshots.projectId, projectId),
+              lte(agentScoreSnapshots.date, throughDate),
+            ),
+          )
+          .orderBy(desc(agentScoreSnapshots.date))
+          .limit(1),
+      )
+      return row ? { ...toDomain(row), ...(row.explanation === null ? {} : { explanation: row.explanation }) } : null
+    }).pipe(Effect.mapError((error) => toRepositoryError(error, "AgentScoreSnapshotRepository.findLatest"))),
 
   listHistory: ({ organizationId, projectId, from, to }) =>
     Effect.gen(function* () {
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
       const rows = yield* sqlClient.query((db) =>
         db
-          .select()
+          .select(snapshotColumns)
           .from(agentScoreSnapshots)
           .where(
             and(

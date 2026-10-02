@@ -22,11 +22,19 @@ class SessionAssessmentDimensionSummaryCost(UniversalBaseModel):
         FieldMetadata(alias="evidenceCounts"),
         pydantic.Field(alias="evidenceCounts", description="Evidence counts grouped by direction."),
     ]
+    """
+    Evidence counts grouped by direction.
+    """
+
     measurement_counts: typing_extensions.Annotated[
         SessionAssessmentDimensionSummaryCostMeasurementCounts,
         FieldMetadata(alias="measurementCounts"),
         pydantic.Field(alias="measurementCounts", description="Evidence counts grouped by measurement state."),
     ]
+    """
+    Evidence counts grouped by measurement state.
+    """
+
     coverage: SessionAssessmentDimensionSummaryCostCoverage = pydantic.Field()
     """
     Reader coverage for this dimension.
@@ -39,6 +47,10 @@ class SessionAssessmentDimensionSummaryCost(UniversalBaseModel):
             alias="observedMicrocents", default=None, description="Total observed session spend in microcents."
         ),
     ]
+    """
+    Total observed session spend in microcents.
+    """
+
     measured_avoidable_microcents: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="measuredAvoidableMicrocents"),
@@ -46,11 +58,19 @@ class SessionAssessmentDimensionSummaryCost(UniversalBaseModel):
             alias="measuredAvoidableMicrocents", default=None, description="Directly measured avoidable spend."
         ),
     ]
+    """
+    Directly measured avoidable spend.
+    """
+
     estimated_avoidable_microcents: typing_extensions.Annotated[
         typing.Optional[float],
         FieldMetadata(alias="estimatedAvoidableMicrocents"),
         pydantic.Field(alias="estimatedAvoidableMicrocents", default=None, description="Estimated avoidable spend."),
     ]
+    """
+    Estimated avoidable spend.
+    """
+
     families: typing.List[SessionAssessmentCostFamilySummary] = pydantic.Field()
     """
     All five Cost families, always present, with raw metric readings and their measurement state.

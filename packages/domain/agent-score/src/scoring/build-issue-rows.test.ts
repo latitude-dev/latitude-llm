@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { CAUSE_EXAMPLE_SESSION_LIMIT } from "../constants.ts"
 import { buildIssueRows, type IssueSession } from "./build-issue-rows.ts"
 
 const session = (
@@ -156,5 +157,26 @@ describe("buildIssueRows", () => {
 
   it("returns nothing when no session carried an issue", () => {
     expect(buildIssueRows({ sessions: [session("a", true, [])] })).toEqual([])
+  })
+})
+
+describe("buildIssueRows example sessions", () => {
+  it("lists adverse sessions first, so a row opens on the ones that went badly", () => {
+    const rows = buildIssueRows({
+      sessions: [session("clean", false, [moment]), session("failed", true, [moment])],
+    })
+
+    expect(rows[0]!.exampleSessionIds).toEqual(["failed", "clean"])
+  })
+
+  it("caps the sample rather than carrying every session the issue touched", () => {
+    const sessions = Array.from({ length: CAUSE_EXAMPLE_SESSION_LIMIT + 5 }, (_, index) =>
+      session(`session-${index}`, true, [moment]),
+    )
+
+    const rows = buildIssueRows({ sessions })
+
+    expect(rows[0]!.examinedSessions).toBe(CAUSE_EXAMPLE_SESSION_LIMIT + 5)
+    expect(rows[0]!.exampleSessionIds).toHaveLength(CAUSE_EXAMPLE_SESSION_LIMIT)
   })
 })

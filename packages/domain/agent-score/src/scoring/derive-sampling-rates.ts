@@ -1,15 +1,10 @@
 /**
  * Sampling rates the daily sweep derives from a project's traffic.
  *
- * A fixed rate cannot satisfy a fixed examined-count floor across projects of different sizes: at a
- * tenth, a project sitting on the window's session target examines a hundred sessions against a
- * floor of a thousand, and no amount of waiting fixes that. So the judge and the suite target a
- * number of examined sessions instead of a share of them. A small project examines nearly
- * everything and a large one examines a bounded sample, which bounds cost at both ends.
- *
- * Lowering the floors instead was rejected: at a hundred examined sessions the zero-harm lower bound
- * is 5, an interval spanning almost the whole scale, and a dimension that wide would dominate the
- * composite's interval while telling nobody anything.
+ * A fixed rate cannot satisfy a fixed examined-count floor across projects of different sizes. So
+ * the judge and the suite target a number of examined sessions instead of a share of them. A small
+ * project examines nearly everything and a large one examines a bounded sample, which bounds cost
+ * at both ends.
  */
 export interface SamplingTargets {
   /** Examined sessions each reader aims for over one window. */

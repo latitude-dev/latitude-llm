@@ -76,6 +76,7 @@ describe("completeOnboardingUseCase", () => {
             Effect.sync(() => {
               savedProjects.push(project)
             }),
+          markFirstTraceAt: () => Effect.die(new Error("unused")),
           softDelete: () => Effect.die(new Error("unused")),
           hardDelete: () => Effect.die(new Error("unused")),
           existsByName: () => Effect.succeed(false),

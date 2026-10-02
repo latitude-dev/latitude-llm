@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
-import { DimensionSection, DimensionSectionSkeleton } from "./dimension-section.tsx"
+import { parseFilters } from "../../-components/trace-page-state.ts"
+import { DimensionSection, DimensionSectionSkeleton, exampleSessionsSearch } from "./dimension-section.tsx"
 
 afterEach(cleanup)
 
@@ -45,11 +46,9 @@ describe("DimensionSection", () => {
         title="Outcome quality"
         description="Did users accomplish what they came for?"
         score={20}
-        projectId="project-1"
         projectSlug="project-one"
         affected={[row]}
         healthy={[healthy]}
-        context={[]}
         coverage={[summary]}
       />,
     )
@@ -59,19 +58,29 @@ describe("DimensionSection", () => {
     expect(screen.queryByText("Completion reader")).toBeNull()
     expect(screen.queryByRole("button", { name: "Readable completion outcomes" })).toBeNull()
 
-    fireEvent.click(screen.getByRole("button", { name: "Terminal provider failure" }))
-    expect(screen.getByText("Observed across 24 sessions")).toBeDefined()
-    expect(screen.getByText("Scoring window")).toBeDefined()
-    expect(screen.getByText("Last 7 days")).toBeDefined()
+    expect(screen.queryByRole("button", { name: "Terminal provider failure" })).toBeNull()
+    expect(screen.queryByText("Observed across 24 sessions")).toBeNull()
+    expect(screen.queryByText("Observed but not scored")).toBeNull()
+    expect(screen.queryByText("Data coverage")).toBeNull()
 
     fireEvent.click(screen.getByRole("button", { name: /Healthy, show/i }))
     expect(screen.getByText("Completion reader")).toBeDefined()
 
-    fireEvent.click(screen.getByRole("button", { name: /Data coverage, show/i }))
     expect(screen.getByText("Readable completion outcomes")).toBeDefined()
 
     fireEvent.click(screen.getByRole("button", { name: /Collapse Outcome quality/ }))
     expect(screen.queryByText("Terminal provider failure")).toBeNull()
     expect(screen.queryByRole("button", { name: /Healthy/ })).toBeNull()
+  })
+})
+
+describe("exampleSessionsSearch", () => {
+  it("builds a filter the sessions list accepts, so the row lands on those sessions", () => {
+    const search = exampleSessionsSearch(["session-a", "session-b"])
+
+    expect(search.tab).toBe("sessions")
+    expect(parseFilters(search.filters)).toEqual({
+      sessionId: [{ op: "in", value: ["session-a", "session-b"] }],
+    })
   })
 })

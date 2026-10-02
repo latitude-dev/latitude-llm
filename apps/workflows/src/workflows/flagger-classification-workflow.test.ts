@@ -60,6 +60,8 @@ const INPUT = {
     inclusionProbability: 1,
     hintKinds: [],
     retentionDays: 90,
+    attempt: 1,
+    version: 1,
   },
 }
 

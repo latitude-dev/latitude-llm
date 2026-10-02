@@ -89,6 +89,7 @@ export interface SignalTableRowsPage extends SignalListPage {
  * visible, because that is how it accumulates the evidence that promotes it.
  *
  * Default-deny with an `includeUnpromoted` opt-in: `findById`, `hybridSearch`.
+ * Never filtered for unpromoted rows: `findByBundleKey`, discovery's exact path.
  * Default-deny with an `unpromotedOnly` opt-in: `findSimilarByCentroid`.
  * Default-deny with no opt-in: `findByIds`, `findBySlug`, `searchOrgWide`,
  * `list`, `listTableRows`, `listIdsCreatedInTimeRange`.
@@ -121,6 +122,39 @@ export interface SignalRepositoryShape {
     readonly projectId: ProjectId
     readonly signalIds: readonly SignalId[]
   }): Effect.Effect<readonly SignalWithLifecycle[], RepositoryError, SqlClient>
+  /**
+   * The issue a deterministic detector's bucket already owns, or null.
+   *
+   * Discovery's exact path: a detector that names the failure class outright does
+   * not need the embedding to rediscover it, and the feedback prose it writes
+   * carries volatile detail that would fragment one failure across several issues.
+   *
+   * Unpromoted issues are **included** — the bucket has to accumulate the sessions
+   * that promote it — and soft-deleted ones excluded, which is also what frees a
+   * key for reuse after a delete.
+   */
+  findByBundleKey(input: {
+    readonly projectId: ProjectId
+    readonly bundleKey: string
+  }): Effect.Effect<Signal | null, RepositoryError, SqlClient>
+  /**
+   * Stamps a bundle key onto an issue that predates one, returning whether it
+   * claimed it.
+   *
+   * Issues discovered before deterministic bundling existed carry no key, so the
+   * exact lookup misses them and would open a second issue for a failure that
+   * already has one. Rather than backfill keys we cannot re-derive — the key comes
+   * from the finding, and only the score's feedback text was persisted — the first
+   * occurrence after the change adopts the key onto whatever the fuzzy path
+   * resolves to, and every later occurrence takes the exact path.
+   *
+   * Guarded in SQL so the claim is atomic and cannot steal a key: only an
+   * unkeyed, live, detector-authored issue is eligible.
+   */
+  adoptBundleKey(input: {
+    readonly signalId: SignalId
+    readonly bundleKey: string
+  }): Effect.Effect<boolean, RepositoryError, SqlClient>
   /**
    * Serves two callers with opposite needs. Discovery passes
    * `includeUnpromoted: true` so a new score can cluster into a candidate; the

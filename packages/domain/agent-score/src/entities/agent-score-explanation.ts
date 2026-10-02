@@ -18,6 +18,7 @@ const causeRowSchema = z.object({
   signalId: z.string().optional(),
   observationCount: z.number(),
   destination: z.enum(CAUSE_DESTINATIONS).optional(),
+  exampleSessionIds: z.array(z.string()).readonly().optional(),
 })
 
 const dimensionAttributionSchema = z.object({
@@ -39,6 +40,7 @@ const observedCauseSchema = z.object({
   observationCount: z.number(),
   signalId: z.string().optional(),
   destination: z.enum(CAUSE_DESTINATIONS).optional(),
+  exampleSessionIds: z.array(z.string()).readonly().optional(),
 })
 
 const issueRowSchema = z.object({
@@ -50,6 +52,14 @@ const issueRowSchema = z.object({
   examinedSessions: z.number(),
   examinedAdverseSessions: z.number(),
   ranked: z.boolean(),
+  /** Optional so a cached explanation written before the field existed still parses. */
+  exampleSessionIds: z.array(z.string()).readonly().optional(),
+  /**
+   * The population this row's reader could see. Optional for the same reason, and defaulted to
+   * `eligible` on read so a legacy row keeps the denominator it was written against.
+   */
+  basis: z.enum(["eligible", "analyzed"]).default("eligible"),
+  basisSessionCount: z.number().optional(),
 })
 
 const windowIssuesSchema = z.object({
@@ -100,23 +110,19 @@ const speedWindowGateSchema = z.object({
   completeSessionCount: z.number(),
   incompleteSessionCount: z.number(),
   completeShareOfEligible: z.number(),
+  /** Absent on stored explanations that predate excluding sessions with unreferenced models. */
+  missingLatencyReferenceSessionCount: z.number().optional(),
+  unreferencedLatencyModels: z
+    .array(z.object({ provider: z.string(), model: z.string(), sessionCount: z.number() }))
+    .readonly()
+    .optional(),
 })
 
-/**
- * Why a project's score is what it is, as the page reads it.
- *
- * Deliberately not part of the snapshot. A stored decomposition would keep looking precise while the
- * evidence under it moved, and `score.md` is explicit that causes are resolved from the current
- * window and are never presented as the history of a number. This carries its own `computedAt` so
- * the page can say when the evidence was read rather than implying it explains the stored score.
- *
- * A schema rather than an interface because this shape round-trips through a cache: a reader that
- * cast whatever JSON it found would hand the page an object missing the fields it dereferences, and
- * the page would break instead of saying the explanation is not ready yet.
- */
+/** Score evidence is stored with published snapshots; unpublished computations use the cache. */
 export const agentScoreExplanationSchema = z.object({
   organizationId: z.string().min(1),
   projectId: z.string().min(1),
+  date: z.string().min(1),
   scoringVersion: z.string().min(1),
   computedAt: z.string().min(1),
   window: z.object({ stepDays: z.number(), from: z.string(), to: z.string() }),
@@ -143,7 +149,10 @@ export const agentScoreExplanationSchema = z.object({
     cost: costWindowGateSchema,
     speed: speedWindowGateSchema,
     readers: z.array(readerCoverageSchema).readonly(),
+    /** The judged sample plus the deterministic failure census. */
     outcomeExaminedSessions: z.number(),
+    /** The judged sample alone. Absent on stored explanations that predate the field. */
+    outcomeSampledSessions: z.number().optional(),
     safetyExaminedSessions: z.number(),
     reliabilityReadableSessions: z.number(),
     unmeasuredSignalEffects: z.number(),
@@ -160,12 +169,19 @@ export const agentScoreExplanationSchema = z.object({
 export type AgentScoreExplanation = z.infer<typeof agentScoreExplanationSchema>
 
 /** Turns a completed window computation into the shape the page and the cache both use. */
-export const toAgentScoreExplanation = (result: AgentScoreResult): AgentScoreExplanation | null => {
+export const toAgentScoreExplanation = ({
+  result,
+  date,
+}: {
+  readonly result: AgentScoreResult
+  readonly date: string
+}): AgentScoreExplanation | null => {
   if (!result.coverage || !result.native || !result.readiness) return null
 
   return {
     organizationId: result.organizationId,
     projectId: result.projectId,
+    date,
     scoringVersion: result.scoringVersion,
     computedAt: new Date().toISOString(),
     window: {
@@ -193,6 +209,7 @@ export const toAgentScoreExplanation = (result: AgentScoreResult): AgentScoreExp
       speed: result.coverage.speed,
       readers: result.coverage.readers,
       outcomeExaminedSessions: result.coverage.outcome.examinedSessionCount,
+      outcomeSampledSessions: result.coverage.outcome.sampledSessionCount,
       safetyExaminedSessions: result.coverage.safety.examinedSessionCount,
       reliabilityReadableSessions: result.coverage.reliability.readableSessionCount,
       unmeasuredSignalEffects: result.coverage.unmeasuredSignalEffects,
@@ -207,19 +224,23 @@ export const toAgentScoreExplanation = (result: AgentScoreResult): AgentScoreExp
   }
 }
 
-/**
- * Organization-prefixed, as every scoped cache key must be, and keyed by project rather than by date.
- *
- * Not a date key on purpose: a date key is what a snapshot has, and this is a cache. It expires, it
- * is rebuilt, and nothing may read it as a record of what a past day looked like.
- */
 export const agentScoreExplanationCacheKey = ({
+  organizationId,
+  projectId,
+  date,
+}: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly date: string
+}): string => `org:${organizationId}:agent-score:explanation:${projectId}:${date}`
+
+export const latestAgentScoreExplanationCacheKey = ({
   organizationId,
   projectId,
 }: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-}): string => `org:${organizationId}:agent-score:explanation:${projectId}`
+}): string => `org:${organizationId}:agent-score:latest-explanation:${projectId}`
 
 /** Longer than the daily cycle so a warm entry always exists, short enough that a stopped job shows through. */
 export const AGENT_SCORE_EXPLANATION_TTL_SECONDS = 26 * 60 * 60

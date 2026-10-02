@@ -49,7 +49,7 @@ class RawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -139,7 +139,7 @@ class RawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request : CreateMonitorBody
 
@@ -229,7 +229,7 @@ class RawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         filter_set_contains : typing.Dict[str, typing.Sequence[FilterCondition]]
             Filter subset to match against monitor targets. For one user use `userId`; for one tool use `operation = execute_tool` and `toolName`.
@@ -323,7 +323,7 @@ class RawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).
@@ -402,7 +402,7 @@ class RawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).
@@ -469,7 +469,7 @@ class RawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).
@@ -583,7 +583,7 @@ class RawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).
@@ -672,7 +672,7 @@ class RawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).
@@ -751,7 +751,7 @@ class RawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).
@@ -841,7 +841,7 @@ class AsyncRawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         cursor : typing.Optional[str]
             Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.
@@ -931,7 +931,7 @@ class AsyncRawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request : CreateMonitorBody
 
@@ -1021,7 +1021,7 @@ class AsyncRawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         filter_set_contains : typing.Dict[str, typing.Sequence[FilterCondition]]
             Filter subset to match against monitor targets. For one user use `userId`; for one tool use `operation = execute_tool` and `toolName`.
@@ -1115,7 +1115,7 @@ class AsyncRawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).
@@ -1194,7 +1194,7 @@ class AsyncRawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).
@@ -1261,7 +1261,7 @@ class AsyncRawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).
@@ -1375,7 +1375,7 @@ class AsyncRawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).
@@ -1464,7 +1464,7 @@ class AsyncRawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).
@@ -1543,7 +1543,7 @@ class AsyncRawMonitorsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         monitor_slug : str
             Monitor slug (human-readable identifier within the project).

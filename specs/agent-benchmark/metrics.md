@@ -324,18 +324,24 @@ This compares the same produced output rather than rewarding short answers.
 - Cost family: recovery when recovered.
 - Evidence role: terminal endpoint when unrecovered; inefficient-call and recovery evidence when
   recovered.
-- Reader: the shared deterministic error-finding reader used by `tool-call-errors`.
+- Reader: the deterministic response-content reader used by `tool-call-errors` plus `execute_tool`
+  span status.
 
-A tool response is a failure only when the response contract or structured payload establishes it.
+A tool response is a failure when its response contract or structured payload establishes it, or
+when its `execute_tool` span has error status. Unset span status is missing telemetry, not evidence
+of success. When both sources identify one unambiguous call, the deterministic finding remains
+canonical and the status duplicate is suppressed. Reused IDs are never aligned by conversation
+ordinal across a truncated window; their error-status spans remain separate observations.
 The current blanket treatment of every HTTP 400 through 499 status as expected is not sufficient;
-the reader needs a caller-declared expected-status contract before it can exclude one.
+the content reader needs a caller-declared expected-status contract before it can exclude one.
 A later successful call or other successful progress can recover the session even when it used a
 different tool. Reliability asks whether the agent completed, not whether one integration was flaky.
 
-Recovered failures remain observable so the recovered session enters Recovery and marginal
-critical-path duration can enter Speed. A tool span has no
-inherent billable spend. Money or context enters only when a paid retry generation or later model
-input can be attributed to the incident. Recovered failures do not open signal-discovery work
+For a span-status failure, a later successful execution of the same normalized tool proves recovery;
+the retry path ends at that span. Recovered failures remain observable so the recovered session
+enters Recovery and marginal critical-path duration can enter Speed. A tool span has no inherent
+billable spend. Money or context enters only when a paid retry generation before that successful
+execution can be attributed to the incident. Recovered failures do not open signal-discovery work
 automatically. [`flaggers.md`](flaggers.md) defines that separation.
 
 Attribution also records same-tool recovery. The session-wide marker answers whether the run
