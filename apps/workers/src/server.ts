@@ -86,6 +86,7 @@ import { createNotificationEmailerWorker } from "./workers/notification-emailer.
 import { createNotificationSlackWorker } from "./workers/notification-slack.ts"
 import { createNotificationsWorker } from "./workers/notifications.ts"
 import { createOrganizationCleanupWorker } from "./workers/organization-cleanup.ts"
+import { createOutboxCleanupWorker } from "./workers/outbox-cleanup.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
 import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
@@ -215,6 +216,7 @@ const bootstrap = async () => {
     createInvitationEmailWorker(ctx)
     createOrganizationClaimEmailWorker(ctx)
     createOrganizationCleanupWorker(ctx)
+    createOutboxCleanupWorker(ctx)
     createUserDeletionWorker(ctx)
     createMarketingContactsWorker(ctx)
     createIncidentsWorker(ctx)
@@ -321,6 +323,17 @@ const bootstrap = async () => {
           "reapExpired",
           {},
           { key: "organization-cleanup:daily", pattern: "0 3 * * *", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "outbox-cleanup",
+          "run",
+          {},
+          { key: "outbox-cleanup:daily", pattern: "30 2 * * *", tz: "UTC" },
         )
         .pipe(withTracing),
     )
