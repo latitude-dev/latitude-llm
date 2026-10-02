@@ -1,4 +1,9 @@
-import type { ClassifySessionFlaggerResult, FlaggerScreeningSelection, SessionHint } from "@domain/flaggers"
+import type {
+  ClassifySessionFlaggerResult,
+  FlaggerClassificationReason,
+  FlaggerScreeningSelection,
+  SessionHint,
+} from "@domain/flaggers"
 import { log, proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
@@ -20,7 +25,7 @@ export interface FlaggerClassificationWorkflowInput {
   readonly sessionId: string
   readonly flaggerId: string
   readonly flaggerSlug: string
-  readonly reason: "hinted" | "sampled"
+  readonly reason: FlaggerClassificationReason
   readonly hints: readonly SessionHint[]
   readonly screeningSelection?: FlaggerScreeningSelection | undefined
 }

@@ -5,6 +5,105 @@ use unicode_normalization::UnicodeNormalization;
 /// Max chars for CLI `--help` method descriptions (terminal-width friendly).
 pub const CLI_DESCRIPTION_LIMIT: usize = 200;
 
+/// Max chars for single-line CLI `--help` descriptions.
+pub const CLI_SHORT_DESCRIPTION_LIMIT: usize = 80;
+
+/// Max chars for the detailed text rendered under `--help` — both a
+/// command's own description and its flags'.
+///
+/// `--help` is the thorough tier: whatever the spec documents about a flag
+/// (constraints, pricing, examples) belongs there in full, so this is set
+/// well above anything real specs contain rather than as an editorial
+/// trim. It exists only so a pathological spec cannot flood the terminal;
+/// [`CLI_SHORT_DESCRIPTION_LIMIT`] is what keeps `-h` scannable.
+pub const CLI_LONG_DESCRIPTION_LIMIT: usize = 2000;
+
+/// Abbreviations that end in a period without ending a sentence. Splitting
+/// on them truncates help text mid-phrase (`Fetch a user, e.g.`), so they
+/// are never treated as sentence boundaries.
+const NON_TERMINAL_ABBREVIATIONS: &[&str] = &[
+    "al", "approx", "ca", "cf", "co", "corp", "dept", "dr", "eg", "esp", "etc", "ex", "fig", "ie",
+    "inc", "jr", "ltd", "max", "min", "mr", "mrs", "ms", "no", "prof", "resp", "sr", "st", "vol",
+    "vs",
+];
+
+/// Return whether the period at `period_index` ends a sentence rather than
+/// an abbreviation, an initial, or a dotted token like `U.S.` or `v1.2`.
+///
+/// Callers are responsible for the "followed by a space or end of input"
+/// half of the check — this decides the ambiguous cases that rule alone
+/// gets wrong.
+fn is_sentence_boundary(chars: &[char], period_index: usize) -> bool {
+    debug_assert_eq!(chars.get(period_index), Some(&'.'));
+
+    // The token this period closes, back to the preceding whitespace, with
+    // any opening punctuation (`(e.g.`) stripped.
+    let token_start = chars[..period_index]
+        .iter()
+        .rposition(|c| c.is_whitespace())
+        .map_or(0, |index| index + 1);
+    let token: String = chars[token_start..period_index].iter().collect();
+    let word = token.trim_start_matches(|c: char| !c.is_alphanumeric());
+
+    if word.is_empty()
+        // Interior periods mark a dotted abbreviation (`e.g.`, `U.S.`) or a
+        // version (`v1.2`), never the end of a sentence.
+        || word.contains('.')
+        // A lone letter is an initial (`J. Smith`).
+        || word.chars().count() == 1
+        || NON_TERMINAL_ABBREVIATIONS
+            .iter()
+            .any(|abbreviation| word.eq_ignore_ascii_case(abbreviation))
+    {
+        return false;
+    }
+
+    // Prose resumes with a capital (or a digit). A lowercase continuation
+    // means the period belonged to the phrase — an abbreviation this list
+    // doesn't know about.
+    match chars[period_index + 1..].iter().find(|c| !c.is_whitespace()) {
+        Some(next) => !next.is_lowercase(),
+        None => true,
+    }
+}
+
+/// Collapse runs of whitespace (including newlines) into single spaces.
+///
+/// Specs routinely carry hand-indented prose whose leading whitespace
+/// survives YAML block scalars; rendered verbatim in a help column it shows
+/// up as long gaps mid-sentence.
+pub fn collapse_whitespace(s: &str) -> String {
+    s.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Return the first sentence of prose, with embedded whitespace normalized.
+pub fn first_sentence(s: &str) -> String {
+    let normalized = collapse_whitespace(s);
+    let chars: Vec<char> = normalized.chars().collect();
+    for index in 0..chars.len() {
+        if chars[index] == '.'
+            && chars.get(index + 1) == Some(&' ')
+            && is_sentence_boundary(&chars, index)
+        {
+            return chars[..=index].iter().collect();
+        }
+    }
+    normalized
+}
+
+/// Return whether a summary merely restates a command name, ignoring case
+/// and non-alphanumeric characters.
+pub fn is_name_restating(summary: &str, name: &str) -> bool {
+    let normalize = |value: &str| {
+        value
+            .chars()
+            .filter(|character| character.is_alphanumeric())
+            .flat_map(char::to_lowercase)
+            .collect::<String>()
+    };
+    normalize(summary) == normalize(name)
+}
+
 /// Convert a parameter name to an idiomatic kebab-case CLI flag.
 ///
 /// Handles snake_case (`min_start_time` → `min-start-time`), camelCase
@@ -41,6 +140,16 @@ pub fn to_kebab_flag(s: &str) -> String {
 /// `x-fern-sdk-variables` to derive the env-var fallback for each global.
 pub fn to_screaming_snake(s: &str) -> String {
     to_kebab_flag(s).to_ascii_uppercase().replace('-', "_")
+}
+
+/// Env-var prefix derived from the binary name: uppercase, `-` → `_`.
+/// `twilio` → `TWILIO`, `my-cli` → `MY_CLI`.
+///
+/// Mirrors the transform `logging::env_prefix` and `HttpConfig::env_prefix`
+/// already use, so every scoped env var a CLI reads (`<PREFIX>_LOG`,
+/// `<PREFIX>_USER_AGENT_SUFFIX`, `<PREFIX>_<SERVER_VAR>`) shares one spelling.
+pub fn env_var_prefix(cli_name: &str) -> String {
+    cli_name.to_ascii_uppercase().replace('-', "_")
 }
 
 /// Sanitize an OpenAPI parameter wire name into a valid CLI flag name.
@@ -279,9 +388,11 @@ fn find_last_sentence_boundary(prefix: &str) -> Option<usize> {
     for (i, _) in chars.iter().enumerate() {
         if chars[i] == '.' {
             let after_period = i + 1;
-            // Sentence boundary: period followed by a space, or period at end of prefix
-            if after_period == chars.len()
-                || (after_period < chars.len() && chars[after_period] == ' ')
+            // Sentence boundary: period followed by a space, or period at
+            // end of prefix — and not an abbreviation's period.
+            if (after_period == chars.len()
+                || (after_period < chars.len() && chars[after_period] == ' '))
+                && is_sentence_boundary(&chars, i)
             {
                 last_boundary = Some(after_period);
             }
@@ -295,6 +406,75 @@ fn find_last_sentence_boundary(prefix: &str) -> Option<usize> {
 fn rfind_char_boundary(s: &str, target: char) -> Option<usize> {
     let chars: Vec<char> = s.chars().collect();
     chars.iter().rposition(|&c| c == target)
+}
+
+/// Lowercase an identifier and drop every separator, so all the spellings of
+/// one name collapse to a single form: `AccountSid`, `account_sid`,
+/// `account-sid`, and `ACCOUNTSID` all become `accountsid`.
+///
+/// This is the equality a *user* means when they name a parameter in a
+/// profile. [`to_kebab_flag`] cannot serve here — it inserts a separator
+/// before every uppercase letter, so an all-caps name decomposes into
+/// `a-c-c-o-u-n-t-s-i-d` and stops matching its own PascalCase twin.
+pub fn normalize_identifier(s: &str) -> String {
+    s.chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+/// The entry in `candidates` closest to `input`, or `None` when nothing is
+/// close enough to be worth suggesting.
+///
+/// Compared via [`normalize_identifier`], so every spelling of a name is
+/// distance 0 from every other — which is the point: a user setting a
+/// profile parameter should not have to guess which one the spec used.
+///
+/// The threshold scales with the input's length (a third of it, at least
+/// one), so a two-character typo in `account-sid` suggests, while an
+/// unrelated word does not produce a confusing "did you mean".
+pub fn nearest(input: &str, candidates: impl IntoIterator<Item = String>) -> Option<String> {
+    let normalized_input = normalize_identifier(input);
+    let threshold = (normalized_input.chars().count() / 3).max(1);
+    candidates
+        .into_iter()
+        .filter_map(|candidate| {
+            let distance = edit_distance(&normalized_input, &normalize_identifier(&candidate));
+            (distance <= threshold).then_some((distance, candidate))
+        })
+        // Ties broken by name so the suggestion is deterministic across runs
+        // — an error message that changes between invocations is untestable.
+        .min_by(|(a_dist, a_name), (b_dist, b_name)| {
+            a_dist.cmp(b_dist).then_with(|| a_name.cmp(b_name))
+        })
+        .map(|(_, candidate)| candidate)
+}
+
+/// Levenshtein distance, two-row implementation.
+///
+/// Rolled here rather than pulled from a crate: it is ten lines, it is only
+/// ever run against a handful of candidate names in an error path, and the
+/// alternative is a new dependency in the shipped `Cargo.lock` for every
+/// generated CLI.
+fn edit_distance(a: &str, b: &str) -> usize {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+    if a.is_empty() {
+        return b.len();
+    }
+    let mut previous: Vec<usize> = (0..=b.len()).collect();
+    let mut current = vec![0usize; b.len() + 1];
+    for (i, &a_char) in a.iter().enumerate() {
+        current[0] = i + 1;
+        for (j, &b_char) in b.iter().enumerate() {
+            let substitution = previous[j] + usize::from(a_char != b_char);
+            current[j + 1] = substitution
+                .min(previous[j + 1] + 1)
+                .min(current[j] + 1);
+        }
+        std::mem::swap(&mut previous, &mut current);
+    }
+    previous[b.len()]
 }
 
 #[cfg(test)]
@@ -466,6 +646,65 @@ mod tests {
         assert_eq!(to_screaming_snake(""), "");
     }
 
+    #[test]
+    fn test_first_sentence_does_not_split_on_abbreviations() {
+        assert_eq!(
+            first_sentence("Fetch a user by id, e.g. usr_123, from the directory."),
+            "Fetch a user by id, e.g. usr_123, from the directory."
+        );
+        assert_eq!(
+            first_sentence("Returns items (i.e. songs, albums) for the user."),
+            "Returns items (i.e. songs, albums) for the user."
+        );
+        assert_eq!(
+            first_sentence("Upload a file to the U.S. region bucket. Returns a handle."),
+            "Upload a file to the U.S. region bucket."
+        );
+        assert_eq!(
+            first_sentence("Reads at most 100 items, etc. Additional pages need a cursor."),
+            "Reads at most 100 items, etc. Additional pages need a cursor."
+        );
+        assert_eq!(
+            first_sentence("Written by J. Smith. Deprecated."),
+            "Written by J. Smith."
+        );
+    }
+
+    #[test]
+    fn test_first_sentence_splits_on_real_boundaries() {
+        assert_eq!(
+            first_sentence("Deletes the voice. This cannot be undone."),
+            "Deletes the voice."
+        );
+        assert_eq!(
+            first_sentence("Deletes the voice.\nThis cannot be undone."),
+            "Deletes the voice."
+        );
+        assert_eq!(first_sentence("No trailing period"), "No trailing period");
+        assert_eq!(first_sentence(""), "");
+    }
+
+    #[test]
+    fn test_truncate_description_does_not_cut_at_abbreviations() {
+        let description = "Fetch a user by id, e.g. usr_123, from the directory of every \
+registered account in the workspace.";
+        let truncated = truncate_description(description, CLI_SHORT_DESCRIPTION_LIMIT, true);
+        assert!(
+            !truncated.ends_with("e.g."),
+            "truncated at an abbreviation: {truncated}"
+        );
+        assert!(truncated.ends_with('…'), "expected a word-boundary cut: {truncated}");
+    }
+
+    #[test]
+    fn test_is_name_restating() {
+        assert!(is_name_restating("Models", "models"));
+        assert!(is_name_restating("Text To Speech", "text-to-speech"));
+        assert!(is_name_restating("Audio_Isolation", "audio-isolation"));
+        assert!(!is_name_restating("Pronunciation Dictionary", "pronunciation-dictionaries"));
+        assert!(!is_name_restating("Manage models", "models"));
+    }
+
     // ------------------------------------------------------------------
     // sanitize_flag_name — FER-10430 parametrized table
     // ------------------------------------------------------------------
@@ -544,5 +783,66 @@ mod tests {
         // so the adjacent letters merge).
         let result = sanitize_flag_name("foo\u{200B}bar").unwrap();
         assert_eq!(result, "foobar");
+    }
+}
+
+#[cfg(test)]
+mod nearest_tests {
+    use super::nearest;
+
+    fn candidates() -> Vec<String> {
+        ["AccountSid", "PageSize", "MessagingServiceSid"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    #[test]
+    fn matches_across_spellings_at_distance_zero() {
+        for spelling in ["AccountSid", "account_sid", "account-sid", "ACCOUNTSID"] {
+            assert_eq!(
+                nearest(spelling, candidates()).as_deref(),
+                Some("AccountSid"),
+                "failed for {spelling}",
+            );
+        }
+    }
+
+    #[test]
+    fn suggests_on_a_plausible_typo() {
+        assert_eq!(
+            nearest("account-sd", candidates()).as_deref(),
+            Some("AccountSid"),
+        );
+    }
+
+    #[test]
+    fn stays_silent_on_an_unrelated_word() {
+        // A confidently wrong "did you mean" is worse than none.
+        assert_eq!(nearest("region", candidates()), None);
+    }
+
+    #[test]
+    fn empty_candidate_set_yields_none() {
+        assert_eq!(nearest("anything", Vec::new()), None);
+    }
+
+    #[test]
+    fn ties_resolve_deterministically_by_name() {
+        // `ac` and `ax` are both distance 1 from `ab`; the alphabetically
+        // first wins so the error message is stable across runs.
+        let both = vec!["ax".to_string(), "ac".to_string()];
+        assert_eq!(nearest("ab", both.clone()).as_deref(), Some("ac"));
+        assert_eq!(nearest("ab", both).as_deref(), Some("ac"));
+    }
+
+    #[test]
+    fn separators_do_not_affect_distance() {
+        // `normalize_identifier` strips them, so a candidate is not penalised
+        // for the spec's naming convention.
+        assert_eq!(
+            nearest("accountsid", vec!["Account-Sid".to_string()]).as_deref(),
+            Some("Account-Sid"),
+        );
     }
 }

@@ -12,6 +12,10 @@ class UpdateDatasetRowResponse(UniversalBaseModel):
     version_id: typing_extensions.Annotated[
         str, FieldMetadata(alias="versionId"), pydantic.Field(alias="versionId", description="New dataset version id.")
     ]
+    """
+    New dataset version id.
+    """
+
     version: int = pydantic.Field()
     """
     New dataset version number.

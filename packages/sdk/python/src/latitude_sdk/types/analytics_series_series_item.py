@@ -28,6 +28,10 @@ class AnalyticsSeriesSeriesItem(UniversalBaseModel):
             description="ISO-8601 start of the time bucket, present when `timeBucket` was set.",
         ),
     ]
+    """
+    ISO-8601 start of the time bucket, present when `timeBucket` was set.
+    """
+
     value: float = pydantic.Field()
     """
     The metric value: seconds for `duration`, dollars for `cost`, a 0–1 ratio for `errorRate`/`cacheHitRate`, otherwise a raw count/token total.

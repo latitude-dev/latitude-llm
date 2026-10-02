@@ -15,41 +15,73 @@ class TraceDetail(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this trace."),
     ]
+    """
+    Organization that owns this trace.
+    """
+
     project_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectId"),
         pydantic.Field(alias="projectId", description="Project this trace belongs to."),
     ]
+    """
+    Project this trace belongs to.
+    """
+
     trace_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="traceId"),
         pydantic.Field(alias="traceId", description="32-character trace identifier."),
     ]
+    """
+    32-character trace identifier.
+    """
+
     span_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="spanCount"),
         pydantic.Field(alias="spanCount", description="Total number of spans in the trace."),
     ]
+    """
+    Total number of spans in the trace.
+    """
+
     error_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="errorCount"),
         pydantic.Field(alias="errorCount", description="Number of spans flagged with an error status."),
     ]
+    """
+    Number of spans flagged with an error status.
+    """
+
     start_time: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="startTime"),
         pydantic.Field(alias="startTime", description="ISO-8601 timestamp of the trace's earliest span."),
     ]
+    """
+    ISO-8601 timestamp of the trace's earliest span.
+    """
+
     end_time: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="endTime"),
         pydantic.Field(alias="endTime", description="ISO-8601 timestamp of the trace's latest span."),
     ]
+    """
+    ISO-8601 timestamp of the trace's latest span.
+    """
+
     duration_ns: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="durationNs"),
         pydantic.Field(alias="durationNs", description="Wall-clock duration of the trace in nanoseconds."),
     ]
+    """
+    Wall-clock duration of the trace in nanoseconds.
+    """
+
     time_to_first_token_ns: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="timeToFirstTokenNs"),
@@ -58,36 +90,64 @@ class TraceDetail(UniversalBaseModel):
             description="Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured.",
         ),
     ]
+    """
+    Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured.
+    """
+
     tokens_input: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="tokensInput"),
         pydantic.Field(alias="tokensInput", description="Total input tokens across LLM spans."),
     ]
+    """
+    Total input tokens across LLM spans.
+    """
+
     tokens_output: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="tokensOutput"),
         pydantic.Field(alias="tokensOutput", description="Total output tokens across LLM spans."),
     ]
+    """
+    Total output tokens across LLM spans.
+    """
+
     tokens_cache_read: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="tokensCacheRead"),
         pydantic.Field(alias="tokensCacheRead", description="Total tokens served from the provider's prompt cache."),
     ]
+    """
+    Total tokens served from the provider's prompt cache.
+    """
+
     tokens_cache_create: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="tokensCacheCreate"),
         pydantic.Field(alias="tokensCacheCreate", description="Total tokens written to the provider's prompt cache."),
     ]
+    """
+    Total tokens written to the provider's prompt cache.
+    """
+
     tokens_reasoning: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="tokensReasoning"),
         pydantic.Field(alias="tokensReasoning", description="Total reasoning tokens reported by the model."),
     ]
+    """
+    Total reasoning tokens reported by the model.
+    """
+
     tokens_total: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="tokensTotal"),
         pydantic.Field(alias="tokensTotal", description="Sum of all token counters."),
     ]
+    """
+    Sum of all token counters.
+    """
+
     cost_input_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costInputMicrocents"),
@@ -95,6 +155,10 @@ class TraceDetail(UniversalBaseModel):
             alias="costInputMicrocents", description="Cost of input tokens in microcents (100,000,000 per USD)."
         ),
     ]
+    """
+    Cost of input tokens in microcents (100,000,000 per USD).
+    """
+
     cost_output_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costOutputMicrocents"),
@@ -102,11 +166,19 @@ class TraceDetail(UniversalBaseModel):
             alias="costOutputMicrocents", description="Cost of output tokens in microcents (100,000,000 per USD)."
         ),
     ]
+    """
+    Cost of output tokens in microcents (100,000,000 per USD).
+    """
+
     cost_total_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costTotalMicrocents"),
         pydantic.Field(alias="costTotalMicrocents", description="Total cost in microcents (100,000,000 per USD)."),
     ]
+    """
+    Total cost in microcents (100,000,000 per USD).
+    """
+
     session_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="sessionId"),
@@ -116,6 +188,10 @@ class TraceDetail(UniversalBaseModel):
             description="Conversation/session identifier set by the SDK. `null` when absent.",
         ),
     ]
+    """
+    Conversation/session identifier set by the SDK. `null` when absent.
+    """
+
     user_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="userId"),
@@ -123,6 +199,10 @@ class TraceDetail(UniversalBaseModel):
             alias="userId", default=None, description="End-user identifier set by the SDK. `null` when absent."
         ),
     ]
+    """
+    End-user identifier set by the SDK. `null` when absent.
+    """
+
     simulation_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="simulationId"),
@@ -132,6 +212,10 @@ class TraceDetail(UniversalBaseModel):
             description="CUID of the simulation that produced this trace. `null` when not a simulation.",
         ),
     ]
+    """
+    CUID of the simulation that produced this trace. `null` when not a simulation.
+    """
+
     tags: typing.List[str] = pydantic.Field()
     """
     Free-form tags attached at ingest time.
@@ -152,6 +236,10 @@ class TraceDetail(UniversalBaseModel):
         FieldMetadata(alias="serviceNames"),
         pydantic.Field(alias="serviceNames", description="OpenTelemetry `service.name` values seen in the trace."),
     ]
+    """
+    OpenTelemetry `service.name` values seen in the trace.
+    """
+
     root_span_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="rootSpanId"),
@@ -161,6 +249,10 @@ class TraceDetail(UniversalBaseModel):
             description="Identifier of the trace's root span. `null` when no root span has been ingested.",
         ),
     ]
+    """
+    Identifier of the trace's root span. `null` when no root span has been ingested.
+    """
+
     root_span_name: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="rootSpanName"),
@@ -170,6 +262,10 @@ class TraceDetail(UniversalBaseModel):
             description="`name` attribute of the root span. `null` when no root span has been ingested.",
         ),
     ]
+    """
+    `name` attribute of the root span. `null` when no root span has been ingested.
+    """
+
     positive_annotation_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="positiveAnnotationCount"),
@@ -177,6 +273,10 @@ class TraceDetail(UniversalBaseModel):
             alias="positiveAnnotationCount", description="Number of `passed = true` annotations attached to this trace."
         ),
     ]
+    """
+    Number of `passed = true` annotations attached to this trace.
+    """
+
     negative_annotation_count: typing_extensions.Annotated[
         int,
         FieldMetadata(alias="negativeAnnotationCount"),
@@ -185,6 +285,10 @@ class TraceDetail(UniversalBaseModel):
             description="Number of `passed = false` annotations attached to this trace.",
         ),
     ]
+    """
+    Number of `passed = false` annotations attached to this trace.
+    """
+
     metadata: typing.Dict[str, str] = pydantic.Field()
     """
     Free-form metadata attached at ingest time.

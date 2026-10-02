@@ -40,7 +40,7 @@ class AgentScoreClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_ : typing.Optional[dt.date]
             Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`.
@@ -72,12 +72,12 @@ class AgentScoreClient:
 
     def causes(self, project_slug: str, *, request_options: typing.Optional[RequestOptions] = None) -> AgentScoreCauses:
         """
-        Returns what explains the project's current Agent Score: ranked causes per dimension, and where Outcome failures and Safety harm concentrate. This is current evidence from the live window and does not reconstruct any stored score.
+        Returns ranked causes per dimension and Outcome and Safety issue summaries for today's UTC date. Published scores retain the evidence from their original computation. When no retained explanation is available, the response may use matching evidence from another computation for the same date, or report an explicit absence.
 
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -85,7 +85,7 @@ class AgentScoreClient:
         Returns
         -------
         AgentScoreCauses
-            Current cause rows, or an explicit absence
+            Evidence for today, retained with the published score when available, or an explicit absence
 
         Examples
         --------
@@ -108,7 +108,7 @@ class AgentScoreClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -162,7 +162,7 @@ class AsyncAgentScoreClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         from_ : typing.Optional[dt.date]
             Inclusive start date as `YYYY-MM-DD`. Defaults to 90 days before `to`.
@@ -204,12 +204,12 @@ class AsyncAgentScoreClient:
         self, project_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AgentScoreCauses:
         """
-        Returns what explains the project's current Agent Score: ranked causes per dimension, and where Outcome failures and Safety harm concentrate. This is current evidence from the live window and does not reconstruct any stored score.
+        Returns ranked causes per dimension and Outcome and Safety issue summaries for today's UTC date. Published scores retain the evidence from their original computation. When no retained explanation is available, the response may use matching evidence from another computation for the same date, or report an explicit absence.
 
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -217,7 +217,7 @@ class AsyncAgentScoreClient:
         Returns
         -------
         AgentScoreCauses
-            Current cause rows, or an explicit absence
+            Evidence for today, retained with the published score when available, or an explicit absence
 
         Examples
         --------
@@ -250,7 +250,7 @@ class AsyncAgentScoreClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.

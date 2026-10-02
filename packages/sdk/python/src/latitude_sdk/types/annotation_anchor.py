@@ -23,6 +23,10 @@ class AnnotationAnchor(UniversalBaseModel):
             description="0-based message index inside the conversation. Omit for conversation-level annotations.",
         ),
     ]
+    """
+    0-based message index inside the conversation. Omit for conversation-level annotations.
+    """
+
     part_index: typing_extensions.Annotated[
         typing.Optional[int],
         FieldMetadata(alias="partIndex"),
@@ -32,6 +36,10 @@ class AnnotationAnchor(UniversalBaseModel):
             description="0-based index into the target message's `parts[]`. Requires `messageIndex`.",
         ),
     ]
+    """
+    0-based index into the target message's `parts[]`. Requires `messageIndex`.
+    """
+
     start_offset: typing_extensions.Annotated[
         typing.Optional[int],
         FieldMetadata(alias="startOffset"),
@@ -41,6 +49,10 @@ class AnnotationAnchor(UniversalBaseModel):
             description="Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`.",
         ),
     ]
+    """
+    Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`.
+    """
+
     end_offset: typing_extensions.Annotated[
         typing.Optional[int],
         FieldMetadata(alias="endOffset"),
@@ -50,6 +62,10 @@ class AnnotationAnchor(UniversalBaseModel):
             description="Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`.",
         ),
     ]
+    """
+    Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`.
+    """
+
     text_format: typing_extensions.Annotated[
         typing.Optional[AnnotationAnchorTextFormat],
         FieldMetadata(alias="textFormat"),
@@ -59,5 +75,8 @@ class AnnotationAnchor(UniversalBaseModel):
             description='UI-side text transform applied before the offsets were captured (e.g. `"pretty-json"`). Resolvers must apply the same transform before slicing.',
         ),
     ]
+    """
+    UI-side text transform applied before the offsets were captured (e.g. `"pretty-json"`). Resolvers must apply the same transform before slicing.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
