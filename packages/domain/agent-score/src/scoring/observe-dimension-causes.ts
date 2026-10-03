@@ -119,6 +119,8 @@ interface SignalAccumulator {
   readonly sessionIds: Set<string>
 }
 
+const SIGNAL_EFFECT_DIMENSIONS: readonly ScoreDimension[] = ["cost", "speed"]
+
 const signalMeasurement = ({
   signalId,
   scoreDimension,
@@ -161,7 +163,7 @@ const signalCauses = ({
 
   return [...signals.entries()].flatMap(([signalId, signal]) =>
     [...signal.scoreDimensions]
-      .filter((dimension) => dimension !== "outcome" && dimension !== "safety")
+      .filter((dimension) => SIGNAL_EFFECT_DIMENSIONS.includes(dimension))
       .map(
         (scoreDimension): ObservedDimensionCause => ({
           scoreDimension,
