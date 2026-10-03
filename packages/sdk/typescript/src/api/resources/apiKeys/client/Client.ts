@@ -88,7 +88,7 @@ export class ApiKeysClient {
     }
 
     /**
-     * Generates a new API key for the organization. The token is only returned once — store it securely.
+     * Generates a new API key. Omit projectId and projectSlug for an organization-wide key, or pass either to bind the key to one project. The token is only returned once — store it securely.
      *
      * @param {Latitude.CreateApiKeyBody} request
      * @param {ApiKeysClient.RequestOptions} requestOptions - Request-specific configuration.
