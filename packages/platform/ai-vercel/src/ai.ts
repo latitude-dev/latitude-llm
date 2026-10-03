@@ -143,6 +143,104 @@ const normalizeProviderOptions = (
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 
+// JSON-schema keywords Anthropic's structured-output subset rejects. Zod emits
+// these from `.min()`/`.max()`/`.multipleOf()`, so a schema that round-trips fine
+// on every other provider is a 400 on `output_config.format.schema`. Two more
+// keywords need a value check rather than a name check and are handled in
+// `hasAnthropicUnsupportedSchemaKeyword`: `minItems` ("only values 0 and 1
+// supported") and `additionalProperties` ("set to anything other than `false`").
+// See https://platform.claude.com/docs/en/build-with-claude/structured-outputs
+const ANTHROPIC_UNSUPPORTED_SCHEMA_KEYWORDS = new Set([
+  "minimum",
+  "maximum",
+  "exclusiveMinimum",
+  "exclusiveMaximum",
+  "multipleOf",
+  "minLength",
+  "maxLength",
+  "maxItems",
+])
+
+/**
+ * Matches by key name, so an object with a property literally named `maxItems` is
+ * a false positive — the same trade-off `stripBedrockUnsupportedKeywords` makes.
+ * Harmless here: a false positive only routes the call through the json tool, which
+ * accepts the whole schema. Anthropic's structural exclusions (recursive schemas,
+ * complex enum members, external `$ref`) are not keyword-detectable and stay out of
+ * scope.
+ */
+const hasAnthropicUnsupportedSchemaKeyword = (node: unknown): boolean => {
+  if (Array.isArray(node)) {
+    return node.some(hasAnthropicUnsupportedSchemaKeyword)
+  }
+  if (!isRecord(node)) {
+    return false
+  }
+
+  for (const [key, value] of Object.entries(node)) {
+    if (ANTHROPIC_UNSUPPORTED_SCHEMA_KEYWORDS.has(key)) {
+      return true
+    }
+    // The docs support `minItems` for 0 and 1 only.
+    if (key === "minItems" && value !== 0 && value !== 1) {
+      return true
+    }
+    // Only "`additionalProperties` set to anything other than `false`" is rejected,
+    // so an absent `additionalProperties` is not flagged. Zod emits
+    // `additionalProperties: false` on every object it converts; a loose object is
+    // what produces a non-`false` value.
+    if (key === "additionalProperties" && value !== false) {
+      return true
+    }
+    if (hasAnthropicUnsupportedSchemaKeyword(value)) {
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
+ * True when the JSON schema derived from `schema` carries a constraint Anthropic's
+ * structured-output subset rejects. Best-effort: if the Zod → JSON-schema conversion
+ * throws, the answer is `false` and the native path is left in place (no worse than
+ * not checking).
+ */
+export const schemaNeedsAnthropicJsonTool = (schema: z.ZodType): boolean => {
+  try {
+    return hasAnthropicUnsupportedSchemaKeyword(z.toJSONSchema(schema, { target: "draft-2020-12", reused: "inline" }))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Anthropic rejects a structured-output schema carrying keywords outside its
+ * supported subset, so such a call is routed through the provider's `jsonTool`
+ * mode: the schema rides in a non-strict tool `input_schema`, which that subset
+ * does not constrain. Compliant schemas keep the native `output_config.format`
+ * path. A caller-supplied `structuredOutputMode` is a deliberate override and wins.
+ */
+const withAnthropicStructuredOutputMode = (
+  providerOptions: ProviderOptions | undefined,
+  provider: string,
+  schema: z.ZodType,
+): ProviderOptions | undefined => {
+  if (provider !== "anthropic" || !schemaNeedsAnthropicJsonTool(schema)) {
+    return providerOptions
+  }
+
+  const anthropicOptions = providerOptions?.anthropic
+  if (isRecord(anthropicOptions) && anthropicOptions.structuredOutputMode !== undefined) {
+    return providerOptions
+  }
+
+  return {
+    ...providerOptions,
+    anthropic: { ...(isRecord(anthropicOptions) ? anthropicOptions : {}), structuredOutputMode: "jsonTool" },
+  }
+}
+
 const truncateErrorText = (value: string): string =>
   value.length <= MAX_ERROR_TEXT_LENGTH ? value : `${value.slice(0, MAX_ERROR_TEXT_LENGTH)}...`
 
@@ -378,7 +476,12 @@ export const AIGenerateLive = Layer.effect(
             servedBy: { readonly provider: string; readonly model: string },
             traceId: string | undefined,
           ) => {
-            const providerOptions = normalizeProviderOptions(input.providerOptions)
+            // Keyed on `servedBy`, not `input`: this runs for the fallback attempt too.
+            const providerOptions = withAnthropicStructuredOutputMode(
+              normalizeProviderOptions(input.providerOptions),
+              servedBy.provider,
+              input.schema,
+            )
 
             const call: GenerateTextCall = {
               model,
