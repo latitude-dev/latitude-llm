@@ -36,6 +36,12 @@ export interface IngestSpansInput {
   readonly isSandbox: boolean
   readonly defaultProjectSlug?: string
   /**
+   * When set, the API key is bound to this project. Spans are forced onto it.
+   * A conflicting `X-Latitude-Project` header or `latitude.project` attribute
+   * rejects that span instead of remapping it.
+   */
+  readonly scopedProjectId?: string | null
+  /**
    * Organization-level redaction setting. Resolved and cached by the transport,
    * because the cached resolver lives in the platform layer and the domain must not
    * reach into it. Absent means "no organization policy".
@@ -142,6 +148,14 @@ const resolveProject = (slug: string): Effect.Effect<Project | null, RepositoryE
     return yield* repo.findBySlug(slug).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
   })
 
+const resolveProjectById = (
+  projectId: string,
+): Effect.Effect<Project | null, RepositoryError, ProjectRepository | SqlClient> =>
+  Effect.gen(function* () {
+    const repo = yield* ProjectRepository
+    return yield* repo.findById(projectId).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+  })
+
 interface IngestSpansUseCaseInput extends IngestSpansInput {
   /**
    * The OTLP request decoded once by `ingestSpansWithBillingUseCase`. The use case
@@ -172,33 +186,58 @@ export const ingestSpansUseCase = (
       return { totalSpans: 0, acceptedSpans: 0, rejectedSpans: 0 }
     }
 
-    // Resolve every unique slug (including the header default) against the org. One DB call per
-    // unique slug; we keep the full `Project` (settings included) so the sampling step below
-    // doesn't have to re-fetch.
-    const slugsToResolve = new Set<string>(uniqueSlugs)
-    if (input.defaultProjectSlug) slugsToResolve.add(input.defaultProjectSlug)
-
     const projectBySlug = new Map<string, Project>()
-    for (const slug of slugsToResolve) {
-      const project = yield* resolveProject(slug)
-      if (project) projectBySlug.set(slug, project)
-    }
-
-    const defaultProject = input.defaultProjectSlug ? (projectBySlug.get(input.defaultProjectSlug) ?? null) : null
-    const defaultProjectId = defaultProject?.id ?? null
-
+    let defaultProject: Project | null = null
     let acceptedSpans = 0
     let rejectedSpans = 0
-    for (const slug of spanSlugs) {
-      if (slug) {
-        if (projectBySlug.has(slug)) acceptedSpans++
-        else rejectedSpans++
-      } else if (defaultProjectId) {
-        acceptedSpans++
-      } else {
-        rejectedSpans++
+
+    if (input.scopedProjectId) {
+      // Project-scoped key: do not remap a conflicting header or span attribute
+      // onto the bound project. Only the bound project is eligible.
+      const forced = yield* resolveProjectById(input.scopedProjectId)
+      if (!forced) {
+        return { totalSpans, acceptedSpans: 0, rejectedSpans: totalSpans }
+      }
+      projectBySlug.set(forced.slug, forced)
+      const headerConflicts = input.defaultProjectSlug !== undefined && input.defaultProjectSlug !== forced.slug
+      defaultProject = headerConflicts ? null : forced
+      for (const slug of spanSlugs) {
+        if (slug) {
+          if (slug === forced.slug) acceptedSpans++
+          else rejectedSpans++
+        } else if (!headerConflicts) {
+          acceptedSpans++
+        } else {
+          rejectedSpans++
+        }
+      }
+    } else {
+      // Resolve every unique slug (including the header default) against the org. One DB call per
+      // unique slug; we keep the full `Project` (settings included) so the sampling step below
+      // doesn't have to re-fetch.
+      const slugsToResolve = new Set<string>(uniqueSlugs)
+      if (input.defaultProjectSlug) slugsToResolve.add(input.defaultProjectSlug)
+
+      for (const slug of slugsToResolve) {
+        const project = yield* resolveProject(slug)
+        if (project) projectBySlug.set(slug, project)
+      }
+
+      defaultProject = input.defaultProjectSlug ? (projectBySlug.get(input.defaultProjectSlug) ?? null) : null
+
+      for (const slug of spanSlugs) {
+        if (slug) {
+          if (projectBySlug.has(slug)) acceptedSpans++
+          else rejectedSpans++
+        } else if (defaultProject) {
+          acceptedSpans++
+        } else {
+          rejectedSpans++
+        }
       }
     }
+
+    const defaultProjectId = defaultProject?.id ?? null
 
     yield* Effect.annotateCurrentSpan("totalSpans", totalSpans)
     yield* Effect.annotateCurrentSpan("acceptedSpans", acceptedSpans)

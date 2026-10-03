@@ -227,6 +227,9 @@ importers:
       '@domain/partners':
         specifier: workspace:*
         version: link:../../packages/domain/partners
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../../packages/domain/projects
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
@@ -1257,6 +1260,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../projects
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared

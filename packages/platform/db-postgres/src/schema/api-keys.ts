@@ -1,5 +1,6 @@
 import { index, text, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
+import { projects } from "./projects.ts"
 
 /**
  * API Keys table - stores API keys for organization access.
@@ -33,10 +34,19 @@ export const apiKeys = latitudeSchema.table(
     token: text("token").notNull(),
     tokenHash: text("token_hash").notNull().unique(),
     organizationId: cuid("organization_id").notNull(),
+    /**
+     * Null = org-wide key. Set = the key may only touch this project.
+     * Restrict (not set-null) so deleting a project cannot silently widen a key.
+     */
+    projectId: cuid("project_id", { default: false }).references(() => projects.id, { onDelete: "restrict" }),
     name: varchar("name", { length: 256 }).notNull().default(""),
     lastUsedAt: tzTimestamp("last_used_at"),
     deletedAt: tzTimestamp("deleted_at"),
     ...timestamps(),
   },
-  (t) => [organizationRLSPolicy("api_keys"), index("api_keys_organization_id_idx").on(t.organizationId)],
+  (t) => [
+    organizationRLSPolicy("api_keys"),
+    index("api_keys_organization_id_idx").on(t.organizationId),
+    index("api_keys_project_id_idx").on(t.projectId),
+  ],
 )
