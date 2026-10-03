@@ -46,6 +46,11 @@ interface SpanOverrides {
   readonly outputMessages?: string
   readonly systemInstructions?: string
   readonly operation?: string
+  readonly userEmail?: string
+  readonly simulationId?: string
+  readonly serviceName?: string
+  readonly agentName?: string
+  readonly tags?: string[]
 }
 
 const makeSpanRow = (overrides: SpanOverrides): SpanRow => {
@@ -58,25 +63,26 @@ const makeSpanRow = (overrides: SpanOverrides): SpanRow => {
     project_id: PROJECT_ID as string,
     session_id: overrides.sessionId ?? "",
     user_id: "",
+    user_email: overrides.userEmail ?? "",
     trace_id: overrides.traceId,
     span_id: overrides.spanId,
     parent_span_id: overrides.parentSpanId ?? "",
     api_key_id: "test-api-key",
-    simulation_id: "",
+    simulation_id: overrides.simulationId ?? "",
     start_time: toClickHouseDateTime(startTime),
     end_time: toClickHouseDateTime(endTime),
     name: overrides.name ?? "test-span",
-    service_name: "test-service",
+    service_name: overrides.serviceName ?? "test-service",
     kind: 0,
     status_code: 0,
     status_message: "",
     error_type: "",
-    tags: [],
+    tags: overrides.tags ?? [],
     metadata: overrides.metadata ?? {},
     operation: overrides.operation ?? "chat",
     provider: overrides.provider ?? "",
     model: overrides.model ?? "",
-    agent_name: "",
+    agent_name: overrides.agentName ?? "",
     response_model: "",
     tokens_input: overrides.tokensInput ?? 0,
     tokens_output: overrides.tokensOutput ?? 0,
@@ -269,6 +275,89 @@ describe("SessionRepository", () => {
       expect(session.providers).toEqual(["openai"])
       // Root span name is the earliest root across the session's traces (turn-1).
       expect(session.rootSpanName).toBe("turn-1-root")
+    })
+
+    it("filter-free two-stage listing keeps every Session field populated (stage-B re-read)", async () => {
+      const sessionId = "two-stage-1"
+      const traceId = "d".repeat(32)
+      const startTime = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+      await insertSpans([
+        makeSpanRow({
+          traceId,
+          spanId: "c".repeat(16),
+          sessionId,
+          startTime,
+          model: "gpt-4",
+          provider: "openai",
+          userEmail: "user@example.com",
+          simulationId: "sim-123",
+          serviceName: "svc-a",
+          agentName: "agent-a",
+          tags: ["tag-a"],
+          metadata: { key: "value" },
+          name: "root-a",
+        }),
+      ])
+
+      const page = await runCh(
+        repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options: { limit: 10 } }),
+      )
+
+      expect(page.items).toHaveLength(1)
+      const session = nonNull(page.items[0])
+      expect(session.userEmail).toBe("user@example.com")
+      expect(session.simulationId).toBe("sim-123")
+      expect(session.serviceNames).toEqual(["svc-a"])
+      expect(session.agentNames).toEqual(["agent-a"])
+      expect(session.definedTools).toEqual([])
+      expect(session.metadata).toEqual({ key: "value" })
+      expect(session.tags).toEqual(["tag-a"])
+      expect(session.models).toEqual(["gpt-4"])
+      expect(session.providers).toEqual(["openai"])
+      expect(session.rootSpanName).toBe("root-a")
+      expect(session.traceCount).toBe(1)
+      expect(session.traceIds).toEqual([traceId])
+    })
+
+    it("filter-free listing paginates in stage-A order with no duplicates", async () => {
+      const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+      const rows = ["1", "2", "3", "4", "5", "6", "7"].map((n, i) =>
+        makeSpanRow({
+          traceId: n.repeat(32),
+          spanId: n.repeat(16),
+          sessionId: `pg-${n}`,
+          startTime: new Date(start.getTime() + i * 60_000),
+          model: "gpt-4",
+        }),
+      )
+      await insertSpans(rows)
+
+      const page = await runCh(
+        repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options: { limit: 3 } }),
+      )
+
+      expect(page.items).toHaveLength(3)
+      expect(page.hasMore).toBe(true)
+      const ids = page.items.map((s) => s.sessionId)
+      expect(new Set(ids).size).toBe(3)
+      // DESC: the newest starts first
+      expect(ids[0]).toBe("pg-7")
+      expect(nonNull(page.nextCursor).sessionId).toBe(ids[2])
+
+      const page2 = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: page.nextCursor
+            ? { limit: 3, sortBy: "lastActivity", sortDirection: "desc", cursor: page.nextCursor }
+            : { limit: 3, sortBy: "lastActivity", sortDirection: "desc" },
+        }),
+      )
+      const ids2 = page2.items.map((s) => s.sessionId)
+      for (const id of ids2) {
+        expect(ids).not.toContain(id)
+      }
+      expect(ids2[0]).toBe("pg-4")
     })
   })
 
