@@ -32,6 +32,7 @@ import {
   useApiKeysCollection,
 } from "../../../../../domains/api-keys/api-keys.collection.ts"
 import type { ApiKeyRecord } from "../../../../../domains/api-keys/api-keys.functions.ts"
+import { apiKeysVisibleOnProject } from "../../../../../domains/api-keys/visible-on-project.ts"
 import { revokeOAuthKeyMutation, useOAuthKeysCollection } from "../../../../../domains/oauth/oauth-keys.collection.ts"
 import type { OAuthKeyRecord } from "../../../../../domains/oauth/oauth-keys.functions.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
@@ -107,9 +108,9 @@ function CreateApiKeyModal({
                         disabled={!project}
                         onChange={() => field.handleChange("project")}
                       />
-                      <span>
-                        <Text.H5>Project</Text.H5>
-                        <Text.H6 color="foregroundMuted">
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <Text.H5 display="block">Project</Text.H5>
+                        <Text.H6 display="block" color="foregroundMuted">
                           {project ? `Only ${project.name} (${project.slug})` : "Current project is still loading"}
                         </Text.H6>
                       </span>
@@ -122,9 +123,11 @@ function CreateApiKeyModal({
                         checked={field.state.value === "organization"}
                         onChange={() => field.handleChange("organization")}
                       />
-                      <span>
-                        <Text.H5>Organization</Text.H5>
-                        <Text.H6 color="foregroundMuted">Every project in this organization</Text.H6>
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <Text.H5 display="block">Organization</Text.H5>
+                        <Text.H6 display="block" color="foregroundMuted">
+                          Every project in this organization
+                        </Text.H6>
                       </span>
                     </label>
                   </fieldset>
@@ -262,7 +265,7 @@ function DeleteApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
   )
 }
 
-function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
+function ApiKeysTable({ apiKeys, deleteLocked }: { apiKeys: ApiKeyRecord[]; deleteLocked: boolean }) {
   const [apiKeyToEdit, setApiKeyToEdit] = useState<ApiKeyRecord | null>(null)
   const [apiKeyToDelete, setApiKeyToDelete] = useState<ApiKeyRecord | null>(null)
 
@@ -318,12 +321,12 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   <Tooltip
                     asChild
                     trigger={
-                      <Button disabled={apiKeys.length === 1} variant="ghost" onClick={() => setApiKeyToDelete(apiKey)}>
+                      <Button disabled={deleteLocked} variant="ghost" onClick={() => setApiKeyToDelete(apiKey)}>
                         <Icon icon={Trash2} size="sm" />
                       </Button>
                     }
                   >
-                    {apiKeys.length === 1 ? "You can't delete the last API key" : "Delete API key"}
+                    {deleteLocked ? "You can't delete the last API key" : "Delete API key"}
                   </Tooltip>
                 </div>
               </TableCell>
@@ -455,7 +458,9 @@ function KeysSettingsPage() {
   // Newest first.
   const byCreatedAtDesc = <T extends { readonly createdAt: string }>(a: T, b: T): number =>
     a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
-  const apiKeys = (apiKeyData ?? []).slice().sort(byCreatedAtDesc)
+  const allApiKeys = (apiKeyData ?? []).slice().sort(byCreatedAtDesc)
+  // Project settings shows this project's keys and org-wide keys only.
+  const apiKeys = apiKeysVisibleOnProject(allApiKeys, currentProject?.id ?? null)
   const oauthKeys = (oauthKeyData ?? []).slice().sort(byCreatedAtDesc)
 
   return (
@@ -478,7 +483,11 @@ function KeysSettingsPage() {
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          {apiKeysLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />}
+          {apiKeysLoading ? (
+            <TableSkeleton cols={3} rows={3} />
+          ) : (
+            <ApiKeysTable apiKeys={apiKeys} deleteLocked={allApiKeys.length === 1} />
+          )}
         </div>
       </section>
 
