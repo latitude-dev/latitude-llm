@@ -212,6 +212,40 @@ describe("readSessionCostEvidence", () => {
     expect(withTools).not.toBe(read([generation()]).workloadStratum)
   })
 
+  it("retains complete tool-definition token weights for window scoring", () => {
+    const evidence = readSessionCostEvidence({
+      generations: [generation()],
+      toolCalls: [],
+      memoryEvents: [],
+      countTokens: () => 0,
+      completed: true,
+      recoveredIncidents: [],
+      recoveredStructuralDefects: [],
+      toolDefinitions: [
+        {
+          name: "search",
+          estimatedSerializedTokens: 20,
+          requestCount: 3,
+          calledAtLeastOnce: false,
+          observationPeriodComplete: true,
+        },
+        {
+          name: "partial",
+          estimatedSerializedTokens: 50,
+          requestCount: 1,
+          calledAtLeastOnce: false,
+          observationPeriodComplete: false,
+        },
+      ],
+      unmatchedToolCallNames: [],
+      cacheEvidence: null,
+      latencyArtifact: artifact,
+    })
+
+    expect(evidence.toolNamesUsed).toEqual([])
+    expect(evidence.toolDefinitionWindowObservations).toEqual([{ name: "search", inputTokens: 60 }])
+  })
+
   it("separates unknown tool metadata from an observed empty toolset", () => {
     const unknownTools = read([generation()]).workloadStratum
     const noTools = read([

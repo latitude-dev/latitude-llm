@@ -28,6 +28,14 @@ minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - "@temporalio/*"
   - "rosetta-ai"
+  # TODO: drop the @tanstack entries after 2026-10-07; they only let the
+  # GHSA-qx66-fv34-fjm8 (react-start XSS) patch in before it is 7 days old.
+  - "@tanstack/react-start*"
+  - "@tanstack/start-*"
+  - "@tanstack/react-router"
+  - "@tanstack/router-*"
+  - "@tanstack/react-store"
+  - "@tanstack/store"
 
 # Disable npm `pre*` / `post*` lifecycle scripts (defense in depth on top of
 # pnpm-workspace.yaml `onlyBuiltDependencies` allowlist). Mini Shai-Hulud
