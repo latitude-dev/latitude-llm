@@ -11,7 +11,7 @@ import type { InitializeObservabilityOptions } from "./types.ts"
 
 export { EffectOtelTracerLive, withTracing } from "./effect-tracer.ts"
 export { recordSpanExceptionForDatadog } from "./record-span-exception.ts"
-export { trace, SpanStatusCode }
+export { SpanStatusCode, trace }
 export const createLogger = (scope: string) => createLoggerWithState(getObservabilityState(), scope)
 export const serializeError = serializeErrorImpl
 

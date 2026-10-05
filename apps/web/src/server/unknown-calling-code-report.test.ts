@@ -49,8 +49,8 @@ describe("reportUnknownCallingCode", () => {
     resetUnknownCallingCodeThrottle()
     reportUnknownCallingCode("+99887654321")
 
-    const [firstError] = recordSpanExceptionForDatadog.mock.calls[0]?.slice(1) as [Error]
-    const [secondError] = recordSpanExceptionForDatadog.mock.calls[1]?.slice(1) as [Error]
+    const [firstError] = (recordSpanExceptionForDatadog.mock.calls[0]?.slice(1) ?? []) as [Error]
+    const [secondError] = (recordSpanExceptionForDatadog.mock.calls[1]?.slice(1) ?? []) as [Error]
     expect(firstError.name).toBe("UnknownCallingCodeError")
     expect(secondError.name).toBe("UnknownCallingCodeError")
     expect(firstError.message).toBe(secondError.message)

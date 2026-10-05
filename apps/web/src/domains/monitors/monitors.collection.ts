@@ -39,9 +39,8 @@ export interface MonitorRuleDraft {
   readonly severity?: AlertSeverity
 }
 
-export type { MonitorListRowRecord, MonitorRecord }
 /** @public Consumed by the M4 details panel incidents table; not yet wired in M2. */
-export type { MonitorIncidentRecord }
+export type { MonitorIncidentRecord, MonitorListRowRecord, MonitorRecord }
 
 const DEFAULT_MONITORS_PAGE_SIZE = 50
 const ORG_SEARCH_LIMIT = 8

@@ -96,13 +96,13 @@ type ToastProps = ComponentPropsWithoutRef<typeof Toast>
 type ToastActionElement = ReactElement<typeof ToastAction>
 
 export {
-  type ToastProps,
-  type ToastActionElement,
-  ToastProvider,
-  ToastViewport,
   Toast,
-  ToastTitle,
-  ToastDescription,
-  ToastClose,
   ToastAction,
+  type ToastActionElement,
+  ToastClose,
+  ToastDescription,
+  type ToastProps,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport,
 }

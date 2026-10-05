@@ -802,7 +802,7 @@ describe("ingestSpansWithBillingUseCase sandbox path", () => {
     )
 
     expect(published).toHaveLength(1)
-    expect((published[0]?.payload as { isSandbox: boolean }).isSandbox).toBe(true)
+    expect((published[0]?.payload as { isSandbox: boolean })?.isSandbox).toBe(true)
     expect(sandboxSignals.state.quotaIncrements).toEqual([{ organizationId: ORGANIZATION_ID, spanCount: 1 }])
     expect(sandboxRepo.stampCount).toBe(1)
     expect(sandboxSignals.state.rejected).toHaveLength(0)
@@ -884,7 +884,7 @@ describe("ingestSpansWithBillingUseCase sandbox path", () => {
     )
 
     expect(published).toHaveLength(1)
-    expect((published[0]?.payload as { isSandbox: boolean }).isSandbox).toBe(false)
+    expect((published[0]?.payload as { isSandbox: boolean })?.isSandbox).toBe(false)
     expect(sandboxSignals.state.quotaIncrements).toHaveLength(0)
     expect(sandboxRepo.stampCount).toBe(0)
   })
