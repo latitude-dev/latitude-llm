@@ -7874,7 +7874,7 @@ client.api_keys.list()
 <dl>
 <dd>
 
-Generates a new API key for the organization. The token is only returned once — store it securely.
+Generates a new API key. Omit projectId and projectSlug for an organization-wide key, or pass either to bind the key to one project. The token is only returned once — store it securely.
 </dd>
 </dl>
 </dd>
@@ -7916,6 +7916,22 @@ client.api_keys.create(
 <dd>
 
 **name:** `str` — Human-readable name for the API key. Used to distinguish keys in the UI.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**project_id:** `typing.Optional[str]` — Bind the key to this project. Omit `projectId` and `projectSlug` to mint an organization-wide key. One project per key.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**project_slug:** `typing.Optional[str]` — Bind the key to the project with this slug. Must agree with `projectId` when both are set.
     
 </dd>
 </dl>

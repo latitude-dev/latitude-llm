@@ -7632,6 +7632,28 @@
             "type": "string",
             "description": "Organization that owns this API key."
           },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "organization",
+              "project"
+            ],
+            "description": "`organization` keys can call every route. `project` keys are bound to `projectId`."
+          },
+          "projectId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Project this key is bound to. `null` for an organization-wide key."
+          },
+          "projectSlug": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Slug of the bound project, when the project still exists. `null` for organization-wide keys."
+          },
           "name": {
             "type": "string",
             "description": "Human-readable name."
@@ -7666,6 +7688,9 @@
         "required": [
           "id",
           "organizationId",
+          "scope",
+          "projectId",
+          "projectSlug",
           "name",
           "token",
           "lastUsedAt",
@@ -7681,6 +7706,16 @@
             "type": "string",
             "minLength": 1,
             "description": "Human-readable name for the API key. Used to distinguish keys in the UI."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bind the key to this project. Omit `projectId` and `projectSlug` to mint an organization-wide key. One project per key."
+          },
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bind the key to the project with this slug. Must agree with `projectId` when both are set."
           }
         },
         "required": [
@@ -7711,6 +7746,28 @@
           "organizationId": {
             "type": "string",
             "description": "Organization that owns this API key."
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "organization",
+              "project"
+            ],
+            "description": "`organization` keys can call every route. `project` keys are bound to `projectId`."
+          },
+          "projectId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Project this key is bound to. `null` for an organization-wide key."
+          },
+          "projectSlug": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Slug of the bound project, when the project still exists. `null` for organization-wide keys."
           },
           "name": {
             "type": "string",
@@ -7746,6 +7803,9 @@
         "required": [
           "id",
           "organizationId",
+          "scope",
+          "projectId",
+          "projectSlug",
           "name",
           "token",
           "lastUsedAt",
@@ -24358,7 +24418,7 @@
         "x-fern-sdk-group-name": "apiKeys",
         "x-fern-sdk-method-name": "create",
         "summary": "Generate API key",
-        "description": "Generates a new API key for the organization. The token is only returned once — store it securely.",
+        "description": "Generates a new API key. Omit projectId and projectSlug for an organization-wide key, or pass either to bind the key to one project. The token is only returned once — store it securely.",
         "security": [
           {
             "ApiKeyAuth": []

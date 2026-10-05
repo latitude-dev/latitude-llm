@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi"
 import { mountOperationModules, operationModules } from "@repo/operations"
 import { API_VERSION } from "../constants.ts"
 import { registerMcpRoute } from "../mcp/server.ts"
+import { createApiKeyProjectScopeMiddleware } from "../middleware/api-key-project-scope.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
@@ -49,6 +50,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
     }),
   )
   routes.use("*", createOrganizationContextMiddleware())
+  routes.use("*", createApiKeyProjectScopeMiddleware())
 
   mountOperationModules(routes, operationModules, { middlewareForTier: createTierRateLimiter })
 

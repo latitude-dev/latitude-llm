@@ -1,7 +1,13 @@
 import { generateApiKeyUseCase } from "@domain/api-keys"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
-import { ApiKeyRepositoryLive, OutboxEventWriterLive, type PostgresClient, withPostgres } from "@platform/db-postgres"
+import {
+  ApiKeyRepositoryLive,
+  OutboxEventWriterLive,
+  type PostgresClient,
+  ProjectRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getPostgresClient } from "../clients.ts"
@@ -21,7 +27,7 @@ export const createApiKeysWorker = ({
     create: (payload) => {
       return generateApiKeyUseCase({ name: payload.name, isSandbox: false }).pipe(
         withPostgres(
-          Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive, ProjectRepositoryLive),
           pgClient,
           OrganizationId(payload.organizationId),
         ),
