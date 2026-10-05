@@ -1152,15 +1152,29 @@ const parseSafetyOutput = (
 }
 
 // The Vercel AI SDK raises `NoObjectGeneratedError` / `NoOutputGeneratedError`
-// when the model returns output that does not materialize as the requested schema,
+// when the model returns output that does not materialize as the requested schema
+// (a mismatched shape, unparseable/duplicated JSON, or no output at all),
 // `AI_APICallError` with a "prompt is too long" message when the trace evidence
 // exceeds the model's context window, and Bedrock "Grammar compilation timed out"
 // when structured-output grammar compilation fails. The flagger keeps matched=false
 // for callers while marking the result indeterminate for screening coverage.
+//
+// When both the primary and fallback model fail, @platform/ai-vercel throws a
+// plain `Error` whose message concatenates both attempts' formatted errors, so
+// `cause.name` is no longer `AI_NoObjectGeneratedError`/`AI_NoOutputGeneratedError`
+// on either side — only their original messages survive, still carrying the
+// SDK's stable "No object generated: ..."/"No output generated." prefix. Match
+// on that prefix (not the more specific "did not match schema" reason) so every
+// no-structured-output reason — schema mismatch, unparseable/duplicated JSON,
+// no output — is recognized whether it came from a single failed attempt or a
+// combined primary+fallback failure.
 const isSchemaMismatchCause = (cause: unknown): boolean => {
   if (!(cause instanceof Error)) return false
   if (cause.name === "AI_NoObjectGeneratedError" || cause.name === "AI_NoOutputGeneratedError") return true
-  return typeof cause.message === "string" && cause.message.includes("response did not match schema")
+  return (
+    typeof cause.message === "string" &&
+    (cause.message.includes("No object generated:") || cause.message.includes("No output generated."))
+  )
 }
 
 const isPromptTooLongCause = (cause: unknown): boolean =>
