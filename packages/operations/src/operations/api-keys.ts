@@ -7,10 +7,11 @@ import {
   revokeApiKeyUseCase,
   updateApiKeyUseCase,
 } from "@domain/api-keys"
-import { ApiKeyId } from "@domain/shared"
+import { ProjectRepository } from "@domain/projects"
+import { ApiKeyId, BadRequestError, NotFoundError, ProjectId } from "@domain/shared"
 import { createRoute, z } from "@hono/zod-openapi"
 import { ApiKeyCacheInvalidatorLive } from "@platform/api-key-auth"
-import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, OutboxEventWriterLive, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
@@ -29,6 +30,14 @@ const ResponseSchema = z
   .object({
     id: z.string().describe("Stable API-key identifier."),
     organizationId: z.string().describe("Organization that owns this API key."),
+    scope: z
+      .enum(["organization", "project"])
+      .describe("`organization` keys can call every route. `project` keys are bound to `projectId`."),
+    projectId: z.string().nullable().describe("Project this key is bound to. `null` for an organization-wide key."),
+    projectSlug: z
+      .string()
+      .nullable()
+      .describe("Slug of the bound project, when the project still exists. `null` for organization-wide keys."),
     name: z.string().describe("Human-readable name."),
     token: z
       .string()
@@ -52,6 +61,14 @@ const ListItemSchema = z
   .object({
     id: z.string().describe("Stable API-key identifier."),
     organizationId: z.string().describe("Organization that owns this API key."),
+    scope: z
+      .enum(["organization", "project"])
+      .describe("`organization` keys can call every route. `project` keys are bound to `projectId`."),
+    projectId: z.string().nullable().describe("Project this key is bound to. `null` for an organization-wide key."),
+    projectSlug: z
+      .string()
+      .nullable()
+      .describe("Slug of the bound project, when the project still exists. `null` for organization-wide keys."),
     name: z.string().describe("Human-readable name."),
     token: z
       .string()
@@ -80,6 +97,18 @@ const ApiKeyIdParamsSchema = z.object({
 const CreateApiKeyBody = z
   .object({
     name: z.string().min(1).describe("Human-readable name for the API key. Used to distinguish keys in the UI."),
+    projectId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Bind the key to this project. Omit `projectId` and `projectSlug` to mint an organization-wide key. One project per key.",
+      ),
+    projectSlug: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Bind the key to the project with this slug. Must agree with `projectId` when both are set."),
   })
   .openapi("CreateApiKeyBody")
 
@@ -89,9 +118,16 @@ const UpdateApiKeyBody = z
   })
   .openapi("UpdateApiKeyBody")
 
-const toResponse = (apiKey: ApiKey) => ({
+const toScope = (apiKey: ApiKey, projectSlug: string | null) => ({
+  scope: apiKey.projectId ? ("project" as const) : ("organization" as const),
+  projectId: (apiKey.projectId as string | null) ?? null,
+  projectSlug,
+})
+
+const toResponse = (apiKey: ApiKey, projectSlug: string | null) => ({
   id: apiKey.id as string,
   organizationId: apiKey.organizationId as string,
+  ...toScope(apiKey, projectSlug),
   name: apiKey.name,
   token: apiKey.token,
   lastUsedAt: apiKey.lastUsedAt ? apiKey.lastUsedAt.toISOString() : null,
@@ -100,9 +136,10 @@ const toResponse = (apiKey: ApiKey) => ({
   updatedAt: apiKey.updatedAt.toISOString(),
 })
 
-const toListItemResponse = (apiKey: ApiKey) => ({
+const toListItemResponse = (apiKey: ApiKey, projectSlug: string | null) => ({
   id: apiKey.id as string,
   organizationId: apiKey.organizationId as string,
+  ...toScope(apiKey, projectSlug),
   name: apiKey.name,
   token: maskApiKeyToken(apiKey.token),
   lastUsedAt: apiKey.lastUsedAt ? apiKey.lastUsedAt.toISOString() : null,
@@ -110,6 +147,36 @@ const toListItemResponse = (apiKey: ApiKey) => ({
   createdAt: apiKey.createdAt.toISOString(),
   updatedAt: apiKey.updatedAt.toISOString(),
 })
+
+const projectSlugFor = (apiKey: ApiKey) =>
+  Effect.gen(function* () {
+    if (!apiKey.projectId) return null
+    const projects = yield* ProjectRepository
+    const project = yield* projects
+      .findById(apiKey.projectId)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    return project?.slug ?? null
+  })
+
+const resolveCreateProjectId = (body: { projectId?: string | undefined; projectSlug?: string | undefined }) =>
+  Effect.gen(function* () {
+    if (!body.projectId && !body.projectSlug) return null
+    const projects = yield* ProjectRepository
+    if (body.projectSlug) {
+      const project = yield* projects
+        .findBySlug(body.projectSlug)
+        .pipe(
+          Effect.catchTag("NotFoundError", () =>
+            Effect.fail(new NotFoundError({ entity: "Project", id: body.projectSlug ?? "" })),
+          ),
+        )
+      if (body.projectId && body.projectId !== project.id) {
+        return yield* new BadRequestError({ message: "projectId does not match projectSlug" })
+      }
+      return ProjectId(project.id)
+    }
+    return ProjectId(body.projectId ?? "")
+  })
 
 const apiKeysPath = "/api-keys"
 
@@ -124,7 +191,8 @@ const createApiKey = apiKeyEndpoint({
     group: "apiKeys",
     sdkMethod: "create",
     summary: "Generate API key",
-    description: "Generates a new API key for the organization. The token is only returned once — store it securely.",
+    description:
+      "Generates a new API key. Omit projectId and projectSlug for an organization-wide key, or pass either to bind the key to one project. The token is only returned once — store it securely.",
     security: PROTECTED_SECURITY,
     request: {
       body: jsonBody(CreateApiKeyBody),
@@ -135,11 +203,17 @@ const createApiKey = apiKeyEndpoint({
   rateLimitTier: "high",
   execute: (input, ctx) =>
     Effect.gen(function* () {
-      const apiKey = yield* generateApiKeyUseCase({ name: input.body.name, isSandbox: false })
-      return { status: 201, body: toResponse(apiKey) } as const
+      const projectId = yield* resolveCreateProjectId(input.body)
+      const apiKey = yield* generateApiKeyUseCase({
+        name: input.body.name,
+        isSandbox: false,
+        ...(projectId ? { projectId } : {}),
+      })
+      const projectSlug = yield* projectSlugFor(apiKey)
+      return { status: 201, body: toResponse(apiKey, projectSlug) } as const
     }).pipe(
       withPostgres(
-        Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive),
+        Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive, ProjectRepositoryLive),
         ctx.postgresClient,
         ctx.organization.id,
       ),
@@ -168,9 +242,25 @@ const listApiKeys = apiKeyEndpoint({
   execute: (_input, ctx) =>
     Effect.gen(function* () {
       const repo = yield* ApiKeyRepository
+      const projects = yield* ProjectRepository
       const apiKeys = yield* repo.list()
-      return { status: 200, body: { apiKeys: apiKeys.map(toListItemResponse) } } as const
-    }).pipe(withPostgres(ApiKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
+      const slugById = new Map((yield* projects.list()).map((project) => [project.id as string, project.slug]))
+      return {
+        status: 200,
+        body: {
+          apiKeys: apiKeys.map((apiKey) =>
+            toListItemResponse(apiKey, apiKey.projectId ? (slugById.get(apiKey.projectId) ?? null) : null),
+          ),
+        },
+      } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ApiKeyRepositoryLive, ProjectRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const getApiKey = apiKeyEndpoint({
@@ -197,8 +287,16 @@ const getApiKey = apiKeyEndpoint({
       const apiKey = yield* repo
         .findById(ApiKeyId(apiKeyId))
         .pipe(Effect.catchTag("NotFoundError", () => Effect.fail(new ApiKeyNotFoundError({ id: ApiKeyId(apiKeyId) }))))
-      return { status: 200, body: toResponse(apiKey) } as const
-    }).pipe(withPostgres(ApiKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
+      const projectSlug = yield* projectSlugFor(apiKey)
+      return { status: 200, body: toResponse(apiKey, projectSlug) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ApiKeyRepositoryLive, ProjectRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const updateApiKey = apiKeyEndpoint({
@@ -220,8 +318,16 @@ const updateApiKey = apiKeyEndpoint({
   execute: (input, ctx) =>
     Effect.gen(function* () {
       const apiKey = yield* updateApiKeyUseCase({ id: ApiKeyId(input.params.apiKeyId), name: input.body.name })
-      return { status: 200, body: toResponse(apiKey) } as const
-    }).pipe(withPostgres(ApiKeyRepositoryLive, ctx.postgresClient, ctx.organization.id), withTracing),
+      const projectSlug = yield* projectSlugFor(apiKey)
+      return { status: 200, body: toResponse(apiKey, projectSlug) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(ApiKeyRepositoryLive, ProjectRepositoryLive),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
 })
 
 const revokeApiKey = apiKeyEndpoint({
