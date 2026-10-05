@@ -1,4 +1,6 @@
 <p align="center">
+
+[![Deploy to Railyard](https://app.railyard.run/deploy/badge)](https://app.railyard.run/deploy?repo=https://github.com/latitude-dev/latitude-llm)
   <img src="docs/assets/readme/readme-banner.png?raw=true" alt="Latitude — self-healing AI agents" width="100%" />
 </p>
 
