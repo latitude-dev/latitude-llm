@@ -140,6 +140,8 @@ export interface AssessmentReaderFact {
  */
 export interface NormalizedSessionCostEvidence {
   readonly readings: readonly CostMetricReading[]
+  readonly toolNamesUsed: readonly string[]
+  readonly toolDefinitionWindowObservations: readonly ToolDefinitionWindowObservation[]
   /**
    * The workload this session is comparable with, for the matched signal estimator.
    *
@@ -160,6 +162,11 @@ export interface NormalizedSessionCostEvidence {
   readonly estimatedAvoidableMicrocents: number
   /** Avoidable critical-path nanoseconds by the claim that produced them, for Speed attribution. */
   readonly avoidableNsByCause: Readonly<Record<string, number>>
+}
+
+export interface ToolDefinitionWindowObservation {
+  readonly name: string
+  readonly inputTokens: number
 }
 
 export interface NormalizedSessionAssessmentInput {
