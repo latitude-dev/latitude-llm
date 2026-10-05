@@ -74,7 +74,9 @@
       "@better-auth/core>zod": "4.3.6",
       "@better-auth/sso>zod": "4.3.6",
       "@better-auth/stripe>zod": "4.3.6",
-      "@better-auth/telemetry>zod": "4.3.6"
+      "@better-auth/telemetry>zod": "4.3.6",
+      "@modelcontextprotocol/inspector-client>react": "18.3.1",
+      "@modelcontextprotocol/inspector-client>react-dom": "18.3.1"
     }
   }
 }
