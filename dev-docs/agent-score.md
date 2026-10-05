@@ -83,7 +83,7 @@ A forced calculation can refresh legacy cached evidence but cannot rewrite the p
 
 ## Evidence requirements
 
-`agent-score-v6-provisional` uses 50 eligible sessions for both the window target and publication
+`agent-score-v8-provisional` uses 50 eligible sessions for both the window target and publication
 minimum. Outcome requires 50 compatible task-failure verdicts, Reliability requires 50 readable
 sessions at 80% of the eligible base, Speed requires 50 complete critical paths at 50% of the
 eligible base, and Safety requires 50 compatible suite examinations with at most 10% rate-limited
