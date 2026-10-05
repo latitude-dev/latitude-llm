@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@repo/ui": "workspace:*",
-    "@tanstack/react-router": "1.168.10",
+    "@tanstack/react-router": "1.170.41",
     "lucide-react": "1.9.0",
     "react": "catalog:",
     "react-dom": "catalog:"
