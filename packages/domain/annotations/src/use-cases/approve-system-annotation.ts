@@ -23,18 +23,22 @@ const startPublishAnnotationWorkflow = (
     readonly preEnrichedFeedback: string
   },
 ) =>
-  workflowStarter.start(
-    "publishAnnotationWorkflow",
-    {
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      scoreId: input.scoreId,
-      preEnrichedFeedback: input.preEnrichedFeedback,
-    },
-    {
-      workflowId: `annotations:approve:${input.scoreId}`,
-    },
-  )
+  workflowStarter
+    .start(
+      "publishAnnotationWorkflow",
+      {
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        scoreId: input.scoreId,
+        preEnrichedFeedback: input.preEnrichedFeedback,
+      },
+      {
+        workflowId: `annotations:approve:${input.scoreId}`,
+      },
+    )
+    // `workflowId` is a dedupe key: a retried approval racing one already in
+    // flight hits this, not a real failure.
+    .pipe(Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.void))
 
 export const approveSystemAnnotationUseCase = Effect.fn("annotations.approveSystemAnnotation")(function* (
   input: ApproveSystemAnnotationInput,
