@@ -24,23 +24,28 @@ import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
-const telemetryLayer = SessionAssessmentBulkTelemetrySourceLive.pipe(
-  Layer.provideMerge(
-    Layer.mergeAll(
-      SessionRepositoryLive,
-      SpanRepositoryLive,
-      SessionAnalysisRepositoryLive,
-      SessionSemanticMomentRepositoryLive,
-      SessionMomentLabelRepositoryLive,
-      FlaggerScreeningDecisionRepositoryLive,
-      MemoryRepositoryLive,
+// Built lazily: a module-level layer survives the Start client compiler's dead-code pass and drags the ClickHouse/Postgres adapters into the browser bundle.
+function telemetryLayer() {
+  return SessionAssessmentBulkTelemetrySourceLive.pipe(
+    Layer.provideMerge(
+      Layer.mergeAll(
+        SessionRepositoryLive,
+        SpanRepositoryLive,
+        SessionAnalysisRepositoryLive,
+        SessionSemanticMomentRepositoryLive,
+        SessionMomentLabelRepositoryLive,
+        FlaggerScreeningDecisionRepositoryLive,
+        MemoryRepositoryLive,
+      ),
     ),
-  ),
-)
+  )
+}
 
-const judgmentLayer = SessionAssessmentBulkJudgmentSourceLive.pipe(
-  Layer.provideMerge(Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive)),
-)
+function judgmentLayer() {
+  return SessionAssessmentBulkJudgmentSourceLive.pipe(
+    Layer.provideMerge(Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive)),
+  )
+}
 
 export const getSessionAssessmentPage = createServerFn({ method: "GET" })
   .inputValidator(
@@ -60,8 +65,8 @@ export const getSessionAssessmentPage = createServerFn({ method: "GET" })
         sessionId: SessionId(data.sessionId),
         ...(data.cursor ? { cursor: data.cursor } : {}),
       }).pipe(
-        withScopedPostgres(judgmentLayer, getPostgresClient(), organizationId),
-        withScopedClickHouse(telemetryLayer, getClickhouseClient(), organizationId),
+        withScopedPostgres(judgmentLayer(), getPostgresClient(), organizationId),
+        withScopedClickHouse(telemetryLayer(), getClickhouseClient(), organizationId),
         withTracing,
       ),
     )
