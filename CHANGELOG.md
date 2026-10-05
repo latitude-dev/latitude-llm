@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.121 - 2026-10-05
+
+### Web
+
+- Patched the TanStack Start reflected XSS advisory (GHSA-qx66-fv34-fjm8) by upgrading `@tanstack/react-start` to 1.168.60 and `@tanstack/react-router` to 1.170.41. The client error boundary now normalizes non-`Error` throwables, and the session-assessment Effect layers are built inside the server function so the ClickHouse and Postgres adapters no longer leak into the browser bundle (ref: #4825).
+
+### Agent Score
+
+- Counted polling-shaped consecutive tool-call loops as thrashing instead of excluding them from the reading (ref: #4781).
+- Scored `tools.dead_surface` across scoring windows: tool definitions that were sent but never called within a window now add a context penalty proportional to their serialized token cost (ref: #4817).
+- Restricted signal-derived dimension causes to the cost and speed dimensions (ref: #4820).
+
+### Dependencies and tooling
+
+- Pinned `react` and `react-dom` 18.3.1 for the MCP inspector client so `pnpm mcp:inspect` works again; application React 19 is unchanged (ref: #4823).
+- Gave `@platform/oauth-token-auth` the shared vitest config so its PGlite setup no longer times out in CI (ref: #4826).
+- Bumped `pg` to 8.23.0, `@radix-ui/react-popover` to 1.1.23, and `@biomejs/biome` to 2.5.14 with its formatter and lint autofixes applied across the repo (ref: #4647, #4726, #4725).
+
 ## v0.3.120 - 2026-10-05
 
 ### API keys
