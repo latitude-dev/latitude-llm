@@ -73,6 +73,7 @@ const runTraceIngestion = async ({
   payload,
   contentType,
   defaultProjectSlug,
+  scopedProjectId,
 }: {
   organization: ReturnType<typeof OrganizationId>
   apiKeyId: string
@@ -80,6 +81,7 @@ const runTraceIngestion = async ({
   payload: Uint8Array
   contentType: string
   defaultProjectSlug?: string | undefined
+  scopedProjectId?: string | null | undefined
 }) => {
   const disk = getStorageDisk()
   const publisher = await getQueuePublisher()
@@ -98,6 +100,7 @@ const runTraceIngestion = async ({
       contentType,
       organizationRedaction,
       ...(defaultProjectSlug ? { defaultProjectSlug } : {}),
+      ...(scopedProjectId ? { scopedProjectId } : {}),
     })
   }).pipe(
     withPostgres(traceIngestionBillingLayers, postgresClient, organization),
@@ -184,6 +187,7 @@ export const registerTracesRoute = ({ app, tracePayloadProtection }: TracesRoute
         payload: body,
         contentType,
         defaultProjectSlug: c.get("defaultProjectSlug"),
+        scopedProjectId: c.get("scopedProjectId"),
       }),
     )
 

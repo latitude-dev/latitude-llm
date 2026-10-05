@@ -1,8 +1,9 @@
+import { NonRetryableTaskError } from "@domain/queue"
 import { base64urlEncode } from "@repo/utils"
-import type { Job } from "bullmq"
-import { Effect } from "effect"
+import { type Job, UnrecoverableError } from "bullmq"
+import { Context, Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
-import { buildBullMqJobOptions, resolveFinalFailureHook } from "./adapter.ts"
+import { buildBullMqJobOptions, resolveFinalFailureHook, toWorkerThrowable } from "./adapter.ts"
 
 const LABEL = "publish(monitors, checkSavedSearchMonitors)"
 
@@ -102,6 +103,38 @@ describe("buildBullMqJobOptions", () => {
   })
 })
 
+describe("toWorkerThrowable", () => {
+  it("turns a NonRetryableTaskError into an UnrecoverableError, skipping the remaining attempts", () => {
+    const error = new NonRetryableTaskError({ reason: "object never existed at this key" })
+    const recorded = new Error(error.message)
+    const thrown = toWorkerThrowable(error, recorded)
+    expect(thrown).toBeInstanceOf(UnrecoverableError)
+    expect(thrown.message).toBe("object never existed at this key")
+  })
+
+  it("passes through any other error unchanged, so BullMQ retries as configured", () => {
+    const error = new Error("timeout exceeded when trying to connect")
+    const thrown = toWorkerThrowable(error, error)
+    expect(thrown).toBe(error)
+    expect(thrown).not.toBeInstanceOf(UnrecoverableError)
+  })
+
+  // Guards against Effect changing what a rejected promise carries: the worker callback's
+  // `catch (error)` receives whatever `Effect.runPromiseWith` rejects with, not a hand-constructed
+  // NonRetryableTaskError — so this exercises the real rejection instead of assuming its shape.
+  it("still recognizes a NonRetryableTaskError after a real Effect.runPromiseWith rejection", async () => {
+    const error = new NonRetryableTaskError({ reason: "object never existed at this key" })
+    let caught: unknown
+    try {
+      await Effect.runPromiseWith(Context.empty())(Effect.fail(error))
+    } catch (rejection) {
+      caught = rejection
+    }
+    expect(caught).toBe(error)
+    expect(toWorkerThrowable(caught, error)).toBeInstanceOf(UnrecoverableError)
+  })
+})
+
 describe("resolveFinalFailureHook", () => {
   const hook = vi.fn(() => Effect.void)
   const handlers = { runSync: hook }
@@ -148,5 +181,15 @@ describe("resolveFinalFailureHook", () => {
   it("treats a single-attempt job (no retries configured) as terminal", () => {
     const invocation = resolveFinalFailureHook(job({ attemptsMade: 1, opts: { attempts: 1 } }), handlers)
     expect(invocation?.context).toEqual({ attemptsMade: 1, attemptsConfigured: 1 })
+  })
+
+  it("treats an UnrecoverableError as terminal even with attempts left", () => {
+    const invocation = resolveFinalFailureHook(
+      job({ attemptsMade: 1, opts: { attempts: 10 } }),
+      handlers,
+      new UnrecoverableError("object never existed at this key"),
+    )
+    expect(invocation).not.toBeNull()
+    expect(invocation?.context).toEqual({ attemptsMade: 1, attemptsConfigured: 10 })
   })
 })

@@ -79,7 +79,12 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateApiKey (integration, Node 25+)",
       }),
     )
 
-    expect(result).toEqual({ organizationId: apiKey.organizationId, keyId: apiKey.id, isSandbox: false })
+    expect(result).toEqual({
+      organizationId: apiKey.organizationId,
+      keyId: apiKey.id,
+      isSandbox: false,
+      projectId: null,
+    })
     expect(touched).toEqual([apiKey.id])
   })
 
@@ -130,7 +135,12 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateApiKey (integration, Node 25+)",
     const authenticated = await Effect.runPromise(
       validateApiKey(apiKey.token, { redis, adminClient: database.adminPostgresClient }),
     )
-    expect(authenticated).toEqual({ organizationId: apiKey.organizationId, keyId: apiKey.id, isSandbox: false })
+    expect(authenticated).toEqual({
+      organizationId: apiKey.organizationId,
+      keyId: apiKey.id,
+      isSandbox: false,
+      projectId: null,
+    })
 
     await revokeApiKey(apiKey.organizationId, apiKey.id, redis)
 
@@ -199,6 +209,11 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateApiKey (integration, Node 25+)",
       }),
     )
 
-    expect(result).toEqual({ organizationId: apiKey.organizationId, keyId: apiKey.id, isSandbox: false })
+    expect(result).toEqual({
+      organizationId: apiKey.organizationId,
+      keyId: apiKey.id,
+      isSandbox: false,
+      projectId: null,
+    })
   })
 })
