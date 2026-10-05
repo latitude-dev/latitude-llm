@@ -4,6 +4,7 @@ import {
   ExternalUserId,
   OrganizationId,
   ProjectId,
+  RepositoryError,
   SessionId,
   SimulationId,
   SpanId,
@@ -347,6 +348,111 @@ describe("submitApiScoreUseCase", () => {
       expect(score.sourceId).toBe(evaluationCuid)
       expect(score.metadata).toEqual({ evaluationHash: "sha256:abc123" })
       expect(store.size).toBe(1)
+    })
+  })
+
+  describe("canonical evaluation-score conflicts", () => {
+    /**
+     * Simulates the Postgres partial unique index `scores_canonical_evaluation_trace_idx`
+     * (one non-draft evaluation score per project+evaluation+trace) at the fake-repository
+     * layer, so `save` fails exactly the way the real repository does on a losing race.
+     */
+    const createRacingScoreRepository = () => {
+      const { repository: base, scores: store } = createFakeScoreRepository()
+      let saveCalls = 0
+
+      return {
+        store,
+        saveCallCount: () => saveCalls,
+        repository: {
+          ...base,
+          save: (score: Parameters<typeof base.save>[0]) => {
+            saveCalls += 1
+            const conflict = [...store.values()].some(
+              (existing) =>
+                existing.id !== score.id &&
+                existing.projectId === score.projectId &&
+                existing.sourceType === "evaluation" &&
+                existing.sourceType === score.sourceType &&
+                existing.sourceId === score.sourceId &&
+                existing.traceId === score.traceId &&
+                existing.draftedAt === null,
+            )
+
+            if (conflict) {
+              return Effect.fail(
+                new RepositoryError({
+                  operation: "save",
+                  cause: { code: "23505", constraint: "scores_canonical_evaluation_trace_idx" },
+                }),
+              )
+            }
+
+            return base.save(score)
+          },
+        },
+      }
+    }
+
+    it("returns the winning score when a duplicate evaluation submission loses the canonical write race", async () => {
+      const { store, repository, saveCallCount } = createRacingScoreRepository()
+      const { layer } = createTestLayers()
+      const racingLayer = Layer.mergeAll(layer, Layer.succeed(ScoreRepository, repository))
+
+      const first = await Effect.runPromise(submitApiScoreUseCase(evaluationInput()).pipe(Effect.provide(racingLayer)))
+      // Second call: same evaluation + trace, a fresh server-generated id — mirrors an SDK
+      // retry or two concurrent submissions racing for the same canonical row.
+      const second = await Effect.runPromise(submitApiScoreUseCase(evaluationInput()).pipe(Effect.provide(racingLayer)))
+
+      expect(second.id).toBe(first.id)
+      expect(store.size).toBe(1)
+      expect(saveCallCount()).toBe(2)
+    })
+
+    it("still fails when the canonical row can't be found after losing the race", async () => {
+      const { repository: base } = createFakeScoreRepository()
+      const alwaysConflicts = {
+        ...base,
+        save: () =>
+          Effect.fail(
+            new RepositoryError({
+              operation: "save",
+              cause: { code: "23505", constraint: "scores_canonical_evaluation_trace_idx" },
+            }),
+          ),
+        findByEvaluationIdAndTraceId: () => Effect.succeed(null),
+      }
+      const { layer } = createTestLayers()
+      const racingLayer = Layer.mergeAll(layer, Layer.succeed(ScoreRepository, alwaysConflicts))
+
+      const exit = await Effect.runPromiseExit(
+        submitApiScoreUseCase(evaluationInput()).pipe(Effect.provide(racingLayer)),
+      )
+
+      expect(exit._tag).toBe("Failure")
+      if (exit._tag === "Failure") {
+        expect(JSON.stringify(exit.cause)).toContain("scores_canonical_evaluation_trace_idx")
+      }
+    })
+
+    it("does not treat a custom score's save failure as a canonical-race conflict", async () => {
+      const { repository: base } = createFakeScoreRepository()
+      const alwaysConflicts = {
+        ...base,
+        save: () =>
+          Effect.fail(
+            new RepositoryError({
+              operation: "save",
+              cause: { code: "23505", constraint: "scores_canonical_evaluation_trace_idx" },
+            }),
+          ),
+      }
+      const { layer } = createTestLayers()
+      const racingLayer = Layer.mergeAll(layer, Layer.succeed(ScoreRepository, alwaysConflicts))
+
+      const exit = await Effect.runPromiseExit(submitApiScoreUseCase(customInput()).pipe(Effect.provide(racingLayer)))
+
+      expect(exit._tag).toBe("Failure")
     })
   })
 

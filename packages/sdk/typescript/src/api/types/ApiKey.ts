@@ -5,6 +5,12 @@ export interface ApiKey {
     id: string;
     /** Organization that owns this API key. */
     organizationId: string;
+    /** `organization` keys can call every route. `project` keys are bound to `projectId`. */
+    scope: ApiKey.Scope;
+    /** Project this key is bound to. `null` for an organization-wide key. */
+    projectId: string | null;
+    /** Slug of the bound project, when the project still exists. `null` for organization-wide keys. */
+    projectSlug: string | null;
     /** Human-readable name. */
     name: string;
     /** The full API key token. Returned by create / get / update — store it securely; treat it as a password. */
@@ -17,4 +23,13 @@ export interface ApiKey {
     createdAt: string;
     /** ISO-8601 timestamp of the last metadata update (rename, revoke, last-used touch). */
     updatedAt: string;
+}
+
+export namespace ApiKey {
+    /** `organization` keys can call every route. `project` keys are bound to `projectId`. */
+    export const Scope = {
+        Organization: "organization",
+        Project: "project",
+    } as const;
+    export type Scope = (typeof Scope)[keyof typeof Scope];
 }

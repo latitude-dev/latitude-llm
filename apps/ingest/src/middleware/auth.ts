@@ -31,5 +31,6 @@ export const authMiddleware: MiddlewareHandler<IngestEnv> = async (c, next) => {
   c.set("organizationId", result.organizationId)
   c.set("apiKeyId", result.keyId)
   c.set("isSandbox", result.isSandbox)
+  c.set("scopedProjectId", result.projectId)
   await next()
 }

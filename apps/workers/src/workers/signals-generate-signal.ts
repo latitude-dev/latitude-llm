@@ -249,7 +249,7 @@ const runAgenticGeneration = async (params: {
 
     const ctx: OperationContext = {
       organization,
-      auth: { method: "api-key", userId: UserId("system:signal-agent"), organizationId: orgId },
+      auth: { method: "api-key", userId: UserId("system:signal-agent"), organizationId: orgId, projectId: null },
       postgresClient: deps.postgresClient,
       clickhouse: deps.clickhouseClient,
       redis: deps.redisClient,
