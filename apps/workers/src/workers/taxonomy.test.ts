@@ -480,7 +480,7 @@ describe("taxonomy gardening worker", () => {
       ),
     )
 
-    expect((started[0]?.input as { trigger: string }).trigger).toBe("manual")
+    expect((started[0]?.input as { trigger: string })?.trigger).toBe("manual")
   })
 
   it("collapses WorkflowAlreadyStartedError into a no-op instead of rethrowing", async () => {

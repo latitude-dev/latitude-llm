@@ -168,7 +168,7 @@ function ModalBase({
         {showHeader ? (
           <ModalHeader
             {...(title !== undefined && title !== "" ? { title } : {})}
-            {...(description !== undefined && Boolean(description) ? { description } : {})}
+            {...(description !== undefined && description ? { description } : {})}
           />
         ) : null}
         {children ? <ModalBody scrollable={scrollable}>{children}</ModalBody> : null}

@@ -9,11 +9,12 @@ describe("FLAGGER_USE_CASE_PRESETS", () => {
   // publication gate then withholds the entire Agent Score, including the four
   // dimensions that were measured. The slug union is exhaustiveness-checked;
   // preset membership is not, so this is the only thing that catches it.
-  it.each(
-    FLAGGER_USE_CASE_PRESETS.map((preset) => [preset.id, preset] as const),
-  )("%s enables the whole Safety suite", (_id, preset) => {
-    expect([...preset.enabledSlugs]).toEqual(expect.arrayContaining([...SAFETY_SUITE_SLUGS]))
-  })
+  it.each(FLAGGER_USE_CASE_PRESETS.map((preset) => [preset.id, preset] as const))(
+    "%s enables the whole Safety suite",
+    (_id, preset) => {
+      expect([...preset.enabledSlugs]).toEqual(expect.arrayContaining([...SAFETY_SUITE_SLUGS]))
+    },
+  )
 
   it("enables the Outcome judge everywhere for the same reason", () => {
     for (const preset of FLAGGER_USE_CASE_PRESETS) {

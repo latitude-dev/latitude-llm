@@ -48,7 +48,7 @@ describe("createFakeQueuePublisher", () => {
 
     const latest = getPublishedByDedupeKey("evaluations", "dup")
     expect(latest).toBeDefined()
-    expect((latest?.payload as { signalId: string }).signalId).toBe("i2")
+    expect((latest?.payload as { signalId: string })?.signalId).toBe("i2")
     expect(listDeduped()).toHaveLength(1)
   })
 
@@ -105,7 +105,7 @@ describe("createFakeQueuePublisher", () => {
 
     const pending = getPublishedByDedupeKey("evaluations", "rl")
     expect(pending).toBeDefined()
-    expect((pending?.payload as { signalId: string }).signalId).toBe("i-first")
+    expect((pending?.payload as { signalId: string })?.signalId).toBe("i-first")
     expect(listDeduped()).toHaveLength(1)
   })
 
@@ -141,7 +141,7 @@ describe("createFakeQueuePublisher", () => {
 
     const pending = getPublishedByDedupeKey("billing-overage", "overage")
     expect(pending).toBeDefined()
-    expect((pending?.payload as { snapshotOverageCredits: number }).snapshotOverageCredits).toBe(1000)
+    expect((pending?.payload as { snapshotOverageCredits: number })?.snapshotOverageCredits).toBe(1000)
     expect(listDeduped()).toHaveLength(1)
   })
 

@@ -99,23 +99,6 @@ export function isLlmCapableStrategy(strategy: FlaggerStrategy): strategy is Llm
   )
 }
 
-export {
-  bluffingStrategy,
-  emptyResponseStrategy,
-  forgettingStrategy,
-  frustrationStrategy,
-  jailbreakingStrategy,
-  lazinessStrategy,
-  lowCacheHitRateStrategy,
-  nsfwStrategy,
-  outputSchemaValidationStrategy,
-  piiLeakageStrategy,
-  refusalStrategy,
-  taskFailureStrategy,
-  toolCallErrorsStrategy,
-  trashingStrategy,
-}
-
 export { extractWorkSignals, getStageWorkSignals, type WorkSignals } from "./laziness.ts"
 export {
   type ConversationStage,
@@ -140,3 +123,19 @@ export {
   readDeterministicFlaggerFindings,
   suppressorSlug,
 } from "./types.ts"
+export {
+  bluffingStrategy,
+  emptyResponseStrategy,
+  forgettingStrategy,
+  frustrationStrategy,
+  jailbreakingStrategy,
+  lazinessStrategy,
+  lowCacheHitRateStrategy,
+  nsfwStrategy,
+  outputSchemaValidationStrategy,
+  piiLeakageStrategy,
+  refusalStrategy,
+  taskFailureStrategy,
+  toolCallErrorsStrategy,
+  trashingStrategy,
+}

@@ -9,16 +9,13 @@ const stored = (overrides: Partial<StoredCostSignals> = {}): StoredCostSignals =
 })
 
 describe("parseCostSource", () => {
-  it.each([
-    "provider_reported",
-    "estimated",
-    "unpriced",
-    "no_tokens",
-    "unknown",
-  ])("passes through the stored value %s", (value) => {
-    // Signals that would classify differently, to prove the stored value wins.
-    expect(parseCostSource(value, stored({ costTotalMicrocents: 500, hasTokens: true }))).toBe(value)
-  })
+  it.each(["provider_reported", "estimated", "unpriced", "no_tokens", "unknown"])(
+    "passes through the stored value %s",
+    (value) => {
+      // Signals that would classify differently, to prove the stored value wins.
+      expect(parseCostSource(value, stored({ costTotalMicrocents: 500, hasTokens: true }))).toBe(value)
+    },
+  )
 
   // A misspelling must not be trusted as a source; it falls through to the stored signals.
   it("classifies a value outside the enum from the signals instead of trusting it", () => {
