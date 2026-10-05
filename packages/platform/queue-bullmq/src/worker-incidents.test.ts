@@ -1,4 +1,4 @@
-import type { Job } from "bullmq"
+import { type Job, UnrecoverableError } from "bullmq"
 import { describe, expect, it } from "vitest"
 
 import { failedJobContextFromJob } from "./worker-incidents.ts"
@@ -44,5 +44,26 @@ describe("failedJobContextFromJob", () => {
     const ctx = failedJobContextFromJob(job)
     expect(ctx?.attemptsConfigured).toBe(1)
     expect(ctx?.willRetry).toBe(false)
+  })
+
+  it("forces willRetry false on an UnrecoverableError even with attempts left", () => {
+    const job = {
+      id: "j4",
+      name: "t",
+      attemptsMade: 1,
+      opts: { attempts: 10 },
+    } as unknown as Job
+    const ctx = failedJobContextFromJob(job, new UnrecoverableError("object never existed at this key"))
+    expect(ctx?.willRetry).toBe(false)
+  })
+
+  it("still retries a non-UnrecoverableError with attempts left", () => {
+    const job = {
+      id: "j5",
+      name: "t",
+      attemptsMade: 1,
+      opts: { attempts: 10 },
+    } as unknown as Job
+    expect(failedJobContextFromJob(job, new Error("timeout"))?.willRetry).toBe(true)
   })
 })

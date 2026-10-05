@@ -273,6 +273,8 @@ if typing.TYPE_CHECKING:
     from .api_key import ApiKey
     from .api_key_list import ApiKeyList
     from .api_key_list_item import ApiKeyListItem
+    from .api_key_list_item_scope import ApiKeyListItemScope
+    from .api_key_scope import ApiKeyScope
     from .bootstrap_account_response import BootstrapAccountResponse
     from .braintrust_import_credentials import BraintrustImportCredentials
     from .braintrust_import_credentials_region import BraintrustImportCredentialsRegion
@@ -1403,6 +1405,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ApiKey": ".api_key",
     "ApiKeyList": ".api_key_list",
     "ApiKeyListItem": ".api_key_list_item",
+    "ApiKeyListItemScope": ".api_key_list_item_scope",
+    "ApiKeyScope": ".api_key_scope",
     "BootstrapAccountResponse": ".bootstrap_account_response",
     "BraintrustImportCredentials": ".braintrust_import_credentials",
     "BraintrustImportCredentialsRegion": ".braintrust_import_credentials_region",
@@ -2429,6 +2433,8 @@ __all__ = [
     "ApiKey",
     "ApiKeyList",
     "ApiKeyListItem",
+    "ApiKeyListItemScope",
+    "ApiKeyScope",
     "BootstrapAccountResponse",
     "BraintrustImportCredentials",
     "BraintrustImportCredentialsRegion",

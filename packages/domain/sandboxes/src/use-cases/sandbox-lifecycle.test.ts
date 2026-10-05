@@ -5,6 +5,8 @@ import { createFakeBillingOverrideRepository, createFakeStripeSubscriptionLookup
 import { OutboxEventWriter } from "@domain/events"
 import { createOrganization, MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import { createFakeMembershipRepository, createFakeOrganizationRepository } from "@domain/organizations/testing"
+import { ProjectRepository } from "@domain/projects"
+import { createFakeProjectRepository } from "@domain/projects/testing"
 import { generateId, OrganizationId, SettingsReader, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Cause, Effect, Exit, Layer } from "effect"
@@ -78,6 +80,7 @@ const buildLayer = (input?: {
     Layer.succeed(BillingOverrideRepository, override.repository),
     Layer.succeed(StripeSubscriptionLookup, subscription.service),
     Layer.succeed(ApiKeyRepository, createFakeApiKeyRepository().repository),
+    Layer.succeed(ProjectRepository, createFakeProjectRepository().repository),
     Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: PARENT_ORG_ID })),
     Layer.succeed(SettingsReader, {
