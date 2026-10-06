@@ -9,6 +9,15 @@ import type {
 } from "../entities/session-assessment-input.ts"
 import { aggregateSessionCost, type CostFamilyDenominators } from "./aggregate-session-cost.ts"
 import type { SessionWindowContribution } from "./bootstrap-window.ts"
+import { deadSurfacePenaltyIncrease, type WindowDeadSurfaceEvidence } from "./dead-surface-window.ts"
+
+const DEAD_SURFACE_METRIC_ID = "tools.dead_surface"
+
+interface DeadSurfaceAdjustment extends WindowDeadSurfaceEvidence {
+  readonly sessionId: string
+  readonly contextDenominator: number
+  readonly costUsableForDenominator: boolean
+}
 
 const missesLatencyReference = (evidence: NormalizedSessionCostEvidence | undefined): boolean =>
   evidence?.criticalPathComplete === true && evidence.unreferencedLatencyModels.length > 0
@@ -20,9 +29,7 @@ export const isSpeedUsable = (evidence: NormalizedSessionCostEvidence | undefine
 /**
  * One session reduced to the numbers a window needs, and nothing else.
  *
- * Folding as each batch lands is what keeps a thousand-session window from having to be resident:
- * the contribution is a handful of numbers, so the session's items, ledger and critical path can be
- * released as soon as this is taken.
+ * Folding each batch keeps session details out of the window; only compact scoring evidence remains.
  */
 export const foldSessionContribution = ({
   session,
@@ -35,12 +42,25 @@ export const foldSessionContribution = ({
   readonly artifact: CostScoringArtifact
   readonly catalog: CostMetricCatalog
 }): SessionWindowContribution => {
-  const aggregate = aggregateSessionCost({
-    readings: session.costEvidence?.readings ?? [],
+  const fold = foldWindowBatch({
+    fold: EMPTY_WINDOW_FOLD,
+    sessions: [session],
+    denominatorsFor: () => denominators,
     artifact,
     catalog,
-    denominators,
   })
+  const contribution = finalizeWindowFold({ fold, artifact }).contributions[0]
+  if (!contribution) throw new Error("Folding one session did not produce a contribution")
+  return contribution
+}
+
+const contributionFromAggregate = ({
+  session,
+  aggregate,
+}: {
+  readonly session: NormalizedSessionAssessmentInput
+  readonly aggregate: ReturnType<typeof aggregateSessionCost>
+}): SessionWindowContribution => {
   const evidence = session.costEvidence
   const missingLatencyReference = missesLatencyReference(evidence)
 
@@ -89,6 +109,9 @@ export interface WindowFold {
    * measured, which coverage already reports, and never a cause with a zero effect.
    */
   readonly costCauseUnits: ReadonlyMap<string, { readonly family: CostFamily; readonly penalizedUnits: number }>
+  readonly windowToolNamesUsed: ReadonlySet<string>
+  readonly deadSurfaceAdjustments: readonly DeadSurfaceAdjustment[]
+  readonly deadSurfaceFinalized: boolean
   readonly speedCauseNs: ReadonlyMap<string, number>
   /** Models kept out of Speed for lacking a latency reference, with the sessions each excluded. */
   readonly unreferencedLatencyModels: ReadonlyMap<string, UnreferencedLatencyModel>
@@ -110,6 +133,9 @@ export const EMPTY_WINDOW_FOLD: WindowFold = {
   withheldSessionCount: 0,
   familyCoverage: emptyFamilyCoverage(),
   costCauseUnits: new Map(),
+  windowToolNamesUsed: new Set(),
+  deadSurfaceAdjustments: [],
+  deadSurfaceFinalized: false,
   speedCauseNs: new Map(),
   unreferencedLatencyModels: new Map(),
 }
@@ -184,8 +210,11 @@ export const foldWindowBatch = ({
   readonly artifact: CostScoringArtifact
   readonly catalog: CostMetricCatalog
 }): WindowFold => {
+  if (fold.deadSurfaceFinalized) throw new Error("Cannot add sessions after the window fold is finalized")
   const added: SessionWindowContribution[] = []
   const costCauseUnits = new Map(fold.costCauseUnits)
+  const windowToolNamesUsed = new Set(fold.windowToolNamesUsed)
+  const deadSurfaceAdjustments = [...fold.deadSurfaceAdjustments]
   const speedCauseNs = new Map(fold.speedCauseNs)
   const unreferencedLatencyModels = new Map(fold.unreferencedLatencyModels)
   const familyCoverage = emptyFamilyCoverage()
@@ -196,6 +225,8 @@ export const foldWindowBatch = ({
   let published = 0
 
   for (const session of sessions) {
+    for (const name of session.costEvidence?.toolNamesUsed ?? []) windowToolNamesUsed.add(name.toLowerCase())
+
     // Coverage counts every session's readings, including a session whose required family could not
     // be read: that session is precisely what the window-level gate is measuring.
     for (const reading of session.costEvidence?.readings ?? []) {
@@ -208,12 +239,49 @@ export const foldWindowBatch = ({
     }
 
     const denominators = denominatorsFor(session)
+    const readings = session.costEvidence?.readings ?? []
+    const deferredReadings = readings.map((reading) =>
+      reading.metricId === DEAD_SURFACE_METRIC_ID &&
+      reading.applicability === "applicable" &&
+      reading.readability === "readable"
+        ? { ...reading, rawValue: 0, adverseUnits: 0, observations: [] }
+        : reading,
+    )
     const aggregate = aggregateSessionCost({
-      readings: session.costEvidence?.readings ?? [],
+      readings: deferredReadings,
       artifact,
       catalog,
       denominators,
     })
+    const deadSurfaceReading = readings.find((reading) => reading.metricId === DEAD_SURFACE_METRIC_ID)
+    const context = aggregate.families.find((family) => family.family === "context")
+    let deadSurfaceEvidence: WindowDeadSurfaceEvidence | undefined
+    if (
+      deadSurfaceReading?.applicability === "applicable" &&
+      deadSurfaceReading.readability === "readable" &&
+      context
+    ) {
+      const eligibleInputTokens = deadSurfaceReading.eligibleUnits
+      if (eligibleInputTokens === undefined || eligibleInputTokens <= 0) {
+        throw new Error("Readable tools.dead_surface evidence must include eligible input tokens")
+      }
+      const curveId = catalog.entries.find((entry) => entry.metricId === DEAD_SURFACE_METRIC_ID)?.curveId
+      if (curveId && artifact.metricCurves.some((curve) => curve.curveId === curveId)) {
+        deadSurfaceEvidence = {
+          metricId: DEAD_SURFACE_METRIC_ID,
+          curveId,
+          eligibleInputTokens,
+          definitions: session.costEvidence?.toolDefinitionWindowObservations ?? [],
+          baseContextPenalty: context.penalty,
+        }
+        deadSurfaceAdjustments.push({
+          ...deadSurfaceEvidence,
+          sessionId: String(session.sessionId),
+          contextDenominator: context.eligibleUnits,
+          costUsableForDenominator: aggregate.publishable,
+        })
+      }
+    }
     if (!aggregate.publishable) {
       withheld += 1
     } else {
@@ -221,18 +289,22 @@ export const foldWindowBatch = ({
       recordCostCauses({
         costCauseUnits,
         penaltiesByMetric: aggregate.penaltiesByMetric,
-        readings: session.costEvidence?.readings ?? [],
+        readings: deferredReadings,
         denominators,
       })
     }
-    const contribution = foldSessionContribution({ session, denominators, artifact, catalog })
+    const contribution = contributionFromAggregate({ session, aggregate })
     if (session.costEvidence && contribution.speed.usableForDenominator) {
       recordSpeedCauses(speedCauseNs, session.costEvidence.avoidableNsByCause)
     }
     if (session.costEvidence && contribution.speed.missingLatencyReference) {
       recordUnreferencedModels(unreferencedLatencyModels, session.costEvidence.unreferencedLatencyModels)
     }
-    added.push(contribution)
+    added.push({
+      ...contribution,
+      toolNamesUsed: (session.costEvidence?.toolNamesUsed ?? []).map((name) => name.toLowerCase()),
+      ...(deadSurfaceEvidence ? { deadSurface: deadSurfaceEvidence } : {}),
+    })
   }
 
   return {
@@ -241,7 +313,68 @@ export const foldWindowBatch = ({
     withheldSessionCount: fold.withheldSessionCount + withheld,
     familyCoverage,
     costCauseUnits,
+    windowToolNamesUsed,
+    deadSurfaceAdjustments,
+    deadSurfaceFinalized: false,
     speedCauseNs,
     unreferencedLatencyModels,
+  }
+}
+
+/** Applies dead-surface penalties after every batch has contributed its tool calls. */
+export const finalizeWindowFold = ({
+  fold,
+  artifact,
+}: {
+  readonly fold: WindowFold
+  readonly artifact: CostScoringArtifact
+}): WindowFold => {
+  if (fold.deadSurfaceFinalized) return fold
+
+  const usedToolNames = new Set([...fold.windowToolNamesUsed].map((name) => name.toLowerCase()))
+  const adjustments = new Map(fold.deadSurfaceAdjustments.map((adjustment) => [adjustment.sessionId, adjustment]))
+  const contextPenaltyIncreaseBySession = new Map<string, number>()
+
+  const contributions = fold.contributions.map((contribution) => {
+    const adjustment = adjustments.get(String(contribution.sessionId))
+    if (!adjustment) return contribution
+
+    const penaltyIncrease = deadSurfacePenaltyIncrease({ evidence: adjustment, usedToolNames, artifact })
+    contextPenaltyIncreaseBySession.set(adjustment.sessionId, penaltyIncrease)
+
+    return {
+      ...contribution,
+      families: contribution.families.map((family) =>
+        family.family === "context"
+          ? {
+              ...family,
+              penalizedUnits: family.eligibleUnits * (adjustment.baseContextPenalty + penaltyIncrease),
+            }
+          : family,
+      ),
+    }
+  })
+
+  const costCauseUnits = new Map(fold.costCauseUnits)
+  for (const adjustment of fold.deadSurfaceAdjustments) {
+    const contextPenaltyIncrease = contextPenaltyIncreaseBySession.get(adjustment.sessionId) ?? 0
+    const penalizedUnits = adjustment.costUsableForDenominator
+      ? contextPenaltyIncrease * adjustment.contextDenominator
+      : 0
+    if (penalizedUnits <= 0) continue
+    const existing = costCauseUnits.get(DEAD_SURFACE_METRIC_ID)
+    costCauseUnits.set(DEAD_SURFACE_METRIC_ID, {
+      family: "context",
+      penalizedUnits: (existing?.penalizedUnits ?? 0) + penalizedUnits,
+    })
+  }
+
+  return {
+    ...fold,
+    contributions,
+    costCauseUnits,
+    windowToolNamesUsed: new Set(),
+    deadSurfaceAdjustments: [],
+    deadSurfaceFinalized: true,
   }
 }

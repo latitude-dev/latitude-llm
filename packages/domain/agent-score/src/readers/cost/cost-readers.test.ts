@@ -465,6 +465,14 @@ describe("tool readers", () => {
     })
   })
 
+  it("counts a regular consecutive loop as thrashing", () => {
+    const loop = [0, 1_000, 2_000, 3_000].map((offset, index) =>
+      toolCall(`regular-loop-${index}`, { startTime: at(offset), endTime: at(offset + 5) }),
+    )
+
+    expect(valid(readThrashing(loop)).adverseUnits).toBe(4)
+  })
+
   it("shares call atoms between the loop and repeated-call views", () => {
     const calls = [0, 10, 700].map((offset, index) =>
       toolCall(`loop-${index}`, { startTime: at(offset), endTime: at(offset + 5) }),

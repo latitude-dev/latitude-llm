@@ -68,6 +68,8 @@ Deterministic `rule` settings compile to pure scripts that read `session` and `s
 
 An evaluation optionally carries a declarative `settings` payload that compiles to its `script`; `settings` is null for a raw or GEPA-generated script.
 
+When `settings` is present, it is the **source of truth** at execution time: `resolveEvaluationScript` (`packages/domain/evaluations/src/helpers.ts`) recompiles from `settings` for live runs, preview, and alignment checks instead of trusting a possibly stale stored `script` body. Raw and GEPA-generated evaluations (`settings` null) still run the persisted `script` text. Creation and updates still write both fields when settings compile, so list/detail APIs and hashes remain stable.
+
 The required persisted shapes are:
 
 ```typescript

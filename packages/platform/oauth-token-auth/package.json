@@ -21,6 +21,7 @@
   "devDependencies": {
     "@domain/shared": "workspace:*",
     "@platform/testkit": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
     "vitest": "catalog:"
   }
 }

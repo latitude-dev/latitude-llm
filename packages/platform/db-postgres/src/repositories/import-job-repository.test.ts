@@ -221,28 +221,27 @@ describe("ImportJobRepositoryLive", () => {
   describe("one active import per org", () => {
     // `created` included: the slot is claimed by the insert, so a concurrent create fails on
     // `save` — where the violation maps to a typed ConflictError — not on the flip to `queued`.
-    it.each([
-      ["created" as const],
-      ["queued" as const],
-      ["running" as const],
-    ])("rejects a second %s import as a conflict", async (status) => {
-      await seedOrganizations()
-      await save(makeJob({ status }))
+    it.each([["created" as const], ["queued" as const], ["running" as const]])(
+      "rejects a second %s import as a conflict",
+      async (status) => {
+        await seedOrganizations()
+        await save(makeJob({ status }))
 
-      const exit = await Effect.runPromiseExit(
-        Effect.gen(function* () {
-          const repo = yield* ImportJobRepository
-          yield* repo.save(makeJob({ status, projectId: PROJECT_B }))
-        }).pipe(withPostgres(ImportJobRepositoryLive, pg.adminPostgresClient, ORG_A)),
-      )
+        const exit = await Effect.runPromiseExit(
+          Effect.gen(function* () {
+            const repo = yield* ImportJobRepository
+            yield* repo.save(makeJob({ status, projectId: PROJECT_B }))
+          }).pipe(withPostgres(ImportJobRepositoryLive, pg.adminPostgresClient, ORG_A)),
+        )
 
-      expect(Exit.isFailure(exit)).toBe(true)
-      if (Exit.isFailure(exit)) {
-        const failReason = exit.cause.reasons.find(Cause.isFailReason)
-        expect(failReason?.error).toBeInstanceOf(ConflictError)
-        expect((failReason?.error as ConflictError).field).toBe("organizationId")
-      }
-    })
+        expect(Exit.isFailure(exit)).toBe(true)
+        if (Exit.isFailure(exit)) {
+          const failReason = exit.cause.reasons.find(Cause.isFailReason)
+          expect(failReason?.error).toBeInstanceOf(ConflictError)
+          expect((failReason?.error as ConflictError)?.field).toBe("organizationId")
+        }
+      },
+    )
 
     it("keeps the slot across the created-to-queued flip, so enqueueing does not free it", async () => {
       await seedOrganizations()
@@ -363,50 +362,47 @@ describe("ImportJobRepositoryLive", () => {
   describe("markFailedIfActive", () => {
     // `created` included so a job that never reached the queue can still be failed rather
     // than holding the org's only slot forever.
-    it.each([
-      ["created" as const],
-      ["queued" as const],
-      ["running" as const],
-    ])("fails a %s job and scrubs credentials", async (status) => {
-      await seedOrganizations()
-      const job = makeJob({ status })
-      await save(job)
-      const finishedAt = new Date("2026-05-01T00:00:00.000Z")
+    it.each([["created" as const], ["queued" as const], ["running" as const]])(
+      "fails a %s job and scrubs credentials",
+      async (status) => {
+        await seedOrganizations()
+        const job = makeJob({ status })
+        await save(job)
+        const finishedAt = new Date("2026-05-01T00:00:00.000Z")
 
-      const marked = await runWithLive(
-        Effect.gen(function* () {
-          const repo = yield* ImportJobRepository
-          return yield* repo.markFailedIfActive(job.id, { error: "retries exhausted", finishedAt })
-        }),
-      )
+        const marked = await runWithLive(
+          Effect.gen(function* () {
+            const repo = yield* ImportJobRepository
+            return yield* repo.markFailedIfActive(job.id, { error: "retries exhausted", finishedAt })
+          }),
+        )
 
-      expect(marked).toBe(true)
-      const stored = await findById(job.id)
-      expect(stored?.status).toBe("failed")
-      expect(stored?.error).toBe("retries exhausted")
-      expect(stored?.credentials).toBeNull()
-    })
+        expect(marked).toBe(true)
+        const stored = await findById(job.id)
+        expect(stored?.status).toBe("failed")
+        expect(stored?.error).toBe("retries exhausted")
+        expect(stored?.credentials).toBeNull()
+      },
+    )
 
-    it.each([
-      ["succeeded" as const],
-      ["capped" as const],
-      ["cancelled" as const],
-      ["failed" as const],
-    ])("refuses to overwrite a %s job", async (status) => {
-      await seedOrganizations()
-      const job = makeJob({ status, credentials: null })
-      await save(job)
+    it.each([["succeeded" as const], ["capped" as const], ["cancelled" as const], ["failed" as const]])(
+      "refuses to overwrite a %s job",
+      async (status) => {
+        await seedOrganizations()
+        const job = makeJob({ status, credentials: null })
+        await save(job)
 
-      const marked = await runWithLive(
-        Effect.gen(function* () {
-          const repo = yield* ImportJobRepository
-          return yield* repo.markFailedIfActive(job.id, { error: "stale", finishedAt: new Date() })
-        }),
-      )
+        const marked = await runWithLive(
+          Effect.gen(function* () {
+            const repo = yield* ImportJobRepository
+            return yield* repo.markFailedIfActive(job.id, { error: "stale", finishedAt: new Date() })
+          }),
+        )
 
-      expect(marked).toBe(false)
-      expect((await findById(job.id))?.status).toBe(status)
-    })
+        expect(marked).toBe(false)
+        expect((await findById(job.id))?.status).toBe(status)
+      },
+    )
 
     it("will not fail another org's active job", async () => {
       await seedOrganizations()

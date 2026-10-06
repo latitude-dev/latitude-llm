@@ -23,10 +23,11 @@ interface AuthMiddlewareOptions {
   logTouchBuffer: boolean
 }
 
-const apiKeyContext = (result: { keyId: string; organizationId: string }): AuthContext => ({
+const apiKeyContext = (result: { keyId: string; organizationId: string; projectId: string | null }): AuthContext => ({
   method: "api-key",
   userId: UserId(`api-key:${result.keyId}`),
   organizationId: OrganizationId(result.organizationId),
+  projectId: result.projectId,
 })
 
 const oauthContext = (result: OAuthTokenAuthResult): AuthContext => ({

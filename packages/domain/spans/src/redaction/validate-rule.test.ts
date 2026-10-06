@@ -35,14 +35,12 @@ describe("validateRedactionRule on patterns", () => {
    * as suspect would reject ordinary patterns, so these are checked against the quantifier gate
    * specifically. Over-breadth is the preview's question, not this validator's.
    */
-  it.each([
-    "(a{2,3})+",
-    "(a+){2}",
-    "(?:ab)+",
-    "(a|b)+",
-  ])("does not read %s as nested repetition, since one side is bounded", (pattern) => {
-    expect(codes(patternRule(pattern))).not.toContain("nested_quantifier")
-  })
+  it.each(["(a{2,3})+", "(a+){2}", "(?:ab)+", "(a|b)+"])(
+    "does not read %s as nested repetition, since one side is bounded",
+    (pattern) => {
+      expect(codes(patternRule(pattern))).not.toContain("nested_quantifier")
+    },
+  )
 
   it.each([
     ["(a+)+$", "nested_quantifier"],
@@ -59,31 +57,24 @@ describe("validateRedactionRule on patterns", () => {
    * rather than by the probe: `a*a*a*b` runs in well under a millisecond at the probe's longest
    * input and for seconds once the input is a few hundred characters long.
    */
-  it.each([
-    "a*a*a*b",
-    "\\w+\\d+",
-    "\\d*\\d*x",
-    "[0-9]+[0-9]+-",
-    "a*b?a*",
-    "\\d+.*\\d+",
-  ])("rejects %s as adjacent unbounded repetition", (pattern) => {
-    expect(codes(patternRule(pattern))).toContain("adjacent_quantifier")
-  })
+  it.each(["a*a*a*b", "\\w+\\d+", "\\d*\\d*x", "[0-9]+[0-9]+-", "a*b?a*", "\\d+.*\\d+"])(
+    "rejects %s as adjacent unbounded repetition",
+    (pattern) => {
+      expect(codes(patternRule(pattern))).toContain("adjacent_quantifier")
+    },
+  )
 
   /**
    * The other half of the adjacency gate, and the reason overlap is measured rather than assumed.
    * Each of these repeats twice over with nothing required between, so a rule that only counted
    * quantifiers would refuse them all — and they are the shapes real identifiers are made of.
    */
-  it.each([
-    "[A-Z]+\\d*",
-    "\\d+-\\d+",
-    "\\d+\\s*\\d+",
-    "[A-Z]+_[0-9]+",
-    "(?:acct|cust)-\\d+",
-  ])("accepts %s, whose repeated parts cannot compete for a character", (pattern) => {
-    expect(codes(patternRule(pattern))).not.toContain("adjacent_quantifier")
-  })
+  it.each(["[A-Z]+\\d*", "\\d+-\\d+", "\\d+\\s*\\d+", "[A-Z]+_[0-9]+", "(?:acct|cust)-\\d+"])(
+    "accepts %s, whose repeated parts cannot compete for a character",
+    (pattern) => {
+      expect(codes(patternRule(pattern))).not.toContain("adjacent_quantifier")
+    },
+  )
 
   // Only a term that must match something can end the ambiguity, so a bounded one is not a fence.
   it("does not treat an optional part as separating two repetitions", () => {
@@ -166,27 +157,23 @@ describe("validateRedactionRule on patterns", () => {
    * answer here: this shape stays under budget at every length the probe can safely reach, and only
    * blows up on inputs long enough that running it would be the outage. So the scanner decides it.
    */
-  it.each([
-    "(?:a|aa)+$",
-    "(a|aa)+$",
-    "(?:\\d|\\w)+!",
-    "(ab|a)*c",
-  ])("rejects %s, whose repeated choice can start either branch the same way", (pattern) => {
-    expect(codes(patternRule(pattern))).toContain("ambiguous_alternation")
-  })
+  it.each(["(?:a|aa)+$", "(a|aa)+$", "(?:\\d|\\w)+!", "(ab|a)*c"])(
+    "rejects %s, whose repeated choice can start either branch the same way",
+    (pattern) => {
+      expect(codes(patternRule(pattern))).toContain("ambiguous_alternation")
+    },
+  )
 
   /**
    * The reason branch overlap is measured rather than assumed. A repeated choice between things that
    * cannot start alike is unambiguous, and these are ordinary ways to spell a character set.
    */
-  it.each([
-    "(a|b)+",
-    "(?:\\d|-)+x",
-    "(?:[A-Z]|[0-9])+-",
-    "(?:acct|xust)-\\d+",
-  ])("accepts %s, whose branches cannot start with the same character", (pattern) => {
-    expect(codes(patternRule(pattern))).not.toContain("ambiguous_alternation")
-  })
+  it.each(["(a|b)+", "(?:\\d|-)+x", "(?:[A-Z]|[0-9])+-", "(?:acct|xust)-\\d+"])(
+    "accepts %s, whose branches cannot start with the same character",
+    (pattern) => {
+      expect(codes(patternRule(pattern))).not.toContain("ambiguous_alternation")
+    },
+  )
 
   it("finishes quickly even when rejecting a catastrophic pattern", () => {
     const started = performance.now()
@@ -201,18 +188,16 @@ describe("validateRedactionRule on patterns", () => {
    * takes 14 seconds at 256 characters, so any probe long enough to see it is long enough to wedge
    * the process. It has to be refused from the source alone, which is what this pins.
    */
-  it.each([
-    "a*a*a*b",
-    "(a+)+$",
-    "(a|aa)+$",
-    "\\w+\\w+\\w+!",
-  ])("refuses %s in a few milliseconds, never by running it to completion", (pattern) => {
-    const started = performance.now()
-    const validation = validateRedactionRule(patternRule(pattern))
+  it.each(["a*a*a*b", "(a+)+$", "(a|aa)+$", "\\w+\\w+\\w+!"])(
+    "refuses %s in a few milliseconds, never by running it to completion",
+    (pattern) => {
+      const started = performance.now()
+      const validation = validateRedactionRule(patternRule(pattern))
 
-    expect(validation.ok).toBe(false)
-    expect(performance.now() - started).toBeLessThan(250)
-  })
+      expect(validation.ok).toBe(false)
+      expect(performance.now() - started).toBeLessThan(250)
+    },
+  )
 })
 
 /**

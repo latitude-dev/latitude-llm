@@ -257,20 +257,17 @@ describe("Jev shadow decision provider", () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
-  it.each([
-    "not-a-number",
-    "0",
-    "1.5",
-    "Infinity",
-    "4294967296",
-  ])("falls back from invalid timeout config %s", async (timeoutMs) => {
-    vi.stubEnv("LAT_JEV_API_KEY", apiKey)
-    vi.stubEnv("LAT_JEV_TIMEOUT_MS", timeoutMs)
-    vi.stubGlobal("fetch", async () => response(successBody()))
+  it.each(["not-a-number", "0", "1.5", "Infinity", "4294967296"])(
+    "falls back from invalid timeout config %s",
+    async (timeoutMs) => {
+      vi.stubEnv("LAT_JEV_API_KEY", apiKey)
+      vi.stubEnv("LAT_JEV_TIMEOUT_MS", timeoutMs)
+      vi.stubGlobal("fetch", async () => response(successBody()))
 
-    await expect(decideWithLayer(JevShadowDecisionProviderLive)).resolves.toMatchObject({
-      kind: "success",
-      probability: 0.8,
-    })
-  })
+      await expect(decideWithLayer(JevShadowDecisionProviderLive)).resolves.toMatchObject({
+        kind: "success",
+        probability: 0.8,
+      })
+    },
+  )
 })

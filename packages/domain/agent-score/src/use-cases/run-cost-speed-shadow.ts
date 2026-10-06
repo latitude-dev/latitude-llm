@@ -16,7 +16,12 @@ import {
   type WindowCostAggregate,
   type WindowSpeedAggregate,
 } from "../scoring/bootstrap-window.ts"
-import { EMPTY_WINDOW_FOLD, foldWindowBatch, type WindowFold } from "../scoring/fold-window-contributions.ts"
+import {
+  EMPTY_WINDOW_FOLD,
+  finalizeWindowFold,
+  foldWindowBatch,
+  type WindowFold,
+} from "../scoring/fold-window-contributions.ts"
 
 /**
  * How many sessions one shadow batch reads.
@@ -255,6 +260,8 @@ export const runCostSpeedShadow = Effect.fn("agentScore.runCostSpeedShadow")(fun
     slowestBatchMs = Math.max(slowestBatchMs, batchMs)
     if (input.probe) samples.push(input.probe.sample())
   }
+
+  fold = finalizeWindowFold({ fold, artifact: input.artifact })
 
   yield* Effect.annotateCurrentSpan("shadow.batchCount", batches.length)
   yield* Effect.annotateCurrentSpan("shadow.withheldSessionCount", fold.withheldSessionCount)
