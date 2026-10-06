@@ -104,6 +104,8 @@ Project routing uses three layers, highest precedence first:
 
 When the constructor omits `project`, every `capture()` call must set its own `project` (or rely on a per-span/resource attribute). This supports multi-project processes that emit to different Latitude projects from one service.
 
+**Project-bound API keys** authenticate to a single Latitude project. With such a key, routing hints must agree with that project: a mismatched `X-Latitude-Project` header or `latitude.project` attribute causes those spans to be rejected at ingest rather than routed elsewhere. Org-wide keys can still emit to multiple projects from one process when each span carries its own project hint.
+
 ## Existing OpenTelemetry providers
 
 The class-based bootstrap should be constructed after any existing OpenTelemetry-compatible observability SDK, such as Sentry, Datadog, New Relic, Honeycomb, or a custom OTel SDK. When a provider is already registered, Latitude attaches its `LatitudeSpanProcessor` to that provider instead of replacing the app's context manager, propagator, sampler, or other processors.

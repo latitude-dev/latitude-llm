@@ -23,6 +23,16 @@ The ingest HTTP boundary protects each process before decoding OTLP payloads:
 
 The defaults are a 32 MiB request cap, a 64 MiB in-flight payload budget, and 16 concurrent payloads per ingest process. The in-flight budget must be at least twice the request cap because assembling a chunked body briefly retains its streamed chunks and exact-sized output buffer together. Operators can tune the limits with `LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES`, `LAT_INGEST_TRACE_MAX_IN_FLIGHT_BYTES`, and `LAT_INGEST_TRACE_MAX_CONCURRENT_PAYLOADS`. The request span records observed and declared payload size, normalized content type, body-read duration, admission outcome, RSS, and ArrayBuffer memory before and after processing.
 
+## Project-bound API keys at ingest
+
+When the bearer key has a non-null `projectId`, ingest passes `scopedProjectId` into `ingestSpansUseCase` (`packages/domain/spans/src/use-cases/ingest-spans.ts`). Only that project is eligible:
+
+- Spans with `latitude.project` (or resource attribute) matching the bound project's slug are accepted.
+- Spans with no project hint default to the bound project when `X-Latitude-Project` is absent or matches the bound slug.
+- A span or header that names a **different** project slug is rejected (`rejectedSpans` increments); ingest does **not** remap foreign slugs onto the bound project.
+
+Org-wide keys (`projectId === null`) keep the previous behavior: resolve every slug in the batch against the organization and require a resolvable project per span. See [`authentication.md`](./authentication.md#api-key-scope) and [`telemetry-sdk.md`](./telemetry-sdk.md#project-scoping).
+
 ## PII Redaction Stage
 
 Opt-in per project. Between `decodeAndTransform` and `repo.insert` in `processIngestedSpansUseCase`, span content is scanned and matches are replaced with `[REDACTED_<LABEL>]`. The engine is a pure function set in `packages/domain/spans/src/redaction/`; there is no port until a second implementation exists.
