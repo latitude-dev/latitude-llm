@@ -668,7 +668,7 @@ requires-dist = [
     { name = "openinference-instrumentation-google-adk", specifier = "==0.1.15" },
     { name = "openinference-instrumentation-google-genai", specifier = "==1.1.0" },
     { name = "openinference-instrumentation-haystack", specifier = "==0.1.34" },
-    { name = "openinference-instrumentation-llama-index", specifier = "==4.4.2" },
+    { name = "openinference-instrumentation-llama-index", specifier = "==4.5.0" },
     { name = "openinference-instrumentation-openai", specifier = "==0.1.56" },
     { name = "openinference-instrumentation-openai-agents", specifier = "==1.6.1" },
     { name = "openinference-semantic-conventions", specifier = "==0.1.33" },
@@ -780,7 +780,7 @@ wheels = [
 
 [[package]]
 name = "openinference-instrumentation"
-version = "0.1.53"
+version = "0.1.62"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openinference-semantic-conventions" },
@@ -788,9 +788,9 @@ dependencies = [
     { name = "opentelemetry-sdk" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f9/b6/c0e7e047ae4962f2755a3bc9141fdd6272c75c74e47dfc6aa71978a9b78f/openinference_instrumentation-0.1.53.tar.gz", hash = "sha256:3c0c145cf6e13cfa630b29d0e3ca806f3821470ffca7922f1590e3970fadd4da", size = 33712, upload-time = "2026-06-02T16:37:21.771Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/30/d1/8a50a7b7f40170e06121964dc5ec4122ddac6cbe7c3f11aff572dc74a711/openinference_instrumentation-0.1.62.tar.gz", hash = "sha256:37e3313c5927087c7cea3679cf2301846064ad3c5b4cdd74c13c51fc23c14210", size = 43525, upload-time = "2026-09-09T07:32:19.976Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/bb/01262d9945c476e15aa21bb9ca05b18604e525d73d9761cadb677f485198/openinference_instrumentation-0.1.53-py3-none-any.whl", hash = "sha256:f43695080eded47b1e03ff1b19cb5c23ea4409459cfe16c5b5748d5656832eb1", size = 40958, upload-time = "2026-06-02T16:37:20.69Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/39/d0c6144b53a037376f35391edd89e00228182425bf40721587b1304b5b46/openinference_instrumentation-0.1.62-py3-none-any.whl", hash = "sha256:aaf9d6a213e6a089924b8505c7bddb3dd790df1a85224e4c497cdeea6fce762d", size = 51239, upload-time = "2026-09-09T07:32:18.549Z" },
 ]
 
 [[package]]
@@ -866,7 +866,7 @@ wheels = [
 
 [[package]]
 name = "openinference-instrumentation-llama-index"
-version = "4.4.2"
+version = "4.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openinference-instrumentation" },
@@ -877,9 +877,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/57/f0/6235bf5eef315a648d591f84f13b810eba214090d9af352d9cf84fbcaf7d/openinference_instrumentation_llama_index-4.4.2.tar.gz", hash = "sha256:80d523f5c3d4c768e25d630af336ba2f8cfcf16e34d9abaf9a1b55ff35d458ce", size = 62823, upload-time = "2026-05-18T18:51:35.37Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9b/b4/11b3ef853f0c8eeb2211e30c8fa1672c427a22ff63f3772cb47d369db30d/openinference_instrumentation_llama_index-4.5.0.tar.gz", hash = "sha256:9b6fb11cc8f2621f059ae1a2e631bc8bba84680588c4ba5ff55b6f5e305da4a9", size = 63464, upload-time = "2026-09-04T20:16:27.97Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/01/2e7f7a39c810e636375ca2185534d85f83e39dd8338ec68ee6f08c5b2562/openinference_instrumentation_llama_index-4.4.2-py3-none-any.whl", hash = "sha256:e213132e71c04daaa99a9810f1c056a19a446d55d7edaa6d4b1a16115365dcb7", size = 29709, upload-time = "2026-05-18T18:51:32.167Z" },
+    { url = "https://files.pythonhosted.org/packages/87/c1/e9eba662edd5b110539a246b65a45b96e1554271605f6f9f4ec6e785c818/openinference_instrumentation_llama_index-4.5.0-py3-none-any.whl", hash = "sha256:6cae6143ff6ad8ea7e8982b90fdeac0d415b0136917c6b84829251a7baa3666f", size = 29851, upload-time = "2026-09-04T20:16:26.491Z" },
 ]
 
 [[package]]
