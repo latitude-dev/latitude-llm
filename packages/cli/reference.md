@@ -154,7 +154,7 @@ Updates an API-created annotation while retaining its Latitude-generated identif
 
 #### `latitude api-keys create`
 
-Generates a new API key for the organization. The token is only returned once — store it securely.
+Generates a new API key. Omit projectId and projectSlug for an organization-wide key, or pass either to bind the key to one project. The token is only returned once — store it securely.
 
 `POST /v1/api-keys`
 

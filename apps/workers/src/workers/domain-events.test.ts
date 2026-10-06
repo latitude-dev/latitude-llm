@@ -158,8 +158,8 @@ describe("domain-events dispatcher", () => {
 
     const traceEnd = published.find((p) => p.queue === "trace-end")
     const billing = published.find((p) => p.queue === "billing")
-    expect((traceEnd?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
-    expect((billing?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
+    expect((traceEnd?.payload as { isSandbox?: boolean })?.isSandbox).toBe(true)
+    expect((billing?.payload as { isSandbox?: boolean })?.isSandbox).toBe(true)
     expect(published.map((p) => `${p.queue}:${p.task}`)).toContain("projects:checkFirstTrace")
     // signals:match is not fanned out here anymore; trace-end publishes it (and skips sandbox itself).
     expect(published.some((p) => p.queue === "signals")).toBe(false)
@@ -651,26 +651,26 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.task).toBe("request-incident-notifications")
   })
 
-  it.each([
-    "resolved",
-    "ignored",
-  ] as const)("suppresses the recovery notification on a manual IncidentClosed (reason=%s)", async (reason) => {
-    const { consumer, published } = setupDispatcher()
+  it.each(["resolved", "ignored"] as const)(
+    "suppresses the recovery notification on a manual IncidentClosed (reason=%s)",
+    async (reason) => {
+      const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("IncidentClosed", {
-      organizationId: "org-1",
-      projectId: "proj-1",
-      alertIncidentId: "ai-1",
-      kind: "signal.escalating",
-      sourceType: "signal",
-      sourceId: "issue-1",
-      reason,
-    })
+      const envelope = makeEnvelope("IncidentClosed", {
+        organizationId: "org-1",
+        projectId: "proj-1",
+        alertIncidentId: "ai-1",
+        kind: "signal.escalating",
+        sourceType: "signal",
+        sourceId: "issue-1",
+        reason,
+      })
 
-    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+      await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toEqual([])
-  })
+      expect(published).toEqual([])
+    },
+  )
 
   it("routes ProjectDeleted to every delete-by-project cascade", async () => {
     const { consumer, published } = setupDispatcher()
@@ -1009,6 +1009,6 @@ describe("domain-events dispatcher", () => {
       "billing:reportOverage:org-1:2026-01-01T00:00:00.000Z:2026-02-01T00:00:00.000Z",
     )
     expect(pending?.options?.latestThrottleMs).toBe(BILLING_OVERAGE_SYNC_THROTTLE_MS)
-    expect((pending?.payload as { snapshotOverageCredits: number }).snapshotOverageCredits).toBe(5_000)
+    expect((pending?.payload as { snapshotOverageCredits: number })?.snapshotOverageCredits).toBe(5_000)
   })
 })

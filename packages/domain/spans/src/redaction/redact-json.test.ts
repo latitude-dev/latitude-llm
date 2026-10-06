@@ -62,24 +62,21 @@ describe("redactJsonValue", () => {
     expect(result.counts).toEqual({ EMAIL: 2 })
   })
 
-  it.each([
-    "call_weather_1",
-    "toolu_01A09q90qw4Lq5Bx",
-    "gem_call_1",
-    "018f2a1e-6c7b-7f3a-9d21-3b6a2e0c1d44",
-    "tc1",
-  ])("leaves the real vendor tool-call id %s alone, so tool pairing survives", (id) => {
-    const parts = [
-      { type: "tool_call", id, name: "get_weather", arguments: { to: "john@example.com" } },
-      { type: "tool_call_response", id, response: "ok" },
-    ]
-    const result = redactJsonValue(parts, ENTITIES)
+  it.each(["call_weather_1", "toolu_01A09q90qw4Lq5Bx", "gem_call_1", "018f2a1e-6c7b-7f3a-9d21-3b6a2e0c1d44", "tc1"])(
+    "leaves the real vendor tool-call id %s alone, so tool pairing survives",
+    (id) => {
+      const parts = [
+        { type: "tool_call", id, name: "get_weather", arguments: { to: "john@example.com" } },
+        { type: "tool_call_response", id, response: "ok" },
+      ]
+      const result = redactJsonValue(parts, ENTITIES)
 
-    expect(result.value).toEqual([
-      { type: "tool_call", id, name: "get_weather", arguments: { to: "[REDACTED_EMAIL]" } },
-      { type: "tool_call_response", id, response: "ok" },
-    ])
-  })
+      expect(result.value).toEqual([
+        { type: "tool_call", id, name: "get_weather", arguments: { to: "[REDACTED_EMAIL]" } },
+        { type: "tool_call_response", id, response: "ok" },
+      ])
+    },
+  )
 
   it("skips blob parts because their content is base64 binary", () => {
     const part = { type: "blob", mimeType: "image/png", content: "aGVsbG8gam9obkBleGFtcGxlLmNvbQ==" }

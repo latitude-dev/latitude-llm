@@ -62,20 +62,16 @@ describe("resolveProjectSessionVolumeUseCase", () => {
 
   // Anything but the canonical integer this use case writes is recomputed: a partially
   // parsed value would silently lower the promotion threshold.
-  it.each([
-    ["not-a-number"],
-    ["6e3"],
-    ["3000.9"],
-    ["3000 sessions"],
-    ["-5"],
-    [" 12"],
-  ])("recomputes when the cached value is %j rather than a canonical count", async (cached) => {
-    const { repository } = createFakeSessionRepository({
-      countByProjectId: () => Effect.succeed({ totalCount: 7 }),
-    })
+  it.each([["not-a-number"], ["6e3"], ["3000.9"], ["3000 sessions"], ["-5"], [" 12"]])(
+    "recomputes when the cached value is %j rather than a canonical count",
+    async (cached) => {
+      const { repository } = createFakeSessionRepository({
+        countByProjectId: () => Effect.succeed({ totalCount: 7 }),
+      })
 
-    await expect(run(makeCache(cached).store, repository)).resolves.toBe(7)
-  })
+      await expect(run(makeCache(cached).store, repository)).resolves.toBe(7)
+    },
+  )
 
   it("degrades to null when ClickHouse fails so the caller can fall back to the floor", async () => {
     const { repository } = createFakeSessionRepository({

@@ -42,17 +42,18 @@ const reportClientError = createServerFn({ method: "POST" })
   })
 
 export function ErrorFallback({
-  error,
+  error: thrown,
   componentStack,
   reset,
   variant,
 }: {
-  error: Error
+  error: unknown
   componentStack?: string | null
   reset: () => void
   variant: "fullscreen" | "contained"
 }) {
   const errorId = useMemo(() => generateErrorId(), [])
+  const error = thrown instanceof Error ? thrown : new Error(String(thrown))
 
   useMountEffect(() => {
     reportClientError({

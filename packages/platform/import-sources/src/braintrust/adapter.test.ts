@@ -665,25 +665,24 @@ describe("Braintrust adapter", () => {
         expect(result.span.inputMessages).toEqual([{ role: "user", parts: [{ type: "text", content: "preserved" }] }])
       })
 
-      it.each([
-        ["" as unknown],
-        [[]],
-        [undefined],
-      ])("falls back to the mapped column when the attribute holds %s", (preserved) => {
-        const result = createBraintrustAdapter().normalize(
-          {
-            span_id: "s1",
-            span_attributes: { type: "llm" },
-            output: [{ role: "assistant", content: reply }],
-            metadata: { "gen_ai.output.messages": preserved },
-          },
-          CONTEXT,
-          CONFIG,
-        )
-        if (result.status !== "ok") throw new Error("expected ok")
+      it.each([["" as unknown], [[]], [undefined]])(
+        "falls back to the mapped column when the attribute holds %s",
+        (preserved) => {
+          const result = createBraintrustAdapter().normalize(
+            {
+              span_id: "s1",
+              span_attributes: { type: "llm" },
+              output: [{ role: "assistant", content: reply }],
+              metadata: { "gen_ai.output.messages": preserved },
+            },
+            CONTEXT,
+            CONFIG,
+          )
+          if (result.status !== "ok") throw new Error("expected ok")
 
-        expect(result.span.outputMessages).toEqual([{ role: "assistant", parts: [{ type: "text", content: reply }] }])
-      })
+          expect(result.span.outputMessages).toEqual([{ role: "assistant", parts: [{ type: "text", content: reply }] }])
+        },
+      )
     })
 
     // Braintrust keeps the instrumentation's own span name, which for Pydantic AI is

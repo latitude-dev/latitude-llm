@@ -30,19 +30,16 @@ describe("classifyFinishReason", () => {
     })
   })
 
-  it.each([
-    "length",
-    "max_tokens",
-    "MAX_TOKENS",
-    "FINISH_REASON_MAX_TOKENS",
-    "model_length",
-  ])("requires output damage before treating length reason %s as a failure", (rawValue) => {
-    expect(classifyFinishReason(rawValue)).toMatchObject({
-      classification: "unreliable",
-      kind: "length",
-      requiresOutputDamage: true,
-    })
-  })
+  it.each(["length", "max_tokens", "MAX_TOKENS", "FINISH_REASON_MAX_TOKENS", "model_length"])(
+    "requires output damage before treating length reason %s as a failure",
+    (rawValue) => {
+      expect(classifyFinishReason(rawValue)).toMatchObject({
+        classification: "unreliable",
+        kind: "length",
+        requiresOutputDamage: true,
+      })
+    },
+  )
 
   it("preserves unknown raw values as unmapped", () => {
     expect(classifyFinishReason("Future.Provider_Value")).toEqual({

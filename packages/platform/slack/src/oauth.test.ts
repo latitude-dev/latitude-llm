@@ -191,7 +191,7 @@ describe("refreshBotToken", () => {
     const exit = await Effect.runPromiseExit(refreshBotToken(baseInput))
     if (!Exit.isFailure(exit)) throw new Error("Expected failure")
     const failReason = exit.cause.reasons.find(Cause.isFailReason)
-    expect((failReason?.error as SlackOAuthError).slackError).toBe("invalid_client_id")
+    expect((failReason?.error as SlackOAuthError)?.slackError).toBe("invalid_client_id")
   })
 
   it("treats a response missing token fields as incomplete", async () => {
@@ -200,6 +200,6 @@ describe("refreshBotToken", () => {
     const exit = await Effect.runPromiseExit(refreshBotToken(baseInput))
     if (!Exit.isFailure(exit)) throw new Error("Expected failure")
     const failReason = exit.cause.reasons.find(Cause.isFailReason)
-    expect((failReason?.error as SlackOAuthError).slackError).toBe("incomplete_refresh_response")
+    expect((failReason?.error as SlackOAuthError)?.slackError).toBe("incomplete_refresh_response")
   })
 })
