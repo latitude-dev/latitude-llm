@@ -14,15 +14,12 @@ describe("isPublicUnicastIp", () => {
     expect(isPublicUnicastIp(ip)).toBe(true)
   })
 
-  it.each([
-    "127.0.0.1",
-    "10.0.0.1",
-    "192.168.1.1",
-    "169.254.0.1",
-    "::1",
-  ])("rejects private or local address %s", (ip) => {
-    expect(isPublicUnicastIp(ip)).toBe(false)
-  })
+  it.each(["127.0.0.1", "10.0.0.1", "192.168.1.1", "169.254.0.1", "::1"])(
+    "rejects private or local address %s",
+    (ip) => {
+      expect(isPublicUnicastIp(ip)).toBe(false)
+    },
+  )
 })
 
 describe("resolvePublicWebhookUrl", () => {

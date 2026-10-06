@@ -352,16 +352,12 @@ describe("redaction rule schema", () => {
     expect(() => redactionRuleSchema.parse(rule)).not.toThrow()
   })
 
-  it.each([
-    "email",
-    "Account_Number",
-    "AN",
-    "ACCOUNT NUMBER",
-    "1ACCOUNT",
-    "ACCOUNT-NUMBER",
-  ])("rejects the label %s, which the chip grammar could not render", (label) => {
-    expect(() => redactionRuleSchema.parse(termsRule({ label }))).toThrow()
-  })
+  it.each(["email", "Account_Number", "AN", "ACCOUNT NUMBER", "1ACCOUNT", "ACCOUNT-NUMBER"])(
+    "rejects the label %s, which the chip grammar could not render",
+    (label) => {
+      expect(() => redactionRuleSchema.parse(termsRule({ label }))).toThrow()
+    },
+  )
 
   // A custom rule wearing a built-in label would merge into its count and make the chip
   // tooltip assert something about the value that may be false.

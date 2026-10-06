@@ -32,7 +32,12 @@ import {
 import { composeAgentScore } from "../scoring/compose-agent-score.ts"
 import { estimateProjectReliability } from "../scoring/estimate-reliability.ts"
 import { evaluateMomentDegradation } from "../scoring/evaluate-moment-degradation.ts"
-import { EMPTY_WINDOW_FOLD, foldWindowBatch, type WindowFold } from "../scoring/fold-window-contributions.ts"
+import {
+  EMPTY_WINDOW_FOLD,
+  finalizeWindowFold,
+  foldWindowBatch,
+  type WindowFold,
+} from "../scoring/fold-window-contributions.ts"
 import { observeDimensionCauses } from "../scoring/observe-dimension-causes.ts"
 import { selectDeterministicOutcomeFailures } from "../scoring/select-outcome-endpoints.ts"
 import { type ReliabilitySessionEndpoint, selectReliabilityEndpoints } from "../scoring/select-reliability-endpoints.ts"
@@ -151,7 +156,7 @@ const readWindow = Effect.fn("agentScore.readWindow")(function* (input: {
   }
 
   return {
-    fold,
+    fold: finalizeWindowFold({ fold, artifact: input.costArtifact }),
     reliabilityEndpoints,
     deterministicOutcomeFailures,
     momentDegradation,

@@ -241,20 +241,19 @@ describe("createImportUseCase", () => {
   })
 
   describe("one import per org", () => {
-    it.each([
-      ["created" as const],
-      ["queued" as const],
-      ["running" as const],
-    ])("refuses to create a second import while one is %s", async (status) => {
-      const active = stubImportJob({ status })
-      const h = importHarness({ seed: [active] })
+    it.each([["created" as const], ["queued" as const], ["running" as const]])(
+      "refuses to create a second import while one is %s",
+      async (status) => {
+        const active = stubImportJob({ status })
+        const h = importHarness({ seed: [active] })
 
-      const exit = await Effect.runPromiseExit(createImportUseCase(input()).pipe(Effect.provide(h.layer)))
+        const exit = await Effect.runPromiseExit(createImportUseCase(input()).pipe(Effect.provide(h.layer)))
 
-      expect(causeOf(exit)).toContain("ActiveImportConflictError")
-      expect(causeOf(exit)).toContain(active.id)
-      expect(h.stored.size).toBe(1)
-    })
+        expect(causeOf(exit)).toContain("ActiveImportConflictError")
+        expect(causeOf(exit)).toContain(active.id)
+        expect(h.stored.size).toBe(1)
+      },
+    )
 
     // The limit is org-wide but the imports page is project-scoped, so the conflict has to say which
     // project holds the blocking job: the page the user is looking at may list no import at all.
@@ -273,19 +272,17 @@ describe("createImportUseCase", () => {
       expect(causeOf(exit)).toContain("Checkout Agent")
     })
 
-    it.each([
-      ["succeeded" as const],
-      ["capped" as const],
-      ["cancelled" as const],
-      ["failed" as const],
-    ])("allows a new import once the previous one is %s", async (status) => {
-      const h = importHarness({ seed: [stubImportJob({ status })] })
+    it.each([["succeeded" as const], ["capped" as const], ["cancelled" as const], ["failed" as const]])(
+      "allows a new import once the previous one is %s",
+      async (status) => {
+        const h = importHarness({ seed: [stubImportJob({ status })] })
 
-      const job = await Effect.runPromise(createImportUseCase(input()).pipe(Effect.provide(h.layer)))
+        const job = await Effect.runPromise(createImportUseCase(input()).pipe(Effect.provide(h.layer)))
 
-      expect(job.status).toBe("created")
-      expect(h.stored.size).toBe(2)
-    })
+        expect(job.status).toBe("created")
+        expect(h.stored.size).toBe(2)
+      },
+    )
   })
 
   describe("ImportStarted", () => {

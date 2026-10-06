@@ -19,8 +19,8 @@ export {
   type AlertSeverity,
   alertSeveritySchema,
   INCIDENT_SOURCE_TYPES,
-  incidentSourceTypeSchema,
   type IncidentSourceType,
+  incidentSourceTypeSchema,
 }
 
 /**

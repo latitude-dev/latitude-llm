@@ -2,6 +2,55 @@
 
 ## Unreleased
 
+## v0.3.121 - 2026-10-05
+
+### Web
+
+- Patched the TanStack Start reflected XSS advisory (GHSA-qx66-fv34-fjm8) by upgrading `@tanstack/react-start` to 1.168.60 and `@tanstack/react-router` to 1.170.41. The client error boundary now normalizes non-`Error` throwables, and the session-assessment Effect layers are built inside the server function so the ClickHouse and Postgres adapters no longer leak into the browser bundle (ref: #4825).
+
+### Agent Score
+
+- Counted polling-shaped consecutive tool-call loops as thrashing instead of excluding them from the reading (ref: #4781).
+- Scored `tools.dead_surface` across scoring windows: tool definitions that were sent but never called within a window now add a context penalty proportional to their serialized token cost (ref: #4817).
+- Restricted signal-derived dimension causes to the cost and speed dimensions (ref: #4820).
+
+### Dependencies and tooling
+
+- Pinned `react` and `react-dom` 18.3.1 for the MCP inspector client so `pnpm mcp:inspect` works again; application React 19 is unchanged (ref: #4823).
+- Gave `@platform/oauth-token-auth` the shared vitest config so its PGlite setup no longer times out in CI (ref: #4826).
+- Bumped `pg` to 8.23.0, `@radix-ui/react-popover` to 1.1.23, and `@biomejs/biome` to 2.5.14 with its formatter and lint autofixes applied across the repo (ref: #4647, #4726, #4725).
+
+## v0.3.120 - 2026-10-05
+
+### API keys
+
+- Added project-scoped API keys. A key can now be bound to one project; keys without a project remain organization-wide. Project keys get a 404 on other projects, a 403 on organization-only routes, and the ingest endpoint rejects a conflicting project. The web UI defaults new keys to the current project and lists that project's keys plus organization-wide ones. Both SDKs expose the new scope field (ref: #4818).
+
+### Evaluations and scores
+
+- Recompiled live evaluation scripts from their stored settings instead of running a stale script snapshot. Judge evaluations saved before the sandbox codegen change no longer fail with `conversation is not defined` (ref: #4605).
+- Treated a raced duplicate evaluation-score submission as idempotent. A retried or concurrent `POST /scores` for the same project, evaluation, and trace now returns the existing score instead of a 500 (ref: #4606).
+
+### Workers and ingestion
+
+- Pruned published outbox events after seven days and added partial indexes for outbox polling and retention (ref: #4735, #4736).
+- Failed span-ingestion jobs on the first attempt when the buffered payload is missing from object storage, instead of retrying for roughly eight minutes. Unrecoverable failures are now logged as terminal (ref: #4612).
+- Skipped weekly Wrapped report generation when the project or organization was deleted before the job ran (ref: #4600).
+- Stopped double-reporting unpriced-span errors to Datadog (ref: #4619).
+
+### Web
+
+- Classified rejected server-function input validation as 400 instead of 500, so expected client errors no longer appear as server faults in Datadog (ref: #4587).
+
+### Docs
+
+- Stated the V1 sunset date (30 October 2026) in the migration guide (ref: #4738).
+- Synced the flaggers Jev preclassifier and Agent Score v6 evidence floors in dev-docs (ref: #4706).
+
+### Dependencies
+
+- Bumped nodemailer to 10.0.9 and hono to 4.13.7 (ref: #4734).
+
 ## v0.3.119 - 2026-10-01
 
 ### Organizations

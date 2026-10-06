@@ -5,6 +5,7 @@ import {
   type ApiKeyId as ApiKeyIdType,
   NotFoundError,
   OrganizationId,
+  ProjectId,
   SqlClient,
   type SqlClientShape,
   toRepositoryError,
@@ -21,6 +22,7 @@ const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer)
     const apiKey: ApiKey = {
       id: ApiKeyId(row.id),
       organizationId: OrganizationId(row.organizationId),
+      projectId: row.projectId ? ProjectId(row.projectId) : null,
       token,
       tokenHash: row.tokenHash,
       name: row.name,
@@ -38,6 +40,7 @@ const toInsertRow = (apiKey: ApiKey, encryptionKey: Buffer) =>
     return {
       id: apiKey.id,
       organizationId: apiKey.organizationId,
+      projectId: apiKey.projectId,
       token,
       tokenHash: apiKey.tokenHash,
       name: apiKey.name,

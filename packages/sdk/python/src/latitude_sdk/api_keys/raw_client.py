@@ -75,14 +75,27 @@ class RawApiKeysClient:
             )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def create(self, *, name: str, request_options: typing.Optional[RequestOptions] = None) -> HttpResponse[ApiKey]:
+    def create(
+        self,
+        *,
+        name: str,
+        project_id: typing.Optional[str] = OMIT,
+        project_slug: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[ApiKey]:
         """
-        Generates a new API key for the organization. The token is only returned once — store it securely.
+        Generates a new API key. Omit projectId and projectSlug for an organization-wide key, or pass either to bind the key to one project. The token is only returned once — store it securely.
 
         Parameters
         ----------
         name : str
             Human-readable name for the API key. Used to distinguish keys in the UI.
+
+        project_id : typing.Optional[str]
+            Bind the key to this project. Omit `projectId` and `projectSlug` to mint an organization-wide key. One project per key.
+
+        project_slug : typing.Optional[str]
+            Bind the key to the project with this slug. Must agree with `projectId` when both are set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -97,6 +110,8 @@ class RawApiKeysClient:
             method="POST",
             json={
                 "name": name,
+                "projectId": project_id,
+                "projectSlug": project_slug,
             },
             headers={
                 "content-type": "application/json",
@@ -426,15 +441,26 @@ class AsyncRawApiKeysClient:
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def create(
-        self, *, name: str, request_options: typing.Optional[RequestOptions] = None
+        self,
+        *,
+        name: str,
+        project_id: typing.Optional[str] = OMIT,
+        project_slug: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[ApiKey]:
         """
-        Generates a new API key for the organization. The token is only returned once — store it securely.
+        Generates a new API key. Omit projectId and projectSlug for an organization-wide key, or pass either to bind the key to one project. The token is only returned once — store it securely.
 
         Parameters
         ----------
         name : str
             Human-readable name for the API key. Used to distinguish keys in the UI.
+
+        project_id : typing.Optional[str]
+            Bind the key to this project. Omit `projectId` and `projectSlug` to mint an organization-wide key. One project per key.
+
+        project_slug : typing.Optional[str]
+            Bind the key to the project with this slug. Must agree with `projectId` when both are set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -449,6 +475,8 @@ class AsyncRawApiKeysClient:
             method="POST",
             json={
                 "name": name,
+                "projectId": project_id,
+                "projectSlug": project_slug,
             },
             headers={
                 "content-type": "application/json",

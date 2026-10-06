@@ -26,6 +26,12 @@ const withTimeout = <T>(operation: Promise<T>, fallback: T): Promise<T> =>
 const getApiKeyCacheKey = (tokenHash: string): string => `apikey:${tokenHash}`
 
 /**
+ * Cache payload version. Entries written before `projectId` existed fail
+ * {@link isCachedApiKeyResult} and are treated as misses, then overwritten.
+ * The key prefix stays `apikey:` so revoke's DEL still hits the live entry.
+ */
+
+/**
  * Best-effort `DEL apikey:${tokenHash}` so a freshly-revoked key stops
  * validating on cache hits before its TTL would have expired. Used by
  * revoke server-fns / routes — the DB row is already updated; this just
@@ -59,7 +65,7 @@ export const ApiKeyCacheInvalidatorLive = (redis: RedisClient) =>
       }).pipe(Effect.orDie),
   })
 
-export type ApiKeyAuthResult = { organizationId: string; keyId: string; isSandbox: boolean }
+export type ApiKeyAuthResult = { organizationId: string; keyId: string; isSandbox: boolean; projectId: string | null }
 
 const isCachedApiKeyResult = (value: unknown): value is ApiKeyAuthResult | null => {
   if (value === null) {
@@ -70,12 +76,16 @@ const isCachedApiKeyResult = (value: unknown): value is ApiKeyAuthResult | null 
     return false
   }
 
-  if (!("organizationId" in value) || !("keyId" in value) || !("isSandbox" in value)) {
+  if (!("organizationId" in value) || !("keyId" in value) || !("isSandbox" in value) || !("projectId" in value)) {
     return false
   }
 
+  const projectId = value.projectId
   return (
-    typeof value.organizationId === "string" && typeof value.keyId === "string" && typeof value.isSandbox === "boolean"
+    typeof value.organizationId === "string" &&
+    typeof value.keyId === "string" &&
+    typeof value.isSandbox === "boolean" &&
+    (projectId === null || typeof projectId === "string")
   )
 }
 
@@ -182,6 +192,7 @@ export const validateApiKey = (
       organizationId: apiKey.organizationId,
       keyId: apiKey.id,
       isSandbox: isSandbox(organization),
+      projectId: apiKey.projectId,
     }
 
     yield* cacheApiKeyResult(redis, tokenHash, result, VALID_KEY_TTL_SECONDS)

@@ -39,6 +39,7 @@ const sandboxCapLayers = Layer.mergeAll(
   SettingsReaderLive,
   ApiKeyRepositoryLive,
   OutboxEventWriterLive,
+  ProjectRepositoryLive,
 )
 const sandboxDeleteLayers = Layer.mergeAll(
   sandboxWriteLayers,

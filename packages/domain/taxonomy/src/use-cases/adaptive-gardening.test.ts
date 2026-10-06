@@ -312,31 +312,31 @@ const badAdaptiveBuilder =
     })
 
 describe("planHierarchicalTaxonomyUseCase enforced falls back to static on unsafe adaptive output", () => {
-  it.each([
-    "nonFinite",
-    "structuralLimit",
-  ] as const)("persists static and records fallbackReason=%s, before any staging/writes", async (kind) => {
-    const observations = createFakeTaxonomyObservationRepository(twoGroupCorpus(now))
-    const clusters = createFakeTaxonomyClusterRepository([])
+  it.each(["nonFinite", "structuralLimit"] as const)(
+    "persists static and records fallbackReason=%s, before any staging/writes",
+    async (kind) => {
+      const observations = createFakeTaxonomyObservationRepository(twoGroupCorpus(now))
+      const clusters = createFakeTaxonomyClusterRepository([])
 
-    const plan = await runPlan(observations, clusters, {
-      now,
-      mode: "enforced",
-      clusterBuilder: badAdaptiveBuilder(kind),
-    })
+      const plan = await runPlan(observations, clusters, {
+        now,
+        mode: "enforced",
+        clusterBuilder: badAdaptiveBuilder(kind),
+      })
 
-    expect(plan.mode).toBe("enforced")
-    expect(plan.fallbackReason).toBe(kind)
-    // Fell back to the static publish path: sample assignments, no full-window leaves.
-    expect(plan.clusters.length).toBeGreaterThan(0)
-    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
-    expect(plan.leafClusters).toEqual([])
-    // The publish path reads this, not the mode: a fallen-back `enforced` run
-    // persists the static tree, so its swap must retire the dead ids only.
-    expect(plan.persistsAdaptiveTree).toBe(false)
-    expect(plan.supersededClusterIds).toEqual([])
-    expect(plan.observationAssignments.length).toBeGreaterThan(0)
-  })
+      expect(plan.mode).toBe("enforced")
+      expect(plan.fallbackReason).toBe(kind)
+      // Fell back to the static publish path: sample assignments, no full-window leaves.
+      expect(plan.clusters.length).toBeGreaterThan(0)
+      expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
+      expect(plan.leafClusters).toEqual([])
+      // The publish path reads this, not the mode: a fallen-back `enforced` run
+      // persists the static tree, so its swap must retire the dead ids only.
+      expect(plan.persistsAdaptiveTree).toBe(false)
+      expect(plan.supersededClusterIds).toEqual([])
+      expect(plan.observationAssignments.length).toBeGreaterThan(0)
+    },
+  )
 
   it("only then builds static — the fallback is the second build, never a speculative one", async () => {
     const modes: string[] = []
@@ -479,26 +479,26 @@ const priorTree = (): TaxonomyCluster[] => {
 }
 
 describe("a degenerate rebuild is detectable before any publish branch runs", () => {
-  it.each([
-    "off",
-    "enforced",
-  ] as const)("reports topLevelClustersBuilt 0 and would retire the whole prior tree (%s)", async (mode) => {
-    const plan = await runPlan(
-      createFakeTaxonomyObservationRepository(unsplittableCorpus(now)),
-      createFakeTaxonomyClusterRepository(priorTree()),
-      { now, mode },
-    )
+  it.each(["off", "enforced"] as const)(
+    "reports topLevelClustersBuilt 0 and would retire the whole prior tree (%s)",
+    async (mode) => {
+      const plan = await runPlan(
+        createFakeTaxonomyObservationRepository(unsplittableCorpus(now)),
+        createFakeTaxonomyClusterRepository(priorTree()),
+        { now, mode },
+      )
 
-    // Above the gardening minimum, so not a cold start: the build ran and produced a bare root.
-    expect(plan.observationsSampled).toBe(40)
-    expect(plan.topLevelClustersBuilt).toBe(0)
-    expect(plan.clusters).toHaveLength(1)
-    expect(plan.maxDepthReached).toBe(0)
-    // What publishing would retire, on whichever branch this mode takes.
-    const retired = [...plan.deprecatedClusterIds, ...plan.supersededClusterIds]
-    expect(retired).toContain("2".repeat(24))
-    expect(retired).toContain("3".repeat(24))
-  })
+      // Above the gardening minimum, so not a cold start: the build ran and produced a bare root.
+      expect(plan.observationsSampled).toBe(40)
+      expect(plan.topLevelClustersBuilt).toBe(0)
+      expect(plan.clusters).toHaveLength(1)
+      expect(plan.maxDepthReached).toBe(0)
+      // What publishing would retire, on whichever branch this mode takes.
+      const retired = [...plan.deprecatedClusterIds, ...plan.supersededClusterIds]
+      expect(retired).toContain("2".repeat(24))
+      expect(retired).toContain("3".repeat(24))
+    },
+  )
 
   it("a healthy rebuild reports its top-level count, so the guard stays out of the way", async () => {
     const plan = await runPlan(
