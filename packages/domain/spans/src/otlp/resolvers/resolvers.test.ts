@@ -235,16 +235,14 @@ describe("resolveAttributes", () => {
 
     // Passing an unmapped package through unchanged is what makes it reportable: the real
     // string reaches Datadog instead of a provider id guessed from its scope.
-    it.each([
-      ["@cursor/sdk"],
-      ["@acme/llm"],
-      ["@ai-sdk/openai-compatible"],
-      ["@ai-sdk/react"],
-    ])("leaves unmapped package %s untouched", (input) => {
-      const attrs: OtlpKeyValue[] = [strAttr("gen_ai.provider.name", input)]
-      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
-      expect(result.provider).toBe(input)
-    })
+    it.each([["@cursor/sdk"], ["@acme/llm"], ["@ai-sdk/openai-compatible"], ["@ai-sdk/react"]])(
+      "leaves unmapped package %s untouched",
+      (input) => {
+        const attrs: OtlpKeyValue[] = [strAttr("gen_ai.provider.name", input)]
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+        expect(result.provider).toBe(input)
+      },
+    )
 
     it("prices a Mastra-wrapped OpenAI Agents span instead of reporting $0", () => {
       const attrs: OtlpKeyValue[] = [

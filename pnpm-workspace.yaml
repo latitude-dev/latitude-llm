@@ -28,6 +28,14 @@ minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - "@temporalio/*"
   - "rosetta-ai"
+  # TODO: drop the @tanstack entries after 2026-10-07; they only let the
+  # GHSA-qx66-fv34-fjm8 (react-start XSS) patch in before it is 7 days old.
+  - "@tanstack/react-start*"
+  - "@tanstack/start-*"
+  - "@tanstack/react-router"
+  - "@tanstack/router-*"
+  - "@tanstack/react-store"
+  - "@tanstack/store"
 
 # Disable npm `pre*` / `post*` lifecycle scripts (defense in depth on top of
 # pnpm-workspace.yaml `onlyBuiltDependencies` allowlist). Mini Shai-Hulud
@@ -35,7 +43,7 @@ minimumReleaseAgeExclude:
 enablePrePostScripts: false
 
 catalog:
-  "@biomejs/biome": 2.4.6
+  "@biomejs/biome": 2.5.14
   "@clickhouse/client": 1.21.0
   "@hono/node-server": 1.19.15
   "@opentelemetry/api": 1.9.1
@@ -46,7 +54,7 @@ catalog:
   "@temporalio/workflow": 1.17.5
   "@types/node": 22.14.1
   "@types/mustache": 4.2.6
-  "@types/pg": 8.16.0
+  "@types/pg": 8.23.1
   "@types/react": 19.2.14
   "@types/react-dom": 19.2.3
   "@typescript/native-preview": 7.0.0-dev.20260705.1
@@ -65,13 +73,13 @@ catalog:
   fast-json-stable-stringify: 2.1.0
   "@effect/opentelemetry": 4.0.0-beta.57
   effect: 4.0.0-beta.57
-  hono: 4.13.5
+  hono: 4.13.7
   ioredis: 5.10.1
   jose: 6.2.3
   js-tiktoken: 1.0.21
   mustache: 4.2.0
   pdfjs-dist: 6.2.108
-  pg: 8.16.0
+  pg: 8.23.0
   quickjs-emscripten: 0.32.0
   react: 19.2.5
   react-dom: 19.2.5
@@ -82,7 +90,7 @@ catalog:
   turbo: 2.9.18
   typescript: 6.0.3
   vite: 8.0.16
-  vitest: 4.1.8
+  vitest: 5.0.3
   zod: 4.3.6
   voyageai: 0.2.1
   "@modelcontextprotocol/sdk": 1.29.0

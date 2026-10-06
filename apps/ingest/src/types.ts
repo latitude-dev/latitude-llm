@@ -15,5 +15,7 @@ export interface IngestEnv {
      * Per-span resolution happens in the ingest use case.
      */
     defaultProjectSlug?: string
+    /** Set when the API key is bound to one project. */
+    scopedProjectId?: string | null
   }
 }

@@ -18,14 +18,12 @@ describe("classifyProviderError", () => {
     expect(classifyProviderError(rawValue)).toMatchObject({ classification: "providerError", kind })
   })
 
-  it.each([
-    "Error",
-    "APIError",
-    "ToolExecutionError",
-    "BookingUnavailableError",
-  ])("keeps generic or non-provider error %s unmapped", (rawValue) => {
-    expect(classifyProviderError(rawValue)).toMatchObject({ classification: "unmapped", rawValue })
-  })
+  it.each(["Error", "APIError", "ToolExecutionError", "BookingUnavailableError"])(
+    "keeps generic or non-provider error %s unmapped",
+    (rawValue) => {
+      expect(classifyProviderError(rawValue)).toMatchObject({ classification: "unmapped", rawValue })
+    },
+  )
 
   it("returns no observation when no named error type was captured", () => {
     expect(classifyProviderError("  ")).toBeNull()

@@ -144,7 +144,7 @@ describe("finishImport", () => {
 
       const finished = await Effect.runPromise(finishImport(job, "succeeded").pipe(Effect.provide(h.layer)))
 
-      const durationMs = (h.written[0]?.payload as { durationMs: number }).durationMs
+      const durationMs = (h.written[0]?.payload as { durationMs: number })?.durationMs
       expect(durationMs).toBe((finished.finishedAt as Date).getTime() - STARTED_AT.getTime())
       expect(durationMs).toBeGreaterThan(0)
     })

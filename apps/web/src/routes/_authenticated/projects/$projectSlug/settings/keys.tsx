@@ -1,5 +1,6 @@
 import {
   Avatar,
+  Badge,
   Button,
   CloseTrigger,
   CopyableText,
@@ -31,8 +32,10 @@ import {
   useApiKeysCollection,
 } from "../../../../../domains/api-keys/api-keys.collection.ts"
 import type { ApiKeyRecord } from "../../../../../domains/api-keys/api-keys.functions.ts"
+import { apiKeysVisibleOnProject } from "../../../../../domains/api-keys/visible-on-project.ts"
 import { revokeOAuthKeyMutation, useOAuthKeysCollection } from "../../../../../domains/oauth/oauth-keys.collection.ts"
 import type { OAuthKeyRecord } from "../../../../../domains/oauth/oauth-keys.functions.ts"
+import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
 import { maskSensitiveValue } from "../../../../../lib/mask-sensitive-value.ts"
@@ -42,13 +45,25 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
   component: KeysSettingsPage,
 })
 
-function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
+function CreateApiKeyModal({
+  open,
+  setOpen,
+  project,
+}: {
+  open: boolean
+  setOpen: (open: boolean) => void
+  project: { readonly id: string; readonly name: string; readonly slug: string } | null
+}) {
   const { toast } = useToast()
   const form = useForm({
-    defaultValues: { name: "" },
+    defaultValues: { name: "", scope: project ? ("project" as const) : ("organization" as const) },
     onSubmit: createFormSubmitHandler(
       async (value) => {
-        await insertApiKeyMutation(value.name)
+        const projectId = value.scope === "project" ? project?.id : null
+        if (value.scope === "project" && !projectId) {
+          throw new Error("This project is still loading. Try again in a moment.")
+        }
+        await insertApiKeyMutation(value.name, projectId)
       },
       {
         onSuccess: async () => {
@@ -76,10 +91,48 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
         >
           <Modal.Header
             title="Create API key"
-            description="Create a new API key for your organization to access the Latitude API."
+            description="Project keys can only access this project. Organization keys can access every project."
           />
           <Modal.Body>
             <FormWrapper>
+              <form.Field name="scope">
+                {(field) => (
+                  <fieldset className="flex flex-col gap-2">
+                    <legend className="text-sm font-medium">Scope</legend>
+                    <label className="flex items-start gap-2">
+                      <input
+                        type="radio"
+                        name="api-key-scope"
+                        className="mt-1"
+                        checked={field.state.value === "project"}
+                        disabled={!project}
+                        onChange={() => field.handleChange("project")}
+                      />
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <Text.H5 display="block">Project</Text.H5>
+                        <Text.H6 display="block" color="foregroundMuted">
+                          {project ? `Only ${project.name} (${project.slug})` : "Current project is still loading"}
+                        </Text.H6>
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-2">
+                      <input
+                        type="radio"
+                        name="api-key-scope"
+                        className="mt-1"
+                        checked={field.state.value === "organization"}
+                        onChange={() => field.handleChange("organization")}
+                      />
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <Text.H5 display="block">Organization</Text.H5>
+                        <Text.H6 display="block" color="foregroundMuted">
+                          Every project in this organization
+                        </Text.H6>
+                      </span>
+                    </label>
+                  </fieldset>
+                )}
+              </form.Field>
               <form.Field name="name">
                 {(field) => (
                   <Input
@@ -212,7 +265,7 @@ function DeleteApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
   )
 }
 
-function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
+function ApiKeysTable({ apiKeys, deleteLocked }: { apiKeys: ApiKeyRecord[]; deleteLocked: boolean }) {
   const [apiKeyToEdit, setApiKeyToEdit] = useState<ApiKeyRecord | null>(null)
   const [apiKeyToDelete, setApiKeyToDelete] = useState<ApiKeyRecord | null>(null)
 
@@ -222,6 +275,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
+            <TableHead>Scope</TableHead>
             <TableHead>Key</TableHead>
             <TableHead>Created at</TableHead>
             <TableHead />
@@ -232,6 +286,15 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
             <TableRow key={apiKey.id} verticalPadding hoverable={false}>
               <TableCell>
                 <Text.H5>{apiKey.name || "Latitude API key"}</Text.H5>
+              </TableCell>
+              <TableCell>
+                {apiKey.projectId ? (
+                  <Badge variant="secondary">
+                    {apiKey.projectSlug ? `Project · ${apiKey.projectSlug}` : "Project"}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">Organization</Badge>
+                )}
               </TableCell>
               <TableCell>
                 <CopyableText
@@ -258,12 +321,12 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   <Tooltip
                     asChild
                     trigger={
-                      <Button disabled={apiKeys.length === 1} variant="ghost" onClick={() => setApiKeyToDelete(apiKey)}>
+                      <Button disabled={deleteLocked} variant="ghost" onClick={() => setApiKeyToDelete(apiKey)}>
                         <Icon icon={Trash2} size="sm" />
                       </Button>
                     }
                   >
-                    {apiKeys.length === 1 ? "You can't delete the last API key" : "Delete API key"}
+                    {deleteLocked ? "You can't delete the last API key" : "Delete API key"}
                   </Tooltip>
                 </div>
               </TableCell>
@@ -383,8 +446,11 @@ function OAuthKeysTable({ oauthKeys }: { oauthKeys: OAuthKeyRecord[] }) {
 }
 
 function KeysSettingsPage() {
+  const { projectSlug } = Route.useParams()
   const [createOpen, setCreateOpen] = useState(false)
   const { data: apiKeyData, isLoading: apiKeysLoading } = useApiKeysCollection()
+  const { data: projects } = useProjectsCollection()
+  const currentProject = (projects ?? []).find((project) => project.slug === projectSlug) ?? null
   const { data: oauthKeyData, isLoading: oauthKeysLoading } = useOAuthKeysCollection()
   // `useLiveQuery` doesn't preserve the server-fn's ORDER BY — TanStack DB
   // iterates the collection by item key, not by insertion order — so we sort
@@ -392,19 +458,21 @@ function KeysSettingsPage() {
   // Newest first.
   const byCreatedAtDesc = <T extends { readonly createdAt: string }>(a: T, b: T): number =>
     a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
-  const apiKeys = (apiKeyData ?? []).slice().sort(byCreatedAtDesc)
+  const allApiKeys = (apiKeyData ?? []).slice().sort(byCreatedAtDesc)
+  // Project settings shows this project's keys and org-wide keys only.
+  const apiKeys = apiKeysVisibleOnProject(allApiKeys, currentProject?.id ?? null)
   const oauthKeys = (oauthKeyData ?? []).slice().sort(byCreatedAtDesc)
 
   return (
-    <SettingsPage title="Keys" description="Manage API keys and OAuth connections for this organization">
-      <CreateApiKeyModal open={createOpen} setOpen={setCreateOpen} />
+    <SettingsPage title="Keys" description="Manage API keys and OAuth connections. New keys default to this project.">
+      <CreateApiKeyModal open={createOpen} setOpen={setCreateOpen} project={currentProject} />
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex flex-col gap-1">
             <Text.H4 weight="bold">API keys</Text.H4>
             <Text.H5 color="foregroundMuted">
-              Application keys with access to this organization (through API or SDK)
+              Organization keys reach every project. Project keys stay on the project shown in Scope.
             </Text.H5>
           </div>
           <div className="shrink-0">
@@ -415,7 +483,11 @@ function KeysSettingsPage() {
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          {apiKeysLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />}
+          {apiKeysLoading ? (
+            <TableSkeleton cols={3} rows={3} />
+          ) : (
+            <ApiKeysTable apiKeys={apiKeys} deleteLocked={allApiKeys.length === 1} />
+          )}
         </div>
       </section>
 

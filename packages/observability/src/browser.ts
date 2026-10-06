@@ -30,9 +30,9 @@ import { createLogger as createLoggerWithState } from "./logger.ts"
 import { getObservabilityState } from "./state.ts"
 import type { InitializeObservabilityOptions } from "./types.ts"
 
-export type { Span, Tracer }
 export { recordSpanExceptionForDatadog } from "./record-span-exception.ts"
-export { trace, SpanStatusCode }
+export type { Span, Tracer }
+export { SpanStatusCode, trace }
 
 export const createLogger = (scope: string) => createLoggerWithState(getObservabilityState(), scope)
 export const initializeObservability = async (_opts: InitializeObservabilityOptions): Promise<void> => {}

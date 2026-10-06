@@ -16,7 +16,7 @@ const url = Effect.runSync(parseEnvOptional("LAT_ADMIN_DATABASE_URL", "string"))
 
 export default defineConfig({
   dialect: "postgresql",
-  schema: "./src/schema/*.ts",
+  schema: "./src/schema/!(*.test).ts",
   out: "./drizzle",
   dbCredentials: { url },
 })

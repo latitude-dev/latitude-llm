@@ -58,17 +58,14 @@ describe("evaluateMomentDegradation", () => {
     expect(result.degraded).toBe(false)
   })
 
-  it.each([
-    "policy_refusal",
-    "hesitation",
-    "stalling",
-    "resolution",
-    "user_satisfaction",
-  ])("never degrades on %s", (kind) => {
-    const findings = [0, 1, 2, 3].map((index) => moment([{ kind, confidence: 1 }], index))
+  it.each(["policy_refusal", "hesitation", "stalling", "resolution", "user_satisfaction"])(
+    "never degrades on %s",
+    (kind) => {
+      const findings = [0, 1, 2, 3].map((index) => moment([{ kind, confidence: 1 }], index))
 
-    expect(evaluateMomentDegradation({ session: session(findings), rules: RULES }).degraded).toBe(false)
-  })
+      expect(evaluateMomentDegradation({ session: session(findings), rules: RULES }).degraded).toBe(false)
+    },
+  )
 
   it("reports every kind that met its rule, so a cause row can name them", () => {
     const result = evaluateMomentDegradation({

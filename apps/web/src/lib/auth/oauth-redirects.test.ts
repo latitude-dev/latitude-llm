@@ -22,18 +22,18 @@ describe("buildOAuthCallbackUrls", () => {
     expect(urls.errorCallbackURL).toBe("/login")
   })
 
-  it.each([
-    null,
-    "https://evil.example/path",
-  ])("keeps the regular signup welcome page when OAuth login has no safe redirect: %s", (redirect) => {
-    const urls = buildOAuthCallbackUrls({
-      provider: "github",
-      redirect,
-      tracking: { utm_source: "newsletter" },
-    })
+  it.each([null, "https://evil.example/path"])(
+    "keeps the regular signup welcome page when OAuth login has no safe redirect: %s",
+    (redirect) => {
+      const urls = buildOAuthCallbackUrls({
+        provider: "github",
+        redirect,
+        tracking: { utm_source: "newsletter" },
+      })
 
-    expect(urls.callbackURL).toBe("/?utm_source=newsletter")
-    expect(urls.newUserCallbackURL).toBe("/welcome?utm_source=newsletter&signup=github")
-    expect(urls.errorCallbackURL).toBe("/login?utm_source=newsletter")
-  })
+      expect(urls.callbackURL).toBe("/?utm_source=newsletter")
+      expect(urls.newUserCallbackURL).toBe("/welcome?utm_source=newsletter&signup=github")
+      expect(urls.errorCallbackURL).toBe("/login?utm_source=newsletter")
+    },
+  )
 })

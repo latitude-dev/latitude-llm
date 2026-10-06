@@ -118,7 +118,11 @@ const makeProjectRepository = (
   settingsBySlug: Record<string, ProjectSettings> = {},
 ) =>
   ProjectRepository.of({
-    findById: () => Effect.die("not used"),
+    findById: (id: string) => {
+      const slug = Object.entries(resolutions).find(([, projectId]) => projectId === id)?.[0]
+      if (!slug) return Effect.fail(new NotFoundError({ entity: "Project", id }))
+      return Effect.succeed(makeProject(slug, id, settingsBySlug[slug] ?? {}))
+    },
     findByIdForUpdate: () => Effect.die("not used"),
     findBySlug: (slug: string) => {
       const id = resolutions[slug]
@@ -139,6 +143,7 @@ const makeInput = (
   payload: Uint8Array,
   opts: {
     defaultProjectSlug?: string
+    scopedProjectId?: string
     isSandbox?: boolean
     organizationRedaction?: OrganizationRedactionSetting | null
   } = {},
@@ -149,6 +154,7 @@ const makeInput = (
   payload,
   contentType: "application/json",
   ...(opts.defaultProjectSlug ? { defaultProjectSlug: opts.defaultProjectSlug } : {}),
+  ...(opts.scopedProjectId ? { scopedProjectId: opts.scopedProjectId } : {}),
   ...(opts.organizationRedaction !== undefined ? { organizationRedaction: opts.organizationRedaction } : {}),
 })
 
@@ -331,6 +337,51 @@ describe("ingestSpansUseCase project scoping", () => {
 
     expect(result).toEqual({ totalSpans: 1, acceptedSpans: 0, rejectedSpans: 1 })
     expect(published).toHaveLength(0)
+  })
+
+  it("forces a project-scoped key onto its project when the span has no project attribute", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    const result = await Effect.runPromise(
+      runUseCase(makeInput(buildOtlpJson(), { scopedProjectId: PRIMARY_PROJECT_ID }), disk, publisher, {
+        primary: PRIMARY_PROJECT_ID,
+      }),
+    )
+
+    expect(result).toEqual({ totalSpans: 1, acceptedSpans: 1, rejectedSpans: 0 })
+    const payload = published[0]?.payload as {
+      defaultProjectId: string | null
+      projectIdBySlug: Record<string, string>
+    }
+    expect(payload.defaultProjectId).toBe(PRIMARY_PROJECT_ID)
+    expect(payload.projectIdBySlug).toEqual({ primary: PRIMARY_PROJECT_ID })
+  })
+
+  it("rejects a span when a project-scoped key's header or attribute names another project", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    const headerConflict = await Effect.runPromise(
+      runUseCase(
+        makeInput(buildOtlpJson(), { scopedProjectId: PRIMARY_PROJECT_ID, defaultProjectSlug: "secondary" }),
+        disk,
+        publisher,
+        { primary: PRIMARY_PROJECT_ID, secondary: SECONDARY_PROJECT_ID },
+      ),
+    )
+    expect(headerConflict).toEqual({ totalSpans: 1, acceptedSpans: 0, rejectedSpans: 1 })
+    expect(published).toHaveLength(0)
+
+    const { publisher: publisher2, published: published2 } = createFakeQueuePublisher()
+    const attrConflict = await Effect.runPromise(
+      runUseCase(makeInput(buildOtlpJson("secondary"), { scopedProjectId: PRIMARY_PROJECT_ID }), disk, publisher2, {
+        primary: PRIMARY_PROJECT_ID,
+        secondary: SECONDARY_PROJECT_ID,
+      }),
+    )
+    expect(attrConflict).toEqual({ totalSpans: 1, acceptedSpans: 0, rejectedSpans: 1 })
+    expect(published2).toHaveLength(0)
   })
 
   it("rejects spans whose latitude.project slug isn't in the org and keeps the rest", async () => {
@@ -802,7 +853,7 @@ describe("ingestSpansWithBillingUseCase sandbox path", () => {
     )
 
     expect(published).toHaveLength(1)
-    expect((published[0]?.payload as { isSandbox: boolean }).isSandbox).toBe(true)
+    expect((published[0]?.payload as { isSandbox: boolean })?.isSandbox).toBe(true)
     expect(sandboxSignals.state.quotaIncrements).toEqual([{ organizationId: ORGANIZATION_ID, spanCount: 1 }])
     expect(sandboxRepo.stampCount).toBe(1)
     expect(sandboxSignals.state.rejected).toHaveLength(0)
@@ -884,7 +935,7 @@ describe("ingestSpansWithBillingUseCase sandbox path", () => {
     )
 
     expect(published).toHaveLength(1)
-    expect((published[0]?.payload as { isSandbox: boolean }).isSandbox).toBe(false)
+    expect((published[0]?.payload as { isSandbox: boolean })?.isSandbox).toBe(false)
     expect(sandboxSignals.state.quotaIncrements).toHaveLength(0)
     expect(sandboxRepo.stampCount).toBe(0)
   })

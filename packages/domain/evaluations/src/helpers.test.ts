@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { wrapPromptAsEvaluationScript } from "./codegen/judge-script-template.ts"
+import { compileSettingsToScript } from "./codegen/compile-settings-to-script.ts"
+import { EVALUATION_CONVERSATION_PLACEHOLDER, wrapPromptAsEvaluationScript } from "./codegen/judge-script-template.ts"
 import { type ConfusionMatrix, evaluationSchema, evaluationTriggerSchema } from "./entities/evaluation.ts"
 import { EvaluationDeletedError } from "./errors.ts"
 import {
@@ -29,6 +30,7 @@ import {
   isArchivedEvaluation,
   isDeletedEvaluation,
   mergeConfusionMatrices,
+  resolveEvaluationScript,
   shouldSampleLiveEvaluation,
   softDeleteEvaluation,
   toLiveEvaluationDebounceMs,
@@ -437,6 +439,32 @@ describe("live evaluation trigger helpers", () => {
         sampling: 100,
       }),
     ).resolves.toBe(true)
+  })
+})
+
+describe("resolveEvaluationScript", () => {
+  it("recompiles from settings, ignoring a stored script that no longer matches the current codegen", () => {
+    const settings = { kind: "judge", criteria: "Check for secret leakage in the conversation." } as const
+    const legacyPlaceholder = ["${", "conversation}"].join("")
+    const evaluation = makeEvaluation({
+      script: wrapPromptAsEvaluationScript(
+        ["Check for secret leakage in the conversation.", legacyPlaceholder].join("\n"),
+      ),
+      settings,
+    })
+
+    const resolved = resolveEvaluationScript(evaluation)
+
+    expect(resolved).toBe(compileSettingsToScript(settings))
+    expect(resolved).toContain(EVALUATION_CONVERSATION_PLACEHOLDER)
+    expect(resolved).not.toContain(legacyPlaceholder)
+  })
+
+  it("uses the stored script as-is when the evaluation has no settings", () => {
+    const rawScript = "return Passed(1, 'always passes')"
+    const evaluation = makeEvaluation({ script: rawScript, settings: null })
+
+    expect(resolveEvaluationScript(evaluation)).toBe(rawScript)
   })
 })
 

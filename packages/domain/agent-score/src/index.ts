@@ -541,6 +541,7 @@ export {
 export type { FamilyReadingCoverage, WindowFold } from "./scoring/fold-window-contributions.ts"
 export {
   EMPTY_WINDOW_FOLD,
+  finalizeWindowFold,
   foldSessionContribution,
   foldWindowBatch,
 } from "./scoring/fold-window-contributions.ts"

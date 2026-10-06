@@ -154,37 +154,34 @@ describe("retryImportUseCase", () => {
     // `capped` is deliberately absent: it means the plan stopped the job, which the period reset
     // fixes, and its cursor points where it left off. `succeeded` now covers a job that met the
     // user's own `maxTraces`, which is why resuming it would be pointless.
-    it.each([
-      ["created" as const],
-      ["queued" as const],
-      ["running" as const],
-      ["succeeded" as const],
-    ])("refuses to retry a %s job", async (status) => {
-      const job = stubImportJob({ status, error: null })
-      const h = importHarness({ seed: [job] })
+    it.each([["created" as const], ["queued" as const], ["running" as const], ["succeeded" as const]])(
+      "refuses to retry a %s job",
+      async (status) => {
+        const job = stubImportJob({ status, error: null })
+        const h = importHarness({ seed: [job] })
 
-      const exit = await Effect.runPromiseExit(retry(job.id).pipe(Effect.provide(h.layer)))
+        const exit = await Effect.runPromiseExit(retry(job.id).pipe(Effect.provide(h.layer)))
 
-      expect(causeOf(exit)).toContain("ImportJobNotRetryableError")
-      expect(h.stored.size).toBe(1)
-      expect(h.written).toEqual([])
-    })
+        expect(causeOf(exit)).toContain("ImportJobNotRetryableError")
+        expect(h.stored.size).toBe(1)
+        expect(h.written).toEqual([])
+      },
+    )
 
-    it.each([
-      ["created" as const],
-      ["queued" as const],
-      ["running" as const],
-    ])("refuses to retry while a %s import holds the org's slot", async (status) => {
-      const failed = failedJob()
-      const active = stubImportJob({ status })
-      const h = importHarness({ seed: [failed, active] })
+    it.each([["created" as const], ["queued" as const], ["running" as const]])(
+      "refuses to retry while a %s import holds the org's slot",
+      async (status) => {
+        const failed = failedJob()
+        const active = stubImportJob({ status })
+        const h = importHarness({ seed: [failed, active] })
 
-      const exit = await Effect.runPromiseExit(retry(failed.id).pipe(Effect.provide(h.layer)))
+        const exit = await Effect.runPromiseExit(retry(failed.id).pipe(Effect.provide(h.layer)))
 
-      expect(causeOf(exit)).toContain("ActiveImportConflictError")
-      expect(h.stored.size).toBe(2)
-      expect(h.written).toEqual([])
-    })
+        expect(causeOf(exit)).toContain("ActiveImportConflictError")
+        expect(h.stored.size).toBe(2)
+        expect(h.written).toEqual([])
+      },
+    )
 
     // The engine re-checks plan usage before reading a page, so resuming while it is still spent
     // would enqueue a job that caps again having imported nothing.

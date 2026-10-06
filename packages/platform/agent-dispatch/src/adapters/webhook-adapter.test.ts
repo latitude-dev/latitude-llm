@@ -86,27 +86,26 @@ describe("createWebhookAdapter", () => {
     })
   })
 
-  it.each([
-    "javascript:alert(1)",
-    "not a url",
-    "   ",
-  ])("keeps valid acknowledgement fields when the deep link %j is invalid", async (deepLinkUrl) => {
-    await expect(
-      dispatchWebhook(async () =>
-        makePinnedResponse(
-          JSON.stringify({
-            externalAgentId: "agent-scope",
-            externalRunId: "   ",
-            deepLinkUrl,
-          }),
+  it.each(["javascript:alert(1)", "not a url", "   "])(
+    "keeps valid acknowledgement fields when the deep link %j is invalid",
+    async (deepLinkUrl) => {
+      await expect(
+        dispatchWebhook(async () =>
+          makePinnedResponse(
+            JSON.stringify({
+              externalAgentId: "agent-scope",
+              externalRunId: "   ",
+              deepLinkUrl,
+            }),
+          ),
         ),
-      ),
-    ).resolves.toEqual({
-      status: "accepted",
-      externalAgentId: "agent-scope",
-      deepLinkUrl: webhookUrl,
-    })
-  })
+      ).resolves.toEqual({
+        status: "accepted",
+        externalAgentId: "agent-scope",
+        deepLinkUrl: webhookUrl,
+      })
+    },
+  )
 
   it.each([
     { name: "empty", response: () => ({ status: 204, headers: new Headers(), body: null, text: async () => "" }) },

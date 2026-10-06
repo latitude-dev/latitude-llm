@@ -1032,6 +1032,8 @@ export const readSessionAssessmentSources = (input: ReadSessionAssessmentSources
       momentsAnalyzed: input.moments.analysisStatus === "analyzed",
       costEvidence: {
         readings: costEvidence.readings,
+        toolNamesUsed: costEvidence.toolNamesUsed,
+        toolDefinitionWindowObservations: costEvidence.toolDefinitionWindowObservations,
         workloadStratum: costEvidence.workloadStratum,
         denominators: costEvidence.denominators,
         observedCriticalPathNs: costEvidence.criticalPath.observedNs,

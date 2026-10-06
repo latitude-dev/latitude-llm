@@ -9,110 +9,105 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as BackofficeRouteRouteImport } from './routes/backoffice/route'
-import { Route as WelcomeIndexRouteImport } from './routes/welcome/index'
-import { Route as ChooseOrganizationIndexRouteImport } from './routes/choose-organization/index'
-import { Route as BackofficeIndexRouteImport } from './routes/backoffice/index'
-import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
-import { Route as WrappedIdRouteImport } from './routes/wrapped/$id'
-import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
-import { Route as ClaimTokenRouteImport } from './routes/claim.$token'
-import { Route as CcWrappedIdRouteImport } from './routes/cc-wrapped/$id'
-import { Route as BackofficeWrappedRouteImport } from './routes/backoffice/wrapped'
-import { Route as BackofficeSearchRouteImport } from './routes/backoffice/search'
-import { Route as AuthVerifyRouteImport } from './routes/auth/verify'
-import { Route as AuthInviteRouteImport } from './routes/auth/invite'
-import { Route as AuthConsentRouteImport } from './routes/auth/consent'
-import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as Char91DotwellKnownChar93OpenidConfigurationRouteImport } from './routes/[.well-known]/openid-configuration'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerRouteImport } from './routes/[.well-known]/oauth-authorization-server'
+import { Route as Char91DotwellKnownChar93OpenidConfigurationRouteImport } from './routes/[.well-known]/openid-configuration'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as AuthConsentRouteImport } from './routes/auth/consent'
+import { Route as AuthInviteRouteImport } from './routes/auth/invite'
+import { Route as AuthVerifyRouteImport } from './routes/auth/verify'
+import { Route as BackofficeIndexRouteImport } from './routes/backoffice/index'
+import { Route as BackofficeSearchRouteImport } from './routes/backoffice/search'
+import { Route as BackofficeWrappedRouteImport } from './routes/backoffice/wrapped'
+import { Route as CcWrappedIdRouteImport } from './routes/cc-wrapped/$id'
+import { Route as ChooseOrganizationIndexRouteImport } from './routes/choose-organization/index'
+import { Route as ClaimTokenRouteImport } from './routes/claim.$token'
+import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
 import { Route as SandboxSandboxOrgIdRouteRouteImport } from './routes/sandbox/$sandboxOrgId/route'
-import { Route as SandboxSandboxOrgIdIndexRouteImport } from './routes/sandbox/$sandboxOrgId/index'
-import { Route as BackofficeUnpricedSpansIndexRouteImport } from './routes/backoffice/unpriced-spans/index'
-import { Route as BackofficeShowcaseIndexRouteImport } from './routes/backoffice/showcase/index'
-import { Route as BackofficePartnersIndexRouteImport } from './routes/backoffice/partners/index'
-import { Route as BackofficeOrganizationsIndexRouteImport } from './routes/backoffice/organizations/index'
-import { Route as BackofficeFeatureFlagsIndexRouteImport } from './routes/backoffice/feature-flags/index'
-import { Route as ApiObservabilityTestIndexRouteImport } from './routes/api/observability-test/index'
-import { Route as SandboxSandboxOrgIdManageRouteImport } from './routes/sandbox/$sandboxOrgId/manage'
-import { Route as IntegrationsSlackInstallRouteImport } from './routes/integrations/slack/install'
-import { Route as IntegrationsGithubInstallRouteImport } from './routes/integrations/github/install'
-import { Route as BackofficeUsersUserIdRouteImport } from './routes/backoffice/users/$userId'
-import { Route as BackofficeProjectsProjectIdRouteImport } from './routes/backoffice/projects/$projectId'
-import { Route as BackofficeOrganizationsOrganizationIdRouteImport } from './routes/backoffice/organizations/$organizationId'
-import { Route as ApiObservabilityTestErrorRouteImport } from './routes/api/observability-test/error'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as ApiAgentScoreRingDotpngRouteImport } from './routes/api/agent-score/ring[.]png'
-import { Route as AuthenticatedSettingsSectionRouteImport } from './routes/_authenticated/settings/$section'
-import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_authenticated/projects/$projectSlug'
-import { Route as Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport } from './routes/[.well-known]/openid-configuration/$'
+import { Route as WelcomeIndexRouteImport } from './routes/welcome/index'
+import { Route as WrappedIdRouteImport } from './routes/wrapped/$id'
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport } from './routes/[.well-known]/oauth-authorization-server/$'
+import { Route as Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport } from './routes/[.well-known]/openid-configuration/$'
+import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_authenticated/projects/$projectSlug'
+import { Route as AuthenticatedSettingsSectionRouteImport } from './routes/_authenticated/settings/$section'
+import { Route as ApiAgentScoreRingDotpngRouteImport } from './routes/api/agent-score/ring[.]png'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiObservabilityTestIndexRouteImport } from './routes/api/observability-test/index'
+import { Route as ApiObservabilityTestErrorRouteImport } from './routes/api/observability-test/error'
+import { Route as BackofficeFeatureFlagsIndexRouteImport } from './routes/backoffice/feature-flags/index'
+import { Route as BackofficeOrganizationsIndexRouteImport } from './routes/backoffice/organizations/index'
+import { Route as BackofficeOrganizationsOrganizationIdRouteImport } from './routes/backoffice/organizations/$organizationId'
+import { Route as BackofficePartnersIndexRouteImport } from './routes/backoffice/partners/index'
+import { Route as BackofficeProjectsProjectIdRouteImport } from './routes/backoffice/projects/$projectId'
+import { Route as BackofficeShowcaseIndexRouteImport } from './routes/backoffice/showcase/index'
+import { Route as BackofficeUnpricedSpansIndexRouteImport } from './routes/backoffice/unpriced-spans/index'
+import { Route as BackofficeUsersUserIdRouteImport } from './routes/backoffice/users/$userId'
+import { Route as IntegrationsGithubInstallRouteImport } from './routes/integrations/github/install'
+import { Route as IntegrationsSlackInstallRouteImport } from './routes/integrations/slack/install'
+import { Route as SandboxSandboxOrgIdIndexRouteImport } from './routes/sandbox/$sandboxOrgId/index'
+import { Route as SandboxSandboxOrgIdManageRouteImport } from './routes/sandbox/$sandboxOrgId/manage'
 import { Route as AuthenticatedProjectsProjectSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/index'
-import { Route as WrappedIdOgPngRouteImport } from './routes/wrapped/$id.og.png'
-import { Route as SandboxSandboxOrgIdProjectsProjectSlugRouteImport } from './routes/sandbox/$sandboxOrgId/projects/$projectSlug'
-import { Route as IntegrationsSlackOauthCallbackRouteImport } from './routes/integrations/slack/oauth/callback'
-import { Route as IntegrationsGithubSetupCallbackRouteImport } from './routes/integrations/github/setup/callback'
-import { Route as CcWrappedIdOgPngRouteImport } from './routes/cc-wrapped/$id.og.png'
-import { Route as ApiNotificationsNidIncidentTrendDotpngRouteImport } from './routes/api/notifications/$nid/incident-trend[.]png'
-import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/authorize'
-import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
-import { Route as AuthenticatedProjectsProjectSlugTracesRouteImport } from './routes/_authenticated/projects/$projectSlug/traces'
-import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
 import { Route as AuthenticatedProjectsProjectSlugOnboardingRouteImport } from './routes/_authenticated/projects/$projectSlug/onboarding'
-import { Route as AuthenticatedProjectsProjectSlugUsersIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/users/index'
-import { Route as AuthenticatedProjectsProjectSlugToolsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/tools/index'
-import { Route as AuthenticatedProjectsProjectSlugSignalsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/signals/index'
-import { Route as AuthenticatedProjectsProjectSlugSettingsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/index'
-import { Route as AuthenticatedProjectsProjectSlugMonitorsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/index'
-import { Route as AuthenticatedProjectsProjectSlugMemoryIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/memory/index'
-import { Route as AuthenticatedProjectsProjectSlugIssuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/issues/index'
-import { Route as AuthenticatedProjectsProjectSlugExperimentsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/experiments/index'
-import { Route as AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/index'
-import { Route as AuthenticatedProjectsProjectSlugCustomBehavioursIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/custom-behaviours/index'
-import { Route as AuthenticatedProjectsProjectSlugCostIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/cost/index'
-import { Route as AuthenticatedProjectsProjectSlugBehavioursIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/index'
+import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
+import { Route as AuthenticatedProjectsProjectSlugTracesRouteImport } from './routes/_authenticated/projects/$projectSlug/traces'
+import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
+import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/authorize'
+import { Route as ApiNotificationsNidIncidentTrendDotpngRouteImport } from './routes/api/notifications/$nid/incident-trend[.]png'
+import { Route as CcWrappedIdOgPngRouteImport } from './routes/cc-wrapped/$id.og.png'
+import { Route as IntegrationsGithubSetupCallbackRouteImport } from './routes/integrations/github/setup/callback'
+import { Route as IntegrationsSlackOauthCallbackRouteImport } from './routes/integrations/slack/oauth/callback'
+import { Route as SandboxSandboxOrgIdProjectsProjectSlugRouteImport } from './routes/sandbox/$sandboxOrgId/projects/$projectSlug'
+import { Route as WrappedIdOgPngRouteImport } from './routes/wrapped/$id.og.png'
 import { Route as AuthenticatedProjectsProjectSlugAgentScoreIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/agent-score/index'
-import { Route as AuthenticatedProjectsProjectSlugSettingsSsoRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/sso'
-import { Route as AuthenticatedProjectsProjectSlugSettingsSignalsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/signals'
-import { Route as AuthenticatedProjectsProjectSlugSettingsPrivacyRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/privacy'
-import { Route as AuthenticatedProjectsProjectSlugSettingsMembersRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/members'
-import { Route as AuthenticatedProjectsProjectSlugSettingsKeysRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/keys'
-import { Route as AuthenticatedProjectsProjectSlugSettingsGeneralRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/general'
-import { Route as AuthenticatedProjectsProjectSlugSettingsFlaggersRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/flaggers'
-import { Route as AuthenticatedProjectsProjectSlugSettingsBillingRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/billing'
-import { Route as AuthenticatedProjectsProjectSlugSettingsAccountRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/account'
-import { Route as AuthenticatedProjectsProjectSlugMonitorsSignalsRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/signals'
-import { Route as AuthenticatedProjectsProjectSlugMonitorsSearchRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/search'
-import { Route as AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/$datasetId'
+import { Route as AuthenticatedProjectsProjectSlugBehavioursIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/index'
 import { Route as AuthenticatedProjectsProjectSlugBehavioursNewRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/new'
-import { Route as AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/users/$userId/index'
-import { Route as AuthenticatedProjectsProjectSlugToolsToolNameIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/tools/$toolName/index'
-import { Route as AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/signals/$signalSlug/index'
-import { Route as AuthenticatedProjectsProjectSlugSettingsOrganizationIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/organization/index'
-import { Route as AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/integrations/index'
-import { Route as AuthenticatedProjectsProjectSlugSettingsImportsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/imports/index'
-import { Route as AuthenticatedProjectsProjectSlugSettingsDefaultsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/defaults/index'
-import { Route as AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/data-destinations/index'
-import { Route as AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/$monitorSlug/index'
-import { Route as AuthenticatedProjectsProjectSlugMemoryStoreIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/memory/$store/index'
-import { Route as AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/experiments/$experimentSlug/index'
-import { Route as AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/index'
+import { Route as AuthenticatedProjectsProjectSlugCostIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/cost/index'
+import { Route as AuthenticatedProjectsProjectSlugCustomBehavioursIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/custom-behaviours/index'
+import { Route as AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/index'
+import { Route as AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/$datasetId'
+import { Route as AuthenticatedProjectsProjectSlugExperimentsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/experiments/index'
+import { Route as AuthenticatedProjectsProjectSlugIssuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/issues/index'
+import { Route as AuthenticatedProjectsProjectSlugMemoryIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/memory/index'
+import { Route as AuthenticatedProjectsProjectSlugMonitorsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/index'
+import { Route as AuthenticatedProjectsProjectSlugMonitorsSearchRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/search'
+import { Route as AuthenticatedProjectsProjectSlugMonitorsSignalsRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/signals'
+import { Route as AuthenticatedProjectsProjectSlugSettingsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/index'
+import { Route as AuthenticatedProjectsProjectSlugSettingsAccountRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/account'
+import { Route as AuthenticatedProjectsProjectSlugSettingsBillingRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/billing'
+import { Route as AuthenticatedProjectsProjectSlugSettingsFlaggersRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/flaggers'
+import { Route as AuthenticatedProjectsProjectSlugSettingsGeneralRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/general'
+import { Route as AuthenticatedProjectsProjectSlugSettingsKeysRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/keys'
+import { Route as AuthenticatedProjectsProjectSlugSettingsMembersRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/members'
+import { Route as AuthenticatedProjectsProjectSlugSettingsPrivacyRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/privacy'
+import { Route as AuthenticatedProjectsProjectSlugSettingsSignalsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/signals'
+import { Route as AuthenticatedProjectsProjectSlugSettingsSsoRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/sso'
+import { Route as AuthenticatedProjectsProjectSlugSignalsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/signals/index'
+import { Route as AuthenticatedProjectsProjectSlugToolsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/tools/index'
+import { Route as AuthenticatedProjectsProjectSlugUsersIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/users/index'
 import { Route as AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/index'
-import { Route as AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationSlugRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/integrations/$integrationSlug'
+import { Route as AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/index'
+import { Route as AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/experiments/$experimentSlug/index'
+import { Route as AuthenticatedProjectsProjectSlugMemoryStoreIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/memory/$store/index'
+import { Route as AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/$monitorSlug/index'
+import { Route as AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/data-destinations/index'
 import { Route as AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId'
+import { Route as AuthenticatedProjectsProjectSlugSettingsDefaultsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/defaults/index'
+import { Route as AuthenticatedProjectsProjectSlugSettingsImportsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/imports/index'
+import { Route as AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/integrations/index'
+import { Route as AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationSlugRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/integrations/$integrationSlug'
+import { Route as AuthenticatedProjectsProjectSlugSettingsOrganizationIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/organization/index'
+import { Route as AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/signals/$signalSlug/index'
+import { Route as AuthenticatedProjectsProjectSlugToolsToolNameIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/tools/$toolName/index'
+import { Route as AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/users/$userId/index'
+import { Route as AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugViewsNewRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/views/new'
 import { Route as AuthenticatedProjectsProjectSlugSettingsOrganizationIntegrationsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/organization/integrations/index'
 import { Route as AuthenticatedProjectsProjectSlugSettingsOrganizationIntegrationsIntegrationSlugRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/organization/integrations/$integrationSlug'
-import { Route as AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugViewsNewRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/views/new'
 import { Route as AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugViewsViewSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/views/$viewSlug/index'
 import { Route as AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugViewsViewSlugEditRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/views/$viewSlug/edit'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -122,64 +117,31 @@ const BackofficeRouteRoute = BackofficeRouteRouteImport.update({
   path: '/backoffice',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WelcomeIndexRoute = WelcomeIndexRouteImport.update({
-  id: '/welcome/',
-  path: '/welcome/',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ChooseOrganizationIndexRoute = ChooseOrganizationIndexRouteImport.update({
-  id: '/choose-organization/',
-  path: '/choose-organization/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BackofficeIndexRoute = BackofficeIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => BackofficeRouteRoute,
-} as any)
+const Char91DotwellKnownChar93OauthAuthorizationServerRoute =
+  Char91DotwellKnownChar93OauthAuthorizationServerRouteImport.update({
+    id: '/.well-known/oauth-authorization-server',
+    path: '/.well-known/oauth-authorization-server',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotwellKnownChar93OpenidConfigurationRoute =
+  Char91DotwellKnownChar93OpenidConfigurationRouteImport.update({
+    id: '/.well-known/openid-configuration',
+    path: '/.well-known/openid-configuration',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const WrappedIdRoute = WrappedIdRouteImport.update({
-  id: '/wrapped/$id',
-  path: '/wrapped/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DownloadsExportRoute = DownloadsExportRouteImport.update({
-  id: '/downloads/export',
-  path: '/downloads/export',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClaimTokenRoute = ClaimTokenRouteImport.update({
-  id: '/claim/$token',
-  path: '/claim/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CcWrappedIdRoute = CcWrappedIdRouteImport.update({
-  id: '/cc-wrapped/$id',
-  path: '/cc-wrapped/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BackofficeWrappedRoute = BackofficeWrappedRouteImport.update({
-  id: '/wrapped',
-  path: '/wrapped',
-  getParentRoute: () => BackofficeRouteRoute,
-} as any)
-const BackofficeSearchRoute = BackofficeSearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => BackofficeRouteRoute,
-} as any)
-const AuthVerifyRoute = AuthVerifyRouteImport.update({
-  id: '/auth/verify',
-  path: '/auth/verify',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthInviteRoute = AuthInviteRouteImport.update({
-  id: '/auth/invite',
-  path: '/auth/invite',
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthConsentRoute = AuthConsentRouteImport.update({
@@ -187,56 +149,112 @@ const AuthConsentRoute = AuthConsentRouteImport.update({
   path: '/auth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
+const AuthInviteRoute = AuthInviteRouteImport.update({
+  id: '/auth/invite',
+  path: '/auth/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char91DotwellKnownChar93OpenidConfigurationRoute =
-  Char91DotwellKnownChar93OpenidConfigurationRouteImport.update({
-    id: '/.well-known/openid-configuration',
-    path: '/.well-known/openid-configuration',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const Char91DotwellKnownChar93OauthAuthorizationServerRoute =
-  Char91DotwellKnownChar93OauthAuthorizationServerRouteImport.update({
-    id: '/.well-known/oauth-authorization-server',
-    path: '/.well-known/oauth-authorization-server',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const AuthVerifyRoute = AuthVerifyRouteImport.update({
+  id: '/auth/verify',
+  path: '/auth/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BackofficeIndexRoute = BackofficeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BackofficeRouteRoute,
+} as any)
+const BackofficeSearchRoute = BackofficeSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => BackofficeRouteRoute,
+} as any)
+const BackofficeWrappedRoute = BackofficeWrappedRouteImport.update({
+  id: '/wrapped',
+  path: '/wrapped',
+  getParentRoute: () => BackofficeRouteRoute,
+} as any)
+const CcWrappedIdRoute = CcWrappedIdRouteImport.update({
+  id: '/cc-wrapped/$id',
+  path: '/cc-wrapped/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChooseOrganizationIndexRoute = ChooseOrganizationIndexRouteImport.update({
+  id: '/choose-organization/',
+  path: '/choose-organization/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClaimTokenRoute = ClaimTokenRouteImport.update({
+  id: '/claim/$token',
+  path: '/claim/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadsExportRoute = DownloadsExportRouteImport.update({
+  id: '/downloads/export',
+  path: '/downloads/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SandboxSandboxOrgIdRouteRoute =
   SandboxSandboxOrgIdRouteRouteImport.update({
     id: '/sandbox/$sandboxOrgId',
     path: '/sandbox/$sandboxOrgId',
     getParentRoute: () => rootRouteImport,
   } as any)
-const SandboxSandboxOrgIdIndexRoute =
-  SandboxSandboxOrgIdIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => SandboxSandboxOrgIdRouteRoute,
-  } as any)
-const BackofficeUnpricedSpansIndexRoute =
-  BackofficeUnpricedSpansIndexRouteImport.update({
-    id: '/unpriced-spans/',
-    path: '/unpriced-spans/',
-    getParentRoute: () => BackofficeRouteRoute,
-  } as any)
-const BackofficeShowcaseIndexRoute = BackofficeShowcaseIndexRouteImport.update({
-  id: '/showcase/',
-  path: '/showcase/',
-  getParentRoute: () => BackofficeRouteRoute,
+const WelcomeIndexRoute = WelcomeIndexRouteImport.update({
+  id: '/welcome/',
+  path: '/welcome/',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const BackofficePartnersIndexRoute = BackofficePartnersIndexRouteImport.update({
-  id: '/partners/',
-  path: '/partners/',
-  getParentRoute: () => BackofficeRouteRoute,
+const WrappedIdRoute = WrappedIdRouteImport.update({
+  id: '/wrapped/$id',
+  path: '/wrapped/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const BackofficeOrganizationsIndexRoute =
-  BackofficeOrganizationsIndexRouteImport.update({
-    id: '/organizations/',
-    path: '/organizations/',
-    getParentRoute: () => BackofficeRouteRoute,
+const Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute =
+  Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport.update({
+    id: '/$',
+    path: '/$',
+    getParentRoute: () => Char91DotwellKnownChar93OauthAuthorizationServerRoute,
+  } as any)
+const Char91DotwellKnownChar93OpenidConfigurationSplatRoute =
+  Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport.update({
+    id: '/$',
+    path: '/$',
+    getParentRoute: () => Char91DotwellKnownChar93OpenidConfigurationRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugRoute =
+  AuthenticatedProjectsProjectSlugRouteImport.update({
+    id: '/projects/$projectSlug',
+    path: '/projects/$projectSlug',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSettingsSectionRoute =
+  AuthenticatedSettingsSectionRouteImport.update({
+    id: '/settings/$section',
+    path: '/settings/$section',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const ApiAgentScoreRingDotpngRoute = ApiAgentScoreRingDotpngRouteImport.update({
+  id: '/api/agent-score/ring.png',
+  path: '/api/agent-score/ring.png',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiObservabilityTestIndexRoute =
+  ApiObservabilityTestIndexRouteImport.update({
+    id: '/api/observability-test/',
+    path: '/api/observability-test/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiObservabilityTestErrorRoute =
+  ApiObservabilityTestErrorRouteImport.update({
+    id: '/api/observability-test/error',
+    path: '/api/observability-test/error',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const BackofficeFeatureFlagsIndexRoute =
   BackofficeFeatureFlagsIndexRouteImport.update({
@@ -244,39 +262,10 @@ const BackofficeFeatureFlagsIndexRoute =
     path: '/feature-flags/',
     getParentRoute: () => BackofficeRouteRoute,
   } as any)
-const ApiObservabilityTestIndexRoute =
-  ApiObservabilityTestIndexRouteImport.update({
-    id: '/api/observability-test/',
-    path: '/api/observability-test/',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const SandboxSandboxOrgIdManageRoute =
-  SandboxSandboxOrgIdManageRouteImport.update({
-    id: '/manage',
-    path: '/manage',
-    getParentRoute: () => SandboxSandboxOrgIdRouteRoute,
-  } as any)
-const IntegrationsSlackInstallRoute =
-  IntegrationsSlackInstallRouteImport.update({
-    id: '/integrations/slack/install',
-    path: '/integrations/slack/install',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const IntegrationsGithubInstallRoute =
-  IntegrationsGithubInstallRouteImport.update({
-    id: '/integrations/github/install',
-    path: '/integrations/github/install',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const BackofficeUsersUserIdRoute = BackofficeUsersUserIdRouteImport.update({
-  id: '/users/$userId',
-  path: '/users/$userId',
-  getParentRoute: () => BackofficeRouteRoute,
-} as any)
-const BackofficeProjectsProjectIdRoute =
-  BackofficeProjectsProjectIdRouteImport.update({
-    id: '/projects/$projectId',
-    path: '/projects/$projectId',
+const BackofficeOrganizationsIndexRoute =
+  BackofficeOrganizationsIndexRouteImport.update({
+    id: '/organizations/',
+    path: '/organizations/',
     getParentRoute: () => BackofficeRouteRoute,
   } as any)
 const BackofficeOrganizationsOrganizationIdRoute =
@@ -285,106 +274,61 @@ const BackofficeOrganizationsOrganizationIdRoute =
     path: '/organizations/$organizationId',
     getParentRoute: () => BackofficeRouteRoute,
   } as any)
-const ApiObservabilityTestErrorRoute =
-  ApiObservabilityTestErrorRouteImport.update({
-    id: '/api/observability-test/error',
-    path: '/api/observability-test/error',
+const BackofficePartnersIndexRoute = BackofficePartnersIndexRouteImport.update({
+  id: '/partners/',
+  path: '/partners/',
+  getParentRoute: () => BackofficeRouteRoute,
+} as any)
+const BackofficeProjectsProjectIdRoute =
+  BackofficeProjectsProjectIdRouteImport.update({
+    id: '/projects/$projectId',
+    path: '/projects/$projectId',
+    getParentRoute: () => BackofficeRouteRoute,
+  } as any)
+const BackofficeShowcaseIndexRoute = BackofficeShowcaseIndexRouteImport.update({
+  id: '/showcase/',
+  path: '/showcase/',
+  getParentRoute: () => BackofficeRouteRoute,
+} as any)
+const BackofficeUnpricedSpansIndexRoute =
+  BackofficeUnpricedSpansIndexRouteImport.update({
+    id: '/unpriced-spans/',
+    path: '/unpriced-spans/',
+    getParentRoute: () => BackofficeRouteRoute,
+  } as any)
+const BackofficeUsersUserIdRoute = BackofficeUsersUserIdRouteImport.update({
+  id: '/users/$userId',
+  path: '/users/$userId',
+  getParentRoute: () => BackofficeRouteRoute,
+} as any)
+const IntegrationsGithubInstallRoute =
+  IntegrationsGithubInstallRouteImport.update({
+    id: '/integrations/github/install',
+    path: '/integrations/github/install',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentScoreRingDotpngRoute = ApiAgentScoreRingDotpngRouteImport.update({
-  id: '/api/agent-score/ring.png',
-  path: '/api/agent-score/ring.png',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedSettingsSectionRoute =
-  AuthenticatedSettingsSectionRouteImport.update({
-    id: '/settings/$section',
-    path: '/settings/$section',
-    getParentRoute: () => AuthenticatedRoute,
+const IntegrationsSlackInstallRoute =
+  IntegrationsSlackInstallRouteImport.update({
+    id: '/integrations/slack/install',
+    path: '/integrations/slack/install',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedProjectsProjectSlugRoute =
-  AuthenticatedProjectsProjectSlugRouteImport.update({
-    id: '/projects/$projectSlug',
-    path: '/projects/$projectSlug',
-    getParentRoute: () => AuthenticatedRoute,
+const SandboxSandboxOrgIdIndexRoute =
+  SandboxSandboxOrgIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => SandboxSandboxOrgIdRouteRoute,
   } as any)
-const Char91DotwellKnownChar93OpenidConfigurationSplatRoute =
-  Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport.update({
-    id: '/$',
-    path: '/$',
-    getParentRoute: () => Char91DotwellKnownChar93OpenidConfigurationRoute,
-  } as any)
-const Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute =
-  Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport.update({
-    id: '/$',
-    path: '/$',
-    getParentRoute: () => Char91DotwellKnownChar93OauthAuthorizationServerRoute,
+const SandboxSandboxOrgIdManageRoute =
+  SandboxSandboxOrgIdManageRouteImport.update({
+    id: '/manage',
+    path: '/manage',
+    getParentRoute: () => SandboxSandboxOrgIdRouteRoute,
   } as any)
 const AuthenticatedProjectsProjectSlugIndexRoute =
   AuthenticatedProjectsProjectSlugIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
-  } as any)
-const WrappedIdOgPngRoute = WrappedIdOgPngRouteImport.update({
-  id: '/og/png',
-  path: '/og/png',
-  getParentRoute: () => WrappedIdRoute,
-} as any)
-const SandboxSandboxOrgIdProjectsProjectSlugRoute =
-  SandboxSandboxOrgIdProjectsProjectSlugRouteImport.update({
-    id: '/projects/$projectSlug',
-    path: '/projects/$projectSlug',
-    getParentRoute: () => SandboxSandboxOrgIdRouteRoute,
-  } as any)
-const IntegrationsSlackOauthCallbackRoute =
-  IntegrationsSlackOauthCallbackRouteImport.update({
-    id: '/integrations/slack/oauth/callback',
-    path: '/integrations/slack/oauth/callback',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const IntegrationsGithubSetupCallbackRoute =
-  IntegrationsGithubSetupCallbackRouteImport.update({
-    id: '/integrations/github/setup/callback',
-    path: '/integrations/github/setup/callback',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const CcWrappedIdOgPngRoute = CcWrappedIdOgPngRouteImport.update({
-  id: '/og/png',
-  path: '/og/png',
-  getParentRoute: () => CcWrappedIdRoute,
-} as any)
-const ApiNotificationsNidIncidentTrendDotpngRoute =
-  ApiNotificationsNidIncidentTrendDotpngRouteImport.update({
-    id: '/api/notifications/$nid/incident-trend.png',
-    path: '/api/notifications/$nid/incident-trend.png',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiAuthMcpAuthorizeRoute = ApiAuthMcpAuthorizeRouteImport.update({
-  id: '/api/auth/mcp/authorize',
-  path: '/api/auth/mcp/authorize',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthProviderStartRoute = ApiAuthProviderStartRouteImport.update({
-  id: '/api/auth/$provider/start',
-  path: '/api/auth/$provider/start',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedProjectsProjectSlugTracesRoute =
-  AuthenticatedProjectsProjectSlugTracesRouteImport.update({
-    id: '/traces',
-    path: '/traces',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugSettingsRoute =
-  AuthenticatedProjectsProjectSlugSettingsRouteImport.update({
-    id: '/settings',
-    path: '/settings',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
 const AuthenticatedProjectsProjectSlugOnboardingRoute =
@@ -393,70 +337,66 @@ const AuthenticatedProjectsProjectSlugOnboardingRoute =
     path: '/onboarding',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugUsersIndexRoute =
-  AuthenticatedProjectsProjectSlugUsersIndexRouteImport.update({
-    id: '/users/',
-    path: '/users/',
+const AuthenticatedProjectsProjectSlugSettingsRoute =
+  AuthenticatedProjectsProjectSlugSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugToolsIndexRoute =
-  AuthenticatedProjectsProjectSlugToolsIndexRouteImport.update({
-    id: '/tools/',
-    path: '/tools/',
+const AuthenticatedProjectsProjectSlugTracesRoute =
+  AuthenticatedProjectsProjectSlugTracesRouteImport.update({
+    id: '/traces',
+    path: '/traces',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugSignalsIndexRoute =
-  AuthenticatedProjectsProjectSlugSignalsIndexRouteImport.update({
-    id: '/signals/',
-    path: '/signals/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+const ApiAuthProviderStartRoute = ApiAuthProviderStartRouteImport.update({
+  id: '/api/auth/$provider/start',
+  path: '/api/auth/$provider/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMcpAuthorizeRoute = ApiAuthMcpAuthorizeRouteImport.update({
+  id: '/api/auth/mcp/authorize',
+  path: '/api/auth/mcp/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNotificationsNidIncidentTrendDotpngRoute =
+  ApiNotificationsNidIncidentTrendDotpngRouteImport.update({
+    id: '/api/notifications/$nid/incident-trend.png',
+    path: '/api/notifications/$nid/incident-trend.png',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedProjectsProjectSlugSettingsIndexRoute =
-  AuthenticatedProjectsProjectSlugSettingsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+const CcWrappedIdOgPngRoute = CcWrappedIdOgPngRouteImport.update({
+  id: '/og/png',
+  path: '/og/png',
+  getParentRoute: () => CcWrappedIdRoute,
+} as any)
+const IntegrationsGithubSetupCallbackRoute =
+  IntegrationsGithubSetupCallbackRouteImport.update({
+    id: '/integrations/github/setup/callback',
+    path: '/integrations/github/setup/callback',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedProjectsProjectSlugMonitorsIndexRoute =
-  AuthenticatedProjectsProjectSlugMonitorsIndexRouteImport.update({
-    id: '/monitors/',
-    path: '/monitors/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+const IntegrationsSlackOauthCallbackRoute =
+  IntegrationsSlackOauthCallbackRouteImport.update({
+    id: '/integrations/slack/oauth/callback',
+    path: '/integrations/slack/oauth/callback',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedProjectsProjectSlugMemoryIndexRoute =
-  AuthenticatedProjectsProjectSlugMemoryIndexRouteImport.update({
-    id: '/memory/',
-    path: '/memory/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+const SandboxSandboxOrgIdProjectsProjectSlugRoute =
+  SandboxSandboxOrgIdProjectsProjectSlugRouteImport.update({
+    id: '/projects/$projectSlug',
+    path: '/projects/$projectSlug',
+    getParentRoute: () => SandboxSandboxOrgIdRouteRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugIssuesIndexRoute =
-  AuthenticatedProjectsProjectSlugIssuesIndexRouteImport.update({
-    id: '/issues/',
-    path: '/issues/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugExperimentsIndexRoute =
-  AuthenticatedProjectsProjectSlugExperimentsIndexRouteImport.update({
-    id: '/experiments/',
-    path: '/experiments/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugDatasetsIndexRoute =
-  AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport.update({
-    id: '/datasets/',
-    path: '/datasets/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute =
-  AuthenticatedProjectsProjectSlugCustomBehavioursIndexRouteImport.update({
-    id: '/custom-behaviours/',
-    path: '/custom-behaviours/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugCostIndexRoute =
-  AuthenticatedProjectsProjectSlugCostIndexRouteImport.update({
-    id: '/cost/',
-    path: '/cost/',
+const WrappedIdOgPngRoute = WrappedIdOgPngRouteImport.update({
+  id: '/og/png',
+  path: '/og/png',
+  getParentRoute: () => WrappedIdRoute,
+} as any)
+const AuthenticatedProjectsProjectSlugAgentScoreIndexRoute =
+  AuthenticatedProjectsProjectSlugAgentScoreIndexRouteImport.update({
+    id: '/agent-score/',
+    path: '/agent-score/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
 const AuthenticatedProjectsProjectSlugBehavioursIndexRoute =
@@ -465,76 +405,28 @@ const AuthenticatedProjectsProjectSlugBehavioursIndexRoute =
     path: '/behaviours/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugAgentScoreIndexRoute =
-  AuthenticatedProjectsProjectSlugAgentScoreIndexRouteImport.update({
-    id: '/agent-score/',
-    path: '/agent-score/',
+const AuthenticatedProjectsProjectSlugBehavioursNewRoute =
+  AuthenticatedProjectsProjectSlugBehavioursNewRouteImport.update({
+    id: '/behaviours/new',
+    path: '/behaviours/new',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugSettingsSsoRoute =
-  AuthenticatedProjectsProjectSlugSettingsSsoRouteImport.update({
-    id: '/sso',
-    path: '/sso',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugSettingsSignalsRoute =
-  AuthenticatedProjectsProjectSlugSettingsSignalsRouteImport.update({
-    id: '/signals',
-    path: '/signals',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugSettingsPrivacyRoute =
-  AuthenticatedProjectsProjectSlugSettingsPrivacyRouteImport.update({
-    id: '/privacy',
-    path: '/privacy',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugSettingsMembersRoute =
-  AuthenticatedProjectsProjectSlugSettingsMembersRouteImport.update({
-    id: '/members',
-    path: '/members',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugSettingsKeysRoute =
-  AuthenticatedProjectsProjectSlugSettingsKeysRouteImport.update({
-    id: '/keys',
-    path: '/keys',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugSettingsGeneralRoute =
-  AuthenticatedProjectsProjectSlugSettingsGeneralRouteImport.update({
-    id: '/general',
-    path: '/general',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugSettingsFlaggersRoute =
-  AuthenticatedProjectsProjectSlugSettingsFlaggersRouteImport.update({
-    id: '/flaggers',
-    path: '/flaggers',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugSettingsBillingRoute =
-  AuthenticatedProjectsProjectSlugSettingsBillingRouteImport.update({
-    id: '/billing',
-    path: '/billing',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugSettingsAccountRoute =
-  AuthenticatedProjectsProjectSlugSettingsAccountRouteImport.update({
-    id: '/account',
-    path: '/account',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugMonitorsSignalsRoute =
-  AuthenticatedProjectsProjectSlugMonitorsSignalsRouteImport.update({
-    id: '/monitors/signals',
-    path: '/monitors/signals',
+const AuthenticatedProjectsProjectSlugCostIndexRoute =
+  AuthenticatedProjectsProjectSlugCostIndexRouteImport.update({
+    id: '/cost/',
+    path: '/cost/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugMonitorsSearchRoute =
-  AuthenticatedProjectsProjectSlugMonitorsSearchRouteImport.update({
-    id: '/monitors/search',
-    path: '/monitors/search',
+const AuthenticatedProjectsProjectSlugCustomBehavioursIndexRoute =
+  AuthenticatedProjectsProjectSlugCustomBehavioursIndexRouteImport.update({
+    id: '/custom-behaviours/',
+    path: '/custom-behaviours/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugDatasetsIndexRoute =
+  AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport.update({
+    id: '/datasets/',
+    path: '/datasets/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
 const AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute =
@@ -543,79 +435,125 @@ const AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute =
     path: '/datasets/$datasetId',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugBehavioursNewRoute =
-  AuthenticatedProjectsProjectSlugBehavioursNewRouteImport.update({
-    id: '/behaviours/new',
-    path: '/behaviours/new',
+const AuthenticatedProjectsProjectSlugExperimentsIndexRoute =
+  AuthenticatedProjectsProjectSlugExperimentsIndexRouteImport.update({
+    id: '/experiments/',
+    path: '/experiments/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugUsersUserIdIndexRoute =
-  AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport.update({
-    id: '/users/$userId/',
-    path: '/users/$userId/',
+const AuthenticatedProjectsProjectSlugIssuesIndexRoute =
+  AuthenticatedProjectsProjectSlugIssuesIndexRouteImport.update({
+    id: '/issues/',
+    path: '/issues/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute =
-  AuthenticatedProjectsProjectSlugToolsToolNameIndexRouteImport.update({
-    id: '/tools/$toolName/',
-    path: '/tools/$toolName/',
+const AuthenticatedProjectsProjectSlugMemoryIndexRoute =
+  AuthenticatedProjectsProjectSlugMemoryIndexRouteImport.update({
+    id: '/memory/',
+    path: '/memory/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRoute =
-  AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRouteImport.update({
-    id: '/signals/$signalSlug/',
-    path: '/signals/$signalSlug/',
+const AuthenticatedProjectsProjectSlugMonitorsIndexRoute =
+  AuthenticatedProjectsProjectSlugMonitorsIndexRouteImport.update({
+    id: '/monitors/',
+    path: '/monitors/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugSettingsOrganizationIndexRoute =
-  AuthenticatedProjectsProjectSlugSettingsOrganizationIndexRouteImport.update({
-    id: '/organization/',
-    path: '/organization/',
+const AuthenticatedProjectsProjectSlugMonitorsSearchRoute =
+  AuthenticatedProjectsProjectSlugMonitorsSearchRouteImport.update({
+    id: '/monitors/search',
+    path: '/monitors/search',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugMonitorsSignalsRoute =
+  AuthenticatedProjectsProjectSlugMonitorsSignalsRouteImport.update({
+    id: '/monitors/signals',
+    path: '/monitors/signals',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSettingsIndexRoute =
+  AuthenticatedProjectsProjectSlugSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute =
-  AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRouteImport.update({
-    id: '/integrations/',
-    path: '/integrations/',
+const AuthenticatedProjectsProjectSlugSettingsAccountRoute =
+  AuthenticatedProjectsProjectSlugSettingsAccountRouteImport.update({
+    id: '/account',
+    path: '/account',
     getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugSettingsImportsIndexRoute =
-  AuthenticatedProjectsProjectSlugSettingsImportsIndexRouteImport.update({
-    id: '/imports/',
-    path: '/imports/',
+const AuthenticatedProjectsProjectSlugSettingsBillingRoute =
+  AuthenticatedProjectsProjectSlugSettingsBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
     getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugSettingsDefaultsIndexRoute =
-  AuthenticatedProjectsProjectSlugSettingsDefaultsIndexRouteImport.update({
-    id: '/defaults/',
-    path: '/defaults/',
+const AuthenticatedProjectsProjectSlugSettingsFlaggersRoute =
+  AuthenticatedProjectsProjectSlugSettingsFlaggersRouteImport.update({
+    id: '/flaggers',
+    path: '/flaggers',
     getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute =
-  AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRouteImport.update(
+const AuthenticatedProjectsProjectSlugSettingsGeneralRoute =
+  AuthenticatedProjectsProjectSlugSettingsGeneralRouteImport.update({
+    id: '/general',
+    path: '/general',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSettingsKeysRoute =
+  AuthenticatedProjectsProjectSlugSettingsKeysRouteImport.update({
+    id: '/keys',
+    path: '/keys',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSettingsMembersRoute =
+  AuthenticatedProjectsProjectSlugSettingsMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSettingsPrivacyRoute =
+  AuthenticatedProjectsProjectSlugSettingsPrivacyRouteImport.update({
+    id: '/privacy',
+    path: '/privacy',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSettingsSignalsRoute =
+  AuthenticatedProjectsProjectSlugSettingsSignalsRouteImport.update({
+    id: '/signals',
+    path: '/signals',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSettingsSsoRoute =
+  AuthenticatedProjectsProjectSlugSettingsSsoRouteImport.update({
+    id: '/sso',
+    path: '/sso',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSignalsIndexRoute =
+  AuthenticatedProjectsProjectSlugSignalsIndexRouteImport.update({
+    id: '/signals/',
+    path: '/signals/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugToolsIndexRoute =
+  AuthenticatedProjectsProjectSlugToolsIndexRouteImport.update({
+    id: '/tools/',
+    path: '/tools/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugUsersIndexRoute =
+  AuthenticatedProjectsProjectSlugUsersIndexRouteImport.update({
+    id: '/users/',
+    path: '/users/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute =
+  AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRouteImport.update(
     {
-      id: '/data-destinations/',
-      path: '/data-destinations/',
-      getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
-    } as any,
-  )
-const AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRoute =
-  AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRouteImport.update({
-    id: '/monitors/$monitorSlug/',
-    path: '/monitors/$monitorSlug/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugMemoryStoreIndexRoute =
-  AuthenticatedProjectsProjectSlugMemoryStoreIndexRouteImport.update({
-    id: '/memory/$store/',
-    path: '/memory/$store/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute =
-  AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRouteImport.update(
-    {
-      id: '/experiments/$experimentSlug/',
-      path: '/experiments/$experimentSlug/',
+      id: '/behaviours/$behaviourSlug/',
+      path: '/behaviours/$behaviourSlug/',
       getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
     } as any,
   )
@@ -627,19 +565,31 @@ const AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute =
       getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
     } as any,
   )
-const AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute =
-  AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRouteImport.update(
+const AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute =
+  AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRouteImport.update(
     {
-      id: '/behaviours/$behaviourSlug/',
-      path: '/behaviours/$behaviourSlug/',
+      id: '/experiments/$experimentSlug/',
+      path: '/experiments/$experimentSlug/',
       getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
     } as any,
   )
-const AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationSlugRoute =
-  AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationSlugRouteImport.update(
+const AuthenticatedProjectsProjectSlugMemoryStoreIndexRoute =
+  AuthenticatedProjectsProjectSlugMemoryStoreIndexRouteImport.update({
+    id: '/memory/$store/',
+    path: '/memory/$store/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRoute =
+  AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRouteImport.update({
+    id: '/monitors/$monitorSlug/',
+    path: '/monitors/$monitorSlug/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute =
+  AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRouteImport.update(
     {
-      id: '/integrations/$integrationSlug',
-      path: '/integrations/$integrationSlug',
+      id: '/data-destinations/',
+      path: '/data-destinations/',
       getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
     } as any,
   )
@@ -649,6 +599,64 @@ const AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
       id: '/data-destinations/$destinationId',
       path: '/data-destinations/$destinationId',
       getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+    } as any,
+  )
+const AuthenticatedProjectsProjectSlugSettingsDefaultsIndexRoute =
+  AuthenticatedProjectsProjectSlugSettingsDefaultsIndexRouteImport.update({
+    id: '/defaults/',
+    path: '/defaults/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSettingsImportsIndexRoute =
+  AuthenticatedProjectsProjectSlugSettingsImportsIndexRouteImport.update({
+    id: '/imports/',
+    path: '/imports/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute =
+  AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRouteImport.update({
+    id: '/integrations/',
+    path: '/integrations/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationSlugRoute =
+  AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationSlugRouteImport.update(
+    {
+      id: '/integrations/$integrationSlug',
+      path: '/integrations/$integrationSlug',
+      getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+    } as any,
+  )
+const AuthenticatedProjectsProjectSlugSettingsOrganizationIndexRoute =
+  AuthenticatedProjectsProjectSlugSettingsOrganizationIndexRouteImport.update({
+    id: '/organization/',
+    path: '/organization/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRoute =
+  AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRouteImport.update({
+    id: '/signals/$signalSlug/',
+    path: '/signals/$signalSlug/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute =
+  AuthenticatedProjectsProjectSlugToolsToolNameIndexRouteImport.update({
+    id: '/tools/$toolName/',
+    path: '/tools/$toolName/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugUsersUserIdIndexRoute =
+  AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport.update({
+    id: '/users/$userId/',
+    path: '/users/$userId/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugViewsNewRoute =
+  AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugViewsNewRouteImport.update(
+    {
+      id: '/behaviours/$behaviourSlug/views/new',
+      path: '/behaviours/$behaviourSlug/views/new',
+      getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
     } as any,
   )
 const AuthenticatedProjectsProjectSlugSettingsOrganizationIntegrationsIndexRoute =
@@ -665,14 +673,6 @@ const AuthenticatedProjectsProjectSlugSettingsOrganizationIntegrationsIntegratio
       id: '/organization/integrations/$integrationSlug',
       path: '/organization/integrations/$integrationSlug',
       getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
-    } as any,
-  )
-const AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugViewsNewRoute =
-  AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugViewsNewRouteImport.update(
-    {
-      id: '/behaviours/$behaviourSlug/views/new',
-      path: '/behaviours/$behaviourSlug/views/new',
-      getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
     } as any,
   )
 const AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugViewsViewSlugIndexRoute =
@@ -1316,13 +1316,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
@@ -1337,109 +1330,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BackofficeRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/welcome/': {
-      id: '/welcome/'
-      path: '/welcome'
-      fullPath: '/welcome/'
-      preLoaderRoute: typeof WelcomeIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/choose-organization/': {
-      id: '/choose-organization/'
-      path: '/choose-organization'
-      fullPath: '/choose-organization/'
-      preLoaderRoute: typeof ChooseOrganizationIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/backoffice/': {
-      id: '/backoffice/'
-      path: '/'
-      fullPath: '/backoffice/'
-      preLoaderRoute: typeof BackofficeIndexRouteImport
-      parentRoute: typeof BackofficeRouteRoute
-    }
-    '/_authenticated/': {
-      id: '/_authenticated/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/wrapped/$id': {
-      id: '/wrapped/$id'
-      path: '/wrapped/$id'
-      fullPath: '/wrapped/$id'
-      preLoaderRoute: typeof WrappedIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/downloads/export': {
-      id: '/downloads/export'
-      path: '/downloads/export'
-      fullPath: '/downloads/export'
-      preLoaderRoute: typeof DownloadsExportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/claim/$token': {
-      id: '/claim/$token'
-      path: '/claim/$token'
-      fullPath: '/claim/$token'
-      preLoaderRoute: typeof ClaimTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cc-wrapped/$id': {
-      id: '/cc-wrapped/$id'
-      path: '/cc-wrapped/$id'
-      fullPath: '/cc-wrapped/$id'
-      preLoaderRoute: typeof CcWrappedIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/backoffice/wrapped': {
-      id: '/backoffice/wrapped'
-      path: '/wrapped'
-      fullPath: '/backoffice/wrapped'
-      preLoaderRoute: typeof BackofficeWrappedRouteImport
-      parentRoute: typeof BackofficeRouteRoute
-    }
-    '/backoffice/search': {
-      id: '/backoffice/search'
-      path: '/search'
-      fullPath: '/backoffice/search'
-      preLoaderRoute: typeof BackofficeSearchRouteImport
-      parentRoute: typeof BackofficeRouteRoute
-    }
-    '/auth/verify': {
-      id: '/auth/verify'
-      path: '/auth/verify'
-      fullPath: '/auth/verify'
-      preLoaderRoute: typeof AuthVerifyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/invite': {
-      id: '/auth/invite'
-      path: '/auth/invite'
-      fullPath: '/auth/invite'
-      preLoaderRoute: typeof AuthInviteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/consent': {
-      id: '/auth/consent'
-      path: '/auth/consent'
-      fullPath: '/auth/consent'
-      preLoaderRoute: typeof AuthConsentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.well-known/openid-configuration': {
-      id: '/.well-known/openid-configuration'
-      path: '/.well-known/openid-configuration'
-      fullPath: '/.well-known/openid-configuration'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OpenidConfigurationRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/oauth-authorization-server': {
@@ -1449,6 +1344,97 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/openid-configuration': {
+      id: '/.well-known/openid-configuration'
+      path: '/.well-known/openid-configuration'
+      fullPath: '/.well-known/openid-configuration'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OpenidConfigurationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/consent': {
+      id: '/auth/consent'
+      path: '/auth/consent'
+      fullPath: '/auth/consent'
+      preLoaderRoute: typeof AuthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/invite': {
+      id: '/auth/invite'
+      path: '/auth/invite'
+      fullPath: '/auth/invite'
+      preLoaderRoute: typeof AuthInviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/verify': {
+      id: '/auth/verify'
+      path: '/auth/verify'
+      fullPath: '/auth/verify'
+      preLoaderRoute: typeof AuthVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/backoffice/': {
+      id: '/backoffice/'
+      path: '/'
+      fullPath: '/backoffice/'
+      preLoaderRoute: typeof BackofficeIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
+    }
+    '/backoffice/search': {
+      id: '/backoffice/search'
+      path: '/search'
+      fullPath: '/backoffice/search'
+      preLoaderRoute: typeof BackofficeSearchRouteImport
+      parentRoute: typeof BackofficeRouteRoute
+    }
+    '/backoffice/wrapped': {
+      id: '/backoffice/wrapped'
+      path: '/wrapped'
+      fullPath: '/backoffice/wrapped'
+      preLoaderRoute: typeof BackofficeWrappedRouteImport
+      parentRoute: typeof BackofficeRouteRoute
+    }
+    '/cc-wrapped/$id': {
+      id: '/cc-wrapped/$id'
+      path: '/cc-wrapped/$id'
+      fullPath: '/cc-wrapped/$id'
+      preLoaderRoute: typeof CcWrappedIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/choose-organization/': {
+      id: '/choose-organization/'
+      path: '/choose-organization'
+      fullPath: '/choose-organization/'
+      preLoaderRoute: typeof ChooseOrganizationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/claim/$token': {
+      id: '/claim/$token'
+      path: '/claim/$token'
+      fullPath: '/claim/$token'
+      preLoaderRoute: typeof ClaimTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/downloads/export': {
+      id: '/downloads/export'
+      path: '/downloads/export'
+      fullPath: '/downloads/export'
+      preLoaderRoute: typeof DownloadsExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sandbox/$sandboxOrgId': {
       id: '/sandbox/$sandboxOrgId'
       path: '/sandbox/$sandboxOrgId'
@@ -1456,102 +1442,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SandboxSandboxOrgIdRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sandbox/$sandboxOrgId/': {
-      id: '/sandbox/$sandboxOrgId/'
-      path: '/'
-      fullPath: '/sandbox/$sandboxOrgId/'
-      preLoaderRoute: typeof SandboxSandboxOrgIdIndexRouteImport
-      parentRoute: typeof SandboxSandboxOrgIdRouteRoute
-    }
-    '/backoffice/unpriced-spans/': {
-      id: '/backoffice/unpriced-spans/'
-      path: '/unpriced-spans'
-      fullPath: '/backoffice/unpriced-spans/'
-      preLoaderRoute: typeof BackofficeUnpricedSpansIndexRouteImport
-      parentRoute: typeof BackofficeRouteRoute
-    }
-    '/backoffice/showcase/': {
-      id: '/backoffice/showcase/'
-      path: '/showcase'
-      fullPath: '/backoffice/showcase/'
-      preLoaderRoute: typeof BackofficeShowcaseIndexRouteImport
-      parentRoute: typeof BackofficeRouteRoute
-    }
-    '/backoffice/partners/': {
-      id: '/backoffice/partners/'
-      path: '/partners'
-      fullPath: '/backoffice/partners/'
-      preLoaderRoute: typeof BackofficePartnersIndexRouteImport
-      parentRoute: typeof BackofficeRouteRoute
-    }
-    '/backoffice/organizations/': {
-      id: '/backoffice/organizations/'
-      path: '/organizations'
-      fullPath: '/backoffice/organizations/'
-      preLoaderRoute: typeof BackofficeOrganizationsIndexRouteImport
-      parentRoute: typeof BackofficeRouteRoute
-    }
-    '/backoffice/feature-flags/': {
-      id: '/backoffice/feature-flags/'
-      path: '/feature-flags'
-      fullPath: '/backoffice/feature-flags/'
-      preLoaderRoute: typeof BackofficeFeatureFlagsIndexRouteImport
-      parentRoute: typeof BackofficeRouteRoute
-    }
-    '/api/observability-test/': {
-      id: '/api/observability-test/'
-      path: '/api/observability-test'
-      fullPath: '/api/observability-test/'
-      preLoaderRoute: typeof ApiObservabilityTestIndexRouteImport
+    '/welcome/': {
+      id: '/welcome/'
+      path: '/welcome'
+      fullPath: '/welcome/'
+      preLoaderRoute: typeof WelcomeIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sandbox/$sandboxOrgId/manage': {
-      id: '/sandbox/$sandboxOrgId/manage'
-      path: '/manage'
-      fullPath: '/sandbox/$sandboxOrgId/manage'
-      preLoaderRoute: typeof SandboxSandboxOrgIdManageRouteImport
-      parentRoute: typeof SandboxSandboxOrgIdRouteRoute
-    }
-    '/integrations/slack/install': {
-      id: '/integrations/slack/install'
-      path: '/integrations/slack/install'
-      fullPath: '/integrations/slack/install'
-      preLoaderRoute: typeof IntegrationsSlackInstallRouteImport
+    '/wrapped/$id': {
+      id: '/wrapped/$id'
+      path: '/wrapped/$id'
+      fullPath: '/wrapped/$id'
+      preLoaderRoute: typeof WrappedIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/integrations/github/install': {
-      id: '/integrations/github/install'
-      path: '/integrations/github/install'
-      fullPath: '/integrations/github/install'
-      preLoaderRoute: typeof IntegrationsGithubInstallRouteImport
-      parentRoute: typeof rootRouteImport
+    '/.well-known/oauth-authorization-server/$': {
+      id: '/.well-known/oauth-authorization-server/$'
+      path: '/$'
+      fullPath: '/.well-known/oauth-authorization-server/$'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport
+      parentRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
     }
-    '/backoffice/users/$userId': {
-      id: '/backoffice/users/$userId'
-      path: '/users/$userId'
-      fullPath: '/backoffice/users/$userId'
-      preLoaderRoute: typeof BackofficeUsersUserIdRouteImport
-      parentRoute: typeof BackofficeRouteRoute
+    '/.well-known/openid-configuration/$': {
+      id: '/.well-known/openid-configuration/$'
+      path: '/$'
+      fullPath: '/.well-known/openid-configuration/$'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport
+      parentRoute: typeof Char91DotwellKnownChar93OpenidConfigurationRoute
     }
-    '/backoffice/projects/$projectId': {
-      id: '/backoffice/projects/$projectId'
-      path: '/projects/$projectId'
-      fullPath: '/backoffice/projects/$projectId'
-      preLoaderRoute: typeof BackofficeProjectsProjectIdRouteImport
-      parentRoute: typeof BackofficeRouteRoute
+    '/_authenticated/projects/$projectSlug': {
+      id: '/_authenticated/projects/$projectSlug'
+      path: '/projects/$projectSlug'
+      fullPath: '/projects/$projectSlug'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/backoffice/organizations/$organizationId': {
-      id: '/backoffice/organizations/$organizationId'
-      path: '/organizations/$organizationId'
-      fullPath: '/backoffice/organizations/$organizationId'
-      preLoaderRoute: typeof BackofficeOrganizationsOrganizationIdRouteImport
-      parentRoute: typeof BackofficeRouteRoute
+    '/_authenticated/settings/$section': {
+      id: '/_authenticated/settings/$section'
+      path: '/settings/$section'
+      fullPath: '/settings/$section'
+      preLoaderRoute: typeof AuthenticatedSettingsSectionRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/api/observability-test/error': {
-      id: '/api/observability-test/error'
-      path: '/api/observability-test/error'
-      fullPath: '/api/observability-test/error'
-      preLoaderRoute: typeof ApiObservabilityTestErrorRouteImport
+    '/api/agent-score/ring.png': {
+      id: '/api/agent-score/ring.png'
+      path: '/api/agent-score/ring.png'
+      fullPath: '/api/agent-score/ring.png'
+      preLoaderRoute: typeof ApiAgentScoreRingDotpngRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -1561,116 +1498,109 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/agent-score/ring.png': {
-      id: '/api/agent-score/ring.png'
-      path: '/api/agent-score/ring.png'
-      fullPath: '/api/agent-score/ring.png'
-      preLoaderRoute: typeof ApiAgentScoreRingDotpngRouteImport
+    '/api/observability-test/': {
+      id: '/api/observability-test/'
+      path: '/api/observability-test'
+      fullPath: '/api/observability-test/'
+      preLoaderRoute: typeof ApiObservabilityTestIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/settings/$section': {
-      id: '/_authenticated/settings/$section'
-      path: '/settings/$section'
-      fullPath: '/settings/$section'
-      preLoaderRoute: typeof AuthenticatedSettingsSectionRouteImport
-      parentRoute: typeof AuthenticatedRoute
+    '/api/observability-test/error': {
+      id: '/api/observability-test/error'
+      path: '/api/observability-test/error'
+      fullPath: '/api/observability-test/error'
+      preLoaderRoute: typeof ApiObservabilityTestErrorRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/projects/$projectSlug': {
-      id: '/_authenticated/projects/$projectSlug'
-      path: '/projects/$projectSlug'
-      fullPath: '/projects/$projectSlug'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugRouteImport
-      parentRoute: typeof AuthenticatedRoute
+    '/backoffice/feature-flags/': {
+      id: '/backoffice/feature-flags/'
+      path: '/feature-flags'
+      fullPath: '/backoffice/feature-flags/'
+      preLoaderRoute: typeof BackofficeFeatureFlagsIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
     }
-    '/.well-known/openid-configuration/$': {
-      id: '/.well-known/openid-configuration/$'
-      path: '/$'
-      fullPath: '/.well-known/openid-configuration/$'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport
-      parentRoute: typeof Char91DotwellKnownChar93OpenidConfigurationRoute
+    '/backoffice/organizations/': {
+      id: '/backoffice/organizations/'
+      path: '/organizations'
+      fullPath: '/backoffice/organizations/'
+      preLoaderRoute: typeof BackofficeOrganizationsIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
     }
-    '/.well-known/oauth-authorization-server/$': {
-      id: '/.well-known/oauth-authorization-server/$'
-      path: '/$'
-      fullPath: '/.well-known/oauth-authorization-server/$'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport
-      parentRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
+    '/backoffice/organizations/$organizationId': {
+      id: '/backoffice/organizations/$organizationId'
+      path: '/organizations/$organizationId'
+      fullPath: '/backoffice/organizations/$organizationId'
+      preLoaderRoute: typeof BackofficeOrganizationsOrganizationIdRouteImport
+      parentRoute: typeof BackofficeRouteRoute
+    }
+    '/backoffice/partners/': {
+      id: '/backoffice/partners/'
+      path: '/partners'
+      fullPath: '/backoffice/partners/'
+      preLoaderRoute: typeof BackofficePartnersIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
+    }
+    '/backoffice/projects/$projectId': {
+      id: '/backoffice/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/backoffice/projects/$projectId'
+      preLoaderRoute: typeof BackofficeProjectsProjectIdRouteImport
+      parentRoute: typeof BackofficeRouteRoute
+    }
+    '/backoffice/showcase/': {
+      id: '/backoffice/showcase/'
+      path: '/showcase'
+      fullPath: '/backoffice/showcase/'
+      preLoaderRoute: typeof BackofficeShowcaseIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
+    }
+    '/backoffice/unpriced-spans/': {
+      id: '/backoffice/unpriced-spans/'
+      path: '/unpriced-spans'
+      fullPath: '/backoffice/unpriced-spans/'
+      preLoaderRoute: typeof BackofficeUnpricedSpansIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
+    }
+    '/backoffice/users/$userId': {
+      id: '/backoffice/users/$userId'
+      path: '/users/$userId'
+      fullPath: '/backoffice/users/$userId'
+      preLoaderRoute: typeof BackofficeUsersUserIdRouteImport
+      parentRoute: typeof BackofficeRouteRoute
+    }
+    '/integrations/github/install': {
+      id: '/integrations/github/install'
+      path: '/integrations/github/install'
+      fullPath: '/integrations/github/install'
+      preLoaderRoute: typeof IntegrationsGithubInstallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/integrations/slack/install': {
+      id: '/integrations/slack/install'
+      path: '/integrations/slack/install'
+      fullPath: '/integrations/slack/install'
+      preLoaderRoute: typeof IntegrationsSlackInstallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sandbox/$sandboxOrgId/': {
+      id: '/sandbox/$sandboxOrgId/'
+      path: '/'
+      fullPath: '/sandbox/$sandboxOrgId/'
+      preLoaderRoute: typeof SandboxSandboxOrgIdIndexRouteImport
+      parentRoute: typeof SandboxSandboxOrgIdRouteRoute
+    }
+    '/sandbox/$sandboxOrgId/manage': {
+      id: '/sandbox/$sandboxOrgId/manage'
+      path: '/manage'
+      fullPath: '/sandbox/$sandboxOrgId/manage'
+      preLoaderRoute: typeof SandboxSandboxOrgIdManageRouteImport
+      parentRoute: typeof SandboxSandboxOrgIdRouteRoute
     }
     '/_authenticated/projects/$projectSlug/': {
       id: '/_authenticated/projects/$projectSlug/'
       path: '/'
       fullPath: '/projects/$projectSlug/'
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
-    }
-    '/wrapped/$id/og/png': {
-      id: '/wrapped/$id/og/png'
-      path: '/og/png'
-      fullPath: '/wrapped/$id/og/png'
-      preLoaderRoute: typeof WrappedIdOgPngRouteImport
-      parentRoute: typeof WrappedIdRoute
-    }
-    '/sandbox/$sandboxOrgId/projects/$projectSlug': {
-      id: '/sandbox/$sandboxOrgId/projects/$projectSlug'
-      path: '/projects/$projectSlug'
-      fullPath: '/sandbox/$sandboxOrgId/projects/$projectSlug'
-      preLoaderRoute: typeof SandboxSandboxOrgIdProjectsProjectSlugRouteImport
-      parentRoute: typeof SandboxSandboxOrgIdRouteRoute
-    }
-    '/integrations/slack/oauth/callback': {
-      id: '/integrations/slack/oauth/callback'
-      path: '/integrations/slack/oauth/callback'
-      fullPath: '/integrations/slack/oauth/callback'
-      preLoaderRoute: typeof IntegrationsSlackOauthCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/integrations/github/setup/callback': {
-      id: '/integrations/github/setup/callback'
-      path: '/integrations/github/setup/callback'
-      fullPath: '/integrations/github/setup/callback'
-      preLoaderRoute: typeof IntegrationsGithubSetupCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cc-wrapped/$id/og/png': {
-      id: '/cc-wrapped/$id/og/png'
-      path: '/og/png'
-      fullPath: '/cc-wrapped/$id/og/png'
-      preLoaderRoute: typeof CcWrappedIdOgPngRouteImport
-      parentRoute: typeof CcWrappedIdRoute
-    }
-    '/api/notifications/$nid/incident-trend.png': {
-      id: '/api/notifications/$nid/incident-trend.png'
-      path: '/api/notifications/$nid/incident-trend.png'
-      fullPath: '/api/notifications/$nid/incident-trend.png'
-      preLoaderRoute: typeof ApiNotificationsNidIncidentTrendDotpngRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/mcp/authorize': {
-      id: '/api/auth/mcp/authorize'
-      path: '/api/auth/mcp/authorize'
-      fullPath: '/api/auth/mcp/authorize'
-      preLoaderRoute: typeof ApiAuthMcpAuthorizeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/$provider/start': {
-      id: '/api/auth/$provider/start'
-      path: '/api/auth/$provider/start'
-      fullPath: '/api/auth/$provider/start'
-      preLoaderRoute: typeof ApiAuthProviderStartRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/projects/$projectSlug/traces': {
-      id: '/_authenticated/projects/$projectSlug/traces'
-      path: '/traces'
-      fullPath: '/projects/$projectSlug/traces'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugTracesRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
-    }
-    '/_authenticated/projects/$projectSlug/settings': {
-      id: '/_authenticated/projects/$projectSlug/settings'
-      path: '/settings'
-      fullPath: '/projects/$projectSlug/settings'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
     '/_authenticated/projects/$projectSlug/onboarding': {
@@ -1680,81 +1610,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugOnboardingRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/users/': {
-      id: '/_authenticated/projects/$projectSlug/users/'
-      path: '/users'
-      fullPath: '/projects/$projectSlug/users/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugUsersIndexRouteImport
+    '/_authenticated/projects/$projectSlug/settings': {
+      id: '/_authenticated/projects/$projectSlug/settings'
+      path: '/settings'
+      fullPath: '/projects/$projectSlug/settings'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/tools/': {
-      id: '/_authenticated/projects/$projectSlug/tools/'
-      path: '/tools'
-      fullPath: '/projects/$projectSlug/tools/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugToolsIndexRouteImport
+    '/_authenticated/projects/$projectSlug/traces': {
+      id: '/_authenticated/projects/$projectSlug/traces'
+      path: '/traces'
+      fullPath: '/projects/$projectSlug/traces'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugTracesRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/signals/': {
-      id: '/_authenticated/projects/$projectSlug/signals/'
-      path: '/signals'
-      fullPath: '/projects/$projectSlug/signals/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSignalsIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    '/api/auth/$provider/start': {
+      id: '/api/auth/$provider/start'
+      path: '/api/auth/$provider/start'
+      fullPath: '/api/auth/$provider/start'
+      preLoaderRoute: typeof ApiAuthProviderStartRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/projects/$projectSlug/settings/': {
-      id: '/_authenticated/projects/$projectSlug/settings/'
-      path: '/'
-      fullPath: '/projects/$projectSlug/settings/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    '/api/auth/mcp/authorize': {
+      id: '/api/auth/mcp/authorize'
+      path: '/api/auth/mcp/authorize'
+      fullPath: '/api/auth/mcp/authorize'
+      preLoaderRoute: typeof ApiAuthMcpAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/projects/$projectSlug/monitors/': {
-      id: '/_authenticated/projects/$projectSlug/monitors/'
-      path: '/monitors'
-      fullPath: '/projects/$projectSlug/monitors/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMonitorsIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    '/api/notifications/$nid/incident-trend.png': {
+      id: '/api/notifications/$nid/incident-trend.png'
+      path: '/api/notifications/$nid/incident-trend.png'
+      fullPath: '/api/notifications/$nid/incident-trend.png'
+      preLoaderRoute: typeof ApiNotificationsNidIncidentTrendDotpngRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/projects/$projectSlug/memory/': {
-      id: '/_authenticated/projects/$projectSlug/memory/'
-      path: '/memory'
-      fullPath: '/projects/$projectSlug/memory/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMemoryIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    '/cc-wrapped/$id/og/png': {
+      id: '/cc-wrapped/$id/og/png'
+      path: '/og/png'
+      fullPath: '/cc-wrapped/$id/og/png'
+      preLoaderRoute: typeof CcWrappedIdOgPngRouteImport
+      parentRoute: typeof CcWrappedIdRoute
     }
-    '/_authenticated/projects/$projectSlug/issues/': {
-      id: '/_authenticated/projects/$projectSlug/issues/'
-      path: '/issues'
-      fullPath: '/projects/$projectSlug/issues/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugIssuesIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    '/integrations/github/setup/callback': {
+      id: '/integrations/github/setup/callback'
+      path: '/integrations/github/setup/callback'
+      fullPath: '/integrations/github/setup/callback'
+      preLoaderRoute: typeof IntegrationsGithubSetupCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/projects/$projectSlug/experiments/': {
-      id: '/_authenticated/projects/$projectSlug/experiments/'
-      path: '/experiments'
-      fullPath: '/projects/$projectSlug/experiments/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugExperimentsIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    '/integrations/slack/oauth/callback': {
+      id: '/integrations/slack/oauth/callback'
+      path: '/integrations/slack/oauth/callback'
+      fullPath: '/integrations/slack/oauth/callback'
+      preLoaderRoute: typeof IntegrationsSlackOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/projects/$projectSlug/datasets/': {
-      id: '/_authenticated/projects/$projectSlug/datasets/'
-      path: '/datasets'
-      fullPath: '/projects/$projectSlug/datasets/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    '/sandbox/$sandboxOrgId/projects/$projectSlug': {
+      id: '/sandbox/$sandboxOrgId/projects/$projectSlug'
+      path: '/projects/$projectSlug'
+      fullPath: '/sandbox/$sandboxOrgId/projects/$projectSlug'
+      preLoaderRoute: typeof SandboxSandboxOrgIdProjectsProjectSlugRouteImport
+      parentRoute: typeof SandboxSandboxOrgIdRouteRoute
     }
-    '/_authenticated/projects/$projectSlug/custom-behaviours/': {
-      id: '/_authenticated/projects/$projectSlug/custom-behaviours/'
-      path: '/custom-behaviours'
-      fullPath: '/projects/$projectSlug/custom-behaviours/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugCustomBehavioursIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    '/wrapped/$id/og/png': {
+      id: '/wrapped/$id/og/png'
+      path: '/og/png'
+      fullPath: '/wrapped/$id/og/png'
+      preLoaderRoute: typeof WrappedIdOgPngRouteImport
+      parentRoute: typeof WrappedIdRoute
     }
-    '/_authenticated/projects/$projectSlug/cost/': {
-      id: '/_authenticated/projects/$projectSlug/cost/'
-      path: '/cost'
-      fullPath: '/projects/$projectSlug/cost/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugCostIndexRouteImport
+    '/_authenticated/projects/$projectSlug/agent-score/': {
+      id: '/_authenticated/projects/$projectSlug/agent-score/'
+      path: '/agent-score'
+      fullPath: '/projects/$projectSlug/agent-score/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
     '/_authenticated/projects/$projectSlug/behaviours/': {
@@ -1764,88 +1694,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/agent-score/': {
-      id: '/_authenticated/projects/$projectSlug/agent-score/'
-      path: '/agent-score'
-      fullPath: '/projects/$projectSlug/agent-score/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAgentScoreIndexRouteImport
+    '/_authenticated/projects/$projectSlug/behaviours/new': {
+      id: '/_authenticated/projects/$projectSlug/behaviours/new'
+      path: '/behaviours/new'
+      fullPath: '/projects/$projectSlug/behaviours/new'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursNewRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/settings/sso': {
-      id: '/_authenticated/projects/$projectSlug/settings/sso'
-      path: '/sso'
-      fullPath: '/projects/$projectSlug/settings/sso'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsSsoRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
-    }
-    '/_authenticated/projects/$projectSlug/settings/signals': {
-      id: '/_authenticated/projects/$projectSlug/settings/signals'
-      path: '/signals'
-      fullPath: '/projects/$projectSlug/settings/signals'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsSignalsRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
-    }
-    '/_authenticated/projects/$projectSlug/settings/privacy': {
-      id: '/_authenticated/projects/$projectSlug/settings/privacy'
-      path: '/privacy'
-      fullPath: '/projects/$projectSlug/settings/privacy'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsPrivacyRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
-    }
-    '/_authenticated/projects/$projectSlug/settings/members': {
-      id: '/_authenticated/projects/$projectSlug/settings/members'
-      path: '/members'
-      fullPath: '/projects/$projectSlug/settings/members'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsMembersRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
-    }
-    '/_authenticated/projects/$projectSlug/settings/keys': {
-      id: '/_authenticated/projects/$projectSlug/settings/keys'
-      path: '/keys'
-      fullPath: '/projects/$projectSlug/settings/keys'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsKeysRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
-    }
-    '/_authenticated/projects/$projectSlug/settings/general': {
-      id: '/_authenticated/projects/$projectSlug/settings/general'
-      path: '/general'
-      fullPath: '/projects/$projectSlug/settings/general'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsGeneralRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
-    }
-    '/_authenticated/projects/$projectSlug/settings/flaggers': {
-      id: '/_authenticated/projects/$projectSlug/settings/flaggers'
-      path: '/flaggers'
-      fullPath: '/projects/$projectSlug/settings/flaggers'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsFlaggersRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
-    }
-    '/_authenticated/projects/$projectSlug/settings/billing': {
-      id: '/_authenticated/projects/$projectSlug/settings/billing'
-      path: '/billing'
-      fullPath: '/projects/$projectSlug/settings/billing'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsBillingRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
-    }
-    '/_authenticated/projects/$projectSlug/settings/account': {
-      id: '/_authenticated/projects/$projectSlug/settings/account'
-      path: '/account'
-      fullPath: '/projects/$projectSlug/settings/account'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsAccountRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
-    }
-    '/_authenticated/projects/$projectSlug/monitors/signals': {
-      id: '/_authenticated/projects/$projectSlug/monitors/signals'
-      path: '/monitors/signals'
-      fullPath: '/projects/$projectSlug/monitors/signals'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRouteImport
+    '/_authenticated/projects/$projectSlug/cost/': {
+      id: '/_authenticated/projects/$projectSlug/cost/'
+      path: '/cost'
+      fullPath: '/projects/$projectSlug/cost/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugCostIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/monitors/search': {
-      id: '/_authenticated/projects/$projectSlug/monitors/search'
-      path: '/monitors/search'
-      fullPath: '/projects/$projectSlug/monitors/search'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMonitorsSearchRouteImport
+    '/_authenticated/projects/$projectSlug/custom-behaviours/': {
+      id: '/_authenticated/projects/$projectSlug/custom-behaviours/'
+      path: '/custom-behaviours'
+      fullPath: '/projects/$projectSlug/custom-behaviours/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugCustomBehavioursIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/datasets/': {
+      id: '/_authenticated/projects/$projectSlug/datasets/'
+      path: '/datasets'
+      fullPath: '/projects/$projectSlug/datasets/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
     '/_authenticated/projects/$projectSlug/datasets/$datasetId': {
@@ -1855,95 +1729,137 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/behaviours/new': {
-      id: '/_authenticated/projects/$projectSlug/behaviours/new'
-      path: '/behaviours/new'
-      fullPath: '/projects/$projectSlug/behaviours/new'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursNewRouteImport
+    '/_authenticated/projects/$projectSlug/experiments/': {
+      id: '/_authenticated/projects/$projectSlug/experiments/'
+      path: '/experiments'
+      fullPath: '/projects/$projectSlug/experiments/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugExperimentsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/users/$userId/': {
-      id: '/_authenticated/projects/$projectSlug/users/$userId/'
-      path: '/users/$userId'
-      fullPath: '/projects/$projectSlug/users/$userId/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport
+    '/_authenticated/projects/$projectSlug/issues/': {
+      id: '/_authenticated/projects/$projectSlug/issues/'
+      path: '/issues'
+      fullPath: '/projects/$projectSlug/issues/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugIssuesIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/tools/$toolName/': {
-      id: '/_authenticated/projects/$projectSlug/tools/$toolName/'
-      path: '/tools/$toolName'
-      fullPath: '/projects/$projectSlug/tools/$toolName/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugToolsToolNameIndexRouteImport
+    '/_authenticated/projects/$projectSlug/memory/': {
+      id: '/_authenticated/projects/$projectSlug/memory/'
+      path: '/memory'
+      fullPath: '/projects/$projectSlug/memory/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMemoryIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/signals/$signalSlug/': {
-      id: '/_authenticated/projects/$projectSlug/signals/$signalSlug/'
-      path: '/signals/$signalSlug'
-      fullPath: '/projects/$projectSlug/signals/$signalSlug/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRouteImport
+    '/_authenticated/projects/$projectSlug/monitors/': {
+      id: '/_authenticated/projects/$projectSlug/monitors/'
+      path: '/monitors'
+      fullPath: '/projects/$projectSlug/monitors/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMonitorsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/settings/organization/': {
-      id: '/_authenticated/projects/$projectSlug/settings/organization/'
-      path: '/organization'
-      fullPath: '/projects/$projectSlug/settings/organization/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsOrganizationIndexRouteImport
+    '/_authenticated/projects/$projectSlug/monitors/search': {
+      id: '/_authenticated/projects/$projectSlug/monitors/search'
+      path: '/monitors/search'
+      fullPath: '/projects/$projectSlug/monitors/search'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMonitorsSearchRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/monitors/signals': {
+      id: '/_authenticated/projects/$projectSlug/monitors/signals'
+      path: '/monitors/signals'
+      fullPath: '/projects/$projectSlug/monitors/signals'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/settings/': {
+      id: '/_authenticated/projects/$projectSlug/settings/'
+      path: '/'
+      fullPath: '/projects/$projectSlug/settings/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
     }
-    '/_authenticated/projects/$projectSlug/settings/integrations/': {
-      id: '/_authenticated/projects/$projectSlug/settings/integrations/'
-      path: '/integrations'
-      fullPath: '/projects/$projectSlug/settings/integrations/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRouteImport
+    '/_authenticated/projects/$projectSlug/settings/account': {
+      id: '/_authenticated/projects/$projectSlug/settings/account'
+      path: '/account'
+      fullPath: '/projects/$projectSlug/settings/account'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsAccountRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
     }
-    '/_authenticated/projects/$projectSlug/settings/imports/': {
-      id: '/_authenticated/projects/$projectSlug/settings/imports/'
-      path: '/imports'
-      fullPath: '/projects/$projectSlug/settings/imports/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsImportsIndexRouteImport
+    '/_authenticated/projects/$projectSlug/settings/billing': {
+      id: '/_authenticated/projects/$projectSlug/settings/billing'
+      path: '/billing'
+      fullPath: '/projects/$projectSlug/settings/billing'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsBillingRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
     }
-    '/_authenticated/projects/$projectSlug/settings/defaults/': {
-      id: '/_authenticated/projects/$projectSlug/settings/defaults/'
-      path: '/defaults'
-      fullPath: '/projects/$projectSlug/settings/defaults/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsDefaultsIndexRouteImport
+    '/_authenticated/projects/$projectSlug/settings/flaggers': {
+      id: '/_authenticated/projects/$projectSlug/settings/flaggers'
+      path: '/flaggers'
+      fullPath: '/projects/$projectSlug/settings/flaggers'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsFlaggersRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
     }
-    '/_authenticated/projects/$projectSlug/settings/data-destinations/': {
-      id: '/_authenticated/projects/$projectSlug/settings/data-destinations/'
-      path: '/data-destinations'
-      fullPath: '/projects/$projectSlug/settings/data-destinations/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRouteImport
+    '/_authenticated/projects/$projectSlug/settings/general': {
+      id: '/_authenticated/projects/$projectSlug/settings/general'
+      path: '/general'
+      fullPath: '/projects/$projectSlug/settings/general'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsGeneralRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
     }
-    '/_authenticated/projects/$projectSlug/monitors/$monitorSlug/': {
-      id: '/_authenticated/projects/$projectSlug/monitors/$monitorSlug/'
-      path: '/monitors/$monitorSlug'
-      fullPath: '/projects/$projectSlug/monitors/$monitorSlug/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRouteImport
+    '/_authenticated/projects/$projectSlug/settings/keys': {
+      id: '/_authenticated/projects/$projectSlug/settings/keys'
+      path: '/keys'
+      fullPath: '/projects/$projectSlug/settings/keys'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsKeysRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/settings/members': {
+      id: '/_authenticated/projects/$projectSlug/settings/members'
+      path: '/members'
+      fullPath: '/projects/$projectSlug/settings/members'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsMembersRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/settings/privacy': {
+      id: '/_authenticated/projects/$projectSlug/settings/privacy'
+      path: '/privacy'
+      fullPath: '/projects/$projectSlug/settings/privacy'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsPrivacyRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/settings/signals': {
+      id: '/_authenticated/projects/$projectSlug/settings/signals'
+      path: '/signals'
+      fullPath: '/projects/$projectSlug/settings/signals'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsSignalsRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/settings/sso': {
+      id: '/_authenticated/projects/$projectSlug/settings/sso'
+      path: '/sso'
+      fullPath: '/projects/$projectSlug/settings/sso'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsSsoRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/signals/': {
+      id: '/_authenticated/projects/$projectSlug/signals/'
+      path: '/signals'
+      fullPath: '/projects/$projectSlug/signals/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSignalsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/memory/$store/': {
-      id: '/_authenticated/projects/$projectSlug/memory/$store/'
-      path: '/memory/$store'
-      fullPath: '/projects/$projectSlug/memory/$store/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMemoryStoreIndexRouteImport
+    '/_authenticated/projects/$projectSlug/tools/': {
+      id: '/_authenticated/projects/$projectSlug/tools/'
+      path: '/tools'
+      fullPath: '/projects/$projectSlug/tools/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugToolsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/experiments/$experimentSlug/': {
-      id: '/_authenticated/projects/$projectSlug/experiments/$experimentSlug/'
-      path: '/experiments/$experimentSlug'
-      fullPath: '/projects/$projectSlug/experiments/$experimentSlug/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
-    }
-    '/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/': {
-      id: '/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/'
-      path: '/custom-behaviours/$behaviourSlug'
-      fullPath: '/projects/$projectSlug/custom-behaviours/$behaviourSlug/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRouteImport
+    '/_authenticated/projects/$projectSlug/users/': {
+      id: '/_authenticated/projects/$projectSlug/users/'
+      path: '/users'
+      fullPath: '/projects/$projectSlug/users/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugUsersIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
     '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/': {
@@ -1953,11 +1869,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/settings/integrations/$integrationSlug': {
-      id: '/_authenticated/projects/$projectSlug/settings/integrations/$integrationSlug'
-      path: '/integrations/$integrationSlug'
-      fullPath: '/projects/$projectSlug/settings/integrations/$integrationSlug'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationSlugRouteImport
+    '/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/': {
+      id: '/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/'
+      path: '/custom-behaviours/$behaviourSlug'
+      fullPath: '/projects/$projectSlug/custom-behaviours/$behaviourSlug/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/experiments/$experimentSlug/': {
+      id: '/_authenticated/projects/$projectSlug/experiments/$experimentSlug/'
+      path: '/experiments/$experimentSlug'
+      fullPath: '/projects/$projectSlug/experiments/$experimentSlug/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/memory/$store/': {
+      id: '/_authenticated/projects/$projectSlug/memory/$store/'
+      path: '/memory/$store'
+      fullPath: '/projects/$projectSlug/memory/$store/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMemoryStoreIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/monitors/$monitorSlug/': {
+      id: '/_authenticated/projects/$projectSlug/monitors/$monitorSlug/'
+      path: '/monitors/$monitorSlug'
+      fullPath: '/projects/$projectSlug/monitors/$monitorSlug/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/settings/data-destinations/': {
+      id: '/_authenticated/projects/$projectSlug/settings/data-destinations/'
+      path: '/data-destinations'
+      fullPath: '/projects/$projectSlug/settings/data-destinations/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
     }
     '/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId': {
@@ -1966,6 +1910,69 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectSlug/settings/data-destinations/$destinationId'
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/settings/defaults/': {
+      id: '/_authenticated/projects/$projectSlug/settings/defaults/'
+      path: '/defaults'
+      fullPath: '/projects/$projectSlug/settings/defaults/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsDefaultsIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/settings/imports/': {
+      id: '/_authenticated/projects/$projectSlug/settings/imports/'
+      path: '/imports'
+      fullPath: '/projects/$projectSlug/settings/imports/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsImportsIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/settings/integrations/': {
+      id: '/_authenticated/projects/$projectSlug/settings/integrations/'
+      path: '/integrations'
+      fullPath: '/projects/$projectSlug/settings/integrations/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/settings/integrations/$integrationSlug': {
+      id: '/_authenticated/projects/$projectSlug/settings/integrations/$integrationSlug'
+      path: '/integrations/$integrationSlug'
+      fullPath: '/projects/$projectSlug/settings/integrations/$integrationSlug'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationSlugRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/settings/organization/': {
+      id: '/_authenticated/projects/$projectSlug/settings/organization/'
+      path: '/organization'
+      fullPath: '/projects/$projectSlug/settings/organization/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsOrganizationIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
+    '/_authenticated/projects/$projectSlug/signals/$signalSlug/': {
+      id: '/_authenticated/projects/$projectSlug/signals/$signalSlug/'
+      path: '/signals/$signalSlug'
+      fullPath: '/projects/$projectSlug/signals/$signalSlug/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/tools/$toolName/': {
+      id: '/_authenticated/projects/$projectSlug/tools/$toolName/'
+      path: '/tools/$toolName'
+      fullPath: '/projects/$projectSlug/tools/$toolName/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugToolsToolNameIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/users/$userId/': {
+      id: '/_authenticated/projects/$projectSlug/users/$userId/'
+      path: '/users/$userId'
+      fullPath: '/projects/$projectSlug/users/$userId/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/views/new': {
+      id: '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/views/new'
+      path: '/behaviours/$behaviourSlug/views/new'
+      fullPath: '/projects/$projectSlug/behaviours/$behaviourSlug/views/new'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugViewsNewRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
     '/_authenticated/projects/$projectSlug/settings/organization/integrations/': {
       id: '/_authenticated/projects/$projectSlug/settings/organization/integrations/'
@@ -1980,13 +1987,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectSlug/settings/organization/integrations/$integrationSlug'
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsOrganizationIntegrationsIntegrationSlugRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
-    }
-    '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/views/new': {
-      id: '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/views/new'
-      path: '/behaviours/$behaviourSlug/views/new'
-      fullPath: '/projects/$projectSlug/behaviours/$behaviourSlug/views/new'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugViewsNewRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
     '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/views/$viewSlug/': {
       id: '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/views/$viewSlug/'
