@@ -1,6 +1,7 @@
 import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
 import type { CostFamilyResult } from "./aggregate-session-cost.ts"
+import { deadSurfacePenaltyIncrease, type WindowDeadSurfaceEvidence } from "./dead-surface-window.ts"
 
 /**
  * What one session contributes to a window, in the units the window aggregates.
@@ -14,6 +15,9 @@ export interface SessionWindowContribution {
   /** False when a required Cost family was unreadable; excluded from Cost but retained for Speed. */
   readonly costUsableForDenominator: boolean
   readonly families: readonly Pick<CostFamilyResult, "family" | "eligibleUnits" | "penalizedUnits">[]
+  /** Retained so bootstrap samples can reevaluate metrics whose result depends on the sampled window. */
+  readonly toolNamesUsed?: readonly string[]
+  readonly deadSurface?: WindowDeadSurfaceEvidence
   readonly speed: {
     readonly observedNs: number
     readonly avoidableNs: number
@@ -59,11 +63,29 @@ export const aggregateWindowCost = ({
   readonly artifact: CostScoringArtifact
   readonly residualSignalPenalty?: number
 }): WindowCostAggregate => {
+  const usedToolNames = new Set(
+    contributions.flatMap((contribution) => contribution.toolNamesUsed ?? []).map((name) => name.toLowerCase()),
+  )
   const familyPenalties = Object.fromEntries(
     COST_FAMILIES.map((family) => {
       const rows = contributions
         .filter((contribution) => contribution.costUsableForDenominator)
-        .flatMap((contribution) => contribution.families.filter((entry) => entry.family === family))
+        .flatMap((contribution) =>
+          contribution.families
+            .filter((entry) => entry.family === family)
+            .map((entry) => {
+              if (family !== "context" || !contribution.deadSurface) return entry
+              const penaltyIncrease = deadSurfacePenaltyIncrease({
+                evidence: contribution.deadSurface,
+                usedToolNames,
+                artifact,
+              })
+              return {
+                ...entry,
+                penalizedUnits: entry.eligibleUnits * (contribution.deadSurface.baseContextPenalty + penaltyIncrease),
+              }
+            }),
+        )
       const eligible = rows.reduce((total, entry) => total + entry.eligibleUnits, 0)
       const penalized = rows.reduce((total, entry) => total + entry.penalizedUnits, 0)
       return [family, Math.min(artifact.familyCaps[family], ratio(penalized, eligible))]

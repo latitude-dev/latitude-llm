@@ -50,20 +50,20 @@ describe("cancelImportUseCase", () => {
     expect(h.written).toEqual([])
   })
 
-  it.each([
-    ["succeeded" as const],
-    ["capped" as const],
-    ["cancelled" as const],
-    ["failed" as const],
-  ])("leaves a %s job untouched", async (status) => {
-    const job = stubImportJob({ status })
-    const h = importHarness({ seed: [job] })
+  it.each([["succeeded" as const], ["capped" as const], ["cancelled" as const], ["failed" as const]])(
+    "leaves a %s job untouched",
+    async (status) => {
+      const job = stubImportJob({ status })
+      const h = importHarness({ seed: [job] })
 
-    const returned = await Effect.runPromise(cancelImportUseCase({ importJobId: job.id }).pipe(Effect.provide(h.layer)))
+      const returned = await Effect.runPromise(
+        cancelImportUseCase({ importJobId: job.id }).pipe(Effect.provide(h.layer)),
+      )
 
-    expect(h.stored.get(job.id)?.cancelledAt).toBeNull()
-    expect(returned).toEqual(job)
-  })
+      expect(h.stored.get(job.id)?.cancelledAt).toBeNull()
+      expect(returned).toEqual(job)
+    },
+  )
 
   // No worker would ever observe a stamp on a job that was never queued, so this one is
   // settled outright rather than left for the page loop to notice.

@@ -193,29 +193,27 @@ describe("flaggerClassificationWorkflow", () => {
 
     const SAFETY_INPUT = { ...INPUT, flaggerSlug: "jailbreaking" as const }
 
-    it.each([
-      "injectionAttempt",
-      "injectionCompliance",
-      "injectionDefense",
-      "piiExposure",
-    ] as const)("saves %s in one step without drafting an annotation", async (safetyFindingKind) => {
-      mockActivities.classifySessionFlagger.mockImplementationOnce(async () => finding(safetyFindingKind))
+    it.each(["injectionAttempt", "injectionCompliance", "injectionDefense", "piiExposure"] as const)(
+      "saves %s in one step without drafting an annotation",
+      async (safetyFindingKind) => {
+        mockActivities.classifySessionFlagger.mockImplementationOnce(async () => finding(safetyFindingKind))
 
-      const result = await flaggerClassificationWorkflow(SAFETY_INPUT)
+        const result = await flaggerClassificationWorkflow(SAFETY_INPUT)
 
-      expect(result).toMatchObject({ result: `safety_${safetyFindingKind}` })
-      expect(mockActivities.saveSessionFlaggerSafetyFinding).toHaveBeenCalledWith(
-        expect.objectContaining({
-          safetyFindingKind,
-          analysisHash: INPUT.screeningSelection.analysisHash,
-          scoringArtifactVersion: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
-          flaggerTraceId: FLAGGER_TRACE_ID,
-        }),
-      )
-      expect(mockActivities.draftSessionFlaggerAnnotation).not.toHaveBeenCalled()
-      expect(mockActivities.saveSessionFlaggerAnnotation).not.toHaveBeenCalled()
-      expect(mockActivities.saveSessionFlaggerVerdict).not.toHaveBeenCalled()
-    })
+        expect(result).toMatchObject({ result: `safety_${safetyFindingKind}` })
+        expect(mockActivities.saveSessionFlaggerSafetyFinding).toHaveBeenCalledWith(
+          expect.objectContaining({
+            safetyFindingKind,
+            analysisHash: INPUT.screeningSelection.analysisHash,
+            scoringArtifactVersion: "safety-v1:amazon-bedrock/anthropic.claude-haiku-4-5",
+            flaggerTraceId: FLAGGER_TRACE_ID,
+          }),
+        )
+        expect(mockActivities.draftSessionFlaggerAnnotation).not.toHaveBeenCalled()
+        expect(mockActivities.saveSessionFlaggerAnnotation).not.toHaveBeenCalled()
+        expect(mockActivities.saveSessionFlaggerVerdict).not.toHaveBeenCalled()
+      },
+    )
 
     // The finding kind is the identity, so a generation is provenance the score
     // can do without rather than a reason to drop the judgement.

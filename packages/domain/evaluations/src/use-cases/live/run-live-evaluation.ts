@@ -14,6 +14,7 @@ import {
   type UnknownStripePlanError,
 } from "@domain/billing"
 import { OutboxEventWriter } from "@domain/events"
+import { hashOptimizationCandidateText } from "@domain/optimizations"
 import { type QueuePublishError, QueuePublisher } from "@domain/queue"
 import {
   DETECTOR_HEALTH_WINDOW_SECONDS,
@@ -50,7 +51,7 @@ import {
 } from "@domain/spans"
 import { Cause, Effect, Exit } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
-import { getLiveEvaluationEligibility } from "../../helpers.ts"
+import { getLiveEvaluationEligibility, resolveEvaluationScript } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 import { buildEvaluationJudgeLiveTelemetryCapture } from "../../runtime/ai-telemetry.ts"
@@ -238,7 +239,9 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     }
 
     const liveEvaluationEligibility = getLiveEvaluationEligibility(evaluation)
-    const scriptCapabilities = detectScriptCapabilities(evaluation.script)
+    const script = resolveEvaluationScript(evaluation)
+    const scriptHash = yield* Effect.promise(() => hashOptimizationCandidateText(script))
+    const scriptCapabilities = detectScriptCapabilities(script)
 
     if (!liveEvaluationEligibility.eligible) {
       return {
@@ -418,7 +421,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       organizationId: input.organizationId,
       projectId: input.projectId,
       evaluationId: evaluation.id,
-      script: evaluation.script,
+      script,
       session,
       telemetry: buildEvaluationJudgeLiveTelemetryCapture({
         organizationId: input.organizationId,
@@ -517,7 +520,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         passed: execution.kind === "completed" ? execution.result.passed : false,
         feedback: execution.kind === "completed" ? execution.result.feedback : execution.error,
         metadata: {
-          evaluationHash: evaluation.scriptHash ?? evaluation.alignment?.evaluationHash ?? "",
+          evaluationHash: scriptHash,
         },
         error: execution.kind === "errored" ? execution.error : null,
         duration: execution.duration,

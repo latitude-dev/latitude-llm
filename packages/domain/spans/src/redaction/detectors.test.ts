@@ -69,15 +69,12 @@ describe("email detector", () => {
    * two-label domain is rejected on its extension, because `mail@example.com.txt` above is a real address
    * followed by one.
    */
-  it.each([
-    "logo@2x.png",
-    "icon@3x.svg",
-    "bundle@main.tar",
-    "report@final.pdf",
-    "config@local.yaml",
-  ])("does not match the asset name %s", (value) => {
-    expect(detects(`open ${value} now`, "email")).toBe(false)
-  })
+  it.each(["logo@2x.png", "icon@3x.svg", "bundle@main.tar", "report@final.pdf", "config@local.yaml"])(
+    "does not match the asset name %s",
+    (value) => {
+      expect(detects(`open ${value} now`, "email")).toBe(false)
+    },
+  )
 
   /**
    * A local part the class cannot express is worse than a miss: the match starts partway in and stores the
@@ -95,14 +92,12 @@ describe("email detector", () => {
    * The extension list must hold no live TLD. `md`, `py`, `sh` and `zip` were all in it, which cost Moldova,
    * Paraguay, Saint Helena and every `.zip` domain their coverage.
    */
-  it.each([
-    "cliente@empresa.py",
-    "user@example.md",
-    "admin@server.sh",
-    "files@backup.zip",
-  ])("detects %s, whose suffix is a real TLD as well as a file extension", (value) => {
-    expect(found(`contact ${value} today`, "email")).toEqual([value])
-  })
+  it.each(["cliente@empresa.py", "user@example.md", "admin@server.sh", "files@backup.zip"])(
+    "detects %s, whose suffix is a real TLD as well as a file extension",
+    (value) => {
+      expect(found(`contact ${value} today`, "email")).toEqual([value])
+    },
+  )
 
   it("does not take the opening quote of a single-quoted address", () => {
     expect(found("email: 'user@example.com'", "email")).toEqual(["user@example.com"])
@@ -152,15 +147,12 @@ describe("phone detector", () => {
     expect(redactText(`call ${value} now`, only("phone")).text).toBe("call [REDACTED_PHONE] now")
   })
 
-  it.each([
-    "version +1 2 3",
-    "diff +12 -4 lines",
-    "commit +2 -3",
-    "+0 123 4567",
-    "span +1710590400200000000 ns",
-  ])("does not match %s", (value) => {
-    expect(detects(value, "phone")).toBe(false)
-  })
+  it.each(["version +1 2 3", "diff +12 -4 lines", "commit +2 -3", "+0 123 4567", "span +1710590400200000000 ns"])(
+    "does not match %s",
+    (value) => {
+      expect(detects(value, "phone")).toBe(false)
+    },
+  )
 
   /**
    * The group repetition is greedy, so a number followed by a numeric list runs past its own end. The
@@ -209,13 +201,12 @@ describe("phone detector", () => {
     expect(detects('{"userId": 4155552671}', "phone")).toBe(false)
   })
 
-  it.each([
-    "Call 415-555-2671.",
-    "Call 415 555 2671.",
-    "Call 415-555-2671... later",
-  ])("detects the number in %s despite the trailing punctuation", (text) => {
-    expect(detects(text, "phone")).toBe(true)
-  })
+  it.each(["Call 415-555-2671.", "Call 415 555 2671.", "Call 415-555-2671... later"])(
+    "detects the number in %s despite the trailing punctuation",
+    (text) => {
+      expect(detects(text, "phone")).toBe(true)
+    },
+  )
 })
 
 describe("credit_card detector", () => {
@@ -260,13 +251,13 @@ describe("credit_card detector", () => {
    * pick the full number. Picking the shorter one would leave the last three digits
    * sitting next to a placeholder.
    */
-  it.each([
-    "4111 1111 1111 1111 110",
-    "4111-1111-1111-1111-110",
-  ])("redacts the whole 19-digit card in %s rather than the 16-digit card inside it", (value) => {
-    expect(found(`card ${value} charged`, "credit_card")[0]).toBe(value)
-    expect(redactText(`card ${value} charged`, only("credit_card")).text).toBe("card [REDACTED_CREDIT_CARD] charged")
-  })
+  it.each(["4111 1111 1111 1111 110", "4111-1111-1111-1111-110"])(
+    "redacts the whole 19-digit card in %s rather than the 16-digit card inside it",
+    (value) => {
+      expect(found(`card ${value} charged`, "credit_card")[0]).toBe(value)
+      expect(redactText(`card ${value} charged`, only("credit_card")).text).toBe("card [REDACTED_CREDIT_CARD] charged")
+    },
+  )
 
   it("does not accept a card whose groups use mixed separators", () => {
     expect(detects("card 4111 1111-1111 1111 charged", "credit_card")).toBe(false)
@@ -294,13 +285,12 @@ describe("credit_card detector", () => {
     expect(found(text, "credit_card")).toContain("4111111111111111")
   })
 
-  it.each([
-    "+14155552671 4111111111111111",
-    "order 987654321 4111111111111111",
-    "4111111111111111 987654321",
-  ])("finds the card beside an unrelated number in %s", (text) => {
-    expect(found(text, "credit_card")).toContain("4111111111111111")
-  })
+  it.each(["+14155552671 4111111111111111", "order 987654321 4111111111111111", "4111111111111111 987654321"])(
+    "finds the card beside an unrelated number in %s",
+    (text) => {
+      expect(found(text, "credit_card")).toContain("4111111111111111")
+    },
+  )
 
   it("finds both cards when two are adjacent", () => {
     expect(found("4111111111111111 5500005555555559", "credit_card")).toEqual(["4111111111111111", "5500005555555559"])
@@ -327,21 +317,19 @@ describe("credit_card detector", () => {
   })
 
   // Both vectors are Luhn-valid, so only the issuer length gate can reject them.
-  it.each([
-    "41111111111111113",
-    "411111111111116",
-  ])("rejects Luhn-valid %s at a length Visa does not issue", (value) => {
-    expect(detects(`id ${value}`, "credit_card")).toBe(false)
-  })
+  it.each(["41111111111111113", "411111111111116"])(
+    "rejects Luhn-valid %s at a length Visa does not issue",
+    (value) => {
+      expect(detects(`id ${value}`, "credit_card")).toBe(false)
+    },
+  )
 
-  it.each([
-    "1234567890123456789012",
-    "timestamp 1710590400200000000",
-    "3.14159265358979",
-    "0.000000000000001",
-  ])("does not match %s", (value) => {
-    expect(detects(value, "credit_card")).toBe(false)
-  })
+  it.each(["1234567890123456789012", "timestamp 1710590400200000000", "3.14159265358979", "0.000000000000001"])(
+    "does not match %s",
+    (value) => {
+      expect(detects(value, "credit_card")).toBe(false)
+    },
+  )
 
   /**
    * A card at the end of a sentence is how a person writes one in a chat, and the trailing guard used to
@@ -362,13 +350,12 @@ describe("credit_card detector", () => {
 })
 
 describe("iban detector", () => {
-  it.each([
-    "GB82WEST12345698765432",
-    "DE89370400440532013000",
-    "FR1420041010050500013M02606",
-  ])("detects compact %s", (value) => {
-    expect(found(`iban ${value} ok`, "iban")).toEqual([value])
-  })
+  it.each(["GB82WEST12345698765432", "DE89370400440532013000", "FR1420041010050500013M02606"])(
+    "detects compact %s",
+    (value) => {
+      expect(found(`iban ${value} ok`, "iban")).toEqual([value])
+    },
+  )
 
   it("detects the four-group form", () => {
     expect(found("iban GB82 WEST 1234 5698 7654 32 ok", "iban")).toEqual(["GB82 WEST 1234 5698 7654 32"])
@@ -406,13 +393,12 @@ describe("us_ssn detector", () => {
     expect(found(`itin ${value} ok`, "us_ssn")).toEqual([value])
   })
 
-  it.each([
-    "900-45-6789",
-    "900-69-1234",
-    "900-93-1234",
-  ])("does not match %s, a 9xx area outside the assigned ITIN groups", (value) => {
-    expect(detects(`id ${value} ok`, "us_ssn")).toBe(false)
-  })
+  it.each(["900-45-6789", "900-69-1234", "900-93-1234"])(
+    "does not match %s, a 9xx area outside the assigned ITIN groups",
+    (value) => {
+      expect(detects(`id ${value} ok`, "us_ssn")).toBe(false)
+    },
+  )
 
   it.each(["value -123-45-6789 ok", "value 123-45-6789-suffix ok"])("detects the number in %s", (text) => {
     expect(detects(text, "us_ssn")).toBe(true)
@@ -534,13 +520,12 @@ describe("secret detector", () => {
   })
 
   // Auth scheme names are case-insensitive on the wire, and a lowercase `bearer` header is common in logs.
-  it.each([
-    "Authorization: Bearer",
-    "authorization: bearer",
-    "AUTHORIZATION: BEARER",
-  ])("detects the token after %s", (header) => {
-    expect(detects(`${header} 9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl`, "secret")).toBe(true)
-  })
+  it.each(["Authorization: Bearer", "authorization: bearer", "AUTHORIZATION: BEARER"])(
+    "detects the token after %s",
+    (header) => {
+      expect(detects(`${header} 9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl`, "secret")).toBe(true)
+    },
+  )
 
   it("redacts the value and leaves the key readable", () => {
     expect(redactText("POSTGRES_PASSWORD=hunter2Correct-Horse", only("secret")).text).toBe(
@@ -633,25 +618,25 @@ describe("entities disabled by default", () => {
     expect(detects("addr 2001:db8::8a2e:370:7334 up", "ip_address")).toBe(true)
   })
 
-  it.each([
-    "Listening on ::1 port 5432",
-    "bound to ::ffff:7f00:1 now",
-  ])("detects the left-compressed address in %s", (text) => {
-    expect(detects(text, "ip_address")).toBe(true)
-  })
+  it.each(["Listening on ::1 port 5432", "bound to ::ffff:7f00:1 now"])(
+    "detects the left-compressed address in %s",
+    (text) => {
+      expect(detects(text, "ip_address")).toBe(true)
+    },
+  )
 
   it.each(["std::vector<int> v", "using Foo::Bar;", "call ::new here"])("does not match %s", (value) => {
     expect(detects(value, "ip_address")).toBe(false)
   })
 
   // A dotted quad and a four-part version string are the same string, so immunity is impossible, not missing.
-  it.each([
-    "upgraded to 1.2.3.4",
-    "schema version 10.0.0.1",
-  ])("would redact the version string in %s if ip_address were enabled", (text) => {
-    expect(detects(text, "ip_address")).toBe(true)
-    expect(findRedactionMatches(text, only("email", "phone", "credit_card", "iban", "us_ssn", "secret"))).toEqual([])
-  })
+  it.each(["upgraded to 1.2.3.4", "schema version 10.0.0.1"])(
+    "would redact the version string in %s if ip_address were enabled",
+    (text) => {
+      expect(detects(text, "ip_address")).toBe(true)
+      expect(findRedactionMatches(text, only("email", "phone", "credit_card", "iban", "us_ssn", "secret"))).toEqual([])
+    },
+  )
 })
 
 describe("coding agent tool output", () => {

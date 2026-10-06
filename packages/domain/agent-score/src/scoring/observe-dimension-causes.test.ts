@@ -47,6 +47,31 @@ describe("observeDimensionCauses", () => {
       ]),
     )
   })
+
+  it("only lists signal causes for dimensions with signal effects", () => {
+    const causes = observeDimensionCauses({
+      fold: EMPTY_WINDOW_FOLD,
+      reliabilityEndpoints: [],
+      signalEvidence: [
+        {
+          ...signalEvidence,
+          signals: [
+            {
+              ...signalEvidence.signals[0],
+              scoreDimensions: ["outcome", "reliability", "cost", "speed", "safety"],
+            },
+          ],
+        },
+      ],
+      signalEffects: EMPTY_WINDOW_SIGNAL_EFFECTS,
+      catalog: PROVISIONAL_COST_METRIC_CATALOG,
+    })
+
+    expect(causes.filter((cause) => cause.signalId === "signal-1").map((cause) => cause.scoreDimension)).toEqual([
+      "cost",
+      "speed",
+    ])
+  })
 })
 
 describe("observeDimensionCauses evidence", () => {

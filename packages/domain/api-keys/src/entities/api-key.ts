@@ -1,4 +1,12 @@
-import { type ApiKeyId, apiKeyIdSchema, generateId, type OrganizationId, organizationIdSchema } from "@domain/shared"
+import {
+  type ApiKeyId,
+  apiKeyIdSchema,
+  generateId,
+  type OrganizationId,
+  organizationIdSchema,
+  type ProjectId,
+  projectIdSchema,
+} from "@domain/shared"
 import { z } from "zod"
 
 /**
@@ -15,6 +23,11 @@ import { z } from "zod"
 export const apiKeySchema = z.object({
   id: apiKeyIdSchema,
   organizationId: organizationIdSchema,
+  /**
+   * When set, the key may only act on this project. `null` is an org-wide key
+   * (every key that existed before project scope).
+   */
+  projectId: projectIdSchema.nullable(),
   token: z.string().min(1),
   tokenHash: z.string().min(1),
   name: z.string().min(1),
@@ -32,6 +45,8 @@ export type ApiKey = z.infer<typeof apiKeySchema>
 export const createApiKey = (params: {
   id?: ApiKeyId | undefined
   organizationId: OrganizationId
+  /** `null` (default) mints an org-wide key. */
+  projectId?: ProjectId | null
   token: string
   tokenHash: string
   name: string
@@ -44,6 +59,7 @@ export const createApiKey = (params: {
   return apiKeySchema.parse({
     id: params.id ?? generateId<"ApiKeyId">(),
     organizationId: params.organizationId,
+    projectId: params.projectId ?? null,
     token: params.token,
     tokenHash: params.tokenHash,
     name: params.name,

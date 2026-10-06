@@ -75,6 +75,8 @@ const session = ({
     scoringEligibleSignalIds: scoringEligibleSignalIds ?? findings.flatMap((finding) => finding.signalIds),
     costEvidence: {
       readings,
+      toolNamesUsed: [],
+      toolDefinitionWindowObservations: [],
       workloadStratum: stratum,
       denominators: EMPTY_COST_FAMILY_DENOMINATORS,
       observedCriticalPathNs: 1_000_000,

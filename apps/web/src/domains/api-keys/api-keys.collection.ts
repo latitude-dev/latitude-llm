@@ -20,6 +20,7 @@ const apiKeysCollection = createAppCollection(
             data: {
               id: mutation.modified.id,
               name: mutation.modified.name ?? "API Key",
+              ...(mutation.modified.projectId ? { projectId: mutation.modified.projectId } : {}),
             },
           }),
         ),
@@ -61,9 +62,9 @@ export function deleteApiKeyMutation(id: string) {
   return apiKeysCollection.delete(id)
 }
 
-export async function insertApiKeyMutation(name: string): Promise<void> {
+export async function insertApiKeyMutation(name: string, projectId?: string | null): Promise<void> {
   await createApiKey({
-    data: { name },
+    data: { name, ...(projectId ? { projectId } : {}) },
   })
   await queryClient.invalidateQueries({ queryKey: ["apiKeys"] })
 }

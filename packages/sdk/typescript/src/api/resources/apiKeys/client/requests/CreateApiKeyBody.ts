@@ -9,4 +9,8 @@
 export interface CreateApiKeyBody {
     /** Human-readable name for the API key. Used to distinguish keys in the UI. */
     name: string;
+    /** Bind the key to this project. Omit `projectId` and `projectSlug` to mint an organization-wide key. One project per key. */
+    projectId?: string;
+    /** Bind the key to the project with this slug. Must agree with `projectId` when both are set. */
+    projectSlug?: string;
 }

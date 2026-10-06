@@ -53,14 +53,27 @@ class ApiKeysClient:
         _response = self._raw_client.list(request_options=request_options)
         return _response.data
 
-    def create(self, *, name: str, request_options: typing.Optional[RequestOptions] = None) -> ApiKey:
+    def create(
+        self,
+        *,
+        name: str,
+        project_id: typing.Optional[str] = OMIT,
+        project_slug: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> ApiKey:
         """
-        Generates a new API key for the organization. The token is only returned once — store it securely.
+        Generates a new API key. Omit projectId and projectSlug for an organization-wide key, or pass either to bind the key to one project. The token is only returned once — store it securely.
 
         Parameters
         ----------
         name : str
             Human-readable name for the API key. Used to distinguish keys in the UI.
+
+        project_id : typing.Optional[str]
+            Bind the key to this project. Omit `projectId` and `projectSlug` to mint an organization-wide key. One project per key.
+
+        project_slug : typing.Optional[str]
+            Bind the key to the project with this slug. Must agree with `projectId` when both are set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -81,7 +94,9 @@ class ApiKeysClient:
             name="name",
         )
         """
-        _response = self._raw_client.create(name=name, request_options=request_options)
+        _response = self._raw_client.create(
+            name=name, project_id=project_id, project_slug=project_slug, request_options=request_options
+        )
         return _response.data
 
     def get(self, api_key_id: str, *, request_options: typing.Optional[RequestOptions] = None) -> ApiKey:
@@ -230,14 +245,27 @@ class AsyncApiKeysClient:
         _response = await self._raw_client.list(request_options=request_options)
         return _response.data
 
-    async def create(self, *, name: str, request_options: typing.Optional[RequestOptions] = None) -> ApiKey:
+    async def create(
+        self,
+        *,
+        name: str,
+        project_id: typing.Optional[str] = OMIT,
+        project_slug: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> ApiKey:
         """
-        Generates a new API key for the organization. The token is only returned once — store it securely.
+        Generates a new API key. Omit projectId and projectSlug for an organization-wide key, or pass either to bind the key to one project. The token is only returned once — store it securely.
 
         Parameters
         ----------
         name : str
             Human-readable name for the API key. Used to distinguish keys in the UI.
+
+        project_id : typing.Optional[str]
+            Bind the key to this project. Omit `projectId` and `projectSlug` to mint an organization-wide key. One project per key.
+
+        project_slug : typing.Optional[str]
+            Bind the key to the project with this slug. Must agree with `projectId` when both are set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -266,7 +294,9 @@ class AsyncApiKeysClient:
 
         asyncio.run(main())
         """
-        _response = await self._raw_client.create(name=name, request_options=request_options)
+        _response = await self._raw_client.create(
+            name=name, project_id=project_id, project_slug=project_slug, request_options=request_options
+        )
         return _response.data
 
     async def get(self, api_key_id: str, *, request_options: typing.Optional[RequestOptions] = None) -> ApiKey:

@@ -54,11 +54,13 @@ it("creates the indexes and records history on a fresh database through the real
     await database.exec("CREATE ROLE latitude_app NOLOGIN; SET search_path TO latitude, public;")
     await migrate(drizzle({ client: database }), { migrationsFolder: MIGRATIONS_FOLDER })
     await expectIndexes(database)
+    const hash = createHash("sha256").update(MIGRATION_SQL).digest("hex")
     const history = await database.query<{ created_at: number; hash: string }>(
-      "SELECT created_at, hash FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1",
+      `SELECT created_at, hash FROM drizzle.__drizzle_migrations WHERE hash = '${hash}'`,
     )
+    expect(history.rows).toHaveLength(1)
     expect(Number(history.rows[0]?.created_at)).toBe(Date.UTC(2026, 9, 1, 10, 11, 32))
-    expect(history.rows[0]?.hash).toBe(createHash("sha256").update(MIGRATION_SQL).digest("hex"))
+    expect(history.rows[0]?.hash).toBe(hash)
   } finally {
     await database.close()
   }

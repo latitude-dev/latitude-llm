@@ -17,7 +17,7 @@ There is no second registration step for any of those surfaces. The `defineOpera
 
 ## Authentication
 
-Routes under `/v1` accept **either** an organization-scoped API key **or** an OAuth2 access token. Both are opaque random strings carried as `Authorization: Bearer …`. The auth middleware tries validators in order:
+Routes under `/v1` accept **either** an API key **or** an OAuth2 access token. Both are opaque random strings carried as `Authorization: Bearer …`. The auth middleware tries validators in order:
 
 ```
 authenticate(c) → AuthContext | 401
@@ -33,11 +33,25 @@ The one exception is `/v1/mcp`, which admits OAuth bearers only — see [`mcp.md
 
 Every 401 the error handler emits carries `WWW-Authenticate: Bearer resource_metadata="<LAT_API_URL>/.well-known/oauth-protected-resource"` (RFC 9728 §5.1), which is how a spec-following MCP client discovers the authorization server instead of guessing the well-known path. The GitHub webhook's signature 401 returns its response directly and is deliberately not a bearer challenge.
 
+### API key scope
+
+Every API key belongs to one organization. Keys also carry an optional `projectId`:
+
+| `projectId` | Scope | REST (`apps/api`) | Ingest (`apps/ingest`) |
+| --- | --- | --- | --- |
+| `null` | Organization-wide | Any route in the org (unchanged from pre–project-scope keys). | Spans route to projects from `latitude.project` / `X-Latitude-Project` as today. |
+| set | Project-bound | Only `/projects/{slug}/…` where `{slug}` resolves to that project. Org-level routes (`/projects` list/create, `/api-keys`, `/members`, `/account`, `/usage`, …) return **403**. A project route whose slug is missing or names a different project returns **404** (same as an unknown slug — the handler does not reveal that the other project exists). OAuth tokens are never project-bound. | Only spans for the bound project are accepted. A conflicting `X-Latitude-Project` or per-span `latitude.project` slug is **rejected** (counted in `rejectedSpans`), not remapped onto the bound project. |
+
+`createApiKeyProjectScopeMiddleware` (`apps/api/src/middleware/api-key-project-scope.ts`) enforces REST scope immediately after auth and organization context. `/v1/mcp` is exempt at this layer because the MCP dispatcher re-enters the underlying operation, which is checked again; a project key calling an org-only tool still receives 403 from the real route.
+
+Public create/list responses expose `scope: "organization" | "project"`, `projectId`, and `projectSlug` (`packages/operations/src/operations/api-keys.ts`). The project settings UI defaults new keys to the current project and lists keys visible on that project (project-bound keys for that project plus org-wide keys).
+
 ### `AuthContext` shape
 
 ```ts
 export type AuthContext =
-  | { method: "api-key"; userId: UserId /* "api-key:<keyId>" */; organizationId: OrganizationId }
+  | { method: "api-key"; userId: UserId /* "api-key:<keyId>" */; organizationId: OrganizationId;
+      projectId: ProjectId | null }
   | { method: "oauth";   userId: UserId; organizationId: OrganizationId; oauthClientId: string;
                          scopes: ReadonlyArray<string>; expiresAt: Date }
 ```
@@ -48,7 +62,7 @@ The middleware writes the chosen variant onto `c.var.auth`. `c.var.organization`
 
 Both validators live in dedicated platform packages so they can be reused by other resource servers without pulling in HTTP middleware:
 
-- `packages/platform/api-key-auth` — `validateApiKey(token, deps)`. Looks up the org-scoped API key, decrypts the AES-256-GCM-encrypted token, returns an `api-key` `AuthContext`.
+- `packages/platform/api-key-auth` — `validateApiKey(token, deps)`. Looks up the API key by token hash, decrypts the AES-256-GCM-encrypted token when needed, and returns `{ organizationId, keyId, isSandbox, projectId }` for the `api-key` `AuthContext`. Cached validation entries include `projectId`; older cache entries without that field are treated as misses and rewritten.
 - `packages/platform/oauth-token-auth` — `validateOAuthAccessToken(token, deps)`. Joins `oauth_access_tokens → oauth_applications`, rejects on expired token / disabled application / missing org binding, returns an `oauth` `AuthContext`. Pure Drizzle — no Better Auth dependency on the API side.
 
 Both follow the same caching shape:
@@ -72,6 +86,7 @@ attachSharedContext(db, redis, clickhouse, queue)   ← all routes
     createAuthRateLimiter()              ← global IP-based brute-force guard
     createAuthMiddleware()               ← API-key OR OAuth dispatch
     createOrganizationContextMiddleware()
+    createApiKeyProjectScopeMiddleware() ← 403/404 for project-bound keys on wrong routes
 
       /v1/...   ← all REST routes, with per-endpoint tier limiters
       /v1/mcp   ← MCP transport, per-request McpServer (OAuth bearers only)
