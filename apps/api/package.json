@@ -22,6 +22,7 @@
     "@domain/imports": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/partners": "workspace:*",
+    "@domain/projects": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/signals": "workspace:*",

@@ -21,5 +21,5 @@ export type AnnotationMetadata = AnnotationScoreMetadata
 export const annotationSourceIdSchema = annotationScoreSourceIdSchema
 export type AnnotationSourceId = AnnotationScoreSourceId
 
-export { ANNOTATION_ANCHOR_TEXT_FORMATS, annotationAnchorSchema }
 export type { AnnotationAnchor, AnnotationAnchorTextFormat }
+export { ANNOTATION_ANCHOR_TEXT_FORMATS, annotationAnchorSchema }

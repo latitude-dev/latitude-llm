@@ -1,9 +1,19 @@
-import { BadRequestError, OrganizationId, type ProjectId } from "@domain/shared"
+import {
+  BadRequestError,
+  findPostgresUniqueViolationConstraint,
+  OrganizationId,
+  type ProjectId,
+  type RepositoryError,
+} from "@domain/shared"
 import { resolveScoreTraceContext, resolveTraceIdFromRef, traceRefSchema } from "@domain/spans"
-import { Effect } from "effect"
+import { Cause, Effect, Exit } from "effect"
 import { z } from "zod"
 import { customScoreSchema, evaluationScoreSchema } from "../entities/score.ts"
+import { ScoreRepository } from "../ports/score-repository.ts"
 import { baseWriteScoreInputSchema, type WriteScoreInput, writeScoreUseCase } from "./write-score.ts"
+
+const isRepositoryError = (error: unknown): error is RepositoryError =>
+  typeof error === "object" && error !== null && (error as { _tag?: unknown })._tag === "RepositoryError"
 
 const formatValidationError = (error: z.ZodError): string => error.issues.map((issue) => issue.message).join(", ")
 
@@ -120,5 +130,29 @@ export const submitApiScoreUseCase = Effect.fn("scores.submitApiScore")(function
       ? { ...sharedWriteInput, sourceType: "evaluation", sourceId: parsed.sourceId, metadata: parsed.metadata }
       : { ...sharedWriteInput, sourceType: "custom", sourceId: parsed.sourceId, metadata: parsed.metadata }
 
-  return yield* writeScoreUseCase(writeInput)
+  const writeExit = yield* Effect.exit(writeScoreUseCase(writeInput))
+  if (Exit.isSuccess(writeExit)) {
+    return writeExit.value
+  }
+
+  // A losing race here already has a winning score in Postgres; return it instead of failing.
+  const errorOption = Cause.findErrorOption(writeExit.cause)
+  const isDuplicateEvaluationScore =
+    parsed.source === "evaluation" &&
+    errorOption._tag === "Some" &&
+    isRepositoryError(errorOption.value) &&
+    findPostgresUniqueViolationConstraint(errorOption.value.cause) === "scores_canonical_evaluation_trace_idx"
+
+  if (!isDuplicateEvaluationScore) {
+    return yield* writeExit
+  }
+
+  const scoreRepository = yield* ScoreRepository
+  const existingScore = yield* scoreRepository.findByEvaluationIdAndTraceId({
+    projectId: input.projectId,
+    evaluationId: parsed.sourceId,
+    traceId,
+  })
+
+  return existingScore ?? (yield* writeExit)
 })

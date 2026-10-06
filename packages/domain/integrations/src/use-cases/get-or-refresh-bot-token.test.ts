@@ -182,7 +182,7 @@ describe("getOrRefreshBotTokenUseCase", () => {
     if (Exit.isFailure(exit)) {
       const failReason = exit.cause.reasons.find(Cause.isFailReason)
       expect(failReason?.error).toBeInstanceOf(SlackTokenRefreshError)
-      expect((failReason?.error as SlackTokenRefreshError).reason).toBe("invalid_refresh_token")
+      expect((failReason?.error as SlackTokenRefreshError)?.reason).toBe("invalid_refresh_token")
     }
 
     // The dead chain was stamped so the UI can prompt a reconnect.

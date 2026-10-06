@@ -117,7 +117,7 @@ describe("DestinationRepositoryLive", () => {
       if (Exit.isFailure(exit)) {
         const failReason = exit.cause.reasons.find(Cause.isFailReason)
         expect(failReason?.error).toBeInstanceOf(ConflictError)
-        expect((failReason?.error as ConflictError).field).toBe("kind")
+        expect((failReason?.error as ConflictError)?.field).toBe("kind")
       }
     })
 
@@ -293,7 +293,7 @@ describe("DestinationRepositoryLive", () => {
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) {
         const failReason = exit.cause.reasons.find(Cause.isFailReason)
-        expect((failReason?.error as { _tag?: string })._tag).toBe("NotFoundError")
+        expect((failReason?.error as { _tag?: string })?._tag).toBe("NotFoundError")
       }
     })
   })

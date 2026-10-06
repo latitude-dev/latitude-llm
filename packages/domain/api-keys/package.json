@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@domain/events": "workspace:*",
+    "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",

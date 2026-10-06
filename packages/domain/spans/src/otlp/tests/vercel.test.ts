@@ -987,24 +987,24 @@ describe("Vercel AI SDK streamObject / generateObject output", () => {
     }
   }
 
-  it.each([
-    ["ai.streamObject"],
-    ["ai.generateObject"],
-  ])("%s surfaces ai.response.object as assistant output", (operationId) => {
-    const obj = { city: "Barcelona", temperature: 22 }
-    const { spans } = transformOtlpToSpans(buildObjectSpan(operationId, obj), CONTEXT)
-    const span = spans[0]
-    expect(span).toBeDefined()
+  it.each([["ai.streamObject"], ["ai.generateObject"]])(
+    "%s surfaces ai.response.object as assistant output",
+    (operationId) => {
+      const obj = { city: "Barcelona", temperature: 22 }
+      const { spans } = transformOtlpToSpans(buildObjectSpan(operationId, obj), CONTEXT)
+      const span = spans[0]
+      expect(span).toBeDefined()
 
-    expect(span?.outputMessages).toHaveLength(1)
-    const assistant = span?.outputMessages[0]
-    expect(assistant).toBeDefined()
-    expect(assistant?.role).toBe("assistant")
-    const parts = (assistant as { parts: { type: string; content?: string }[] }).parts
-    const textPart = parts.find((p) => p.type === "text")
-    expect(textPart).toBeDefined()
-    expect((textPart as { content: string }).content).toContain("Barcelona")
-  })
+      expect(span?.outputMessages).toHaveLength(1)
+      const assistant = span?.outputMessages[0]
+      expect(assistant).toBeDefined()
+      expect(assistant?.role).toBe("assistant")
+      const parts = (assistant as { parts: { type: string; content?: string }[] }).parts
+      const textPart = parts.find((p) => p.type === "text")
+      expect(textPart).toBeDefined()
+      expect((textPart as { content: string }).content).toContain("Barcelona")
+    },
+  )
 })
 
 describe("Vercel AI SDK wrapper operation by tree position", () => {

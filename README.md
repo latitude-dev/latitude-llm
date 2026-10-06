@@ -183,6 +183,11 @@ Contributions are welcome. Read the [Contributing Guide](CONTRIBUTING.md) to get
   <a href="https://github.com/eeshsaxena" title="eeshsaxena"><img src="https://avatars.githubusercontent.com/u/139802361?v=4&s=128" width="64" height="64" alt="eeshsaxena" /></a>
   <a href="https://github.com/Osamaali313" title="Osamaali313"><img src="https://avatars.githubusercontent.com/u/86572800?v=4&s=128" width="64" height="64" alt="Osamaali313" /></a>
   <a href="https://github.com/GouravSingal-code" title="GouravSingal-code"><img src="https://avatars.githubusercontent.com/u/60310438?v=4&s=128" width="64" height="64" alt="GouravSingal-code" /></a>
+  <a href="https://github.com/MonsterDeveloper" title="MonsterDeveloper"><img src="https://avatars.githubusercontent.com/u/16190582?v=4&s=128" width="64" height="64" alt="MonsterDeveloper" /></a>
+  <a href="https://github.com/ChenCJ-io" title="ChenCJ-io"><img src="https://avatars.githubusercontent.com/u/99855454?v=4&s=128" width="64" height="64" alt="ChenCJ-io" /></a>
+  <a href="https://github.com/phleudt" title="phleudt"><img src="https://avatars.githubusercontent.com/u/148907986?v=4&s=128" width="64" height="64" alt="phleudt" /></a>
+  <a href="https://github.com/ShubhamVsCode" title="ShubhamVsCode"><img src="https://avatars.githubusercontent.com/u/99742546?v=4&s=128" width="64" height="64" alt="ShubhamVsCode" /></a>
+  <a href="https://github.com/mikemikimike" title="mikemikimike"><img src="https://avatars.githubusercontent.com/u/186855910?v=4&s=128" width="64" height="64" alt="mikemikimike" /></a>
 </p>
 
 ## 🔗 Links

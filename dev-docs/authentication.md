@@ -21,6 +21,19 @@ API boundaries in `apps/api` and `apps/ingest` use API key authentication, not B
 
 Shared implementation: `packages/platform/api-key-auth` exports `validateApiKey`, which both apps call from their Hono middleware so cache TTLs, token hashing, minimum validation timing, and repository lookup stay aligned. `apps/api` additionally wires `onKeyValidated` to the touch buffer for batched `lastUsedAt` updates; ingest uses the same validator without that hook. A key only authenticates while it is active (not soft-deleted) and its organization still exists; unknown, revoked, and orphaned keys all take the same negative-cache path, and revocation busts the positive cache entry through `ApiKeyCacheInvalidator`. Deleting an organization revokes all of its API keys and OAuth keys first via `teardownOrganizationUseCase` (see [`organizations.md`](./organizations.md#how-organizations-get-deleted)).
 
+### API key scope
+
+`api_keys.project_id` is nullable. `NULL` means an **organization-wide** key (every key minted before project scope, bootstrap keys, and keys created without a project binding). A non-null value binds the key to that project within the org.
+
+Minting goes through `generateApiKeyUseCase` (`packages/domain/api-keys`). The target project must belong to the key's organization. Sandbox orgs still use the `lat_sandbox_` token prefix; scope is independent of that prefix.
+
+Enforcement is split by transport:
+
+- **REST** — after auth, `createApiKeyProjectScopeMiddleware` allows project-bound keys only on `/projects/{slug}/…` routes whose slug resolves to the bound project; everything else at organization scope returns 403, and a wrong slug returns 404. See [`api.md`](./api.md#api-key-scope).
+- **Ingest** — `scopedProjectId` from validation is passed into `ingestSpansUseCase`, which accepts only spans for the bound project and rejects conflicting routing hints instead of silently remapping them. See [`spans.md`](./spans.md#project-bound-api-keys-at-ingest).
+
+The web settings page for a project (`apps/web/.../settings/keys.tsx`) defaults new keys to project scope when opened in a project context, and filters the list with `apiKeysVisibleOnProject` (org-wide keys plus keys for that project). Org-level API key management still mints org-wide keys.
+
 `/v1/private/*` in `apps/api` uses neither: those routes authenticate a **partner** rather than a user or an organization, by verifying an HMAC signature over the timestamp, method, path and raw body. The primitives are shared with the webhook verifiers (`hmacSha256Hex`, constant-time `verifyHmacSha256Hex`), and the partner registry itself is staff-managed in the backoffice. See [`partners.md`](./partners.md).
 
 ## Core invariants

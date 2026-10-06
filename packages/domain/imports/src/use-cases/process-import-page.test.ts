@@ -320,7 +320,7 @@ describe("processImportPageUseCase", () => {
         payload: { projectId: job.projectId, isSandbox: false },
       })
       // 10 rows at 5 spans per trace.
-      expect((h.events[0]?.payload.traceIds as readonly string[]).length).toBe(2)
+      expect((h.events[0]?.payload.traceIds as readonly string[])?.length).toBe(2)
     })
 
     it("carries the plan snapshot so imported traces are billed like ingested ones", async () => {
@@ -1090,17 +1090,15 @@ describe("processImportPageUseCase", () => {
       expect(await h.run()).toEqual({ done: true, reason: "not_found" })
     })
 
-    it.each([
-      ["succeeded" as const],
-      ["capped" as const],
-      ["cancelled" as const],
-      ["failed" as const],
-    ])("does nothing when the job is already %s", async (status) => {
-      const h = harness(makeJob({ status }))
+    it.each([["succeeded" as const], ["capped" as const], ["cancelled" as const], ["failed" as const]])(
+      "does nothing when the job is already %s",
+      async (status) => {
+        const h = harness(makeJob({ status }))
 
-      expect(await h.run()).toEqual({ done: true, reason: "terminal" })
-      expect(h.fetchPageCalls).toHaveLength(0)
-    })
+        expect(await h.run()).toEqual({ done: true, reason: "terminal" })
+        expect(h.fetchPageCalls).toHaveLength(0)
+      },
+    )
 
     it("refuses a payload whose project does not match the job", async () => {
       const job = makeJob()
@@ -1371,24 +1369,23 @@ describe("recordImportFinalFailureUseCase", () => {
     upstreamStatus: 429,
   })
 
-  it.each([
-    ["created" as const],
-    ["queued" as const],
-    ["running" as const],
-  ])("marks a %s job failed and clears credentials once retries are exhausted", async (status) => {
-    const job = stubImportJob({ status, startedAt: new Date("2026-03-01T00:00:00Z") })
-    const h = importHarness({ seed: [job] })
-    const finishedAt = new Date("2026-03-01T00:05:00Z")
+  it.each([["created" as const], ["queued" as const], ["running" as const]])(
+    "marks a %s job failed and clears credentials once retries are exhausted",
+    async (status) => {
+      const job = stubImportJob({ status, startedAt: new Date("2026-03-01T00:00:00Z") })
+      const h = importHarness({ seed: [job] })
+      const finishedAt = new Date("2026-03-01T00:05:00Z")
 
-    const result = await Effect.runPromise(record(job, RATE_LIMITED, finishedAt).pipe(Effect.provide(h.layer)))
+      const result = await Effect.runPromise(record(job, RATE_LIMITED, finishedAt).pipe(Effect.provide(h.layer)))
 
-    expect(result).toEqual({ recorded: true })
-    const stored = h.stored.get(job.id)
-    expect(stored?.status).toBe("failed")
-    expect(stored?.error).toBe("[429] rate_limited: Too many requests")
-    expect(stored?.finishedAt).toBe(finishedAt)
-    expect(stored?.credentials).toBeNull()
-  })
+      expect(result).toEqual({ recorded: true })
+      const stored = h.stored.get(job.id)
+      expect(stored?.status).toBe("failed")
+      expect(stored?.error).toBe("[429] rate_limited: Too many requests")
+      expect(stored?.finishedAt).toBe(finishedAt)
+      expect(stored?.credentials).toBeNull()
+    },
+  )
 
   // The sanitizer is what keeps a source's own error text out of the row unrecognized.
   it("records a generic reason for a failure that is not a source error", async () => {
@@ -1400,25 +1397,23 @@ describe("recordImportFinalFailureUseCase", () => {
     expect(h.stored.get(job.id)?.error).toBe("Import retries exhausted")
   })
 
-  it.each([
-    ["succeeded" as const],
-    ["capped" as const],
-    ["cancelled" as const],
-    ["failed" as const],
-  ])("does not overwrite a %s job from a stale hook", async (status) => {
-    const finishedAt = new Date("2026-03-01T00:05:00Z")
-    const job = stubImportJob({ status, finishedAt, credentials: null })
-    const h = importHarness({ seed: [job] })
+  it.each([["succeeded" as const], ["capped" as const], ["cancelled" as const], ["failed" as const]])(
+    "does not overwrite a %s job from a stale hook",
+    async (status) => {
+      const finishedAt = new Date("2026-03-01T00:05:00Z")
+      const job = stubImportJob({ status, finishedAt, credentials: null })
+      const h = importHarness({ seed: [job] })
 
-    const result = await Effect.runPromise(
-      record(job, new Error("stale retry"), new Date("2026-03-01T00:10:00Z")).pipe(Effect.provide(h.layer)),
-    )
+      const result = await Effect.runPromise(
+        record(job, new Error("stale retry"), new Date("2026-03-01T00:10:00Z")).pipe(Effect.provide(h.layer)),
+      )
 
-    expect(result).toEqual({ recorded: false, reason: "terminal" })
-    expect(h.stored.get(job.id)?.status).toBe(status)
-    expect(h.stored.get(job.id)?.finishedAt).toBe(finishedAt)
-    expect(h.stored.get(job.id)?.error).toBeNull()
-  })
+      expect(result).toEqual({ recorded: false, reason: "terminal" })
+      expect(h.stored.get(job.id)?.status).toBe(status)
+      expect(h.stored.get(job.id)?.finishedAt).toBe(finishedAt)
+      expect(h.stored.get(job.id)?.error).toBeNull()
+    },
+  )
 
   it("reports a deleted job rather than failing the hook", async () => {
     const job = stubImportJob({ status: "running" })
