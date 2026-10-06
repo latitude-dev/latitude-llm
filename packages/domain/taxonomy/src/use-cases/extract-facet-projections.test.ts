@@ -3,6 +3,7 @@ import { ChSqlClient, FacetId, OrganizationId, ProjectId, SessionId } from "@dom
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import type { z } from "zod"
 import { FACET_EXTRACTION_INPUT_CHAR_CAP, FACET_PROJECTION_TEXT_MAX_LENGTH } from "../constants.ts"
 import type { TaxonomyFacet } from "../entities/facet.ts"
 import type { TaxonomyFacetProjection } from "../entities/facet-projection.ts"
@@ -43,6 +44,7 @@ const sample = (overrides: Partial<FacetExtractionSample> = {}): FacetExtraction
 interface AiSpy {
   readonly systemPrompts: string[]
   readonly prompts: string[]
+  readonly schemas: z.ZodTypeAny[]
   readonly embedTexts: string[]
   generateCalls: number
   embedCalls: number
@@ -59,6 +61,7 @@ const makeAi = (
     spy.generateCalls++
     spy.systemPrompts.push(input.system)
     spy.prompts.push(input.prompt)
+    spy.schemas.push(input.schema as z.ZodTypeAny)
     return Effect.succeed({
       object: respond(input as GenerateInput<unknown>) as T,
       tokens: 10,
@@ -86,7 +89,14 @@ const run = (
   return { effect, repo }
 }
 
-const emptySpy = (): AiSpy => ({ systemPrompts: [], prompts: [], embedTexts: [], generateCalls: 0, embedCalls: 0 })
+const emptySpy = (): AiSpy => ({
+  systemPrompts: [],
+  prompts: [],
+  schemas: [],
+  embedTexts: [],
+  generateCalls: 0,
+  embedCalls: 0,
+})
 
 describe("extractFacetProjectionsUseCase", () => {
   it("extracts, embeds, and persists a projection for each cache miss", async () => {
@@ -210,6 +220,23 @@ describe("extractFacetProjectionsUseCase", () => {
 
     expect(spy.generateCalls).toBe(1)
     expect(result.projections).toHaveLength(1)
+  })
+
+  it("tolerates a model response that omits unclear/answer so schema validation doesn't force a wasted fallback call", async () => {
+    // Bedrock's minimax/gpt-oss models routinely reply with only the field they
+    // consider relevant (e.g. `{"answer": "..."}` with no explicit `unclear: false`),
+    // which a schema requiring both fields rejects as structurally invalid —
+    // triggering a needless second (fallback) model generation. See the sibling
+    // fix in run-flagger.ts for the same pattern with `agentContext`.
+    const spy = emptySpy()
+    const { effect } = run({ facet: facet(), samples: [sample()], now }, { ai: makeAi(spy) })
+
+    await Effect.runPromise(effect)
+
+    const schema = spy.schemas[0]
+    expect(schema?.safeParse({ answer: "The user wants to cancel their subscription." }).success).toBe(true)
+    expect(schema?.safeParse({ unclear: true }).success).toBe(true)
+    expect(schema?.safeParse({}).success).toBe(true)
   })
 
   it("returns an empty result and touches nothing when there are no samples", async () => {
