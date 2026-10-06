@@ -314,36 +314,35 @@ describe("readSessionAssessmentSources", () => {
     expect(intact.findings.some((finding) => finding.kind === "finishFailure")).toBe(false)
   })
 
-  it.each([
-    "length",
-    "max_tokens",
-    "max_output_tokens",
-  ])("counts a final prose completion stopped by %s as a reliability failure", async (finishReason) => {
-    const generation = span("e", 0, 10, { finishReasons: [finishReason] })
-    const result = await read(
-      session([
-        {
-          role: "assistant",
-          parts: [
-            {
-              type: "text",
-              content:
-                "The CMR showing the original seal number SL-88214, the gate CCTV timestamped for the arrival, " +
-                "the quarantine record from your QA, and the",
-            },
-          ],
-        },
-      ]),
-      [generation],
-    )
+  it.each(["length", "max_tokens", "max_output_tokens"])(
+    "counts a final prose completion stopped by %s as a reliability failure",
+    async (finishReason) => {
+      const generation = span("e", 0, 10, { finishReasons: [finishReason] })
+      const result = await read(
+        session([
+          {
+            role: "assistant",
+            parts: [
+              {
+                type: "text",
+                content:
+                  "The CMR showing the original seal number SL-88214, the gate CCTV timestamped for the arrival, " +
+                  "the quarantine record from your QA, and the",
+              },
+            ],
+          },
+        ]),
+        [generation],
+      )
 
-    expect(result.findings).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "finishFailure" })]))
-    expect(resolveSessionAssessment(result).items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ metricId: "spans.finish_failure", polarity: "negative", impactLevel: "high" }),
-      ]),
-    )
-  })
+      expect(result.findings).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "finishFailure" })]))
+      expect(resolveSessionAssessment(result).items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ metricId: "spans.finish_failure", polarity: "negative", impactLevel: "high" }),
+        ]),
+      )
+    },
+  )
 
   it("counts bracket-numbered prose as a final prose completion", async () => {
     const generation = span("j", 0, 10, { finishReasons: ["length"] })
