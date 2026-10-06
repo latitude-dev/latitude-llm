@@ -36,7 +36,7 @@ class RawAnalyticsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request : AnalyticsQuery
 
@@ -124,7 +124,7 @@ class AsyncRawAnalyticsClient:
         Parameters
         ----------
         project_slug : str
-            Project slug (human-readable identifier)
+            Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.
 
         request : AnalyticsQuery
 

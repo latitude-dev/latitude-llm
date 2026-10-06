@@ -36,6 +36,15 @@ type RecordedQuery = {
 const generationFactQueries = (queries: readonly RecordedQuery[]) =>
   queries.filter((query) => query.query.includes("length(input_messages) AS input_message_bytes"))
 
+const spanListQueries = (queries: readonly RecordedQuery[]) =>
+  queries.filter(
+    (query) =>
+      query.query.includes("ORDER BY trace_id, span_id, ingested_at DESC") && query.query.includes("attr_string"),
+  )
+
+const toolCallQueries = (queries: readonly RecordedQuery[]) =>
+  queries.filter((query) => query.query.includes("AS normalized_tool_name"))
+
 const generationContentQueries = (queries: readonly RecordedQuery[]) =>
   queries.filter((query) =>
     query.query.includes("SELECT trace_id, span_id, input_messages, output_messages, tool_definitions"),
@@ -216,6 +225,51 @@ describe("SpanRepository Cost and Speed source facts", () => {
         modelContextState: "known",
       })
       expect(facts[0]?.modelContextLimitTokens ?? 0).toBeGreaterThan(0)
+    })
+
+    it("applies the start-time range to generation facts and selected content", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          spanRow({
+            span_id: "0000000000000001",
+            start_time: "2025-12-01 00:00:00.000000000",
+            end_time: "2025-12-01 00:00:01.000000000",
+          }),
+          spanRow({ span_id: "0000000000000002", input_messages: messages("inside") }),
+          spanRow({
+            span_id: "0000000000000003",
+            start_time: "2026-02-01 00:00:00.000000000",
+            end_time: "2026-02-01 00:00:01.000000000",
+          }),
+        ]),
+      )
+      const startTimeFrom = new Date("2025-12-31T00:00:00.000Z")
+      const startTimeTo = new Date("2026-01-15T00:00:00.000Z")
+      const queries: RecordedQuery[] = []
+      const facts = await Effect.runPromise(
+        repo
+          .listGenerationFactsByTraceIds({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceIds: [TRACE_A],
+            startTimeFrom,
+            startTimeTo,
+            contentBudget: UNLIMITED_BUDGET,
+            sessionKeyByTraceId: SESSION_KEYS,
+          })
+          .pipe(Effect.provide(ChSqlClientLive(recordingClient(queries), ORG_ID))),
+      )
+
+      expect(facts.map((fact) => fact.spanId)).toEqual([SpanId("0000000000000002")])
+      expect(facts[0]?.content?.inputMessages[0]?.parts[0]?.content).toBe("inside")
+      expect([...generationFactQueries(queries), ...generationContentQueries(queries)]).toHaveLength(2)
+      expect(
+        [...generationFactQueries(queries), ...generationContentQueries(queries)].every(
+          (query) =>
+            query.queryParams?.startTimeFrom === "2025-12-31T00:00:00.000" &&
+            query.queryParams?.startTimeTo === "2026-01-15T00:00:00.000",
+        ),
+      ).toBe(true)
     })
 
     it("reports absent content without loading a payload", async () => {
@@ -568,6 +622,45 @@ describe("SpanRepository Cost and Speed source facts", () => {
       expect(fact?.outputHash).toBe("")
     })
 
+    it("applies the start-time range to tool-call facts", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          toolRow({
+            span_id: "0000000000000001",
+            tool_call_id: "before",
+            start_time: "2025-12-01 00:00:00.000000000",
+            end_time: "2025-12-01 00:00:01.000000000",
+          }),
+          toolRow({ span_id: "0000000000000002", tool_call_id: "inside" }),
+          toolRow({
+            span_id: "0000000000000003",
+            tool_call_id: "after",
+            start_time: "2026-02-01 00:00:00.000000000",
+            end_time: "2026-02-01 00:00:01.000000000",
+          }),
+        ]),
+      )
+      const queries: RecordedQuery[] = []
+      const facts = await Effect.runPromise(
+        repo
+          .listToolCallFactsByTraceIds({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceIds: [TRACE_A],
+            startTimeFrom: new Date("2025-12-31T00:00:00.000Z"),
+            startTimeTo: new Date("2026-01-15T00:00:00.000Z"),
+          })
+          .pipe(Effect.provide(ChSqlClientLive(recordingClient(queries), ORG_ID))),
+      )
+
+      expect(facts.map((fact) => fact.toolCallId)).toEqual(["inside"])
+      expect(toolCallQueries(queries)).toHaveLength(1)
+      expect(toolCallQueries(queries)[0]?.queryParams).toMatchObject({
+        startTimeFrom: "2025-12-31T00:00:00.000",
+        startTimeTo: "2026-01-15T00:00:00.000",
+      })
+    })
+
     it("distinguishes different payloads and carries failure evidence", async () => {
       await runCh(
         insertJsonEachRow(ch.client, "spans", [
@@ -614,6 +707,98 @@ describe("SpanRepository Cost and Speed source facts", () => {
 
       expect(await readToolCalls([TRACE_A])).toEqual([])
       expect(await readToolCalls([])).toEqual([])
+    })
+
+    it("splits a long trace list into bounded queries and restores one global order", async () => {
+      const traces = Array.from({ length: 9 }, (_, index) => TraceId((index + 80).toString(16).padStart(32, "0")))
+      await runCh(
+        insertJsonEachRow(
+          ch.client,
+          "spans",
+          traces.map((traceId, index) =>
+            toolRow({
+              trace_id: traceId,
+              span_id: (index + 80).toString(16).padStart(16, "0"),
+              tool_call_id: `call-${index}`,
+              tool_name: "search",
+              tool_input: "{}",
+              start_time: `2026-01-01 00:00:0${9 - index}.000000000`,
+            }),
+          ),
+        ),
+      )
+      const queries: RecordedQuery[] = []
+      const facts = await Effect.runPromise(
+        repo
+          .listToolCallFactsByTraceIds({ organizationId: ORG_ID, projectId: PROJECT_ID, traceIds: traces })
+          .pipe(Effect.provide(ChSqlClientLive(recordingClient(queries), ORG_ID))),
+      )
+
+      expect(facts.map((fact) => fact.traceId)).toEqual([...traces].reverse())
+      const reads = toolCallQueries(queries)
+      expect(reads).toHaveLength(2)
+      expect(reads.map((query) => query.queryParams?.traceIds)).toEqual([traces.slice(0, 8), [traces[8]]])
+      expect(reads.every((query) => query.settings?.max_threads === 1)).toBe(true)
+    })
+  })
+
+  describe("listByTraceIds", () => {
+    /**
+     * The read that failed in production: one `trace_id IN (...)` over a whole session batch could
+     * exceed ClickHouse's per-query memory cap and fail the day's score outright.
+     */
+    it("splits a long trace list into bounded queries, dedupes it, and restores one global order", async () => {
+      const traces = Array.from({ length: 9 }, (_, index) => TraceId((index + 60).toString(16).padStart(32, "0")))
+      await runCh(
+        insertJsonEachRow(
+          ch.client,
+          "spans",
+          traces.map((traceId, index) =>
+            spanRow({
+              trace_id: traceId,
+              span_id: (index + 60).toString(16).padStart(16, "0"),
+              start_time: `2026-01-01 00:00:0${9 - index}.000000000`,
+            }),
+          ),
+        ),
+      )
+      const queries: RecordedQuery[] = []
+      const spans = await Effect.runPromise(
+        repo
+          .listByTraceIds({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceIds: traces.concat(traces[0] as TraceId),
+          })
+          .pipe(Effect.provide(ChSqlClientLive(recordingClient(queries), ORG_ID))),
+      )
+
+      expect(spans.map((span) => span.traceId)).toEqual([...traces].reverse())
+      const reads = spanListQueries(queries)
+      expect(reads).toHaveLength(2)
+      expect(reads.map((query) => query.queryParams?.traceIds)).toEqual([traces.slice(0, 8), [traces[8]]])
+      expect(reads.every((query) => new Set(query.queryParams?.traceIds as string[]).size <= 8)).toBe(true)
+      expect(reads.every((query) => query.settings?.max_threads === 1)).toBe(true)
+      expect(reads.every((query) => query.settings?.max_block_size === "256")).toBe(true)
+    })
+
+    it("fails the complete read when a later batch fails and does not start later batches", async () => {
+      const traces = Array.from({ length: 17 }, (_, index) => TraceId((index + 100).toString(16).padStart(32, "0")))
+      const queries: RecordedQuery[] = []
+      const client = recordingClient(queries, (query) =>
+        (query.queryParams?.traceIds as string[] | undefined)?.includes(traces[8] as string)
+          ? new Error("later batch failed")
+          : null,
+      )
+
+      await expect(
+        Effect.runPromise(
+          repo
+            .listByTraceIds({ organizationId: ORG_ID, projectId: PROJECT_ID, traceIds: traces })
+            .pipe(Effect.provide(ChSqlClientLive(client, ORG_ID))),
+        ),
+      ).rejects.toMatchObject({ _tag: "RepositoryError", operation: "listByTraceIds" })
+      expect(spanListQueries(queries)).toHaveLength(2)
     })
   })
 })

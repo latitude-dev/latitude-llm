@@ -1,15 +1,6 @@
 import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
-import {
-  CacheStore,
-  ChSqlClient,
-  FlaggerId,
-  generateId,
-  OrganizationId,
-  ProjectId,
-  SessionId,
-  SqlClient,
-} from "@domain/shared"
+import { CacheStore, ChSqlClient, FlaggerId, generateId, OrganizationId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { SessionRepository, SpanRepository } from "@domain/spans"
 import { createFakeSessionRepository, createFakeSpanRepository } from "@domain/spans/testing"
@@ -17,13 +8,10 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { FLAGGER_DEFAULT_CLASSIFIER_MODEL } from "../constants.ts"
 import type { Flagger } from "../entities/flagger.ts"
-import type { FlaggerScreeningSelection } from "../entities/flagger-screening-decision.ts"
 import { safetyJudgmentVersion } from "../entities/safety-verdict.ts"
 import { taskOutcomeJudgmentVersion } from "../entities/task-outcome-verdict.ts"
 import { assistant, makeSessionDetail, user } from "../flagger-strategies/test-helpers.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
-import { JevShadowDecisionProvider } from "../ports/jev-shadow-decision-provider.ts"
-import { JevShadowObservationRepository } from "../ports/jev-shadow-observation-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
 import { classifySessionFlaggerUseCase } from "./classify-session-flagger.ts"
 
@@ -33,11 +21,6 @@ const INPUT = {
   sessionId: "session-1",
   flaggerSlug: "jailbreaking",
 }
-
-const jevShadowLayers = Layer.mergeAll(
-  Layer.succeed(JevShadowDecisionProvider, { decide: () => Effect.die("Jev must not be called") }),
-  Layer.succeed(JevShadowObservationRepository, { save: () => Effect.die("Jev must not be saved") }),
-)
 
 // Entry-point gating: these guards run before any repository or AI work, so
 // every fake below dies if touched.
@@ -65,7 +48,6 @@ const dyingLayers = (flaggerRepo?: ReturnType<typeof createFakeFlaggerRepository
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
     aiLayer,
-    jevShadowLayers,
   )
 }
 
@@ -167,171 +149,12 @@ describe("classifySessionFlaggerUseCase gating", () => {
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             aiLayer,
-            jevShadowLayers,
           ),
         ),
       ),
     )
 
     expect(result).toEqual({ matched: false, outcome: "notApplicable" })
-  })
-})
-
-describe("classifySessionFlaggerUseCase Jev shadow", () => {
-  const session = makeSessionDetail([user("What is the capital of France?"), assistant("I cannot help with that.")])
-  const screeningSelection = {
-    decisionId: "d".repeat(64),
-    organizationId: OrganizationId(INPUT.organizationId),
-    projectId: ProjectId(INPUT.projectId),
-    sessionId: SessionId(INPUT.sessionId),
-    flaggerSlug: "refusal",
-    analysisHash: "a".repeat(64),
-    scoringArtifactVersion: "flagger-screening-v1",
-    selected: true,
-    reason: "hinted",
-    inclusionProbability: 1,
-    hintKinds: [],
-    retentionDays: 90,
-    attempt: 1,
-    version: 1,
-  } as FlaggerScreeningSelection
-
-  const classify = (
-    shadowLayer: Layer.Layer<JevShadowDecisionProvider | JevShadowObservationRepository>,
-    selection: Omit<FlaggerScreeningSelection, "attempt" | "version"> & {
-      readonly attempt?: number | undefined
-      readonly version?: number | undefined
-    } = screeningSelection,
-  ) => {
-    const { repository: sessionRepo } = createFakeSessionRepository({ findBySessionId: () => Effect.succeed(session) })
-    const { repository: spanRepo } = createFakeSpanRepository({
-      findLatestOutputTraceId: () => Effect.die("spans must not be queried for single-trace sessions"),
-    })
-    const { repository: flaggerRepo } = createFakeFlaggerRepository([], {
-      findByProjectAndSlug: () =>
-        Effect.succeed({
-          id: FlaggerId(generateId()),
-          organizationId: INPUT.organizationId,
-          projectId: INPUT.projectId,
-          slug: "refusal",
-          enabled: true,
-          sampling: 10,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as Flagger),
-    })
-    const { layer: aiLayer } = createFakeAI({
-      generate: <T>() => Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 1 }),
-    })
-
-    return Effect.runPromise(
-      classifySessionFlaggerUseCase({
-        ...INPUT,
-        flaggerSlug: "refusal",
-        jevShadow: {
-          enabled: true,
-          screeningSelection: selection,
-          workflowId: "workflow-1",
-          workflowRunId: "run-1",
-          activityId: "activity-1",
-          activityAttempt: 1,
-        },
-      }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(SessionRepository, sessionRepo),
-            Layer.succeed(SpanRepository, spanRepo),
-            Layer.succeed(FlaggerRepository, flaggerRepo),
-            Layer.succeed(CacheStore, {
-              get: () => Effect.succeed(null),
-              set: () => Effect.void,
-              delete: () => Effect.void,
-            }),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-            aiLayer,
-            shadowLayer,
-          ),
-        ),
-      ),
-    )
-  }
-
-  it("runs the enabled shadow provider and audit without changing the baseline result", async () => {
-    let providerCalls = 0
-    let auditWrites = 0
-    let screeningAttempt: number | undefined
-    let screeningVersion: number | undefined
-    const { attempt: _, version: __, ...legacySelection } = screeningSelection
-    const result = await classify(
-      Layer.mergeAll(
-        Layer.succeed(JevShadowDecisionProvider, {
-          decide: () =>
-            Effect.sync(() => {
-              providerCalls++
-              return {
-                kind: "success" as const,
-                probability: 0.9,
-                provider: "jev",
-                requestedModel: "judge",
-                resolvedModel: "judge",
-                latencyMs: 1,
-                inputTokens: 1,
-                outputTokens: 1,
-              }
-            }),
-        }),
-        Layer.succeed(JevShadowObservationRepository, {
-          save: (observation) =>
-            Effect.sync(() => {
-              auditWrites++
-              screeningAttempt = observation.screeningAttempt
-              screeningVersion = observation.screeningVersion
-            }),
-        }),
-      ),
-      legacySelection,
-    )
-
-    expect(result).toEqual({ matched: false, outcome: "indeterminate" })
-    expect(providerCalls).toBe(1)
-    expect(auditWrites).toBe(1)
-    expect(screeningAttempt).toBe(1)
-    expect(screeningVersion).toBe(1)
-  })
-
-  it("contains a shadow provider defect without changing the baseline result", async () => {
-    const result = await classify(
-      Layer.mergeAll(
-        Layer.succeed(JevShadowDecisionProvider, { decide: () => Effect.die("provider defect") }),
-        Layer.succeed(JevShadowObservationRepository, { save: () => Effect.die("audit must not run") }),
-      ),
-    )
-
-    expect(result).toEqual({ matched: false, outcome: "indeterminate" })
-  })
-
-  it("times out a stalled audit without changing the baseline result", async () => {
-    const result = await classify(
-      Layer.mergeAll(
-        Layer.succeed(JevShadowDecisionProvider, {
-          decide: () =>
-            Effect.succeed({
-              kind: "success" as const,
-              probability: 0.9,
-              provider: "jev",
-              requestedModel: "judge",
-              resolvedModel: "judge",
-              latencyMs: 1,
-              inputTokens: 1,
-              outputTokens: 1,
-            }),
-        }),
-        Layer.succeed(JevShadowObservationRepository, { save: () => Effect.never }),
-      ),
-    )
-
-    expect(result).toEqual({ matched: false, outcome: "indeterminate" })
   })
 })
 
@@ -392,7 +215,6 @@ describe("classifySessionFlaggerUseCase task-failure verdicts", () => {
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             aiLayer,
-            jevShadowLayers,
           ),
         ),
       ),
@@ -502,7 +324,6 @@ describe("classifySessionFlaggerUseCase Safety findings", () => {
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             aiLayer,
-            jevShadowLayers,
           ),
         ),
       ),

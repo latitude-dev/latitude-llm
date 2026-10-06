@@ -921,99 +921,102 @@ describe("listSignalsUseCase", () => {
       },
     ]
 
-    it.each(cases)("$name", async ({
-      timeRange,
-      expectedFromIso,
-      expectedToIso,
-      expectedBucketSeconds,
-      expectedFirstBucketIso,
-      expectedLastBucketIso,
-    }) => {
-      const now = new Date("2026-04-10T12:00:00.000Z")
-      const issue = makeSignal({
-        id: SignalId("m".repeat(24)),
-        name: "Histogram issue",
-      })
+    it.each(cases)(
+      "$name",
+      async ({
+        timeRange,
+        expectedFromIso,
+        expectedToIso,
+        expectedBucketSeconds,
+        expectedFirstBucketIso,
+        expectedLastBucketIso,
+      }) => {
+        const now = new Date("2026-04-10T12:00:00.000Z")
+        const issue = makeSignal({
+          id: SignalId("m".repeat(24)),
+          name: "Histogram issue",
+        })
 
-      const { repository: signalRepository } = createFakeSignalRepository([issue])
-      const { repository: evaluationRepository } = createEvaluationRepository()
-      const histogramInputs: Array<{
-        signalIds: readonly string[]
-        from: Date
-        to: Date
-        bucketSeconds: number
-      }> = []
-      const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-        listSignalWindowMetrics: () =>
-          Effect.succeed([
-            makeWindowMetric({
+        const { repository: signalRepository } = createFakeSignalRepository([issue])
+        const { repository: evaluationRepository } = createEvaluationRepository()
+        const histogramInputs: Array<{
+          signalIds: readonly string[]
+          from: Date
+          to: Date
+          bucketSeconds: number
+        }> = []
+        const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+          listSignalWindowMetrics: () =>
+            Effect.succeed([
+              makeWindowMetric({
+                signalId: issue.id,
+                occurrences: 3,
+                firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
+                lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
+              }),
+            ]),
+          aggregateBySignals: aggregateOccurrences([
+            makeOccurrence({
               signalId: issue.id,
-              occurrences: 3,
+              totalOccurrences: 3,
+              recentOccurrences: 3,
+              baselineAvgOccurrences: 1,
               firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
               lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
             }),
           ]),
-        aggregateBySignals: aggregateOccurrences([
-          makeOccurrence({
-            signalId: issue.id,
-            totalOccurrences: 3,
-            recentOccurrences: 3,
-            baselineAvgOccurrences: 1,
-            firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
-            lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
-          }),
-        ]),
-        histogramBySignals: ({ signalIds, timeRange, bucketSeconds }) =>
-          Effect.sync(() => {
-            histogramInputs.push({
-              signalIds,
-              from: timeRange.from ?? new Date(0),
-              to: timeRange.to ?? new Date(0),
-              bucketSeconds,
-            })
-            return []
-          }),
-      })
-      createSignalSearch([])
-      sessionCount = 3
+          histogramBySignals: ({ signalIds, timeRange, bucketSeconds }) =>
+            Effect.sync(() => {
+              histogramInputs.push({
+                signalIds,
+                from: timeRange.from ?? new Date(0),
+                to: timeRange.to ?? new Date(0),
+                bucketSeconds,
+              })
+              return []
+            }),
+        })
+        createSignalSearch([])
+        sessionCount = 3
 
-      const result = await Effect.runPromise(
-        listSignalsUseCase({
-          organizationId,
-          projectId,
-          ...(timeRange ? { timeRange } : {}),
-          now,
-        }).pipe(
-          Effect.provide(
-            Layer.mergeAll(
-              Layer.succeed(SignalRepository, signalRepository),
-              Layer.succeed(EvaluationRepository, evaluationRepository),
-              Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-              provideSessionRepository,
+        const result = await Effect.runPromise(
+          listSignalsUseCase({
+            organizationId,
+            projectId,
+            ...(timeRange ? { timeRange } : {}),
+            now,
+          }).pipe(
+            Effect.provide(
+              Layer.mergeAll(
+                Layer.succeed(SignalRepository, signalRepository),
+                Layer.succeed(EvaluationRepository, evaluationRepository),
+                Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+                Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+                Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+                provideSessionRepository,
+              ),
             ),
           ),
-        ),
-      )
+        )
 
-      expect(histogramInputs[0]?.signalIds).toEqual([issue.id])
-      expect(histogramInputs[0]?.from.toISOString()).toBe(expectedFromIso)
-      expect(histogramInputs[0]?.to.toISOString()).toBe(expectedToIso)
-      expect(histogramInputs[0]?.bucketSeconds).toBe(expectedBucketSeconds)
-      expect(result.analytics.histogramBucketSeconds).toBe(expectedBucketSeconds)
+        expect(histogramInputs[0]?.signalIds).toEqual([issue.id])
+        expect(histogramInputs[0]?.from.toISOString()).toBe(expectedFromIso)
+        expect(histogramInputs[0]?.to.toISOString()).toBe(expectedToIso)
+        expect(histogramInputs[0]?.bucketSeconds).toBe(expectedBucketSeconds)
+        expect(result.analytics.histogramBucketSeconds).toBe(expectedBucketSeconds)
 
-      const histogram = result.analytics.histogram
-      expect(histogram.length).toBeGreaterThan(0)
-      expect(histogram[0]?.bucket).toBe(expectedFirstBucketIso)
-      expect(histogram[histogram.length - 1]?.bucket).toBe(expectedLastBucketIso)
-      // Every bucket key is aligned to the chosen interval — no drift between scaffold rows.
-      const widthMs = expectedBucketSeconds * 1000
-      const firstMs = Date.parse(expectedFirstBucketIso)
-      for (const [index, bucket] of histogram.entries()) {
-        expect(Date.parse(bucket.bucket)).toBe(firstMs + index * widthMs)
-      }
-    })
+        const histogram = result.analytics.histogram
+        expect(histogram.length).toBeGreaterThan(0)
+        expect(histogram[0]?.bucket).toBe(expectedFirstBucketIso)
+        expect(histogram[histogram.length - 1]?.bucket).toBe(expectedLastBucketIso)
+        // Every bucket key is aligned to the chosen interval — no drift between scaffold rows.
+        const widthMs = expectedBucketSeconds * 1000
+        const firstMs = Date.parse(expectedFirstBucketIso)
+        for (const [index, bucket] of histogram.entries()) {
+          expect(Date.parse(bucket.bucket)).toBe(firstMs + index * widthMs)
+        }
+      },
+    )
 
     it("anchors the All-time histogram and trend to the latest activity when data predates today", async () => {
       const now = new Date("2026-04-10T12:00:00.000Z")

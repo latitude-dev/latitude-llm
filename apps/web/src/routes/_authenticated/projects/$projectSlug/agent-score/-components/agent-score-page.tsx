@@ -1,8 +1,9 @@
-import { Button, Icon, Text, useToast } from "@repo/ui"
-import { RotateCwIcon } from "lucide-react"
+import { Alert, Button, Icon, Status, Tabs, Text, useToast } from "@repo/ui"
+import { Loader2Icon, RotateCwIcon } from "lucide-react"
 import { useState } from "react"
 import {
   useProjectAgentScore,
+  useProjectAgentScoreComputation,
   useProjectAgentScoreExplanation,
   useProjectAgentScoreHistory,
 } from "../../../../../../domains/agent-score/agent-score.collection.ts"
@@ -14,104 +15,73 @@ import type { useRouteProject } from "../../-route-data.ts"
 import { formatCount, SCORE_DIMENSION_ORDER } from "./agent-score-format.ts"
 import {
   agentScoreExplanationForSnapshot,
-  agentScoreRefreshCompleted,
-  agentScoreRefreshMarker,
-  agentScoreSnapshotEvidenceCompleted,
-  agentScoreSnapshotMarker,
   agentVitalityIsLoading,
   isCurrentAgentScoreSnapshot,
-  isStaleAgentScoreSnapshot,
-  waitForAgentScoreRefresh,
 } from "./agent-score-refresh.ts"
 import { AgentVitality } from "./agent-vitality.tsx"
 import { buildDimensionEvidence, type DimensionEvidence } from "./dimension-evidence.ts"
 import { DIMENSION_META } from "./dimension-meta.ts"
 import { DimensionSection, DimensionSectionSkeleton } from "./dimension-section.tsx"
-import { ScoreTrend } from "./score-trend.tsx"
+import { ScoreDateNavigator } from "./score-date-navigator.tsx"
+import { ScoreSnapshotButton } from "./score-snapshot-button.tsx"
+import { ScoreSummary } from "./score-summary.tsx"
+import { ScoreTrend, TREND_RANGE_OPTIONS, type TrendRange } from "./score-trend.tsx"
 
-type RouteProject = ReturnType<typeof useRouteProject>
+type RouteProject = Pick<ReturnType<typeof useRouteProject>, "id" | "slug" | "name">
 
 const EMPTY_EVIDENCE: DimensionEvidence = { affected: [], coverageGaps: [], healthy: [], context: [] }
 
 const scoreTrendIsLoading = ({
-  isReloading,
   isHistoryLoading,
   isExplanationLoading,
   isCurrentSnapshot,
 }: {
-  readonly isReloading: boolean
   readonly isHistoryLoading: boolean
   readonly isExplanationLoading: boolean
   readonly isCurrentSnapshot: boolean
-}): boolean => isReloading || isHistoryLoading || (!isCurrentSnapshot && isExplanationLoading)
+}): boolean => isHistoryLoading || (!isCurrentSnapshot && isExplanationLoading)
 
-export function AgentScorePage({ project }: { readonly project: RouteProject }) {
+export function AgentScorePage({
+  project,
+  selectedDate,
+  onDateChange,
+}: {
+  readonly project: RouteProject
+  readonly selectedDate?: string | undefined
+  readonly onDateChange: (date: string) => void
+}) {
   const { toast } = useToast()
-  const [isReloading, setIsReloading] = useState(false)
-  const scoreQuery = useProjectAgentScore(project.id)
-  const historyQuery = useProjectAgentScoreHistory(project.id)
-  const explanationQuery = useProjectAgentScoreExplanation(project.id)
+  const [trendRange, setTrendRange] = useState<TrendRange>("7d")
+  const [isStartingRefresh, setIsStartingRefresh] = useState(false)
+  const computationQuery = useProjectAgentScoreComputation(project.id, selectedDate)
+  const computationMarker = computationQuery.data?.marker ?? "none"
+  const isComputing = computationQuery.data?.status === "computing"
+  const scoreQuery = useProjectAgentScore(project.id, selectedDate, computationMarker)
   const scoreData = scoreQuery.data
+  const date = scoreData?.date ?? selectedDate
+  const historyQuery = useProjectAgentScoreHistory(project.id, date, computationMarker)
+  const explanationQuery = useProjectAgentScoreExplanation(project.id, date, computationMarker)
   const snapshot = scoreData?.snapshot ?? null
-  const date = scoreData?.date ?? new Date().toISOString().slice(0, 10)
-  const isCurrentSnapshot = isCurrentAgentScoreSnapshot(snapshot, date)
-  const hasStaleSnapshot = isStaleAgentScoreSnapshot(snapshot, date)
-  const currentExplanation = explanationQuery.data?.currentExplanation ?? null
+  const displayDate = date ?? new Date().toISOString().slice(0, 10)
+  const isCurrentSnapshot = isCurrentAgentScoreSnapshot(snapshot, displayDate)
   const explanation = agentScoreExplanationForSnapshot({
     explanation: explanationQuery.data?.explanation ?? null,
-    date: snapshot?.date ?? date,
+    date: displayDate,
     snapshot,
   })
-  const isRefreshing = scoreQuery.isRefetching || historyQuery.isRefetching || explanationQuery.isRefetching
   const refresh = async () => {
-    if (isReloading) return
-    const needsSnapshotEvidence = snapshot !== null && explanation === null
-    const previousMarker = [
-      agentScoreRefreshMarker({ snapshot, explanation: currentExplanation }),
-      explanation?.computedAt ?? "none",
-    ].join(":")
-    const previousSnapshotMarker = agentScoreSnapshotMarker(snapshot)
-    const previousExplanationTime = currentExplanation?.computedAt
-    const previousSnapshotExplanationTime = explanation?.computedAt
-    setIsReloading(true)
+    if (isStartingRefresh || isComputing) return
+    if (!date) {
+      await scoreQuery.refetch()
+      return
+    }
+    setIsStartingRefresh(true)
     try {
-      const { date: refreshDate } = await refreshProjectAgentScore({ data: { projectId: project.id } })
-      const completed = await waitForAgentScoreRefresh({
-        previousMarker,
-        refetch: async () => {
-          const [scoreResult, explanationResult] = await Promise.all([scoreQuery.refetch(), explanationQuery.refetch()])
-          const nextSnapshot = scoreResult.data?.snapshot ?? null
-          const nextExplanation = explanationResult.data?.currentExplanation ?? null
-          const nextSnapshotExplanation = agentScoreExplanationForSnapshot({
-            explanation: explanationResult.data?.explanation ?? null,
-            date: nextSnapshot?.date ?? refreshDate,
-            snapshot: nextSnapshot,
-          })
-          const nextMarker = [
-            agentScoreRefreshMarker({ snapshot: nextSnapshot, explanation: nextExplanation }),
-            nextSnapshotExplanation?.computedAt ?? "none",
-          ].join(":")
-          const todayDone = agentScoreRefreshCompleted({
-            previousSnapshotMarker,
-            previousExplanationTime,
-            date: refreshDate,
-            snapshot: nextSnapshot,
-            explanation: nextExplanation,
-          })
-          const snapshotEvidenceDone = agentScoreSnapshotEvidenceCompleted({
-            needsSnapshotEvidence,
-            previousSnapshotExplanationTime,
-            snapshotExplanation: nextSnapshotExplanation,
-          })
-          return todayDone && snapshotEvidenceDone ? nextMarker : previousMarker
-        },
-      })
-      await historyQuery.refetch()
-      if (!completed) {
-        toast({
-          title: "Agent Score is still refreshing",
-          description: "The calculation is taking longer than expected. Try refreshing again in a few minutes.",
-        })
+      const { enqueued } = await refreshProjectAgentScore({ data: { projectId: project.id, date } })
+      if (enqueued) {
+        await computationQuery.refetch()
+      } else {
+        await Promise.all([scoreQuery.refetch(), historyQuery.refetch(), explanationQuery.refetch()])
       }
     } catch (error) {
       toast({
@@ -120,7 +90,7 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
         description: toUserMessage(error),
       })
     } finally {
-      setIsReloading(false)
+      setIsStartingRefresh(false)
     }
   }
 
@@ -135,48 +105,84 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
             />
           }
           actions={
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              isLoading={isReloading || isRefreshing}
-              onClick={() => void refresh()}
-            >
-              <Icon icon={RotateCwIcon} size="sm" />
-              Refresh
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <ScoreDateNavigator date={date} onDateChange={onDateChange} disabled={isStartingRefresh} />
+              <Button
+                type="button"
+                variant="outline"
+                size="default"
+                disabled={computationQuery.isLoading || scoreQuery.isLoading || isComputing}
+                isLoading={isStartingRefresh}
+                onClick={() => void refresh()}
+              >
+                <Icon icon={RotateCwIcon} size="sm" />
+                Refresh
+              </Button>
+            </div>
           }
         />
         <div className="flex flex-col gap-6 px-6 pb-6">
-          <div className="flex flex-row gap-3 @max-[64rem]:flex-col">
+          {isComputing ? (
+            <Alert
+              showIcon={false}
+              title="Computing Agent Score"
+              description="This can take several minutes. You can leave this page and return later."
+              cta={
+                <Status
+                  variant="info"
+                  label="In progress"
+                  indicator={<Icon icon={Loader2Icon} size="xs" className="animate-spin" />}
+                />
+              }
+            />
+          ) : null}
+          {[computationQuery.isError, scoreQuery.isError, historyQuery.isError, explanationQuery.isError].some(
+            Boolean,
+          ) ? (
+            <Text.H6 color="destructive">Some score data could not be loaded. Refresh to try again.</Text.H6>
+          ) : null}
+          <div className="flex flex-row rounded-xl bg-secondary p-4 @max-[48rem]:flex-col">
             <AgentVitality
+              actions={
+                <ScoreSnapshotButton snapshot={snapshot} projectName={project.name} projectSlug={project.slug} />
+              }
               snapshot={snapshot}
-              date={date}
-              history={historyQuery.data}
               dimensionWeights={scoreData?.dimensionWeights}
               explanation={explanation}
-              isLoading={agentVitalityIsLoading(
-                snapshot,
-                isReloading || scoreQuery.isLoading || explanationQuery.isLoading,
-              )}
+              isLoading={agentVitalityIsLoading(snapshot, scoreQuery.isLoading || explanationQuery.isLoading)}
             />
-            <ScoreTrend
-              endDate={date}
-              isCurrentSnapshot={isCurrentSnapshot}
-              hasStaleSnapshot={hasStaleSnapshot}
-              history={historyQuery.data}
-              explanation={currentExplanation}
-              isLoading={scoreTrendIsLoading({
-                isReloading,
-                isHistoryLoading: historyQuery.isLoading,
-                isExplanationLoading: explanationQuery.isLoading,
-                isCurrentSnapshot,
-              })}
-            />
+            <div className="flex min-w-0 flex-1 flex-col border-l border-border pl-4 @max-[48rem]:border-l-0 @max-[48rem]:border-t @max-[48rem]:pl-0">
+              <ScoreSummary
+                snapshot={snapshot}
+                history={historyQuery.data}
+                isLoading={scoreQuery.isLoading}
+                actions={
+                  <Tabs
+                    options={TREND_RANGE_OPTIONS}
+                    active={trendRange}
+                    onSelect={setTrendRange}
+                    variant="bordered"
+                    size="sm"
+                  />
+                }
+              />
+              <ScoreTrend
+                range={trendRange}
+                endDate={displayDate}
+                isCurrentSnapshot={isCurrentSnapshot}
+                history={historyQuery.data}
+                explanation={explanation}
+                isLoading={scoreTrendIsLoading({
+                  isHistoryLoading: scoreQuery.isLoading || historyQuery.isLoading,
+                  isExplanationLoading: explanationQuery.isLoading,
+                  isCurrentSnapshot,
+                })}
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-3">
-            {isReloading || explanationQuery.isLoading
+            {scoreQuery.isLoading || explanationQuery.isLoading
               ? SCORE_DIMENSION_ORDER.map((dimension) => <DimensionSectionSkeleton key={dimension} />)
               : SCORE_DIMENSION_ORDER.map((dimension) => {
                   const meta = DIMENSION_META[dimension]
@@ -200,14 +206,14 @@ export function AgentScorePage({ project }: { readonly project: RouteProject }) 
                       emptyAffectedMessage={
                         explanation
                           ? "No material issues affected this score."
-                          : "Evidence has not been prepared for the latest score yet."
+                          : "Evidence is not available for this date."
                       }
                     />
                   )
                 })}
           </div>
 
-          {explanation && !isReloading ? (
+          {explanation ? (
             <div className="flex flex-row flex-wrap items-center gap-x-3 gap-y-1 px-1">
               <Text.H7 color="foregroundMuted">
                 Evidence updated {new Date(explanation.computedAt).toLocaleString()}

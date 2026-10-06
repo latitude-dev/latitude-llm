@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-19
+
 ### Fixed
 
 - **`LATITUDE_NO_CONTENT` no longer leaks provider and tool error text.** The span's status message and `hermes.stream.error` were the two strings that escaped content gating, and a provider error routinely quotes the request it rejected, so a rejected call could put prompt text on the wire from an installation that had capture turned off. Both are gated now, and the status message also picks up the size budget and the secret redactor it was bypassing even with capture on. Failures stay just as visible: `status.code`, `error.type` and the `hermes.error.*` family are ungated and unchanged.

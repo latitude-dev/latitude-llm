@@ -6,6 +6,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .api_key_scope import ApiKeyScope
 
 
 class ApiKey(UniversalBaseModel):
@@ -19,6 +20,41 @@ class ApiKey(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this API key."),
     ]
+    """
+    Organization that owns this API key.
+    """
+
+    scope: ApiKeyScope = pydantic.Field()
+    """
+    `organization` keys can call every route. `project` keys are bound to `projectId`.
+    """
+
+    project_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="projectId"),
+        pydantic.Field(
+            alias="projectId",
+            default=None,
+            description="Project this key is bound to. `null` for an organization-wide key.",
+        ),
+    ]
+    """
+    Project this key is bound to. `null` for an organization-wide key.
+    """
+
+    project_slug: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="projectSlug"),
+        pydantic.Field(
+            alias="projectSlug",
+            default=None,
+            description="Slug of the bound project, when the project still exists. `null` for organization-wide keys.",
+        ),
+    ]
+    """
+    Slug of the bound project, when the project still exists. `null` for organization-wide keys.
+    """
+
     name: str = pydantic.Field()
     """
     Human-readable name.
@@ -38,6 +74,10 @@ class ApiKey(UniversalBaseModel):
             description="ISO-8601 timestamp of the most recent successful authentication. `null` until first use.",
         ),
     ]
+    """
+    ISO-8601 timestamp of the most recent successful authentication. `null` until first use.
+    """
+
     deleted_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="deletedAt"),
@@ -47,11 +87,19 @@ class ApiKey(UniversalBaseModel):
             description="ISO-8601 timestamp at which the key was revoked. `null` while the key is active.",
         ),
     ]
+    """
+    ISO-8601 timestamp at which the key was revoked. `null` while the key is active.
+    """
+
     created_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
     ]
+    """
+    ISO-8601 timestamp of creation.
+    """
+
     updated_at: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="updatedAt"),
@@ -60,5 +108,8 @@ class ApiKey(UniversalBaseModel):
             description="ISO-8601 timestamp of the last metadata update (rename, revoke, last-used touch).",
         ),
     ]
+    """
+    ISO-8601 timestamp of the last metadata update (rename, revoke, last-used touch).
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

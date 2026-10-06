@@ -2,8 +2,7 @@ import type { CostCoverageFloors, SpeedCoverageFloors } from "../entities/agent-
 import { COST_FAMILIES, type CostFamily } from "../entities/cost-evidence.ts"
 import type { CostScoringArtifact } from "../entities/cost-scoring-artifact.ts"
 import type { WindowSpeedAggregate } from "./bootstrap-window.ts"
-import type { WindowFold } from "./fold-window-contributions.ts"
-import type { WindowReaderCoverage } from "./tally-reader-coverage.ts"
+import type { UnreferencedLatencyModel, WindowFold } from "./fold-window-contributions.ts"
 
 export type CostUnmeasuredReason = "requiredFamilyUnreadable" | "publishableSessionFloor" | "noReadableSessions"
 
@@ -96,42 +95,67 @@ export interface SpeedWindowGate {
   readonly completeSessionCount: number
   readonly incompleteSessionCount: number
   readonly completeShareOfEligible: number
+  /** Reconstructed sessions kept out only because a model on the path has no latency reference. */
+  readonly missingLatencyReferenceSessionCount: number
+  /** The models responsible, most sessions first, capped at `UNREFERENCED_LATENCY_MODEL_LIMIT`. */
+  readonly unreferencedLatencyModels: readonly UnreferencedLatencyModel[]
 }
 
+export const UNREFERENCED_LATENCY_MODEL_LIMIT = 10
+
 /**
- * Whether enough of the window's critical paths reconstructed to divide by them.
+ * Whether enough of the window's critical paths can be judged to divide by them.
  *
- * A session whose path did not reconstruct is excluded from both sides of the ratio, so a project
- * where reconstruction rarely succeeds would otherwise report the Speed of the handful of sessions
- * that happened to be readable. Observed time of zero is its own gate: dividing avoidable time by
- * nothing would read as either perfect or undefined, and neither is a measurement.
+ * A session whose path did not reconstruct, or whose path runs through a model the frozen latency
+ * reference has nothing for, is excluded from both sides of the ratio. The floors then decide
+ * whether what remains describes the project; a project where few sessions can be judged would
+ * otherwise report the Speed of the handful that happened to be readable. When the missing
+ * references are what took Speed below a floor, the reason says so, because that is the gap a
+ * calibration can close. Observed time of zero is its own gate: dividing avoidable time by nothing
+ * would read as either perfect or undefined, and neither is a measurement.
  */
 export const gateSpeedWindow = ({
   speed,
   eligibleSessionCount,
-  latencyReaderCoverage,
+  missingLatencyReferenceSessionCount,
+  unreferencedLatencyModels,
   floors,
 }: {
   readonly speed: WindowSpeedAggregate
   readonly eligibleSessionCount: number
-  readonly latencyReaderCoverage: readonly WindowReaderCoverage[]
+  readonly missingLatencyReferenceSessionCount: number
+  readonly unreferencedLatencyModels: readonly UnreferencedLatencyModel[]
   readonly floors: SpeedCoverageFloors
 }): SpeedWindowGate => {
-  const completeShareOfEligible = eligibleSessionCount > 0 ? speed.includedSessionCount / eligibleSessionCount : 0
+  const shareOfEligible = (sessions: number) => (eligibleSessionCount > 0 ? sessions / eligibleSessionCount : 0)
+  const floorFailure = (sessions: number): SpeedUnmeasuredReason | undefined => {
+    if (sessions < floors.completeCriticalPathSessions) return "completePathFloor"
+    if (shareOfEligible(sessions) < floors.completeCriticalPathShareOfEligible) return "completePathCoverageFloor"
+    return undefined
+  }
   const base = {
     completeSessionCount: speed.includedSessionCount,
     incompleteSessionCount: speed.excludedSessionCount,
-    completeShareOfEligible,
+    completeShareOfEligible: shareOfEligible(speed.includedSessionCount),
+    missingLatencyReferenceSessionCount,
+    unreferencedLatencyModels: [...unreferencedLatencyModels]
+      .sort(
+        (a, b) =>
+          b.sessionCount - a.sessionCount || `${a.provider}/${a.model}`.localeCompare(`${b.provider}/${b.model}`),
+      )
+      .slice(0, UNREFERENCED_LATENCY_MODEL_LIMIT),
   }
 
-  if (speed.includedSessionCount < floors.completeCriticalPathSessions) {
-    return { ...base, coverage: "unmeasured", unmeasuredReason: "completePathFloor" }
-  }
-  if (completeShareOfEligible < floors.completeCriticalPathShareOfEligible) {
-    return { ...base, coverage: "unmeasured", unmeasuredReason: "completePathCoverageFloor" }
-  }
-  if (latencyReaderCoverage.some((reader) => reader.readableUnits < reader.applicableUnits)) {
-    return { ...base, coverage: "unmeasured", unmeasuredReason: "latencyReferenceCoverage" }
+  const failure = floorFailure(speed.includedSessionCount)
+  if (failure) {
+    const referencesWouldClearFloors =
+      missingLatencyReferenceSessionCount > 0 &&
+      floorFailure(speed.includedSessionCount + missingLatencyReferenceSessionCount) === undefined
+    return {
+      ...base,
+      coverage: "unmeasured",
+      unmeasuredReason: referencesWouldClearFloors ? "latencyReferenceCoverage" : failure,
+    }
   }
   if (speed.observedNs <= 0) {
     return { ...base, coverage: "unmeasured", unmeasuredReason: "noObservedTime" }

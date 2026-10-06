@@ -19,7 +19,7 @@ The public API exposes flaggers only on `PATCH project` (`flaggers: partialRecor
 
 ## The strategy registry
 
-`FLAGGER_STRATEGY_SLUGS` / `STRATEGY_REGISTRY` (`flagger-strategies/`): **14 strategies** — 10 LLM-capable, 4 deterministic-only, of which `trashing` is a hybrid. The slug `trashing` is a **frozen historical typo** (persisted in DB, ClickHouse, and the public API); the display name is "Thrashing" — never rename the slug.
+`FLAGGER_STRATEGY_SLUGS` / `STRATEGY_REGISTRY` (`flagger-strategies/`): **15 strategies** — 11 LLM-capable, 4 deterministic-only, of which `trashing` is a hybrid. The slug `trashing` is a **frozen historical typo** (persisted in DB, ClickHouse, and the public API); the display name is "Thrashing" — never rename the slug.
 
 | Slug | Display | Judges | Mode | Deterministic outcome | `hintKinds` | `suppressedBy` |
 |------|---------|--------|------|----------------------|-------------|----------------|
@@ -37,6 +37,7 @@ The public API exposes flaggers only on `PATCH project` (`flaggers: partialRecor
 | `output-schema-validation` | Output schema validation | assistant JSON text | Det | truncated/unparseable JSON → `matched` | — | — |
 | `empty-response` | Empty response | last assistant turn | Det | empty/degenerate → `matched` | — | — |
 | `low-cache-hit-rate` | Low cache hit rate | token aggregates | Det | hit-rate <30% on large multi-turn → `matched` | — | — |
+| `task-failure` | Task failure | whole session | LLM | — | — | — |
 
 ### Strategy shape
 
@@ -47,6 +48,8 @@ Strategy modules embed multi-KB system prompts, so they are **server-only**: the
 `FlaggerStrategy` (`flagger-strategies/types.ts`): `hasRequiredContext`, optional `detectDeterministically` (→ `matched | unmatched`), `buildSystemPrompt`/`buildPrompt`/`annotator` for LLM strategies, `details` for deterministic-only display, `classifiesAssistantResponseOnly` (default `true`; `false` for user/input-centric strategies — drives the targeting guidance in classifier and reviewer prompts), `suppressedBy`, `hintKinds`, optional `isHintedBy` override, and optional `validateMatch` — a code-level gate on LLM matches, enforced after classification and before the adversarial review. Independently of `validateMatch`, assistant-response-centric strategies also reject any match whose `messageIndex` points at a non-assistant transcript line (reflag classifiers otherwise latch onto nested evidence inside the classify user prompt).
 
 `incompletion` judges **closed task episodes** only: an assistant response with a *later user reaction* evidencing whether the task was delivered. Session-end is arbitrary (the session may keep growing after a screen), so the latest assistant response is structurally unflaggable — its `validateMatch` rejects any match not citing a closed episode's assistant index, which also blocks the index-less anchor fallback (the last assistant message). A later re-screen judges that turn once the user has reacted, and the content-anchor dedup keeps repeat convictions single.
+
+`task-failure` is the Agent Score Outcome reference judge: a holistic session verdict (`success`, `failure`, `indeterminate`, `notApplicable`) with no `hintKinds`, so every readable session shares one uniform sampling stratum. Unlike defect detectors it persists **passed** scores as well as failures, and successful verdicts feed Outcome without rendering as green annotation cards. See [`./agent-score.md`](./agent-score.md).
 
 **Suppression** (`suppressedBy`): declared on the suppressed strategy; each entry is a suppressor slug or `{ slug, whenHintedBy }`. A suppressor triggers when it is `matched`, or `hinted` (started or rate-limited) — for qualified entries only when one of the edge's `whenHintedBy` kinds fired, so a weak escalation lead does not mute the suppressed strategy. Validated by `assertFlaggerRegistryValid` (run from tests, not at module load): one level deep (suppressors run in phase 1, suppressed strategies in phase 2) and `whenHintedBy` ⊆ the suppressor's `hintKinds`. Edges: `refusal` ← `jailbreaking`/`nsfw` (any hint — their single pattern hint is direct evidence of the ask being adversarial); `laziness` ← `trashing` `whenHintedBy: [tool:loop]` (a stuck loop is a different failure than punting work, but a lone `tool:error` or a `moment:stalling` — also laziness's own hint — is not loop evidence).
 
@@ -81,7 +84,25 @@ trace-end (90s debounce) ─► session-end (5-min session debounce)
 | `unmatched` | yes | no | sample at `flagger.sampling` → rate limit (sampled bucket) → start classification |
 | `unmatched` | no | — | dropped |
 
+5. **Jev preclassifier** (optional): when globally and per-org enabled, `runJevPreclassifierUseCase` may upgrade `sampled-out` LLM strategies to `classify` with reason `jev-preclassifier` (see below). Hinted and deterministic paths are unchanged.
+
 The activity logs one summary line per pass (decision counts, fired hint kinds, started classifications) — the hinted-vs-sampled match-rate comparison is readable off plain logs; there is no dedicated analytics pipeline.
+
+### Jev preclassifier
+
+An optional session-level pre-classifier that routes **sampled-out** LLM flaggers into the classification pass when Jev's probability estimate meets the threshold. It runs after the baseline two-phase fan-out and before screening decisions are persisted. Jev never overrides a `matched` or `hinted` decision.
+
+**Enablement** requires all three gates: `LAT_JEV_FLAGGER_PRECLASSIFIER_ENABLED=true`, `LAT_JEV_API_KEY` set, and the per-organization `jevFlaggerPreclassifier` feature flag (`isJevFlaggerPreclassifierEnabledForOrganization` in `flagger-session-activities.ts`). Any gate failure disables the pass. Provider, audit, or feature-flag lookup failures are fail-closed — baseline screening continues with the pre-Jev decisions.
+
+`runJevPreclassifierUseCase` (`use-cases/run-jev-preclassifier.ts`) issues one batched `decideMany` call against the session conversation for every slug in `JEV_PRECLASSIFIER_STRATEGY_SLUGS` (the 10 defect detectors plus `task-failure`). Each question uses threshold `0.5` (`JEV_PRECLASSIFIER_THRESHOLD`). A sampled-out session whose probability clears the threshold is upgraded to `classify` with reason `jev-preclassifier` and inclusion probability `1`. Sessions already headed to classify via hint or ordinary sample get propensity correction only: when Jev would also have gated in, `inclusionProbability` is raised to `1` without enqueueing a duplicate classification.
+
+**Safety suite**: `jailbreaking` and `pii-leakage` share one rate-limit bucket (`safety-suite`) and admit together or not at all — gating only a subset would leave Safety's examined population incomplete.
+
+**Rate limiting** reuses the sampled buckets (`sampled` / `sampled-positive` depending on positive hints); `jev-preclassifier` is not a fourth hinted bucket.
+
+**Billing**: one `llm-call` per `decideMany` response, metered under `source: "jev-preclassifier"`. Classification charges are unchanged.
+
+**Observability**: every strategy evaluation appends a row to ClickHouse `flagger_jev_preclassifier_observations` (90-day retention) with probability, threshold decision (`gated-in` / `below-threshold` / `unknown`), provider metadata, and whether classify was added. Screening decisions record selection reason `jev-preclassifier` in the public coverage API.
 
 ### Screening decision history
 
@@ -93,7 +114,7 @@ Repository reads are cutoff-aware and perform those steps in that order. A decis
 
 Public coverage deliberately hides internal policy subreasons: disabled flaggers, suppressor decisions, unprovisioned flaggers, and missing required context all become `skipped`. Sampling losses are `notSelected`; rate-limit rejection is `rateLimited`; a terminal error is `executionFailed`; an initial selection without a terminal revision is `pending`; and no compatible decision is `missingTelemetry`. Only a selected decision with a non-error terminal outcome is `examined`.
 
-`FlaggerCoverageRepository` provides the organization- and project-scoped window aggregate used by Settings. The eligible base is settled, non-simulation sessions with LLM activity, using the same five-minute session-end debounce as screening. `examinedSessions` includes selected terminal non-error decisions; `readableSessions` additionally requires a positive inclusion probability and excludes policy skips and rate limits. Missing decisions and unknown probabilities stay visible and never count as readable.
+`FlaggerCoverageRepository` provides the organization- and project-scoped window aggregate used by Settings. The eligible base is settled, non-simulation sessions with LLM activity, using the same five-minute session-end debounce as screening. Every reader first finds candidate session ids behind one shared partition floor, then restores their complete aggregates before applying eligibility so older fragments cannot hide exclusions. Coverage and the Agent Score window therefore count the same sessions. `examinedSessions` includes selected terminal non-error decisions; `readableSessions` additionally requires a positive inclusion probability and excludes policy skips and rate limits. Missing decisions and unknown probabilities stay visible and never count as readable.
 
 Flagger Settings keeps configuration as the primary task and presents coverage as secondary feedback inside each enabled flagger row. The collapsed state reports how many eligible sessions were examined over the fixed 28-day window; detailed selection paths, unavailable observations, readable evidence, findings, and sampling-data completeness are progressively disclosed. Normal activity stays visually muted, while concrete operational limits such as rate limiting receive warning treatment. A positive `matched` or `failure` decision contributes to the finding count. `calibrationReadyFindings` is the subset with usable selection evidence; it reports readiness, not a score or confidence estimate. Detailed deterministic sub-kinds remain dynamically calculated source facts and are not persisted by this aggregate.
 
@@ -148,14 +169,6 @@ classifySessionFlagger ──(matched?)──► draftSessionFlaggerAnnotation �
 - **Classify**: the classifier LLM receives the agent context, the session's declared tool names when `definedTools` is non-empty (`<evaluated_agent_available_tools>` — also shown to the annotation reviewer), a `<session_hints>` block (every fired hint with anchors + evidence, capped at 20 hints × 256 chars, with explicit "leads, not proof — verify against the transcript" guidance), the strategy's evidence prompt in `<evaluated_trace_evidence>` tags, a targeting footer, and the structured-output contract. The refusal strategy treats a tool-dependent request (external action, tool access, or unsupported modality) that none of those tools can fulfill as a correct capability refusal, even when the assistant frames it as policy. Native LLM work such as summarizing pasted text stays in-capability. The injected list is a session-wide union; when more than 40 names are reported the remainder is omitted and the capability carve-out is disabled. `messageIndex` is offered as a Zod enum of the conversation's real indices (strings, capped at 200) so Bedrock cannot run the field away to the token cap; indices land in the session drawer's index space. Unclassifiable model failures (no-object, schema mismatch, prompt-too-long) degrade to `matched: false`. The generation schema requires `matched` and a **nullable but required** `feedback` — constrained decoders omit optional fields (Bedrock Haiku at t0 did), and a matched output without feedback is discarded at parse, annotated `flagger.malformedClassifierOutput`.
 - **Adversarial review**: a second classifier call approves or rejects the proposed annotation — the primary precision guard.
 - On a confirmed match the use-case computes the **`contentHash`** (below) and returns it with the session metadata the draft/save steps need.
-
-### Jev shadow pilot
-
-The optional Jev shadow runs inside the existing `classifySessionFlagger` activity after strategy, enabled-row, applicability, and session-context gates, concurrently with the baseline classifier. It only supports `frustration` and `refusal`. It receives the already loaded context and the screening selection, then records an append-only advisory observation in ClickHouse. It never changes the baseline classifier, adversarial reviewer, score writes, or billing. The shadow path has a 3s outer timeout over the 2s provider limit, so a slow provider call still leaves headroom for the audit write.
-
-Three independent gates must all be true before a provider call: `LAT_JEV_FLAGGER_SHADOW_ENABLED` (default `false`), a configured `LAT_JEV_API_KEY`, and the per-organization `jevFlaggerShadow` feature flag. The first two gates run before the feature-flag lookup, so disabled global or API-key gates do not create or call its client. The lookup uses its own size-one bounded Postgres pool: it rejects immediately under load, has a 200ms acquisition limit, a 150ms statement limit, and a 400ms transaction limit. The activity has a 1s outer lookup timeout. Any lookup failure, timeout, or capacity rejection disables the shadow path. Provider and audit-write failures are contained, so they cannot fail or retry the baseline classification activity. The observation carries the Temporal workflow id, run id, activity id, and activity attempt for audit and retry correlation.
-
-Models resolve per stage via `resolveGenerationConfig` (`LAT_AI_FLAGGER_{CLASSIFIER,EXTRACTOR,ANNOTATOR}_*` env overrides): classifier haiku t0/512, extractor + annotator minimax. The classifier's feedback is normally final; the annotator LLM only runs as a fallback for a match without feedback text.
 
 ## Scores, anchors, and dedup
 

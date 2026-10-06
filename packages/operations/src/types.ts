@@ -11,7 +11,8 @@ import type { PostgresClient, PostgresDb } from "@platform/db-postgres"
  *
  * Discriminated on `method`:
  *
- * - `api-key` — request authenticated via an organization-scoped API key.
+ * - `api-key` — request authenticated via an API key. Org-wide keys have
+ *   `projectId: null`. Project-scoped keys carry the bound project id.
  *   `userId` is a synthetic `api-key:<keyId>` value because API keys aren't
  *   tied to a real user.
  * - `oauth` — request authenticated via an OAuth access token issued through
@@ -25,6 +26,8 @@ export type AuthContext =
       /** Synthetic `api-key:<keyId>` — API keys aren't tied to a real user. */
       readonly userId: UserId
       readonly organizationId: OrganizationId
+      /** Bound project, or `null` for an org-wide key. */
+      readonly projectId: string | null
     }
   | {
       readonly method: "oauth"

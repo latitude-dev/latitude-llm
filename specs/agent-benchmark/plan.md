@@ -664,8 +664,9 @@ persistence branch, and the window arithmetic. Do not rebuild these:
   `FLAGGER_DEFAULT_ENABLED` and `FLAGGER_DEFAULT_SAMPLING`. Ten LLM flaggers already sample at 10%
   each, so this is roughly a tenth more flagger spend, not a new order of magnitude. Unlike the
   others it has no deterministic prefilter, so it runs on the whole sampled share. The provisional
-  Outcome coverage floor is 100 compatible verdicts and 5% of the eligible base; both numbers are
-  calibration candidates frozen in PR 6, not constants buried in a reader.
+  Outcome coverage floor is 50 compatible verdicts and 5% of the eligible base; the launch window
+  and every dimension's count floor are also 50. These numbers are calibration candidates frozen in
+  PR 6, not constants buried in a reader.
 - **D8. No new session-assessment contract surface.** Incompatible judgment version and insufficient
   examined population are window concerns, not session concerns, so `SessionCoverageLimitation`
   gains no member and the generated contracts do not change shape. Adding the slug still changes the
@@ -1415,18 +1416,14 @@ Each row is a gate the previous checklist asserted and the code does not current
   Shapley runs for 12 or fewer grouped causes and a seeded permutation sample above that, bounded by
   an error target and a computation ceiling. A residual row absorbs what is left. Explanation limits
   never remove evidence from the estimator.
-- **D11. The snapshot stores scores and nothing else, and a withheld day writes no row.** Causes,
-  coverage, native inputs, and attribution are resolved dynamically from the live window and labelled
-  as current evidence. A snapshot that stored them would invite the page to present a frozen
-  decomposition that new evidence has already invalidated. Re-running a date that has a snapshot is a
-  no-op rather than an update, which is what makes the row immutable in practice and not only by
-  intent.
-- **D12. The page uses the latest published snapshot as its headline.** If today's snapshot was not
-  published, the headline labels that score as latest available, includes its score date and exact
-  computation timestamp, and says no score was published today. Today's readiness and evidence remain
-  separate: they do not lower or explain the stale score, and unavailable current evidence remains
-  unavailable. The trend preserves missing-day gaps. The public operation keeps its explicit
-  today-only unavailable contract; the latest-available fallback belongs to the page.
+- **D11. The snapshot stores the score and its evidence together; a withheld day writes no row.**
+  Causes, coverage, native values, and attribution remain attached to their published computation.
+  Re-running a date cannot replace the score or its stored evidence. Unpublished computations and
+  legacy evidence can use the date-scoped cache.
+- **D12. The page selects one UTC date for every section.** The default is the latest published
+  score date, or today if no score exists. Exact-date reads do not substitute older scores. The trend
+  ends on the selected date and preserves missing-day gaps. The public score operation retains its
+  today-only contract.
 - **D13. PR 6 ships behind a feature flag and the flag is a separate decision from the merge.** The
   two remaining gates need production traffic that does not exist yet. Holding the code back until it
   does would mean a month of drift against a moving codebase for no review benefit. The flag comes
@@ -1514,7 +1511,7 @@ Each row is a gate the previous checklist asserted and the code does not current
 ### Step 3: window selection and the eligible population
 
 - [x] **P6-16** Add `selectScoreWindow` as a pure function: the shortest of 7, 14, 21, or 28 days
-  reaching 200 eligible sessions, withheld below 200. Return the chosen step and the reason it was
+  reaching 100 eligible sessions, withheld below 100. Return the chosen step and the reason it was
   chosen.
 - [x] **P6-17** Implement D7's hysteresis against the previous snapshot's stored step: do not shorten
   until the shorter step exceeds the target by 10%, do not lengthen until the current step falls 10%
@@ -1694,8 +1691,8 @@ Each row is a gate the previous checklist asserted and the code does not current
   with their fixed weights, raw values, healthy/watch/poor labels, readable and applicable units, and
   missing-evidence reasons, keeping not-applicable and unmeasured distinct.
 - [x] **P6-46** Build the cause rows with the fields [`page.md`](page.md#cause-rows) fixes, label
-  attributed deficits as additive and fix gains as not, and mark native inputs and causes as current
-  evidence from the live window rather than a decomposition of the stored snapshot.
+  attributed deficits as additive and fix gains as not, and show native values and causes from the
+  explanation stored with the selected snapshot.
 - [x] **P6-47** Build the expandable coverage panel and the unavailable-score behaviour. When the
   score is withheld the page still shows session and finding counts, actual cost and duration,
   confirmed safety findings and exposure, exact deterministic waste, progress toward each reader's
@@ -1757,9 +1754,18 @@ release carrying those PRs has been out for a window.
   P6-3: family weights, piecewise curves, caps, coverage floors, tokenizer bounds, and residual-signal
   policy. Publish the calibration report and pin the artifact version. Later production recalibration
   requires a new scoring version.
-- [ ] **P6-54** Build, inspect, and freeze the latency reference from P6-4, and record its cohort
+- [x] **P6-54** Build, inspect, and freeze the latency reference from P6-4, and record its cohort
   coverage and fallback rate. A cohort that cannot be published falls back explicitly and lowers Speed
   coverage rather than silently using a neighbouring cohort's expectation.
+
+  The `latency-reference-v2-calibrated-20260921` freeze uses the closed 2026-06-23 to 2026-09-21
+  fleet window, an exclusive 2026-09-21 08:00 UTC ingestion snapshot, a 200-observation gate, and a
+  5-organization tenant-spread gate. TTFT had 1,281,691 candidate readings: 21 detailed cohorts
+  cover 78.75%, and 11 provider/model roll-ups cover 83.75%.
+  Throughput had 5,742,411 candidate readings: 233 detailed cohorts cover 74.46%, and 28 roll-ups
+  cover 77.94%. Calls outside those exact pairs remain unmeasured. The repeatable
+  `agent-score:calibrate-latency` command emits the deterministic artifact and rejection report for
+  later reviewed freezes; a later freeze requires a new scoring version.
 - [ ] **P6-55** Close D6's open number: choose the target examined count per window for the Outcome
   judge and the Safety suite against measured traffic and measured flagger cost, and record the
   resulting rate distribution across representative projects.

@@ -2,6 +2,233 @@
 
 ## Unreleased
 
+## v0.3.121 - 2026-10-05
+
+### Web
+
+- Patched the TanStack Start reflected XSS advisory (GHSA-qx66-fv34-fjm8) by upgrading `@tanstack/react-start` to 1.168.60 and `@tanstack/react-router` to 1.170.41. The client error boundary now normalizes non-`Error` throwables, and the session-assessment Effect layers are built inside the server function so the ClickHouse and Postgres adapters no longer leak into the browser bundle (ref: #4825).
+
+### Agent Score
+
+- Counted polling-shaped consecutive tool-call loops as thrashing instead of excluding them from the reading (ref: #4781).
+- Scored `tools.dead_surface` across scoring windows: tool definitions that were sent but never called within a window now add a context penalty proportional to their serialized token cost (ref: #4817).
+- Restricted signal-derived dimension causes to the cost and speed dimensions (ref: #4820).
+
+### Dependencies and tooling
+
+- Pinned `react` and `react-dom` 18.3.1 for the MCP inspector client so `pnpm mcp:inspect` works again; application React 19 is unchanged (ref: #4823).
+- Gave `@platform/oauth-token-auth` the shared vitest config so its PGlite setup no longer times out in CI (ref: #4826).
+- Bumped `pg` to 8.23.0, `@radix-ui/react-popover` to 1.1.23, and `@biomejs/biome` to 2.5.14 with its formatter and lint autofixes applied across the repo (ref: #4647, #4726, #4725).
+
+## v0.3.120 - 2026-10-05
+
+### API keys
+
+- Added project-scoped API keys. A key can now be bound to one project; keys without a project remain organization-wide. Project keys get a 404 on other projects, a 403 on organization-only routes, and the ingest endpoint rejects a conflicting project. The web UI defaults new keys to the current project and lists that project's keys plus organization-wide ones. Both SDKs expose the new scope field (ref: #4818).
+
+### Evaluations and scores
+
+- Recompiled live evaluation scripts from their stored settings instead of running a stale script snapshot. Judge evaluations saved before the sandbox codegen change no longer fail with `conversation is not defined` (ref: #4605).
+- Treated a raced duplicate evaluation-score submission as idempotent. A retried or concurrent `POST /scores` for the same project, evaluation, and trace now returns the existing score instead of a 500 (ref: #4606).
+
+### Workers and ingestion
+
+- Pruned published outbox events after seven days and added partial indexes for outbox polling and retention (ref: #4735, #4736).
+- Failed span-ingestion jobs on the first attempt when the buffered payload is missing from object storage, instead of retrying for roughly eight minutes. Unrecoverable failures are now logged as terminal (ref: #4612).
+- Skipped weekly Wrapped report generation when the project or organization was deleted before the job ran (ref: #4600).
+- Stopped double-reporting unpriced-span errors to Datadog (ref: #4619).
+
+### Web
+
+- Classified rejected server-function input validation as 400 instead of 500, so expected client errors no longer appear as server faults in Datadog (ref: #4587).
+
+### Docs
+
+- Stated the V1 sunset date (30 October 2026) in the migration guide (ref: #4738).
+- Synced the flaggers Jev preclassifier and Agent Score v6 evidence floors in dev-docs (ref: #4706).
+
+### Dependencies
+
+- Bumped nodemailer to 10.0.9 and hono to 4.13.7 (ref: #4734).
+
+## v0.3.119 - 2026-10-01
+
+### Organizations
+
+- Restricted member removal to organization owners and administrators. Regular members can no longer remove other members through the API (ref: #4722).
+
+### Flaggers and scores
+
+- Fixed duplicate safety findings in sessions with more than 200 scores by querying the existing finding directly (ref: #4717).
+- Refreshed safety finding evidence when a new analysis found the same issue, while retaining the existing score identifier (ref: #4691).
+- Replaced stale ClickHouse score analytics after a score moved to another signal (ref: #4710).
+
+### Agent Score
+
+- Allowed weekly digest notification requests to retry after a failed run. Recipient-level checks still prevent duplicate notifications (ref: #4723).
+- Added a product guide for Agent Score, its dimensions, and its evidence (ref: #4720).
+
+### Traces and sessions
+
+- Added clickable HTTP and HTTPS links in metadata, tag filter shortcuts, and actions to view all sessions for a user (ref: #4731).
+
+### SDKs
+
+- Updated the Python SDK lockfile to match version 9.15.0, fixing locked dependency installation (ref: #4733).
+
+## v0.3.118 - 2026-09-23
+
+### Agent Score
+
+- A generation on a model with no frozen latency reference no longer withholds the whole Agent Score. Sessions that ran through such a model are left out of Speed, which is computed from the remaining sessions as long as they still clear the complete critical-path floors (50 sessions and half of eligible sessions). Before this, one call to `gpt-5-mini`, `claude-sonnet-4-5` or any other model the calibrated reference lacks withheld every dimension for the whole window. When the excluded sessions are what take Speed below a floor, the readiness panel now names the unreferenced model instead of "Needs timing data". Scoring version moves to `agent-score-v8-provisional` (ref: #4721).
+
+### Integrations
+
+- One Slack workspace can now be connected to several Latitude organisations. Connecting a workspace that another organisation already uses no longer fails with a "workspace taken" error. Disconnecting skips the Slack-side token revoke while another organisation still shares the same long-lived bot token. A Postgres migration drops Slack from the unique vendor account index; GitHub and agent dispatch keep it (ref: #4719).
+
+## v0.3.117 - 2026-09-23
+
+### Agent Score
+
+- Added a weekly Agent Score digest, sent every Monday at 08:00 UTC by email, Slack and the in-app bell to members of organisations with Agent Score enabled. It covers each project that published a score during the week. The digest shows the score ring and trend as an image, the week's change and a per-dimension breakdown. A change that falls inside the confidence intervals is reported as steady, and no delta is shown when the scoring version or window changed during the week. Sample and showcase projects are skipped. Users can turn it off through a new `agent_score` notification preferences group. A Postgres migration adds a date index on `agent_score_snapshots` (ref: #4718).
+- Staff can send a project's digest on demand from the backoffice project actions. It uses the same eligibility rules as the weekly job (ref: #4718).
+
+### Integrations
+
+- Slack messages with image blocks are now reposted without the images when Slack cannot download them, instead of being rejected entirely. Before this, incident alerts with trend charts were dropped on deploys that Slack could not reach (ref: #4718).
+
+### Flaggers
+
+- Fixed flagger re-screening writing duplicate scores for the same finding on sessions with more than 200 system annotations. Anchor deduplication now queries directly instead of scanning a capped window (ref: #4607).
+
+## v0.3.116 - 2026-09-23
+
+### Agent Score
+
+- The vitality panel now has a camera action that renders the selected published score and its five dimensions as a shareable PNG, with a preview, Copy image and Download PNG. The image is generated in the browser, so no project data is uploaded. Its background follows the overall score band (red below 60, blue from 60 to 79, green from 80). Unpublished dates disable the action, and a generation failure offers a retry (ref: #4715).
+- Polished the Agent Score dashboard. The date navigator now uses the shared single-day `DateRangePicker`, keeps UTC dates and cannot advance past today. Displayed composite scores are floored to whole numbers, while stored scores keep their precision (ref: #4715).
+
+### CLI and SDKs
+
+- The CLI now supports named profiles, each with its own API key in the OS keyring, so production and sandbox keys can live side by side. Pick one per command with `-p`, per shell with `LATITUDE_PROFILE`, or by default with `latitude profiles use`. A profile can also carry a default project. A `LATITUDE_API_KEY` from the shell or `.env` still wins unless `-p` is passed. Ships as CLI 7.16.0, and the CLI docs now cover profiles, `.env` loading and the `--with-token` requirement on `auth login` (ref: #4716).
+
+## v0.3.115 - 2026-09-22
+
+### Agent Score
+
+- Conversation moments now degrade Outcome quality. A session where the user got what they came for after showing frustration, abandoning the conversation, being handed to a human, looping on clarification, or correcting the agent three or more times is scored as degraded rather than as a full success, at `0.75` of a clean session. The degraded share is measured only over sessions conversation analysis actually read, since it skips empty, too-short and non-conversation sessions on a rule that is deterministic on content and cannot be projected onto the rest. Below fifty analyzed sessions the component contributes nothing and Outcome is unchanged, so an analysis gap can never withhold the score. Each degrading kind appears under the dimension's "Affected by" list with the points it cost. Scoring version moves to `agent-score-v7-provisional` (ref: #4713).
+
+### Backoffice
+
+- The project page's Agent Score card now shows the vitality ring and the trend of published scores that the customer-facing page uses, replacing the headline number, per-dimension tiles and written-out cause list that repeated the same information in a slower form. The trend anchors on today rather than on the snapshot date, so a project that stopped publishing shows the trailing gap; unscored days stay absent rather than zero-filled, the chart says so when a range crosses scoring versions or window lengths, and a policy cap is called out on its own line (ref: #4711).
+- Staff can now seed Agent Score history for demo projects from a 30-day strip of sliders, so a freshly seeded demo has a trend instead of a single point. Nothing is recomputed: one composite is expanded into a full synthetic snapshot whose dimensions are renormalised to the requested score exactly, seeded rows carry no evidence rather than invented causes, days that already have a published score are locked and skipped by the unique index, and every date is bounded to the 30-day window ending today so a fabricated future row can never silently block a real run (ref: #4711).
+
+### CLI and SDKs
+
+- Project-scoped CLI commands now resolve the project slug from `LATITUDE_PROJECT_SLUG` instead of requiring `--project-slug` on every invocation. Resolution order is `--project-slug`, then `--global-project-slug`, then the environment variable; the twenty operations that are not project-scoped are unaffected. SDK method signatures do not change — only the CLI reads the variable (ref: #4714).
+- Bumped the Fern toolchain and regenerated the API clients, shipping CLI 7.15.0 and SDKs 9.15.0. The TypeScript SDK now redacts URLs in errors, and the Python SDK gains SSE reconnect handling and alias coercion. Linux CLI binaries vendor OpenSSL statically, so they keep depending only on glibc after the generator moved its TLS backend selection into per-target dependencies (ref: #4714).
+
+
+## v0.3.114 - 2026-09-21
+
+### Documentation
+
+- Documented that a sandbox organization is readable over the public REST API and the CLI using its own `lat_sandbox_` key, that a live key cannot see sandbox data, and that MCP cannot reach a sandbox at all because an OAuth token binds to an organization you are a member of and sandboxes have no membership rows. Corrected the claim that sandbox keys are created from inside the sandbox: there is one key per sandbox, surfaced under Sandbox configuration. Pinned the behavior with an API integration test (ref: #4707).
+
+## v0.3.113 - 2026-09-21
+
+### Annotations
+
+- The API now covers the full annotation lifecycle: `GET`, `PATCH`, and `DELETE` on `/projects/{projectSlug}/annotations/{annotationId}` read, update, and remove API-created annotations by their Latitude-generated identifier. Updates keep the original identifier, leave omitted fields untouched, retract the annotation from the signal it was previously attached to, and republish it to issue discovery and human-annotation scoring. Exposed as `annotations.get` / `update` / `delete` in the TypeScript and Python SDKs (9.14.0) and as `latitude annotations get|update|delete` in the CLI (7.14.0) (ref: #4704).
+- Score analytics are now rebuilt from the stored score after an annotation changes, so a retried update no longer duplicates analytics rows, and analytics belonging to a score that is still mutable are dropped instead of left stale (ref: #4704).
+
+### Flaggers
+
+- The Jev preclassifier gate is now a Pulumi setting and is turned on in production, so organization feature flags drive its rollout (ref: e2460d7e).
+
+## v0.3.112 - 2026-09-21
+
+### Agent Score
+
+- Outcome and Safety no longer require the judged sample to cover a share of eligible traffic; the floor of fifty compatible verdicts is unchanged. That share floor was unreachable above roughly five thousand eligible sessions for Outcome and thirty thousand for Safety, because the sampler bounds evaluation spend to a fixed number of examined sessions. Large projects therefore reported Not Ready and, since the composite withholds all five dimensions when one is unmeasured, published no Agent Score at all. Scoring version moves to `agent-score-v6-provisional`; the estimator itself is unchanged, only the decision to publish (ref: #4705).
+- Score readiness no longer projects a completion date from the evaluation count, which is a rolling-window level rather than a running total and told permanently stalled projects they were days away. Outcome evidence also stopped counting deterministic failure-census sessions as judged samples (ref: #4705).
+- The Agent Score page now tracks scheduled and forced Temporal snapshot runs for the selected date: score data stays visible while a run is in flight, a progress notice persists until it finishes, duplicate refresh requests are disabled, and refreshing an already-complete snapshot reloads score, history, and evidence (ref: #4703).
+
+### Flaggers
+
+- Verdict deduplication now queries the published SYSTEM verdict for a generation directly instead of scanning a session's newest 200 scores. Busy sessions could miss an existing verdict for the same analysis hash, write a duplicate, and flip the Outcome dimension depending on which row the window kept (ref: #4650).
+
+### Signals
+
+- Signal promotion now persists score evidence on conflicting upserts, so dimensions classified during promotion are no longer discarded (ref: #4558).
+
+## v0.3.111 - 2026-09-21
+
+### Agent Score
+
+- Speed now uses frozen TTFT and throughput references calibrated from a closed fleet window, with provider/model fallbacks that fail closed when no qualified reference exists. Added a repeatable operator command for later calibration freezes and advanced the scoring version to `agent-score-v5-provisional` (ref: #4702).
+- Bounded span, generation, content, and tool-call reads to the selected sessions' time range, preventing daily snapshots from scanning older ClickHouse partitions while preserving evidence for retained sessions (ref: #4699).
+- Forced refreshes and backoffice recalculations now use workflow IDs distinct from scheduled snapshots, so an in-flight daily run no longer prevents a requested recalculation (ref: #4700).
+- Simplified the score date control by removing its redundant helper label while retaining its accessible name (ref: #4701).
+
+## v0.3.110 - 2026-09-21
+
+### Agent Score
+
+- Moved daily snapshots and manual refreshes to Temporal, with durable execution history, bounded retries, and idempotent snapshot writes; BullMQ now only fans out the daily project sweep (ref: #4695).
+- Lowered the provisional publication and count-based dimension requirements from 100 sessions to 50 under `agent-score-v4-provisional`, allowing smaller projects to publish scores while retaining the existing percentage coverage guards (ref: #4695).
+
+## v0.3.109 - 2026-09-20
+
+### Agent Score
+
+- Scores and their evidence are now persisted together in the snapshot row, so the selected date immutably keeps its score and explanation after publication; recomputing or forcing a refresh can no longer rewrite a published score (ref: #4693). This adds an `explanation` JSONB column to `agent_score_snapshots` (Postgres migration included).
+- The Agent Score page now keys all score, evidence, and trend queries on the selected date, so navigating between dates never shows another day's score or evidence while loading; unscored dates no longer borrow older scores, and missing evidence is an explicit empty state (ref: #4693).
+- The selected date moved into the page URL (`date` search parameter), and shared scoring logic between the API and SDK now selects the date window consistently (ref: #4693).
+
+### SDKs
+
+- TypeScript and Python SDKs 9.13.0: the Agent Score causes and explanation types now carry field descriptions for the new persisted evidence (ref: #4692).
+
+## v0.3.108 - 2026-09-18
+
+### Agent Score
+
+- Snapshot jobs no longer exhaust the ClickHouse query memory limit: the remaining trace-scoped span reads now run in bounded trace batches with the same single-thread settings as the generation-fact read, and the per-project eligibility subquery gained a partition bound so it stops scanning every month a project ever recorded. Snapshot job logs now carry the organization, project, and score date (ref: #4687).
+- The refresh poll now outlives the publish throttle and backs off after the first 30 seconds, so a refresh that takes longer than four minutes no longer tells the reader to retry into a throttled queue (ref: #4687).
+- Issue counts in the score breakdown now report observed sessions instead of inflated estimates, with rounding aligned across the resolver and the page (ref: #4685).
+
+### Backoffice
+
+- Project pages now show the Agent Score evidence behind each dimension, with a recalculate action that refreshes what is displayed (ref: #4686).
+
+## v0.3.107 - 2026-09-18
+
+### Agent Score
+
+- Agent Score trends now show markers for isolated and nonconsecutive daily snapshots, so sparse scores remain visible in the 7-day and 30-day views (ref: #4682).
+
+### Flaggers
+
+- Added an opt-in Jev session-level preclassifier for all LLM-capable flaggers. It can add classifications when a dimension meets its threshold, preserves the existing screening paths and rate limits, records metered observations in ClickHouse, and fails closed without disrupting baseline screening. The global and organization feature flags remain disabled by default. Removed the superseded classify-time Jev shadow pilot (ref: #4678, #4684).
+
+### Sessions
+
+- The filter sidebar now hides while a session drawer is open and returns with its state intact when the drawer closes, preventing the two panels from competing for horizontal space (ref: #4681).
+
+## v0.3.106 - 2026-09-18
+
+### Agent Score
+
+- Safety now counts confirmed harm only when the score belongs to the screening generation the suite decisions name, so a stale harm row left by dedup after a clean re-screen no longer depresses Safety or trips the composite policy cap (ref: #4634).
+- Tool calls whose `execute_tool` span carried an error status are now scored as failures even when the result was plain text, restoring recovered incidents to Reliability, the Cost recovery family, and Speed retry attribution. Both detectors are deduplicated by tool-call identity, unset status is reported as missing telemetry, and successful same-tool retries contribute their spans to recovery rate and critical-path time (ref: #4680).
+- Cost and Speed causes that resolve to a zero penalty are no longer recorded, so a healthy metric stops appearing as a red "Affected by" row reading "$0" on withheld scores. Outcome issues and Reliability causes now carry a capped sample of the sessions behind them, adverse first, and open the Sessions list filtered to exactly those with the filter panel expanded (ref: #4679).
+- Filter sidebar chips show exact values and stay contained when long (ref: #4679).
+
+### Flaggers
+
+- Classification workflow ids include the analysis hash, so a newer screening generation arriving while a prior classification is still running no longer hits `WorkflowExecutionAlreadyStartedError` and skips the retry (ref: #4634).
+
 ## v0.3.105 - 2026-09-17
 
 ### Agent Score

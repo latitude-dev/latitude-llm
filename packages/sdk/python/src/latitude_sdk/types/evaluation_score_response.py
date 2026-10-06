@@ -21,11 +21,19 @@ class EvaluationScoreResponse(UniversalBaseModel):
         FieldMetadata(alias="organizationId"),
         pydantic.Field(alias="organizationId", description="Organization that owns this score."),
     ]
+    """
+    Organization that owns this score.
+    """
+
     project_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="projectId"),
         pydantic.Field(alias="projectId", description="Project this score lives in."),
     ]
+    """
+    Project this score lives in.
+    """
+
     session_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="sessionId"),
@@ -35,11 +43,19 @@ class EvaluationScoreResponse(UniversalBaseModel):
             description="Session id lifted from the trace, when set. `null` when the trace has no session.",
         ),
     ]
+    """
+    Session id lifted from the trace, when set. `null` when the trace has no session.
+    """
+
     trace_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="traceId"),
         pydantic.Field(alias="traceId", default=None, description="Identifier of the scored trace."),
     ]
+    """
+    Identifier of the scored trace.
+    """
+
     span_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="spanId"),
@@ -49,16 +65,28 @@ class EvaluationScoreResponse(UniversalBaseModel):
             description="Span the score pins to. Defaults to the trace's last LLM-completion span.",
         ),
     ]
+    """
+    Span the score pins to. Defaults to the trace's last LLM-completion span.
+    """
+
     simulation_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="simulationId"),
         pydantic.Field(alias="simulationId", default=None, description="Simulation reference, if any."),
     ]
+    """
+    Simulation reference, if any.
+    """
+
     signal_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="signalId"),
         pydantic.Field(alias="signalId", default=None, description="Signal this score contributes to, if any."),
     ]
+    """
+    Signal this score contributes to, if any.
+    """
+
     value: float = pydantic.Field()
     """
     Normalized score value in [0, 1].
@@ -108,26 +136,46 @@ class EvaluationScoreResponse(UniversalBaseModel):
             description="ISO-8601 timestamp while the score is awaiting human confirmation. `null` for published / system scores.",
         ),
     ]
+    """
+    ISO-8601 timestamp while the score is awaiting human confirmation. `null` for published / system scores.
+    """
+
     annotator_id: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="annotatorId"),
         pydantic.Field(alias="annotatorId", default=None, description="User who authored the score, if any."),
     ]
+    """
+    User who authored the score, if any.
+    """
+
     created_at: typing_extensions.Annotated[
         dt.datetime,
         FieldMetadata(alias="createdAt"),
         pydantic.Field(alias="createdAt", description="ISO-8601 timestamp at which the score was created."),
     ]
+    """
+    ISO-8601 timestamp at which the score was created.
+    """
+
     updated_at: typing_extensions.Annotated[
         dt.datetime,
         FieldMetadata(alias="updatedAt"),
         pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last metadata update."),
     ]
+    """
+    ISO-8601 timestamp of the last metadata update.
+    """
+
     source_id: typing_extensions.Annotated[
         str,
         FieldMetadata(alias="sourceId"),
         pydantic.Field(alias="sourceId", description="CUID of the evaluation that produced this score."),
     ]
+    """
+    CUID of the evaluation that produced this score.
+    """
+
     metadata: EvaluationScoreMetadata
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

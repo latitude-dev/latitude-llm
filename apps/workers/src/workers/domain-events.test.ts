@@ -158,8 +158,8 @@ describe("domain-events dispatcher", () => {
 
     const traceEnd = published.find((p) => p.queue === "trace-end")
     const billing = published.find((p) => p.queue === "billing")
-    expect((traceEnd?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
-    expect((billing?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
+    expect((traceEnd?.payload as { isSandbox?: boolean })?.isSandbox).toBe(true)
+    expect((billing?.payload as { isSandbox?: boolean })?.isSandbox).toBe(true)
     expect(published.map((p) => `${p.queue}:${p.task}`)).toContain("projects:checkFirstTrace")
     // signals:match is not fanned out here anymore; trace-end publishes it (and skips sandbox itself).
     expect(published.some((p) => p.queue === "signals")).toBe(false)
@@ -651,26 +651,26 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.task).toBe("request-incident-notifications")
   })
 
-  it.each([
-    "resolved",
-    "ignored",
-  ] as const)("suppresses the recovery notification on a manual IncidentClosed (reason=%s)", async (reason) => {
-    const { consumer, published } = setupDispatcher()
+  it.each(["resolved", "ignored"] as const)(
+    "suppresses the recovery notification on a manual IncidentClosed (reason=%s)",
+    async (reason) => {
+      const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("IncidentClosed", {
-      organizationId: "org-1",
-      projectId: "proj-1",
-      alertIncidentId: "ai-1",
-      kind: "signal.escalating",
-      sourceType: "signal",
-      sourceId: "issue-1",
-      reason,
-    })
+      const envelope = makeEnvelope("IncidentClosed", {
+        organizationId: "org-1",
+        projectId: "proj-1",
+        alertIncidentId: "ai-1",
+        kind: "signal.escalating",
+        sourceType: "signal",
+        sourceId: "issue-1",
+        reason,
+      })
 
-    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+      await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toEqual([])
-  })
+      expect(published).toEqual([])
+    },
+  )
 
   it("routes ProjectDeleted to every delete-by-project cascade", async () => {
     const { consumer, published } = setupDispatcher()
@@ -772,6 +772,45 @@ describe("domain-events dispatcher", () => {
       dedupeKey: "annotation-scores:publish-human:score-3",
       debounceMs: SCORE_PUBLICATION_DEBOUNCE,
     })
+  })
+
+  it("reprocesses signal and publication side effects after an annotation update", async () => {
+    const { consumer, published } = setupDispatcher()
+    const revision = "2026-09-21T12:00:00.000Z"
+    const envelope = makeEnvelope("AnnotationUpdated", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-3",
+      previousSignalId: "signal-1",
+      previousFeedback: "Old feedback",
+      source: "annotation",
+      createdAt: "2026-09-20T12:00:00.000Z",
+      revision,
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          queue: "issues",
+          task: "removeScore",
+          payload: expect.objectContaining({ signalId: "signal-1", feedback: "Old feedback" }),
+          options: expect.objectContaining({ dedupeKey: `issues:remove-score:score-3:${revision}` }),
+        }),
+        expect.objectContaining({
+          queue: "issues",
+          task: "discovery",
+          payload: expect.objectContaining({ scoreId: "score-3", signalId: null, status: "published" }),
+          options: expect.objectContaining({ dedupeKey: `issues:discovery:score-3:published:${revision}` }),
+        }),
+        expect.objectContaining({
+          queue: "annotation-scores",
+          task: "publishHumanAnnotation",
+          options: expect.objectContaining({ dedupeKey: `annotation-scores:publish-human:score-3:${revision}` }),
+        }),
+      ]),
+    )
   })
 
   it("uses distinct discovery dedupe keys for draft vs published scores", async () => {
@@ -970,6 +1009,6 @@ describe("domain-events dispatcher", () => {
       "billing:reportOverage:org-1:2026-01-01T00:00:00.000Z:2026-02-01T00:00:00.000Z",
     )
     expect(pending?.options?.latestThrottleMs).toBe(BILLING_OVERAGE_SYNC_THROTTLE_MS)
-    expect((pending?.payload as { snapshotOverageCredits: number }).snapshotOverageCredits).toBe(5_000)
+    expect((pending?.payload as { snapshotOverageCredits: number })?.snapshotOverageCredits).toBe(5_000)
   })
 })

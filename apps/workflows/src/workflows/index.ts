@@ -1,4 +1,8 @@
 export {
+  type AgentScoreSnapshotWorkflowInput,
+  agentScoreSnapshotWorkflow,
+} from "./agent-score-snapshot-workflow.ts"
+export {
   type AnalyzeSessionWorkflowInput,
   type AnalyzeSessionWorkflowResult,
   analyzeSessionWorkflow,

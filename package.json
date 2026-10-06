@@ -43,7 +43,7 @@
     "@effect/language-service": "0.84.3",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "fern-api": "5.50.4",
+    "fern-api": "5.122.0",
     "knip": "6.6.2",
     "turbo": "catalog:",
     "typescript": "catalog:",
@@ -74,7 +74,9 @@
       "@better-auth/core>zod": "4.3.6",
       "@better-auth/sso>zod": "4.3.6",
       "@better-auth/stripe>zod": "4.3.6",
-      "@better-auth/telemetry>zod": "4.3.6"
+      "@better-auth/telemetry>zod": "4.3.6",
+      "@modelcontextprotocol/inspector-client>react": "18.3.1",
+      "@modelcontextprotocol/inspector-client>react-dom": "18.3.1"
     }
   }
 }

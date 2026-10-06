@@ -1,7 +1,9 @@
 import { OutboxEventWriter } from "@domain/events"
+import { ProjectNotFoundError, ProjectRepository } from "@domain/projects"
 import {
   type ApiKeyId,
   type OrganizationId,
+  type ProjectId,
   type RepositoryError,
   SqlClient,
   type ValidationError,
@@ -25,9 +27,19 @@ export interface GenerateApiKeyInput {
    * new sandbox org (admin client, so RLS doesn't block the cross-org insert).
    */
   readonly organizationId?: OrganizationId
+  /**
+   * Bind the key to a single project in the target org. Omit (or pass `null`)
+   * for an org-wide key. The project must belong to `organizationId`.
+   */
+  readonly projectId?: ProjectId | null
 }
 
-export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApiKeyNameError | CryptoError
+export type GenerateApiKeyError =
+  | RepositoryError
+  | ValidationError
+  | InvalidApiKeyNameError
+  | CryptoError
+  | ProjectNotFoundError
 
 export const generateApiKeyUseCase = Effect.fn("apiKeys.generateApiKey")(function* (input: GenerateApiKeyInput) {
   const organizationId = input.organizationId ?? (yield* SqlClient).organizationId
@@ -49,11 +61,27 @@ export const generateApiKeyUseCase = Effect.fn("apiKeys.generateApiKey")(functio
     })
   }
 
+  const projectId = input.projectId ?? null
+  if (projectId) {
+    const projects = yield* ProjectRepository
+    const project = yield* projects
+      .findById(projectId)
+      .pipe(
+        Effect.catchTag("NotFoundError", () =>
+          Effect.fail(new ProjectNotFoundError({ id: projectId, organizationId })),
+        ),
+      )
+    if (project.organizationId !== organizationId) {
+      return yield* new ProjectNotFoundError({ id: projectId, organizationId })
+    }
+  }
+
   const token = generateApiKeyToken(input.isSandbox ? SANDBOX_API_KEY_TOKEN_PREFIX : "")
   const tokenHash = yield* hash(token)
   const apiKey = createApiKey({
     id: input.id,
     organizationId,
+    projectId,
     token,
     tokenHash,
     name: input.name.trim(),

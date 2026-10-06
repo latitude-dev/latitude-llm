@@ -1,10 +1,12 @@
-import { CacheError, CacheStore, OrganizationId, ProjectId } from "@domain/shared"
+import { CacheError, CacheStore, OrganizationId, ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import {
   agentScoreExplanationCacheKey,
+  agentScoreExplanationSchema,
   latestAgentScoreExplanationCacheKey,
 } from "../entities/agent-score-explanation.ts"
+import { AgentScoreSnapshotRepository } from "../ports/agent-score-snapshot-repository.ts"
 import {
   cacheAgentScoreExplanation,
   getAgentScoreExplanation,
@@ -80,6 +82,13 @@ const read = (value: string | null | Effect.Effect<string | null, CacheError>) =
   Effect.runPromise(
     getAgentScoreExplanation({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, date: DATE }).pipe(
       Effect.provide(withCachedValue(value)),
+      Effect.provideService(AgentScoreSnapshotRepository, {
+        findByDate: () => Effect.succeed(null),
+        findLatest: () => Effect.succeed(null),
+        listHistory: () => Effect.succeed([]),
+        insertIfAbsent: () => Effect.succeed(false),
+      }),
+      Effect.provideService(SqlClient, {} as SqlClientShape),
     ),
   )
 
@@ -119,6 +128,18 @@ describe("getAgentScoreExplanation", () => {
 
     expect(result.status).toBe("ready")
     expect(result.status === "ready" && result.explanation.eligibleSessionCount).toBe(5037)
+  })
+
+  it("does not substitute another date's cached evidence", async () => {
+    await expect(read(JSON.stringify({ ...EXPLANATION, date: "2026-09-11" }))).resolves.toEqual({
+      status: "notComputed",
+    })
+  })
+
+  it("does not use cached evidence for another project", async () => {
+    await expect(read(JSON.stringify({ ...EXPLANATION, projectId: "another-project" }))).resolves.toEqual({
+      status: "notComputed",
+    })
   })
 
   it("returns the latest published explanation independently from the current date", async () => {
@@ -280,5 +301,52 @@ describe("cacheAgentScoreExplanation latest pointer", () => {
       cacheAgentScoreExplanation({ result: makeResult("2026-09-18"), date: "2026-09-18" }).pipe(Effect.provide(layer)),
     )
     expect(latestDateOf(store)).toBe("2026-09-18")
+  })
+})
+
+describe("explanations stored under an earlier scoring version", () => {
+  const v4 = {
+    ...EXPLANATION,
+    scoringVersion: "agent-score-v5-provisional",
+    publication: {
+      ...EXPLANATION.publication,
+      status: "withheld",
+      reason: "unmeasuredDimensions",
+      dimensions: [{ scoreDimension: "outcome", coverage: "unmeasured", unmeasuredReason: "coverageFloor" }],
+    },
+    readiness: {
+      ...EXPLANATION.readiness,
+      dimensions: [
+        {
+          scoreDimension: "outcome",
+          requirements: [
+            {
+              kind: "threshold",
+              metric: "outcomeCoverage",
+              current: 0.029,
+              required: 0.05,
+              comparison: "atLeast",
+              unit: "fraction",
+              met: false,
+            },
+          ],
+        },
+      ],
+    },
+  }
+
+  it("still decode, retired share requirement and all", () => {
+    const parsed = agentScoreExplanationSchema.safeParse(v4)
+
+    expect(parsed.success).toBe(true)
+    expect(parsed.data?.readiness.dimensions[0]?.requirements[0]).toMatchObject({ metric: "outcomeCoverage" })
+    expect(parsed.data?.publication.dimensions[0]).toMatchObject({ unmeasuredReason: "coverageFloor" })
+  })
+
+  it("decode without the judged-sample count, which only v6 writes", () => {
+    const parsed = agentScoreExplanationSchema.safeParse(v4)
+
+    expect(parsed.data?.coverage.outcomeSampledSessions).toBeUndefined()
+    expect(parsed.data?.coverage.outcomeExaminedSessions).toBe(400)
   })
 })

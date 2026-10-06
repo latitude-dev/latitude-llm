@@ -9,7 +9,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import { type CryptoError, hash } from "@repo/utils"
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
 import { FLAGGER_SCREENING_ARTIFACT_VERSION, FLAGGER_SCREENING_RETENTION_DAYS } from "../constants.ts"
 import { computeFlaggerAnchorContentHash, type FlaggerSessionContext } from "../conversation.ts"
 import { flaggerSlugSchema } from "../entities/flagger.ts"
@@ -36,6 +36,7 @@ import { FlaggerScreeningDecisionRepository } from "../ports/flagger-screening-d
 import { isReflagSuppressed, isUserCentricReflagInapplicable } from "../reflag.ts"
 import { loadFlaggerSessionContextUseCase } from "./classify-session-flagger.ts"
 import { type FlaggerCacheEntry, getProjectFlaggersUseCase } from "./get-project-flaggers.ts"
+import { runJevPreclassifierUseCase } from "./run-jev-preclassifier.ts"
 import { upsertFlaggerAnnotationScore } from "./upsert-flagger-annotation-score.ts"
 
 export interface ScreenSessionFlaggersInput {
@@ -46,7 +47,7 @@ export interface ScreenSessionFlaggersInput {
   readonly attempt: number
 }
 
-export type FlaggerClassificationReason = "hinted" | "sampled"
+export type FlaggerClassificationReason = "hinted" | "sampled" | "jev-preclassifier"
 
 export type CheckFlaggerLlmRateLimit = (args: {
   readonly organizationId: string
@@ -57,6 +58,13 @@ export type CheckFlaggerLlmRateLimit = (args: {
 
 export interface ScreenSessionFlaggersDeps {
   readonly checkRateLimit: CheckFlaggerLlmRateLimit
+  readonly jevPreclassifier?: {
+    readonly enabled: boolean
+    readonly workflowId: string
+    readonly workflowRunId: string
+    readonly activityId: string
+    readonly activityAttempt: number
+  }
 }
 
 export type SessionFlaggerDroppedReason =
@@ -105,7 +113,7 @@ export interface FlaggerClassificationRequest {
   readonly screeningSelection: FlaggerScreeningSelection
 }
 
-type PendingFlaggerClassificationRequest = Omit<FlaggerClassificationRequest, "screeningSelection">
+export type PendingFlaggerClassificationRequest = Omit<FlaggerClassificationRequest, "screeningSelection">
 
 export interface ScreenSessionFlaggersResult {
   readonly skipped?: "session-not-found" | "reflag-suppressed"
@@ -241,7 +249,32 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
     concurrency: "unbounded",
   })
 
-  const decisions = [...phase1Decisions, ...phase2Decisions]
+  const baselineDecisions = [...phase1Decisions, ...phase2Decisions]
+  const preclassifier = deps.jevPreclassifier
+  const preclassified =
+    preclassifier?.enabled === true
+      ? yield* runJevPreclassifierUseCase({
+          enabled: true,
+          ...input,
+          context,
+          decisions: baselineDecisions,
+          classifications,
+          flaggerBySlug,
+          hasPositiveHints,
+          checkRateLimit: deps.checkRateLimit,
+          workflowId: preclassifier.workflowId,
+          workflowRunId: preclassifier.workflowRunId,
+          activityId: preclassifier.activityId,
+          activityAttempt: preclassifier.activityAttempt,
+        }).pipe(
+          Effect.catchCause((cause) =>
+            Cause.hasInterruptsOnly(cause)
+              ? Effect.failCause(cause)
+              : Effect.succeed({ decisions: baselineDecisions, classifications }),
+          ),
+        )
+      : { decisions: baselineDecisions, classifications }
+  const decisions = preclassified.decisions
   const screeningDecisions = yield* Effect.forEach(decisions, (decision) =>
     buildInitialScreeningDecision({
       input,
@@ -252,7 +285,7 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
   const screeningDecisionRepository = yield* FlaggerScreeningDecisionRepository
   yield* screeningDecisionRepository.saveMany(screeningDecisions)
 
-  const classificationRequests = classifications.map((classification) => ({
+  const classificationRequests = preclassified.classifications.map((classification) => ({
     ...classification,
     screeningSelection: toSelection(findScreeningDecision(screeningDecisions, classification.flaggerSlug)),
   }))
@@ -637,6 +670,22 @@ const findScreeningDecision = (decisions: readonly FlaggerScreeningDecision[], f
   return decision
 }
 
+const classificationSelectionReason = (
+  decision: Extract<SessionFlaggerDecision, { readonly action: "classify" }>,
+): FlaggerScreeningSelectionReason => {
+  if (decision.selection?.reason) return decision.selection.reason
+  if (decision.reason === "hinted") return "hinted"
+  return decision.reason === "jev-preclassifier" ? "jev-preclassifier" : "ordinary-sample"
+}
+
+const classificationInclusionProbability = (
+  decision: Extract<SessionFlaggerDecision, { readonly action: "classify" }>,
+  flagger: FlaggerCacheEntry | null,
+): number => {
+  if (decision.selection?.inclusionProbability !== undefined) return decision.selection.inclusionProbability
+  return decision.reason === "sampled" ? (flagger?.sampling ?? 0) / 100 : 1
+}
+
 const selectionFacts = (
   decision: SessionFlaggerDecision,
   flagger: FlaggerCacheEntry | null,
@@ -653,9 +702,8 @@ const selectionFacts = (
   if (decision.action === "classify") {
     return {
       selected: true,
-      reason: decision.selection?.reason ?? (decision.reason === "hinted" ? "hinted" : "ordinary-sample"),
-      inclusionProbability:
-        decision.selection?.inclusionProbability ?? (decision.reason === "hinted" ? 1 : (flagger?.sampling ?? 0) / 100),
+      reason: classificationSelectionReason(decision),
+      inclusionProbability: classificationInclusionProbability(decision, flagger),
       hintKinds: decision.hintKinds,
     }
   }

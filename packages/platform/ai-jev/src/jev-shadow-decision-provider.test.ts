@@ -53,6 +53,35 @@ afterEach(() => {
 })
 
 describe("Jev shadow decision provider", () => {
+  it("sends multiple questions in one request and isolates malformed answers", async () => {
+    let request: RequestInit | undefined
+    const fetch: typeof globalThis.fetch = async (_url, init) => {
+      request = init
+      return response(
+        successBody({
+          frustration: { type: "noul", noul: 0.8 },
+          refusal: { type: "noul", noul: 3 },
+        }),
+      )
+    }
+    const provider = createJevShadowDecisionProvider({ apiKey, fetch })
+    const decideMany = provider.decideMany
+    if (!decideMany) throw new Error("decideMany is not configured")
+    const results = await Effect.runPromise(
+      decideMany({
+        state: input.state,
+        questions: [input.question, { id: "refusal", version: "v1", prompt: "Did the assistant refuse?" }],
+      }),
+    )
+
+    expect(JSON.parse(request?.body as string).questions).toEqual({
+      frustration: { type: "noul", instructions: "Is the user frustrated?" },
+      refusal: { type: "noul", instructions: "Did the assistant refuse?" },
+    })
+    expect(results.frustration).toMatchObject({ kind: "success", probability: 0.8 })
+    expect(results.refusal).toMatchObject({ kind: "failure", errorCategory: "malformed-response" })
+  })
+
   it("posts the TypeSafe System One request and maps a noul answer", async () => {
     let request: RequestInit | undefined
     let url: string | undefined
@@ -228,20 +257,17 @@ describe("Jev shadow decision provider", () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
-  it.each([
-    "not-a-number",
-    "0",
-    "1.5",
-    "Infinity",
-    "4294967296",
-  ])("falls back from invalid timeout config %s", async (timeoutMs) => {
-    vi.stubEnv("LAT_JEV_API_KEY", apiKey)
-    vi.stubEnv("LAT_JEV_TIMEOUT_MS", timeoutMs)
-    vi.stubGlobal("fetch", async () => response(successBody()))
+  it.each(["not-a-number", "0", "1.5", "Infinity", "4294967296"])(
+    "falls back from invalid timeout config %s",
+    async (timeoutMs) => {
+      vi.stubEnv("LAT_JEV_API_KEY", apiKey)
+      vi.stubEnv("LAT_JEV_TIMEOUT_MS", timeoutMs)
+      vi.stubGlobal("fetch", async () => response(successBody()))
 
-    await expect(decideWithLayer(JevShadowDecisionProviderLive)).resolves.toMatchObject({
-      kind: "success",
-      probability: 0.8,
-    })
-  })
+      await expect(decideWithLayer(JevShadowDecisionProviderLive)).resolves.toMatchObject({
+        kind: "success",
+        probability: 0.8,
+      })
+    },
+  )
 })

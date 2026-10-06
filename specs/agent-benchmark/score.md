@@ -40,14 +40,14 @@ arriving later affect future daily snapshots, not earlier ones.
 
 ### The window
 
-The score uses the shortest whole-week step that contains at least 200 eligible sessions:
+The score uses the shortest whole-week step that contains at least 100 eligible sessions:
 
 1. 7 days
 2. 14 days
 3. 21 days
 4. 28 days
 
-The score is withheld below 200 eligible sessions. Because the target and floor are both 200, every
+The score is withheld below 100 eligible sessions. Because the target and floor are both 100, every
 published score uses the shortest step that passes the floor.
 
 Whole-week steps keep weekday composition stable and make snapshots easy to compare. The selected
@@ -57,7 +57,7 @@ step is stored on every snapshot.
 
 The window does not shorten until the shorter step exceeds the target by 10%, and it does not
 lengthen until the current step falls 10% below the target. The publication floor still takes
-precedence, so a step below 200 sessions cannot be retained by hysteresis. This prevents a project
+precedence, so a step below 100 sessions cannot be retained by hysteresis. This prevents a project
 near the boundary from changing windows every day.
 
 ### The session evidence table
@@ -186,11 +186,11 @@ examined by the complete Safety suite.
 An unmeasured dimension has no numeric value. It does not display 100, 0, or a neutral midpoint, and
 its absence prevents every other numeric score from being published.
 
-### Dynamic attribution after scoring
+### Attribution after scoring
 
 The dimension formula computes the number before causes receive any credit. Attribution is a second
-step used for ranking and explanation. It is resolved dynamically from the current selected window
-and is not stored in daily snapshots.
+step used for ranking and explanation. It is computed from the same window as the score and stored
+with the daily snapshot.
 
 Where the dimension has a defensible counterfactual, the engine computes two quantities:
 
@@ -225,8 +225,8 @@ row says "associated effect" unless the observation itself identifies avoidable 
 failure.
 
 Only metrics with readable observations and signals with eligible occurrences in the window appear.
-Because new source evidence can arrive after the daily snapshot, the cause list is labelled as
-current evidence and is not required to reconstruct a historical snapshot.
+The published snapshot retains the cause list from its computation. Later source evidence affects
+future snapshots and does not replace the evidence for an existing score.
 
 ### The daily snapshot
 
@@ -237,11 +237,14 @@ contains:
 - Agent Score point estimate and 95% interval;
 - each of the five dimension point estimates and 95% intervals;
 - scoring version, selected window length, and eligible-session count;
-- any separately applied composite policy cap.
+- any separately applied composite policy cap;
+- the evidence explanation, including attribution, cause rows, coverage, readiness, native values,
+  example session references, and the computation time.
 
-It contains no sessions, metrics, signals, causes, attribution, coverage breakdowns, model inputs, or
-counterfactual rows. A failed or unavailable calculation writes no snapshot. Re-running a date with
-an existing snapshot is a no-op.
+It contains no raw session or generation content. A failed or unavailable calculation writes no
+snapshot. Re-running a date cannot replace the stored score or its evidence. Unpublished
+computations use the short-lived cache for readiness. See [Agent Score](../../dev-docs/agent-score.md)
+for date selection and retained evidence.
 
 ### The scoring version
 

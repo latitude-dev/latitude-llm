@@ -73,6 +73,13 @@ const _registry = {
     readonly periodEnd: string
     readonly snapshotOverageCredits: number
   }>(),
+  agentScoreSnapshotWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly date: string
+    readonly to?: string
+    readonly force?: boolean
+  }>(),
   // Session flagger screening; its classification children start as Temporal
   // child workflows, not through this registry.
   flaggerScreeningWorkflow: input<{

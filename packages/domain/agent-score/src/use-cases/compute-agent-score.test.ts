@@ -28,11 +28,11 @@ const OPEN_ARTIFACT: AgentScoreArtifact = {
   ...LAUNCH_AGENT_SCORE_ARTIFACT,
   window: { ...LAUNCH_AGENT_SCORE_ARTIFACT.window, sessionTarget: 10, sessionFloor: 2 },
   dimensionFloors: {
-    outcome: { examinedSessions: 1, examinedShareOfEligible: 0 },
+    outcome: { examinedSessions: 1 },
     reliability: { readableSessions: 1, readableShareOfEligible: 0 },
     cost: { publishableSessionShare: 0 },
     speed: { completeCriticalPathSessions: 0, completeCriticalPathShareOfEligible: 0 },
-    safety: { examinedSessions: 1, examinedShareOfEligible: 0, maxRateLimitedHintedShare: 1 },
+    safety: { examinedSessions: 1, maxRateLimitedHintedShare: 1 },
   },
 }
 

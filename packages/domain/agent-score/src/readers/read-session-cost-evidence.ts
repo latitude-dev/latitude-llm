@@ -24,7 +24,11 @@ import {
   lookupThroughputExpectationTps,
   lookupTtftExpectationNs,
 } from "../entities/latency-reference-artifact.ts"
-import type { AssessmentReaderFact } from "../entities/session-assessment-input.ts"
+import type {
+  AssessmentReaderFact,
+  LatencyModel,
+  ToolDefinitionWindowObservation,
+} from "../entities/session-assessment-input.ts"
 import type { CostFamilyDenominators } from "../scoring/aggregate-session-cost.ts"
 import {
   composeSpeedCounterfactual,
@@ -63,6 +67,8 @@ export interface SessionCostEvidenceInput {
 
 export interface SessionCostEvidence {
   readonly readings: readonly CostMetricReading[]
+  readonly toolNamesUsed: readonly string[]
+  readonly toolDefinitionWindowObservations: readonly ToolDefinitionWindowObservation[]
   /** The session's comparable-workload key, which is the matched signal estimator's match key. */
   readonly workloadStratum: string
   readonly denominators: CostFamilyDenominators
@@ -70,6 +76,7 @@ export interface SessionCostEvidence {
   readonly ledger: SessionContentLedger
   readonly criticalPath: SessionCriticalPath
   readonly speed: SpeedCounterfactual
+  readonly unreferencedLatencyModels: readonly LatencyModel[]
   readonly readers: readonly AssessmentReaderFact[]
   readonly observedMicrocents: number
 }
@@ -183,7 +190,17 @@ interface LatencyEvidence {
   readonly claims: readonly SpeedAvoidableClaim[]
   readonly ttft: LatencyReaderCoverage
   readonly throughput: LatencyReaderCoverage
+  readonly unreferencedModels: readonly LatencyModel[]
 }
+
+const distinctModels = (generations: readonly SessionGenerationFact[]): readonly LatencyModel[] => [
+  ...new Map(
+    generations.map((generation) => [
+      `${generation.provider} ${generation.model}`,
+      { provider: generation.provider, model: generation.model },
+    ]),
+  ).values(),
+]
 
 const latencyApplicableCompletions = ({
   generations,
@@ -220,10 +237,12 @@ const readLatencyEvidence = ({
       claims: [],
       ttft: { applicable: completions.filter((generation) => generation.isStreaming).length, readable: 0 },
       throughput: { applicable: completions.length, readable: 0 },
+      unreferencedModels: distinctModels(completions),
     }
   }
 
   const claims: SpeedAvoidableClaim[] = []
+  const unreferenced: SessionGenerationFact[] = []
   let ttftApplicable = 0
   let ttftReadable = 0
   let throughputApplicable = 0
@@ -248,12 +267,16 @@ const readLatencyEvidence = ({
       isStreaming: generation.isStreaming,
     })
 
-    if (!(ttftExpectation.provenance === "unmeasured" && ttftExpectation.reason === "notStreaming")) {
+    const ttftApplies = !(ttftExpectation.provenance === "unmeasured" && ttftExpectation.reason === "notStreaming")
+    const ttftUnreferenced = ttftApplies && ttftExpectation.provenance === "unmeasured"
+    const throughputUnreferenced = throughputExpectation.provenance === "unmeasured"
+    if (ttftApplies) {
       ttftApplicable += 1
-      if (ttftExpectation.provenance !== "unmeasured") ttftReadable += 1
+      if (!ttftUnreferenced) ttftReadable += 1
     }
     throughputApplicable += 1
-    if (throughputExpectation.provenance !== "unmeasured") throughputReadable += 1
+    if (!throughputUnreferenced) throughputReadable += 1
+    if (ttftUnreferenced || throughputUnreferenced) unreferenced.push(generation)
 
     const ttftNs = excessTtftNs({ observedTtftNs: generation.timeToFirstTokenNs, expectation: ttftExpectation })
     const generationNs = excessGenerationNs({
@@ -277,6 +300,7 @@ const readLatencyEvidence = ({
     claims,
     ttft: { applicable: ttftApplicable, readable: ttftReadable },
     throughput: { applicable: throughputApplicable, readable: throughputReadable },
+    unreferencedModels: distinctModels(unreferenced),
   }
 }
 
@@ -415,7 +439,20 @@ const latencyCoverageFact = ({
 export const readSessionCostEvidence = (input: SessionCostEvidenceInput): SessionCostEvidence => {
   const spendCoverage = readSessionSpendCoverage(input.generations)
   const ledger = buildSessionContentLedger({ generations: input.generations, countTokens: input.countTokens })
-  const criticalPath = buildSessionCriticalPath({ spans: input.generations })
+  const toolNamesUsed = [...new Set(input.toolCalls.map((call) => call.normalizedToolName).filter(Boolean))].sort()
+  const definitionInputTokens = new Map<string, number>()
+  for (const definition of input.toolDefinitions) {
+    if (!definition.observationPeriodComplete) continue
+    const name = definition.name.toLowerCase()
+    const inputTokens = definition.estimatedSerializedTokens * Math.max(1, definition.requestCount)
+    definitionInputTokens.set(name, (definitionInputTokens.get(name) ?? 0) + inputTokens)
+  }
+  const toolDefinitionWindowObservations = [...definitionInputTokens.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, inputTokens]) => ({ name, inputTokens }))
+  const criticalPath = buildSessionCriticalPath({
+    spans: [...input.generations, ...input.toolCalls.map((call) => ({ ...call, operation: "execute_tool" }))],
+  })
 
   const repeatedCalls = readRepeatedCalls(input.toolCalls)
   const thrashing = readThrashing(input.toolCalls)
@@ -465,6 +502,8 @@ export const readSessionCostEvidence = (input: SessionCostEvidenceInput): Sessio
 
   return {
     readings,
+    toolNamesUsed,
+    toolDefinitionWindowObservations,
     workloadStratum: workloadStratumOf(input.generations, input.toolDefinitions),
     denominators: {
       spend: spendCoverage.pricedMicrocents,
@@ -477,6 +516,7 @@ export const readSessionCostEvidence = (input: SessionCostEvidenceInput): Sessio
     ledger,
     criticalPath,
     speed,
+    unreferencedLatencyModels: latency.unreferencedModels,
     observedMicrocents: spendCoverage.pricedMicrocents,
     readers: [
       coverageFact({

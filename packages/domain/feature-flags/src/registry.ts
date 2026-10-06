@@ -41,11 +41,11 @@ export const FEATURE_FLAGS = {
     description:
       "Builds every project's behaviour tree with node-relative adaptive clustering instead of the static builder. Takes effect on the organization's next gardening pass, either way.",
   },
-  jevFlaggerShadow: {
-    emoji: "👤",
-    name: "Jev flagger shadow",
+  jevFlaggerPreclassifier: {
+    emoji: "🚦",
+    name: "Jev flagger preclassifier",
     description:
-      "Runs the Jev advisory classifier beside supported flaggers without changing their classifications, reviews, or billing.",
+      "Runs Jev as a session-level pre-classifier that can gate LLM flaggers into classify when probability meets the threshold. Disabled by default.",
   },
 } as const satisfies Record<
   string,

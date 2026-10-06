@@ -17,7 +17,7 @@ There is no second registration step for any of those surfaces. The `defineOpera
 
 ## Authentication
 
-Routes under `/v1` accept **either** an organization-scoped API key **or** an OAuth2 access token. Both are opaque random strings carried as `Authorization: Bearer …`. The auth middleware tries validators in order:
+Routes under `/v1` accept **either** an API key **or** an OAuth2 access token. Both are opaque random strings carried as `Authorization: Bearer …`. The auth middleware tries validators in order:
 
 ```
 authenticate(c) → AuthContext | 401
@@ -33,11 +33,25 @@ The one exception is `/v1/mcp`, which admits OAuth bearers only — see [`mcp.md
 
 Every 401 the error handler emits carries `WWW-Authenticate: Bearer resource_metadata="<LAT_API_URL>/.well-known/oauth-protected-resource"` (RFC 9728 §5.1), which is how a spec-following MCP client discovers the authorization server instead of guessing the well-known path. The GitHub webhook's signature 401 returns its response directly and is deliberately not a bearer challenge.
 
+### API key scope
+
+Every API key belongs to one organization. Keys also carry an optional `projectId`:
+
+| `projectId` | Scope | REST (`apps/api`) | Ingest (`apps/ingest`) |
+| --- | --- | --- | --- |
+| `null` | Organization-wide | Any route in the org (unchanged from pre–project-scope keys). | Spans route to projects from `latitude.project` / `X-Latitude-Project` as today. |
+| set | Project-bound | Only `/projects/{slug}/…` where `{slug}` resolves to that project. Org-level routes (`/projects` list/create, `/api-keys`, `/members`, `/account`, `/usage`, …) return **403**. A project route whose slug is missing or names a different project returns **404** (same as an unknown slug — the handler does not reveal that the other project exists). OAuth tokens are never project-bound. | Only spans for the bound project are accepted. A conflicting `X-Latitude-Project` or per-span `latitude.project` slug is **rejected** (counted in `rejectedSpans`), not remapped onto the bound project. |
+
+`createApiKeyProjectScopeMiddleware` (`apps/api/src/middleware/api-key-project-scope.ts`) enforces REST scope immediately after auth and organization context. `/v1/mcp` is exempt at this layer because the MCP dispatcher re-enters the underlying operation, which is checked again; a project key calling an org-only tool still receives 403 from the real route.
+
+Public create/list responses expose `scope: "organization" | "project"`, `projectId`, and `projectSlug` (`packages/operations/src/operations/api-keys.ts`). The project settings UI defaults new keys to the current project and lists keys visible on that project (project-bound keys for that project plus org-wide keys).
+
 ### `AuthContext` shape
 
 ```ts
 export type AuthContext =
-  | { method: "api-key"; userId: UserId /* "api-key:<keyId>" */; organizationId: OrganizationId }
+  | { method: "api-key"; userId: UserId /* "api-key:<keyId>" */; organizationId: OrganizationId;
+      projectId: ProjectId | null }
   | { method: "oauth";   userId: UserId; organizationId: OrganizationId; oauthClientId: string;
                          scopes: ReadonlyArray<string>; expiresAt: Date }
 ```
@@ -48,7 +62,7 @@ The middleware writes the chosen variant onto `c.var.auth`. `c.var.organization`
 
 Both validators live in dedicated platform packages so they can be reused by other resource servers without pulling in HTTP middleware:
 
-- `packages/platform/api-key-auth` — `validateApiKey(token, deps)`. Looks up the org-scoped API key, decrypts the AES-256-GCM-encrypted token, returns an `api-key` `AuthContext`.
+- `packages/platform/api-key-auth` — `validateApiKey(token, deps)`. Looks up the API key by token hash, decrypts the AES-256-GCM-encrypted token when needed, and returns `{ organizationId, keyId, isSandbox, projectId }` for the `api-key` `AuthContext`. Cached validation entries include `projectId`; older cache entries without that field are treated as misses and rewritten.
 - `packages/platform/oauth-token-auth` — `validateOAuthAccessToken(token, deps)`. Joins `oauth_access_tokens → oauth_applications`, rejects on expired token / disabled application / missing org binding, returns an `oauth` `AuthContext`. Pure Drizzle — no Better Auth dependency on the API side.
 
 Both follow the same caching shape:
@@ -72,6 +86,7 @@ attachSharedContext(db, redis, clickhouse, queue)   ← all routes
     createAuthRateLimiter()              ← global IP-based brute-force guard
     createAuthMiddleware()               ← API-key OR OAuth dispatch
     createOrganizationContextMiddleware()
+    createApiKeyProjectScopeMiddleware() ← 403/404 for project-bound keys on wrong routes
 
       /v1/...   ← all REST routes, with per-endpoint tier limiters
       /v1/mcp   ← MCP transport, per-request McpServer (OAuth bearers only)
@@ -103,6 +118,32 @@ pnpm mcp:emit       # rewrites apps/api/mcp.json
 ```
 
 CI guards drift via `.github/workflows/api-manifests.yml`: on every PR, both emitters run and `git diff --exit-code` fails the job if the committed manifests don't match the regenerated ones.
+
+## Global parameters
+
+A **global parameter** is a value a generated client resolves once instead of on every call. We declare them in `API_GLOBAL_PARAMETERS` (`apps/api/src/constants.ts`); `emit-openapi.ts` writes them to the spec root as [`x-fern-global-parameters`](https://buildwithfern.com/learn/api-definitions/openapi/extensions/global-parameters).
+
+Today there is exactly one: `projectSlug`, which 119 of our 139 operations take as a path parameter. It lets CLI users export `LATITUDE_PROJECT_SLUG` once instead of passing `--project-slug` to every command.
+
+```
+--project-slug (per-operation flag)  →  profile's projectSlug  →  --global-project-slug  →  $LATITUDE_PROJECT_SLUG
+```
+
+Leftmost wins. A CLI profile's `projectSlug` becomes the `default_value` of the per-operation `--project-slug` arg, so it outranks both global rungs whether the profile was picked with `-p` or ambiently (`LATITUDE_PROFILE`, `profiles use`). Credentials order differently: there, `LATITUDE_API_KEY` beats an ambient profile and only `-p` beats the env var. Nothing about the underlying parameter changes: it stays `required: true` in `openapi.json` and a non-optional string in the IR. `target` just names the `{…}` slot in the path template that the resolved value fills at request-build time. The CLI never enforces path parameters at parse time (only multipart fields are clap-`required`), so omitting the flag parses fine and the global injects the value before the URL is rendered.
+
+Three settings are load-bearing and easy to "simplify" into a bug:
+
+- **`apply: explicit`** — a path global is injected into every operation that opts in. Under `apply: auto` that means *all* operations, and one with no `{projectSlug}` in its template would carry the value as a stray query parameter (`/v1/projects?projectSlug=…`). `emit-openapi.ts` derives the per-operation `x-fern-global-parameter` opt-in from the parameters each operation already declares, so the two can't drift.
+- **`parameter-name`** — derived in `emit-openapi.ts` as `global<Target>` (`globalProjectSlug` → `--global-project-slug`), never left to default. The global's flag must avoid `--project-slug`. When a global's flag name collides with a per-operation flag, the generator can't register it `global(true)` (clap rejects duplicate long names), so it attaches it per-leaf and skips the colliding commands, falling back to reading `env` itself. That fallback hangs off `try_get_one` returning `Err` for an unknown arg id — and clap's `verify_arg` is entirely inside `#[cfg(debug_assertions)]`, so a release build returns `Ok(None)` and never reaches it. The env var works in `cargo build` and silently fails in every shipped binary. A non-colliding name keeps the arg on the `global(true)` path, where clap's own `.env()` does the work. Name it after the target it backs and the feature dies in release only. This is not a regression to downgrade around: before generator 0.38.3 a colliding global had no env fallback at all.
+- **`env`** — the only reason to prefer this extension over [`x-fern-sdk-variables`](https://buildwithfern.com/learn/api-definitions/openapi/extensions/sdk-variables), which derives its env var from the variable name (`PROJECT_SLUG`, unprefixed) with no way to override it.
+
+### Surface support
+
+`x-fern-global-parameters` is **CLI-only today**. The Fern CLI lowers it into the IR (`globalParameters`, carrying `env`, `apply` and the `parameter-name` alias), but the TypeScript and Python SDK generators ignore it — Fern's own `seed/ts-sdk/x-fern-global-parameters` fixture still destructures the path parameter out of the request object, and its client options expose no global. Our SDK output is byte-identical with and without the extension. So SDK callers still pass `projectSlug` per method, and `LATITUDE_PROJECT_SLUG` does nothing there. If Fern adds SDK support later, it arrives on a regeneration with no spec change.
+
+`emit-openapi.ts` also appends `envFallbackNote(env)` to the description of each parameter a global backs, so `--project-slug`'s own help names the environment variable. That note is worded for the CLI on purpose: descriptions propagate to SDK JSDoc, where the variable does nothing.
+
+One rough edge remains upstream: per-command `--help` still lists the backed parameter under **Required parameters** and spells it into the usage line even when the environment satisfies it, and `--schema` omits the global entirely because its flag is registered hidden.
 
 ## Sharing logic with the web
 
