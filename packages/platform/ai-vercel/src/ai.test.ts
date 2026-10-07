@@ -3,8 +3,10 @@ import { Effect, Logger, Result } from "effect"
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 const {
+  anthropicModelFactoryMock,
   bedrockModelFactoryMock,
   createAmazonBedrockMock,
+  createAnthropicMock,
   embedMock,
   fromNodeProviderChainMock,
   generateTextMock,
@@ -17,10 +19,13 @@ const {
       reranking: vi.fn((modelId: string) => ({ modelId })),
     },
   )
+  const anthropicModelFactoryMock = vi.fn((modelId: string) => ({ modelId }))
 
   return {
+    anthropicModelFactoryMock,
     bedrockModelFactoryMock,
     createAmazonBedrockMock: vi.fn(() => bedrockModelFactoryMock),
+    createAnthropicMock: vi.fn(() => anthropicModelFactoryMock),
     embedMock: vi.fn(),
     fromNodeProviderChainMock: vi.fn(() =>
       Promise.resolve({
@@ -36,6 +41,10 @@ const {
 
 vi.mock("@ai-sdk/amazon-bedrock", () => ({
   createAmazonBedrock: createAmazonBedrockMock,
+}))
+
+vi.mock("@ai-sdk/anthropic", () => ({
+  createAnthropic: createAnthropicMock,
 }))
 
 vi.mock("@aws-sdk/credential-providers", () => ({
@@ -54,7 +63,7 @@ vi.mock("ai", () => ({
   jsonSchema: (schema: unknown) => ({ jsonSchema: schema }),
 }))
 
-import { AIAgent, type RunAgentInput } from "@domain/ai"
+import { AIAgent, type GenerateInput, type RunAgentInput } from "@domain/ai"
 import { z } from "zod"
 import {
   AIAgentLive,
@@ -63,6 +72,7 @@ import {
   embedWithVercel,
   loosenSchemaForBedrock,
   rerankWithVercel,
+  schemaNeedsAnthropicJsonTool,
 } from "./ai.ts"
 
 const originalAwsRegion = process.env.LAT_AWS_REGION
@@ -75,15 +85,19 @@ const originalAwsBearerTokenBedrock = process.env.LAT_AWS_BEARER_TOKEN_BEDROCK
 const originalOpenAiApiKey = process.env.LAT_OPENAI_API_KEY
 const originalGoogleApiKey = process.env.LAT_GOOGLE_API_KEY
 const originalCustomAiBaseUrl = process.env.LAT_CUSTOM_AI_BASE_URL
+const originalAnthropicApiKey = process.env.LAT_ANTHROPIC_API_KEY
 
 beforeEach(() => {
   process.env.LAT_AWS_REGION = "eu-central-1"
   process.env.LAT_AWS_ACCESS_KEY_ID = "test-access-key"
   process.env.LAT_AWS_SECRET_ACCESS_KEY = "test-secret-key"
+  process.env.LAT_ANTHROPIC_API_KEY = "test-anthropic-key"
   delete process.env.LAT_AWS_SESSION_TOKEN
   delete process.env.LAT_AWS_BEARER_TOKEN_BEDROCK
+  anthropicModelFactoryMock.mockClear()
   bedrockModelFactoryMock.mockClear()
   createAmazonBedrockMock.mockClear()
+  createAnthropicMock.mockClear()
   fromNodeProviderChainMock.mockClear()
   generateTextMock.mockReset()
   outputObjectMock.mockClear()
@@ -103,6 +117,7 @@ afterEach(() => {
   process.env.LAT_OPENAI_API_KEY = originalOpenAiApiKey
   process.env.LAT_GOOGLE_API_KEY = originalGoogleApiKey
   process.env.LAT_CUSTOM_AI_BASE_URL = originalCustomAiBaseUrl
+  process.env.LAT_ANTHROPIC_API_KEY = originalAnthropicApiKey
 })
 
 describe("createProviderModel", () => {
@@ -306,6 +321,92 @@ describe("AIGenerateLive", () => {
     expect(result.duration).toBe(700_000_000)
     expect(logs.join("\n")).toContain("Bedrock is unable to process your request.")
     expect(logs.join("\n")).toContain("amazon-bedrock/openai.gpt-oss-120b-1:0")
+  })
+
+  // A realistic compliant schema: nested objects, arrays and strings, no bounds.
+  // Zod emits `additionalProperties: false` on every object it converts, so this
+  // stays on Anthropic's native structured-output path.
+  const COMPLIANT_SCHEMA = z.object({
+    name: z.string(),
+    tags: z.array(z.string()),
+    nested: z.object({ note: z.string() }),
+  })
+  const NON_COMPLIANT_SCHEMA = z.object({
+    candidates: z
+      .array(z.object({ theme: z.string() }))
+      .min(1)
+      .max(5),
+  })
+
+  const generateOnce = async ({
+    callerProviderOptions,
+    ...rest
+  }: {
+    readonly provider: string
+    readonly model: string
+    readonly schema: z.ZodType
+    readonly callerProviderOptions?: GenerateInput<unknown>["providerOptions"]
+  }) => {
+    generateTextMock.mockResolvedValueOnce({
+      output: { ok: true },
+      usage: { totalTokens: 3, inputTokens: 2, outputTokens: 1 },
+    })
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const ai = yield* AIGenerate
+
+        return yield* ai.generate({
+          system: "Return JSON.",
+          prompt: "Say ok.",
+          ...rest,
+          ...(callerProviderOptions !== undefined ? { providerOptions: callerProviderOptions } : {}),
+        })
+      }).pipe(Effect.provide(AIGenerateLive)),
+    )
+
+    return generateTextMock.mock.calls[0]?.[0].providerOptions
+  }
+
+  it("routes Anthropic structured output through the json tool when the schema carries unsupported keywords", async () => {
+    const providerOptions = await generateOnce({
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      schema: NON_COMPLIANT_SCHEMA,
+    })
+
+    expect(providerOptions).toEqual({ anthropic: { structuredOutputMode: "jsonTool" } })
+  })
+
+  it("leaves the native Anthropic structured-output path in place for a compliant schema", async () => {
+    const providerOptions = await generateOnce({
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      schema: COMPLIANT_SCHEMA,
+    })
+
+    expect(providerOptions).toBeUndefined()
+  })
+
+  it("does not set the Anthropic json-tool mode for other providers", async () => {
+    const providerOptions = await generateOnce({
+      provider: "amazon-bedrock",
+      model: "anthropic.claude-sonnet-4-20250514-v1:0",
+      schema: NON_COMPLIANT_SCHEMA,
+    })
+
+    expect(providerOptions).toBeUndefined()
+  })
+
+  it("preserves a caller-supplied structuredOutputMode", async () => {
+    const providerOptions = await generateOnce({
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      schema: NON_COMPLIANT_SCHEMA,
+      callerProviderOptions: { anthropic: { structuredOutputMode: "outputFormat" } },
+    })
+
+    expect(providerOptions).toEqual({ anthropic: { structuredOutputMode: "outputFormat" } })
   })
 })
 
@@ -525,5 +626,47 @@ describe("loosenSchemaForBedrock", () => {
     expect(serialized).not.toContain("minimum")
     expect(serialized).not.toContain("maximum")
     expect(serialized).not.toContain("maxItems")
+  })
+})
+
+describe("schemaNeedsAnthropicJsonTool", () => {
+  it("detects maxItems", () => {
+    expect(schemaNeedsAnthropicJsonTool(z.object({ names: z.array(z.string()).max(5) }))).toBe(true)
+  })
+
+  it("detects minItems above 1", () => {
+    expect(schemaNeedsAnthropicJsonTool(z.object({ names: z.array(z.string()).min(2) }))).toBe(true)
+  })
+
+  it("accepts minItems of 0 and 1, the only values Anthropic supports", () => {
+    expect(schemaNeedsAnthropicJsonTool(z.object({ names: z.array(z.string()).min(0) }))).toBe(false)
+    expect(schemaNeedsAnthropicJsonTool(z.object({ names: z.array(z.string()).min(1) }))).toBe(false)
+  })
+
+  it("detects string length constraints", () => {
+    expect(schemaNeedsAnthropicJsonTool(z.object({ name: z.string().min(3).max(80) }))).toBe(true)
+  })
+
+  it("detects numeric constraints", () => {
+    expect(schemaNeedsAnthropicJsonTool(z.object({ limit: z.number().int().min(1).max(50) }))).toBe(true)
+    expect(schemaNeedsAnthropicJsonTool(z.object({ step: z.number().multipleOf(5) }))).toBe(true)
+  })
+
+  it("detects additionalProperties set to anything other than false", () => {
+    expect(schemaNeedsAnthropicJsonTool(z.looseObject({ name: z.string() }))).toBe(true)
+  })
+
+  it("accepts a schema whose objects only carry the additionalProperties: false Zod emits", () => {
+    const schema = z.object({
+      name: z.string(),
+      tags: z.array(z.string()),
+      nested: z.object({ note: z.string(), counts: z.array(z.number()) }),
+    })
+
+    expect(schemaNeedsAnthropicJsonTool(schema)).toBe(false)
+  })
+
+  it("answers false when the schema cannot be converted, leaving the native path in place", () => {
+    expect(schemaNeedsAnthropicJsonTool({ parse: (value: unknown) => value } as never)).toBe(false)
   })
 })
