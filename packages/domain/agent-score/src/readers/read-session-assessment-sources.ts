@@ -274,6 +274,87 @@ const readDeterministicFindings = (session: SessionDetail, spans: readonly Span[
 
 const spanById = (spans: readonly Span[]) => new Map(spans.map((span) => [`${span.traceId}:${span.spanId}`, span]))
 
+const looksLikeStructuredJsonOutput = (content: string): boolean => {
+  if (content.startsWith("{")) return true
+  if (!content.startsWith("[")) return false
+  if (/^\[[^\]\r\n]+\](?:\(|\s+\p{L})/u.test(content)) return false
+
+  const afterBracket = content.slice(1).trimStart()
+  if (afterBracket.length === 0) return true
+
+  const first = afterBracket[0]!
+  if (first === "]" || first === "{" || first === "[" || first === '"' || first === "-") return true
+  return /^(?:-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null)(?=\s*(?:,|\]|$))/.test(afterBracket)
+}
+
+const isTextPart = (part: unknown): part is { readonly type: "text"; readonly content: string } => {
+  if (typeof part !== "object" || part === null || !("type" in part) || !("content" in part)) return false
+  const candidate = part as { readonly type?: unknown; readonly content?: unknown }
+  return candidate.type === "text" && typeof candidate.content === "string"
+}
+
+const isFinalProseCompletion = (outputMessages: SessionDetail["outputMessages"]): boolean => {
+  for (let index = outputMessages.length - 1; index >= 0; index--) {
+    const message = outputMessages[index]
+    if (!message || message.role !== "assistant") continue
+    if (!Array.isArray(message.parts) || message.parts.length === 0) return false
+
+    const parts: readonly unknown[] = message.parts
+    if (!parts.every(isTextPart)) return false
+
+    const textParts = parts.map((part) => part.content.trim()).filter((content) => content.length > 0)
+    return textParts.length > 0 && textParts.every((content) => !looksLikeStructuredJsonOutput(content))
+  }
+  return false
+}
+
+const readFinishFindings = ({
+  resolution,
+  spansById,
+  hasFinalOutputDamage,
+  hasFinalProseCompletion,
+}: {
+  readonly resolution: ReturnType<typeof resolveSessionSpanEndpoints>
+  readonly spansById: ReadonlyMap<string, Span>
+  readonly hasFinalOutputDamage: boolean
+  readonly hasFinalProseCompletion: boolean
+}): AssessmentFinding[] =>
+  resolution.generationEndpoints.flatMap((endpoint) => {
+    const span = spansById.get(`${endpoint.traceId}:${endpoint.spanId}`)
+    if (!span) return []
+
+    return endpoint.finishReasons.flatMap((reason) => {
+      if (reason.classification !== "unreliable") return []
+      if (
+        reason.requiresOutputDamage &&
+        !(endpoint.generationPosition === "final" && (hasFinalOutputDamage || hasFinalProseCompletion))
+      )
+        return []
+
+      return [
+        {
+          evidenceKey: `span:${endpoint.spanId}:finish:${reason.kind}`,
+          label: `Generation ended with ${reason.kind}`,
+          description: reason.rawValue,
+          source: "metric" as const,
+          metricId: "spans.finish_failure" as const,
+          signalIds: [],
+          scoreIds: [],
+          occurrenceCount: 1,
+          chronology: { occurredAt: endpoint.endTime },
+          anchors: [{ kind: "span" as const, traceId: endpoint.traceId, spanId: endpoint.spanId }],
+          destinations: [{ kind: "span" as const, traceId: endpoint.traceId, spanId: endpoint.spanId }],
+          independentHumanEvidence: false,
+          kind: "finishFailure" as const,
+          findingKind: reason.kind,
+          generationPosition: endpoint.generationPosition,
+          observedMicrocents: span.costTotalMicrocents,
+          observedNs: Math.max(0, endpoint.endTime.getTime() - endpoint.startTime.getTime()) * 1_000_000,
+        },
+      ]
+    })
+  })
+
 const readSpanFindings = (
   session: SessionDetail,
   spans: readonly Span[],
@@ -284,35 +365,8 @@ const readSpanFindings = (
   const hasFinalOutputDamage = deterministic.some(
     (finding) => finding.kind === "outputDamage" && finding.generationPosition === "final",
   )
-  const findings: AssessmentFinding[] = []
-
-  for (const endpoint of resolution.generationEndpoints) {
-    const span = spansById.get(`${endpoint.traceId}:${endpoint.spanId}`)
-    if (!span) continue
-    for (const reason of endpoint.finishReasons) {
-      if (reason.classification !== "unreliable") continue
-      if (reason.requiresOutputDamage && !(endpoint.generationPosition === "final" && hasFinalOutputDamage)) continue
-      findings.push({
-        evidenceKey: `span:${endpoint.spanId}:finish:${reason.kind}`,
-        label: `Generation ended with ${reason.kind}`,
-        description: reason.rawValue,
-        source: "metric",
-        metricId: "spans.finish_failure",
-        signalIds: [],
-        scoreIds: [],
-        occurrenceCount: 1,
-        chronology: { occurredAt: endpoint.endTime },
-        anchors: [{ kind: "span", traceId: endpoint.traceId, spanId: endpoint.spanId }],
-        destinations: [{ kind: "span", traceId: endpoint.traceId, spanId: endpoint.spanId }],
-        independentHumanEvidence: false,
-        kind: "finishFailure",
-        findingKind: reason.kind,
-        generationPosition: endpoint.generationPosition,
-        observedMicrocents: span.costTotalMicrocents,
-        observedNs: Math.max(0, endpoint.endTime.getTime() - endpoint.startTime.getTime()) * 1_000_000,
-      })
-    }
-  }
+  const hasFinalProseCompletion = isFinalProseCompletion(session.outputMessages)
+  const findings = readFinishFindings({ resolution, spansById, hasFinalOutputDamage, hasFinalProseCompletion })
 
   for (const finding of resolution.providerErrorFindings) {
     const span = spansById.get(`${finding.traceId}:${finding.spanId}`)

@@ -294,7 +294,7 @@ describe("readSessionAssessmentSources", () => {
     })
   })
 
-  it("pairs a length finish reason only with final output damage", async () => {
+  it("pairs a length finish reason with final output damage for structured output", async () => {
     const generation = span("c", 0, 10, { finishReasons: ["length"] })
     const damaged = await read(
       session([{ role: "assistant", parts: [{ type: "text", content: '{"answer":"unfinished' }] }]),
@@ -312,6 +312,99 @@ describe("readSessionAssessmentSources", () => {
       expect.arrayContaining([expect.objectContaining({ polarity: "negative", impactLevel: "high" })]),
     )
     expect(intact.findings.some((finding) => finding.kind === "finishFailure")).toBe(false)
+  })
+
+  it.each(["length", "max_tokens", "max_output_tokens"])(
+    "counts a final prose completion stopped by %s as a reliability failure",
+    async (finishReason) => {
+      const generation = span("e", 0, 10, { finishReasons: [finishReason] })
+      const result = await read(
+        session([
+          {
+            role: "assistant",
+            parts: [
+              {
+                type: "text",
+                content:
+                  "The CMR showing the original seal number SL-88214, the gate CCTV timestamped for the arrival, " +
+                  "the quarantine record from your QA, and the",
+              },
+            ],
+          },
+        ]),
+        [generation],
+      )
+
+      expect(result.findings).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "finishFailure" })]))
+      expect(resolveSessionAssessment(result).items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ metricId: "spans.finish_failure", polarity: "negative", impactLevel: "high" }),
+        ]),
+      )
+    },
+  )
+
+  it("counts bracket-numbered prose as a final prose completion", async () => {
+    const generation = span("j", 0, 10, { finishReasons: ["length"] })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [{ type: "text", content: "[1] The CMR, gate CCTV, quarantine record, and" }],
+        },
+      ]),
+      [generation],
+    )
+
+    expect(result.findings).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "finishFailure" })]))
+  })
+
+  it("does not count a valid JSON array as a prose completion", async () => {
+    const generation = span("k", 0, 10, { finishReasons: ["length"] })
+    const result = await read(session([{ role: "assistant", parts: [{ type: "text", content: "[1, 2]" }] }]), [
+      generation,
+    ])
+
+    expect(result.findings.some((finding) => finding.kind === "finishFailure")).toBe(false)
+  })
+
+  it("does not count a length-limited generation before a later prose completion", async () => {
+    const truncated = span("h", 0, 10, { finishReasons: ["length"] })
+    const final = span("i", 11, 20)
+    const result = await read(
+      session([{ role: "assistant", parts: [{ type: "text", content: "The complete answer follows." }] }]),
+      [truncated, final],
+    )
+
+    expect(result.findings.some((finding) => finding.kind === "finishFailure")).toBe(false)
+  })
+
+  it("does not treat a length-limited tool call as a prose failure", async () => {
+    const generation = span("f", 0, 10, { finishReasons: ["length"] })
+    const result = await read(
+      session([{ role: "assistant", parts: [{ type: "tool_call", id: "call-1", name: "search", arguments: {} }] }]),
+      [generation],
+    )
+
+    expect(result.findings.some((finding) => finding.kind === "finishFailure")).toBe(false)
+  })
+
+  it("does not treat a mixed text and tool-call response as a prose completion", async () => {
+    const generation = span("g", 0, 10, { finishReasons: ["max_tokens"] })
+    const result = await read(
+      session([
+        {
+          role: "assistant",
+          parts: [
+            { type: "text", content: "I need to look this up first." },
+            { type: "tool_call", id: "call-1", name: "search", arguments: {} },
+          ],
+        },
+      ]),
+      [generation],
+    )
+
+    expect(result.findings.some((finding) => finding.kind === "finishFailure")).toBe(false)
   })
 
   it("reports unmapped span telemetry as a coverage limitation without creating findings", async () => {
