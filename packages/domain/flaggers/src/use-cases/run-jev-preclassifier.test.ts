@@ -401,6 +401,46 @@ describe("runJevPreclassifierUseCase", () => {
     })
   })
 
+  it("skips hinted-only classifications without selection evidence", async () => {
+    const input = makeInput({
+      decisions: [{ slug: "nsfw", action: "classify", reason: "hinted", hintKinds: ["pattern:nsfw"] }],
+      checkRateLimit: () => Effect.die("rate limiting must not run"),
+    })
+    const { result, providerCalls, observations, meteringCalls } = await run(input, {
+      save: () => Effect.die("audit persistence must not run"),
+    })
+
+    expect(result.decisions).toBe(input.decisions)
+    expect(result.classifications).toBe(input.classifications)
+    expect(providerCalls).toEqual([])
+    expect(observations).toEqual([])
+    expect(meteringCalls).toEqual([])
+  })
+
+  it("corrects hinted classifications with explicit probability below one", async () => {
+    const { result, providerCalls } = await run(
+      makeInput({
+        decisions: [
+          {
+            slug: "nsfw",
+            action: "classify",
+            reason: "hinted",
+            hintKinds: ["pattern:nsfw"],
+            selection: { reason: "hinted", inclusionProbability: 0.5 },
+          },
+        ],
+        classifications: [{ flaggerId: "nsfw-id", flaggerSlug: "nsfw", reason: "hinted" }],
+      }),
+      { probabilities: { "flagger.nsfw": 0.9 } },
+    )
+
+    expect(providerCalls).toHaveLength(1)
+    expect(result.classifications).toEqual([{ flaggerId: "nsfw-id", flaggerSlug: "nsfw", reason: "hinted" }])
+    expect(result.decisions[0]).toMatchObject({
+      selection: { reason: "hinted", inclusionProbability: 1 },
+    })
+  })
+
   it("does not return gated classifications when audit persistence fails", async () => {
     await expect(
       run(makeInput(), {

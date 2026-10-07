@@ -103,7 +103,11 @@ const hasEligibleStrategy = (input: RunJevPreclassifierInput) =>
     const decision = input.decisions.find((candidate) => candidate.slug === strategy.slug)
     if (!decision) return false
     if (isSampledOutDrop(decision)) return input.flaggerBySlug.get(strategy.slug)?.enabled === true
-    return decision.action === "classify" && decision.selection?.inclusionProbability !== 1
+    if (decision.action !== "classify") return false
+    const probability =
+      decision.selection?.inclusionProbability ??
+      (decision.reason === "sampled" ? (input.flaggerBySlug.get(strategy.slug)?.sampling ?? 0) / 100 : 1)
+    return probability < 1
   })
 
 const withPropensityCorrection = (
