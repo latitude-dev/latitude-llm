@@ -829,8 +829,6 @@ describe("resolveAttributes", () => {
     })
   })
 
-  // The unsigned cost columns cannot hold a negative, and NaN or Infinity price nothing. A bad value
-  // is dropped as if unsent, so the next candidate (or the catalog) still prices the span.
   describe("cost validation", () => {
     const PRICED: OtlpKeyValue[] = [
       strAttr("gen_ai.provider.name", "openai"),
@@ -884,7 +882,6 @@ describe("resolveAttributes", () => {
     })
   })
 
-  // Without the marker a lone zero total is not a price, which is how it has always been read.
   describe("cost without the customer marker", () => {
     const PRICED: OtlpKeyValue[] = [
       strAttr("gen_ai.provider.name", "openai"),
@@ -909,14 +906,11 @@ describe("resolveAttributes", () => {
       })
       expect(result.costSource).toBe("provider_reported")
       expect(result.costTotalMicrocents).toBe(50_000_000)
-      // A provider-reported total still gets estimated sides beside it.
       expect(result.costIsEstimated).toBe(true)
       expect(result.costInputMicrocents).toBe(250_000)
     })
   })
 
-  // `latitude.cost.source = "user"` marks the cost attributes as the customer's own figure: stored
-  // exactly as sent, with nothing filled from the catalog.
   describe("customer-reported cost", () => {
     const USER_PRICED: OtlpKeyValue[] = [
       strAttr("gen_ai.provider.name", "openai"),
@@ -1709,6 +1703,35 @@ describe("resolveUsage — embedded message usage (OpenClaw)", () => {
     expect(u.costOutputMicrocents).toBe(381_000)
     expect(u.costTotalMicrocents).toBe(1_899_700)
     expect(u.costIsEstimated).toBe(false)
+  })
+
+  it("lets a customer-reported cost win over the embedded cost, keeping the embedded tokens", () => {
+    const embedded = outputMessages({ input: 951, output: 127, cacheRead: 20864, cost: { total: 0.018997 } })
+    const u = resolveUsage({
+      attrs: [embedded, strAttr("latitude.cost.source", "user"), floatAttr("gen_ai.usage.total_cost", 0.5)],
+      provider: "openai",
+      model: "gpt-5.5",
+    })
+    expect(u.tokensInput).toBe(951)
+    expect(u.tokensCacheRead).toBe(20864)
+    expect(u).toMatchObject({
+      costInputMicrocents: 0,
+      costOutputMicrocents: 0,
+      costTotalMicrocents: 50_000_000,
+      costIsEstimated: false,
+      costSource: "user_reported",
+    })
+  })
+
+  it("keeps the embedded cost when the marker comes with no usable cost attribute", () => {
+    const embedded = outputMessages({ input: 951, output: 127, cost: { total: 0.018997 } })
+    const u = resolveUsage({
+      attrs: [embedded, strAttr("latitude.cost.source", "user"), floatAttr("gen_ai.usage.total_cost", -1)],
+      provider: "openai",
+      model: "gpt-5.5",
+    })
+    expect(u.costTotalMicrocents).toBe(1_899_700)
+    expect(u.costSource).toBe("provider_reported")
   })
 
   it("falls back to flat gen_ai.usage.* attrs when there is no embedded usage", () => {

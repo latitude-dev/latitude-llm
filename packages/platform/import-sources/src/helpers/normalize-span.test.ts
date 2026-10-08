@@ -546,8 +546,6 @@ describe("buildSpanFromNormalized cost", () => {
     expect(span.costIsEstimated).toBe(false)
   })
 
-  // Same validation as live ingestion: the cost columns are unsigned, so a negative or non-finite
-  // figure is treated as unstated and the side falls back to the estimate.
   it.each([-0.001, Number.NaN, Number.POSITIVE_INFINITY])("ignores a reported cost of %s", (bad) => {
     const span = withUsage({ provider: "openai", model: "gpt-4o-mini", cost: { inputUsd: bad, totalUsd: bad } })
 

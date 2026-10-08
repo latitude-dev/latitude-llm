@@ -20,8 +20,7 @@ export type SpanStatusCode = z.infer<typeof spanStatusCodeSchema>
  * Where a span's cost came from, so a stored 0 can be read.
  *
  * - `provider_reported` — the instrumentation sent a cost, authoritative.
- * - `user_reported` — the customer sent their own cost and marked it with `latitude.cost.source = "user"`.
- *   Authoritative like `provider_reported`, but the catalog never fills a side the customer left out.
+ * - `user_reported` — the customer sent their own cost under `latitude.cost.source = "user"`, stored as sent.
  * - `estimated` — we priced the tokens off models.dev.
  * - `unpriced` — tokens were reported but no models.dev pricing matched, so cost stayed 0. A 0 here
  *   understates the real spend; it is not free.
@@ -54,8 +53,6 @@ export interface StoredCostSignals {
  * Read a stored `cost_source`. Rows written before the column existed come back as the empty string;
  * a non-zero cost still says which side it came from, but a zero cost with tokens cannot say whether
  * it was free or unpriced, so it stays `unknown` rather than being guessed either way.
- *
- * `user_reported` never needs the fallback: it was added after the column, so every such row stores it.
  */
 export function parseCostSource(value: string, stored: StoredCostSignals): CostSource {
   if (COST_SOURCE_SET.has(value)) return value as CostSource

@@ -91,12 +91,7 @@ export const mapSourceId = (
     .slice(0, length)
 }
 
-/**
- * The source's own figures in the units the shared cost policy resolves over. A figure that is not
- * finite and non-negative reads as unstated, the same validation live ingestion applies; a real zero
- * survives, so a source pricing a call at nothing still reads as a price rather than as a gap in our
- * pricing.
- */
+/** The source's own figures in the units the shared cost policy resolves over. */
 const resolveCost = (input: NormalizedSpanInput, tokens: SpanTokenCounts) =>
   resolveSpanCost({
     reported: {

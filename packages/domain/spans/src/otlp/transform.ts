@@ -108,7 +108,6 @@ export interface UnpricedSpanGroup {
   readonly spans: number
 }
 
-/** A cost attribute ingestion ignored because its value was not a finite, non-negative number. */
 export interface InvalidCostAttributeCount {
   readonly key: string
   readonly spans: number
@@ -119,7 +118,7 @@ interface TransformResult {
   /** Spans skipped for lacking a resolvable `projectId` or a valid `traceId`. */
   readonly rejectedSpans: number
   readonly unpricedSpanGroups: readonly UnpricedSpanGroup[]
-  /** Cost attributes ignored as invalid, by key. The span is still stored, without that figure. */
+  /** Cost attributes ignored for not being a finite, non-negative number, by key. */
   readonly invalidCostAttributes: readonly InvalidCostAttributeCount[]
 }
 

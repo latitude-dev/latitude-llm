@@ -201,9 +201,6 @@ const cloudflareAiGatewayRequest = {
   ],
 }
 
-// A chat span carrying the customer's own cost, marked with `latitude.cost.source = "user"`, beside
-// one sending an invalid figure. The pair is priced by the catalog (openai / gpt-4o) so any
-// estimate leaking into the customer's span would show.
 const customerCostSpan = (spanId: string, attributes: readonly { key: string; value: Record<string, unknown> }[]) => ({
   traceId: "33333333333333333333333333333333",
   spanId,
@@ -230,23 +227,19 @@ const customerReportedCostRequest = {
         {
           scope: { name: "byo-cost-test" },
           spans: [
-            // Total only, sent as a numeric string.
             customerCostSpan("d000000000000001", [
               { key: "latitude.cost.source", value: { stringValue: "user" } },
               { key: "gen_ai.usage.total_cost", value: { stringValue: "0.0123" } },
             ]),
-            // Sides only: the total is their sum.
             customerCostSpan("d000000000000002", [
               { key: "latitude.cost.source", value: { stringValue: "user" } },
               { key: "gen_ai.usage.input_cost", value: { doubleValue: 0.00042 } },
               { key: "gen_ai.usage.output_cost", value: { intValue: "1" } },
             ]),
-            // An explicit zero total is free.
             customerCostSpan("d000000000000003", [
               { key: "latitude.cost.source", value: { stringValue: "user" } },
               { key: "gen_ai.usage.total_cost", value: { doubleValue: 0 } },
             ]),
-            // A negative total, no marker: ignored, so the catalog prices the span.
             customerCostSpan("d000000000000004", [{ key: "gen_ai.usage.total_cost", value: { doubleValue: -0.5 } }]),
           ],
         },
@@ -683,9 +676,7 @@ describe("createSpanIngestionWorker", () => {
     }))
 
     expect(stored).toEqual([
-      // "0.0123" USD → 1,230,000 microcents, sides left at zero.
       { spanId: "d000000000000001", input: 0, output: 0, total: 1_230_000, estimated: false, source: "user_reported" },
-      // 0.00042 + 1 USD → 42,000 + 100,000,000 microcents.
       {
         spanId: "d000000000000002",
         input: 42_000,
@@ -695,7 +686,7 @@ describe("createSpanIngestionWorker", () => {
         source: "user_reported",
       },
       { spanId: "d000000000000003", input: 0, output: 0, total: 0, estimated: false, source: "user_reported" },
-      // The -0.5 was dropped; gpt-4o at 1,000 in / 500 out prices at 750,000 microcents.
+      // gpt-4o at 1,000 input / 500 output tokens.
       {
         spanId: "d000000000000004",
         input: 250_000,

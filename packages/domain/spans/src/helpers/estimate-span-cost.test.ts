@@ -112,7 +112,6 @@ describe("resolveSpanCost", () => {
     })
   })
 
-  // The customer's own figure: authoritative, and never topped up from the catalog.
   describe("what the customer reported", () => {
     const resolveUser = (reported: Parameters<typeof resolveSpanCost>[0]["reported"], pair = PRICED) =>
       resolveSpanCost({ reported, reportedBy: "user", ...pair, tokens: TOKENS })

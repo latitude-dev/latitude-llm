@@ -133,11 +133,6 @@ function decodeAndTransform(
   })
 }
 
-/**
- * A cost attribute that is negative, NaN, infinite or not a number is dropped at resolution so it
- * never reaches the unsigned cost columns. The span is still stored, priced from whatever else it
- * carried, so this is the only trace that the figure was sent and ignored.
- */
 function reportInvalidCostAttributes(
   invalid: readonly InvalidCostAttributeCount[],
   organizationId: string,

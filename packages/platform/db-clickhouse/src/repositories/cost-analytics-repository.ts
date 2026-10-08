@@ -495,9 +495,7 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
               const [overviewResult, topSpendResult, zeroCostResult] = await Promise.all([
                 client.query({
                   // `cost_source` is resolved in a subquery so the aggregates below
-                  // can filter on it without nesting inside the alias. A cost the
-                  // customer reported is verified on the same terms as a provider's:
-                  // it was stated, not priced by us.
+                  // can filter on it without nesting inside the alias.
                   query: `SELECT
                         sum(cost_total_microcents) AS total_microcents,
                         sumIf(cost_total_microcents, cost_source IN ('provider_reported', 'user_reported')) AS verified_microcents,

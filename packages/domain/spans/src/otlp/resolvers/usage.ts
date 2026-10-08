@@ -4,24 +4,14 @@ import { attrArray, stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import { resolveTokens } from "./usage/tokens.ts"
 
-// ─── Reported cost ───────────────────────────────────────
-//
-// Each side is read off the first key that carries a usable figure, in this order. The keys are the
-// GenAI semantic-convention-style `gen_ai.usage.*` costs and OpenInference's `llm.cost.*`.
-
 const COST_INPUT_KEYS = ["gen_ai.usage.input_cost", "llm.cost.prompt"] as const
 const COST_OUTPUT_KEYS = ["gen_ai.usage.output_cost", "llm.cost.completion"] as const
 const COST_TOTAL_KEYS = ["gen_ai.usage.total_cost", "gen_ai.usage.cost", "llm.cost.total"] as const
 const COST_ATTRIBUTE_KEYS = [...COST_INPUT_KEYS, ...COST_OUTPUT_KEYS, ...COST_TOTAL_KEYS] as const
 
-/**
- * Marks the cost attributes on a span as the customer's own figure rather than a provider's. Only
- * {@link USER_COST_SOURCE} means anything; any other value is ignored.
- */
 const COST_SOURCE_MARKER_KEY = "latitude.cost.source"
 const USER_COST_SOURCE = "user"
 
-/** An attribute's value as whichever scalar OTLP carried it in, or `undefined` when it is absent. */
 function rawCostValue(attrs: readonly OtlpKeyValue[], key: string): number | string | undefined {
   const value = attrArray(attrs).find((a) => a.key === key)?.value
   if (!value) return undefined
@@ -30,13 +20,6 @@ function rawCostValue(attrs: readonly OtlpKeyValue[], key: string): number | str
   return value.stringValue || undefined
 }
 
-/**
- * The first usable figure among `keys`, in microcents.
- *
- * A value that is not a finite, non-negative number is skipped, so the next key can still supply the
- * side. `ignoreZero` skips a stated zero the same way, which is how a total without the customer's
- * marker has always been read: a lone zero total does not, on its own, price the call as free.
- */
 function firstReportedMicrocents(
   attrs: readonly OtlpKeyValue[],
   keys: readonly string[],
@@ -52,16 +35,26 @@ function firstReportedMicrocents(
   return undefined
 }
 
-/**
- * The cost attributes on a span that carry a value we could not store as a cost: negative, NaN,
- * infinite, or a string that is not a number. Each is ignored at resolution; this is for reporting.
- */
 export function findInvalidCostAttributes(attrs: readonly OtlpKeyValue[]): readonly string[] {
   return COST_ATTRIBUTE_KEYS.filter((key) => {
     const raw = rawCostValue(attrs, key)
     return raw !== undefined && parseReportedUsd(raw) === undefined
   })
 }
+
+const tokenCountsOf = ({
+  tokensInput,
+  tokensOutput,
+  tokensCacheRead,
+  tokensCacheCreate,
+  tokensReasoning,
+}: SpanTokenCounts): SpanTokenCounts => ({
+  tokensInput,
+  tokensOutput,
+  tokensCacheRead,
+  tokensCacheCreate,
+  tokensReasoning,
+})
 
 // ─── Resolve ─────────────────────────────────────────────
 
@@ -170,27 +163,24 @@ interface ResolveUsageInput {
 }
 
 export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): ResolvedUsage {
+  const userReported = stringAttr(attrs, COST_SOURCE_MARKER_KEY) === USER_COST_SOURCE
+  const reported = {
+    inputMicrocents: firstReportedMicrocents(attrs, COST_INPUT_KEYS, { ignoreZero: false }),
+    outputMicrocents: firstReportedMicrocents(attrs, COST_OUTPUT_KEYS, { ignoreZero: false }),
+    // Without the marker a lone zero total is not read as a price.
+    totalMicrocents: firstReportedMicrocents(attrs, COST_TOTAL_KEYS, { ignoreZero: !userReported }),
+  }
+  const hasUserCost = userReported && Object.values(reported).some((value) => value !== undefined)
+
   // Some instrumentations carry usage in the message payload rather than as flat
   // gen_ai.usage.* attrs (OpenClaw) — prefer that when present.
   const embedded = resolveEmbeddedMessageUsage(attrs, provider, model)
-  if (embedded) return embedded
+  if (embedded && !hasUserCost) return embedded
 
-  const tokens = resolveTokens(attrs, provider)
-  // The customer's own figure is taken exactly as sent, an explicit zero total included.
-  const userReported = stringAttr(attrs, COST_SOURCE_MARKER_KEY) === USER_COST_SOURCE
+  const tokens = embedded ? tokenCountsOf(embedded) : resolveTokens(attrs, provider)
 
   return {
     ...tokens,
-    ...resolveSpanCost({
-      reported: {
-        inputMicrocents: firstReportedMicrocents(attrs, COST_INPUT_KEYS, { ignoreZero: false }),
-        outputMicrocents: firstReportedMicrocents(attrs, COST_OUTPUT_KEYS, { ignoreZero: false }),
-        totalMicrocents: firstReportedMicrocents(attrs, COST_TOTAL_KEYS, { ignoreZero: !userReported }),
-      },
-      reportedBy: userReported ? "user" : "provider",
-      provider,
-      model,
-      tokens,
-    }),
+    ...resolveSpanCost({ reported, reportedBy: userReported ? "user" : "provider", provider, model, tokens }),
   }
 }

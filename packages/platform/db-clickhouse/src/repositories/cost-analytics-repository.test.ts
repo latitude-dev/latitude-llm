@@ -20,7 +20,7 @@ const CACHE_PROJECT_ID = ProjectId("costcache00000000000000a")
 // Cadence lives on its own project: the ceiling is read from inter-call gaps, so it
 // needs timestamps chosen for their spacing rather than for the token columns.
 const CADENCE_PROJECT_ID = ProjectId("costcadence000000000000a")
-// Own project so the verified share can be read off a fixture that mixes both reported sources.
+// Own project so the verified share reads off a fixture mixing both reported sources.
 const REPORTED_PROJECT_ID = ProjectId("costreported00000000000a")
 
 const DAY1 = new Date("2026-06-01T10:00:00.000Z")
@@ -328,7 +328,6 @@ describe("CostAnalyticsRepositoryLive", () => {
         cadenceSpan(54, 0, { model: "named-agents", serviceName: "shared-service", agentName: "billing" }),
         cadenceSpan(55, 60, { model: "named-agents", serviceName: "shared-service", agentName: "support" }),
 
-        // Verified spend: what the provider reported plus what the customer reported, at any value.
         span(91, DAY1, { project: REPORTED_PROJECT_ID, costTotal: 200, costSource: "provider_reported" }),
         span(92, DAY1, { project: REPORTED_PROJECT_ID, costTotal: 300, costSource: "user_reported" }),
         span(93, DAY2, { project: REPORTED_PROJECT_ID, costTotal: 0, tokensInput: 50, costSource: "user_reported" }),
@@ -366,7 +365,6 @@ describe("CostAnalyticsRepositoryLive", () => {
       expect(totalMicrocents).toBe(600)
       expect(confidence.verifiedMicrocents).toBe(500)
       expect(confidence.estimatedMicrocents).toBe(100)
-      // A customer's zero is a price, not a gap.
       expect(confidence.unpricedCalls).toBe(0)
       expect(confidence.unknownCalls).toBe(0)
     })
