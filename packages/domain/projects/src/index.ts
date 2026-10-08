@@ -11,7 +11,12 @@ export {
   InvalidProjectNameError as UpdateInvalidProjectNameError,
   InvalidProjectSlugError,
   ProjectNotFoundError,
+  RedactionPolicyForbiddenError,
 } from "./errors.ts"
+export {
+  ProjectRedactionAuthorizer,
+  type ProjectRedactionAuthorizerShape,
+} from "./ports/project-redaction-authorizer.ts"
 export { ProjectRepository, type ProjectRepositoryShape } from "./ports/project-repository.ts"
 export {
   type CreateProjectError,

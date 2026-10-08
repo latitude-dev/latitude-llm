@@ -13,6 +13,16 @@ export * from "./id.ts"
 export * from "./monitor-metric-units.ts"
 export * from "./monitor-stream.ts"
 export * from "./notification-preferences.ts"
+export {
+  REDACTION_VALIDATOR_VERSION,
+  type RejectedRedactionRule,
+  type RuleValidation,
+  type RuleValidationIssue,
+  rejectInvalidRedactionRules,
+  rejectionMessage,
+  validateRedactionRule,
+  withServerValidatorVersion,
+} from "./redaction-rule-validation.ts"
 export * from "./score-evidence.ts"
 export * from "./score-image-url.ts"
 export * from "./score-ring-geometry.ts"

@@ -1,11 +1,18 @@
 import { generateId } from "@domain/shared"
 import { and, eq } from "@platform/db-postgres"
+import { members } from "@platform/db-postgres/schema/better-auth"
 import { flaggers as flaggersTable } from "@platform/db-postgres/schema/flaggers"
 import { outboxEvents } from "@platform/db-postgres/schema/outbox-events"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { describe, expect, it } from "vitest"
-import { type ApiTestContext, createTenantSetup, setupTestApi } from "../test-utils/create-test-app.ts"
+import {
+  type ApiTestContext,
+  createOAuthAuthHeaders,
+  createOAuthTenantSetup,
+  createTenantSetup,
+  setupTestApi,
+} from "../test-utils/create-test-app.ts"
 
 interface ProjectRow {
   readonly id: string
@@ -163,19 +170,98 @@ describe("Projects Routes Integration", () => {
     expect(body.settings).toEqual({ keepMonitoring: true })
   })
 
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug rejects API-key redaction changes", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "API Key Redaction")
+    await database.db
+      .update(projects)
+      .set({ settings: { redaction: { mode: "off" } } })
+      .where(eq(projects.id, project.id))
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}`, {
+        method: "PATCH",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Must Not Change", settings: { redaction: { mode: "enforce" } } }),
+      }),
+    )
+
+    expect(response.status).toBe(403)
+    const [stored] = await database.db.select().from(projects).where(eq(projects.id, project.id))
+    expect(stored?.name).toBe("API Key Redaction")
+    expect(stored?.settings?.redaction).toEqual({ mode: "off" })
+  })
+
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug rejects non-admin OAuth redaction changes", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Member Redaction")
+    await database.db.update(members).set({ role: "member" }).where(eq(members.userId, tenant.userId))
+    await database.db
+      .update(projects)
+      .set({ settings: { redaction: { mode: "enforce", entities: ["email"] } } })
+      .where(eq(projects.id, project.id))
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}`, {
+        method: "PATCH",
+        headers: { ...createOAuthAuthHeaders(tenant.oauthAccessToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { redaction: { mode: "off" } } }),
+      }),
+    )
+
+    expect(response.status).toBe(403)
+    const [stored] = await database.db.select().from(projects).where(eq(projects.id, project.id))
+    expect(stored?.settings?.redaction).toEqual({ mode: "enforce", entities: ["email"] })
+  })
+
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug rejects mixed non-admin redaction updates", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Mixed Member Redaction")
+    await database.db.update(members).set({ role: "member" }).where(eq(members.userId, tenant.userId))
+    await database.db
+      .update(projects)
+      .set({ settings: { redaction: { mode: "off" } } })
+      .where(eq(projects.id, project.id))
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}`, {
+        method: "PATCH",
+        headers: { ...createOAuthAuthHeaders(tenant.oauthAccessToken), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Must Not Change",
+          settings: { keepMonitoring: true, redaction: { mode: "enforce" } },
+        }),
+      }),
+    )
+
+    expect(response.status).toBe(403)
+    const [stored] = await database.db.select().from(projects).where(eq(projects.id, project.id))
+    expect(stored?.name).toBe("Mixed Member Redaction")
+    expect(stored?.settings).toEqual({ redaction: { mode: "off" } })
+    const events = await database.db.select().from(outboxEvents).where(eq(outboxEvents.aggregateId, project.id))
+    expect(events).toEqual([])
+  })
+
   // Redaction is irreversible, so an API-driven change has to leave the same audit trail a
   // dashboard change does. The generic settings path emits no event, hence the separate route.
   it<ApiTestContext>("PATCH /v1/projects/:projectSlug records an audit event when it changes redaction", async ({
     app,
     database,
   }) => {
-    const tenant = await createTenantSetup(database)
+    const tenant = await createOAuthTenantSetup(database)
     const project = await createProjectRecord(database, tenant.organizationId, "Audited Redaction")
+    await database.db.update(members).set({ role: "admin" }).where(eq(members.userId, tenant.userId))
 
     const response = await app.fetch(
       new Request(`http://localhost/v1/projects/${project.slug}`, {
         method: "PATCH",
-        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        headers: { ...createOAuthAuthHeaders(tenant.oauthAccessToken), "Content-Type": "application/json" },
         body: JSON.stringify({ settings: { redaction: { mode: "enforce", entities: ["email"] } } }),
       }),
     )
@@ -190,9 +276,41 @@ describe("Projects Routes Integration", () => {
     expect(redactionEvent).toBeDefined()
     expect(redactionEvent?.payload).toMatchObject({
       projectId: project.id,
+      actorUserId: tenant.userId,
       fromRedaction: null,
       toRedaction: { mode: "enforce", entities: ["email"] },
     })
+  })
+
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug rolls back redaction when another update fails", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Rollback Redaction")
+    await createProjectRecord(database, tenant.organizationId, "Existing Name")
+    await database.db
+      .update(projects)
+      .set({ settings: { redaction: { mode: "off" } } })
+      .where(eq(projects.id, project.id))
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}`, {
+        method: "PATCH",
+        headers: { ...createOAuthAuthHeaders(tenant.oauthAccessToken), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Existing Name",
+          settings: { redaction: { mode: "enforce", entities: ["email"] } },
+        }),
+      }),
+    )
+
+    expect(response.status).toBe(400)
+    const [stored] = await database.db.select().from(projects).where(eq(projects.id, project.id))
+    expect(stored?.name).toBe("Rollback Redaction")
+    expect(stored?.settings?.redaction).toEqual({ mode: "off" })
+    const events = await database.db.select().from(outboxEvents).where(eq(outboxEvents.aggregateId, project.id))
+    expect(events).toEqual([])
   })
 
   /**
@@ -204,7 +322,7 @@ describe("Projects Routes Integration", () => {
     app,
     database,
   }) => {
-    const tenant = await createTenantSetup(database)
+    const tenant = await createOAuthTenantSetup(database)
     const project = await createProjectRecord(database, tenant.organizationId, "Rules Preserved")
     const rules = [{ id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms" as const, terms: ["ACME-1234"] }]
     await database.db
@@ -215,7 +333,7 @@ describe("Projects Routes Integration", () => {
     const response = await app.fetch(
       new Request(`http://localhost/v1/projects/${project.slug}`, {
         method: "PATCH",
-        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        headers: { ...createOAuthAuthHeaders(tenant.oauthAccessToken), "Content-Type": "application/json" },
         body: JSON.stringify({ settings: { redaction: { mode: "off" } } }),
       }),
     )
@@ -224,6 +342,42 @@ describe("Projects Routes Integration", () => {
 
     const [stored] = await database.db.select().from(projects).where(eq(projects.id, project.id))
     expect(stored?.settings?.redaction).toEqual({ mode: "off", rules })
+  })
+
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug strips redaction rules outside the API contract", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Rules Stripped")
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}`, {
+        method: "PATCH",
+        headers: { ...createOAuthAuthHeaders(tenant.oauthAccessToken), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          settings: {
+            redaction: {
+              mode: "enforce",
+              rules: [
+                {
+                  id: "r1",
+                  label: "ACCOUNT_NUMBER",
+                  kind: "pattern",
+                  pattern: "(a+)+$",
+                  validatorVersion: 99,
+                },
+              ],
+            },
+          },
+        }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    const [stored] = await database.db.select().from(projects).where(eq(projects.id, project.id))
+    expect(stored?.settings?.redaction).toEqual({ mode: "enforce" })
+    expect(stored?.settings?.redaction?.rules).toBeUndefined()
   })
 
   // `ProjectSettingsSchema` exposes a subset of what's stored, so a replace here would let

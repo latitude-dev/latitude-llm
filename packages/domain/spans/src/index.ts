@@ -4,6 +4,9 @@
 // type's surface, so consumers that only deal with claude_code today
 // don't need to import from `wrapped/types/claude-code` directly.
 
+export type { RuleValidation, RuleValidationIssue } from "@domain/shared"
+export { REDACTION_VALIDATOR_VERSION, validateRedactionRule } from "@domain/shared"
+
 export {
   buildMetricBaseline,
   buildMetricBaselines,
@@ -406,8 +409,6 @@ export type {
 } from "./ports/user-analytics-repository.ts"
 export { isUserSortField, USER_SORT_FIELDS, UserAnalyticsRepository } from "./ports/user-analytics-repository.ts"
 export { redactSpans, type SpanRedactionSummary } from "./redaction/redact-spans.ts"
-export type { RuleValidation, RuleValidationIssue } from "./redaction/validate-rule.ts"
-export { REDACTION_VALIDATOR_VERSION, validateRedactionRule } from "./redaction/validate-rule.ts"
 export { deterministicSample } from "./sampling/deterministic-sampler.ts"
 export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
 export type {

@@ -33,7 +33,6 @@ import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { rejectInvalidRedactionRules, rejectionMessage } from "../../lib/redaction-rules.ts"
 import { requireSession, requireUserSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getBetterAuth, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 import {
@@ -211,13 +210,11 @@ export const updateOrganizationRedaction = createServerFn({ method: "POST" })
           })
         }
 
-        const rejected = rejectInvalidRedactionRules(data.redaction)
-        if (rejected) {
-          return yield* new BadRequestError({ message: rejectionMessage(rejected) })
-        }
-
         return yield* updateOrganizationRedactionUseCase({ actorUserId: userId, redaction: data.redaction })
       }).pipe(
+        Effect.catchTag("InvalidRedactionRuleError", (error) =>
+          Effect.fail(new BadRequestError({ message: error.message })),
+        ),
         withPostgres(
           Layer.mergeAll(OrganizationRepositoryLive, MembershipRepositoryLive, OutboxEventWriterLive),
           client,

@@ -1,4 +1,4 @@
-import type { RedactionRule } from "@domain/shared"
+import type { OrganizationRedactionSetting, RedactionRule, RedactionSetting } from "./settings.ts"
 
 /**
  * Bumped whenever a gate below gets stricter.
@@ -105,6 +105,60 @@ const result = (errors: RuleValidationIssue[], slowestProbeMs: number): RuleVali
   slowestProbeMs,
   validatorVersion: REDACTION_VALIDATOR_VERSION,
 })
+
+export interface RejectedRedactionRule {
+  readonly rule: RedactionRule
+  readonly reason: string
+}
+
+/**
+ * Rejects a redaction setting whose rules cannot be trusted, before it is stored.
+ *
+ * The gate runs in update use cases rather than at the web boundary, so every writer applies the
+ * same validator verdict.
+ *
+ * Write-time is the only time this runs. The ingest path compiles rules without revalidating
+ * them, since a source scan and a timing probe per batch would cost more than the redaction.
+ */
+export function rejectInvalidRedactionRules(
+  setting: OrganizationRedactionSetting | null,
+): RejectedRedactionRule | null {
+  const rules = setting?.rules
+  if (!rules || rules.length === 0) return null
+
+  const seenIds = new Set<string>()
+  for (const rule of rules) {
+    if (seenIds.has(rule.id)) {
+      return { rule, reason: `two rules share the id ${rule.id}` }
+    }
+    seenIds.add(rule.id)
+
+    const validation = validateRedactionRule(rule)
+    if (!validation.ok) return { rule, reason: describeValidation(validation) }
+  }
+
+  return null
+}
+
+const describeValidation = (validation: RuleValidation): string =>
+  validation.errors.map((issue) => issue.message).join("; ")
+
+/** The label is punctuated off the reason, which otherwise runs into it as one unreadable sentence. */
+export const rejectionMessage = (rejected: RejectedRedactionRule): string =>
+  `Rule "${rejected.rule.label}": ${rejected.reason}`
+
+export function withServerValidatorVersion<T extends RedactionSetting | OrganizationRedactionSetting | null>(
+  setting: T,
+): T {
+  if (setting === null || !setting.rules?.some((rule) => rule.kind === "pattern")) return setting
+
+  return {
+    ...setting,
+    rules: setting.rules.map((rule) =>
+      rule.kind === "pattern" ? { ...rule, validatorVersion: REDACTION_VALIDATOR_VERSION } : rule,
+    ),
+  } as T
+}
 
 function validateKeys(keys: readonly string[], errors: RuleValidationIssue[]): void {
   for (const key of keys) {

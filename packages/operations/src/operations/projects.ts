@@ -13,12 +13,14 @@ import {
   REDACTION_ENTITIES,
   REDACTION_IDENTITY_HANDLINGS,
   REDACTION_MODES,
+  SqlClient,
 } from "@domain/shared"
 import { createRoute, z } from "@hono/zod-openapi"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   FlaggerRepositoryLive,
   OutboxEventWriterLive,
+  ProjectRedactionAuthorizerLive,
   ProjectRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -35,6 +37,7 @@ import {
   typedResponses,
 } from "../openapi/schemas.ts"
 import type { AuthContext, OrganizationScopedEnv } from "../types.ts"
+import { requireOAuthUserId } from "../utils/require-oauth.ts"
 
 // Project-settings shape, expressed at the API layer so each field carries a
 // description (the domain `projectSettingsSchema` is description-free by
@@ -222,28 +225,13 @@ const oauthActorUserId = (auth: AuthContext): string | undefined =>
 const applyProjectNameAndSettings = (input: {
   readonly projectId: Project["id"]
   readonly body: z.infer<typeof UpdateRequestSchema>
-  readonly actorUserId: string | undefined
 }) =>
-  Effect.gen(function* () {
-    let updated = yield* updateProjectUseCase({
-      id: input.projectId,
-      ...(input.body.name !== undefined ? { name: input.body.name } : {}),
-      // Patch, not replace: this schema exposes a subset of the stored settings,
-      // so a replace would let one field's update silently clear the others.
-      ...(input.body.settings !== undefined ? { settingsPatch: input.body.settings } : {}),
-    })
-
-    // `updateProjectUseCase` refuses to write `redaction`, so the policy goes through its
-    // own use case to pick up the audit event that an irreversible change needs.
-    if (input.body.settings?.redaction !== undefined) {
-      updated = yield* updateProjectRedactionUseCase({
-        projectId: input.projectId,
-        actorUserId: input.actorUserId ?? "",
-        redaction: input.body.settings.redaction,
-      })
-    }
-
-    return updated
+  updateProjectUseCase({
+    id: input.projectId,
+    ...(input.body.name !== undefined ? { name: input.body.name } : {}),
+    // Patch, not replace: this schema exposes a subset of the stored settings,
+    // so a replace would let one field's update silently clear the others.
+    ...(input.body.settings !== undefined ? { settingsPatch: input.body.settings } : {}),
   })
 
 const applyProjectFlaggers = (input: {
@@ -389,7 +377,23 @@ const updateProject = projectEndpoint({
 
       const repo = yield* ProjectRepository
       const project = yield* repo.findBySlug(input.params.projectSlug)
-      const updated = yield* applyProjectNameAndSettings({ projectId: project.id, body, actorUserId })
+
+      const nameAndSettingsUpdate = applyProjectNameAndSettings({ projectId: project.id, body })
+      const redaction = body.settings?.redaction
+      const updated =
+        redaction === undefined
+          ? yield* nameAndSettingsUpdate
+          : yield* (yield* SqlClient).transaction(
+              Effect.gen(function* () {
+                const redactionActorUserId = yield* requireOAuthUserId(ctx.auth)
+                yield* updateProjectRedactionUseCase({
+                  projectId: project.id,
+                  actorUserId: redactionActorUserId,
+                  redaction,
+                })
+                return yield* nameAndSettingsUpdate
+              }),
+            )
 
       if (body.flaggers) {
         yield* applyProjectFlaggers({
@@ -403,7 +407,12 @@ const updateProject = projectEndpoint({
       return { status: 200, body: toResponse(updated) } as const
     }).pipe(
       withPostgres(
-        Layer.mergeAll(ProjectRepositoryLive, FlaggerRepositoryLive, OutboxEventWriterLive),
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          ProjectRedactionAuthorizerLive,
+          FlaggerRepositoryLive,
+          OutboxEventWriterLive,
+        ),
         ctx.postgresClient,
         ctx.organization.id,
       ),

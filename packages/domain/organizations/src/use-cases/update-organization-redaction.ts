@@ -1,12 +1,16 @@
 import { OutboxEventWriter } from "@domain/events"
 import {
+  InvalidRedactionRuleError,
   isSameRedactionSetting,
   type NotFoundError,
   type OrganizationRedactionSetting,
   type RepositoryError,
+  rejectInvalidRedactionRules,
+  rejectionMessage,
   SqlClient,
   toRepositoryError,
   withPreservedRedactionRules,
+  withServerValidatorVersion,
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Organization } from "../entities/organization.ts"
@@ -18,7 +22,7 @@ export interface UpdateOrganizationRedactionInput {
   readonly redaction: OrganizationRedactionSetting | null
 }
 
-export type UpdateOrganizationRedactionError = RepositoryError | NotFoundError
+export type UpdateOrganizationRedactionError = RepositoryError | NotFoundError | InvalidRedactionRuleError
 
 export const updateOrganizationRedactionUseCase = Effect.fn("organizations.updateOrganizationRedaction")(function* (
   input: UpdateOrganizationRedactionInput,
@@ -27,6 +31,10 @@ export const updateOrganizationRedactionUseCase = Effect.fn("organizations.updat
 
   const sqlClient = yield* SqlClient
   const { organizationId } = sqlClient
+  const rejected = rejectInvalidRedactionRules(input.redaction)
+  if (rejected) return yield* new InvalidRedactionRuleError({ message: rejectionMessage(rejected) })
+
+  const incomingRedaction = withServerValidatorVersion(input.redaction)
 
   return yield* sqlClient.transaction(
     Effect.gen(function* () {
@@ -34,7 +42,7 @@ export const updateOrganizationRedactionUseCase = Effect.fn("organizations.updat
       const existing = yield* repo.findByIdForUpdate(organizationId)
 
       const fromRedaction = existing.settings?.redaction ?? null
-      const toRedaction = withPreservedRedactionRules(fromRedaction, input.redaction)
+      const toRedaction = withPreservedRedactionRules(fromRedaction, incomingRedaction)
 
       if (isSameRedactionSetting(fromRedaction, toRedaction)) return existing
 
