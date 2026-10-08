@@ -375,5 +375,34 @@ describe("redaction", () => {
       ).not.toThrow()
       expect(exporter.getFinishedSpans()[0]?.attributes).toEqual({ secret: "[x]", boom: MASK, keep: "v" })
     })
+
+    it("RedactSpanProcessor registered directly fails closed in place, including events and links", () => {
+      vi.spyOn(console, "warn").mockImplementation(() => {})
+      vi.spyOn(
+        RedactSpanProcessor.prototype as unknown as { redactList: () => never },
+        "redactList",
+      ).mockImplementation(() => {
+        throw new Error("boom")
+      })
+      const exporter = new InMemorySpanExporter()
+      const provider = new NodeTracerProvider({
+        spanProcessors: [new RedactSpanProcessor({ attributes: ["secret"] }), new SimpleSpanProcessor(exporter)],
+      })
+      const span = provider.getTracer("test").startSpan("op", {
+        attributes: { secret: "s", keep: "v" },
+        links: [
+          {
+            context: { traceId: "a".repeat(32), spanId: "b".repeat(16), traceFlags: 1 },
+            attributes: { "link.secret": "l" },
+          },
+        ],
+      })
+      span.addEvent("evt", { "event.secret": "e" })
+      expect(() => span.end()).not.toThrow()
+      const [exported] = exporter.getFinishedSpans()
+      expect(exported?.attributes).toEqual({ secret: MASK, keep: MASK })
+      expect(exported?.events[0]?.attributes).toEqual({ "event.secret": MASK })
+      expect(exported?.links[0]?.attributes).toEqual({ "link.secret": MASK })
+    })
   })
 })

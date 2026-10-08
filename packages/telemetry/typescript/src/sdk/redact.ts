@@ -89,14 +89,14 @@ export class RedactSpanProcessor implements SpanProcessor {
     try {
       const { attributes, events, links } = this.redactSpan(span)
       if (attributes) Object.assign(span.attributes, attributes)
-      events?.forEach((event, i) => {
-        const original = span.events[i]
-        if (original?.attributes && event.attributes) Object.assign(original.attributes, event.attributes)
-      })
-      links?.forEach((link, i) => {
-        const original = span.links[i]
-        if (original?.attributes && link.attributes) Object.assign(original.attributes, link.attributes)
-      })
+      // `failClosed` drops events and strips link attributes, which the view Proxy applies wholesale.
+      // In place, mask every event/link attribute instead so this path fails closed too.
+      if (events) {
+        for (const [i, original] of span.events.entries()) mergeInPlace(original.attributes, events[i]?.attributes)
+      }
+      if (links) {
+        for (const [i, original] of span.links.entries()) mergeInPlace(original.attributes, links[i]?.attributes)
+      }
     } catch (error) {
       console.warn("[Latitude] Failed to redact span in place", error)
     }
@@ -179,6 +179,16 @@ export class RedactSpanProcessor implements SpanProcessor {
     }
     return false
   }
+}
+
+/** Applies a redacted copy onto `target`; with no copy (fail-closed), masks every value. */
+function mergeInPlace(target: otel.Attributes | undefined, redacted: otel.Attributes | undefined): void {
+  if (!target) return
+  if (redacted) {
+    Object.assign(target, redacted)
+    return
+  }
+  for (const key of Object.keys(target)) target[key] = FALLBACK_MASK
 }
 
 function failClosed(span: ReadableSpan): SpanOverrides {

@@ -26,7 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rollups and lost its model attribution. Listing one as an exact string still redacts it.
 - Redaction never throws: a `mask` that throws or returns a non-attribute value masks that value
   with `******`, and the span is still exported. Cost is still resolved from the unredacted span, and
-  the SDK's own cost attributes are written after redaction, so patterns never mask them.
+  the SDK's own cost attributes are written after redaction, so patterns never mask them. A
+  `RedactSpanProcessor` registered directly on a provider also fails closed in place (span, event
+  and link attributes).
 
 ### Fixed
 
