@@ -123,6 +123,97 @@ capture.end(scope)
 
 Nested `capture()` calls inherit parent context and can override local values. Metadata is shallow-merged, and tags are appended and deduplicated.
 
+## Bring your own cost
+
+By default Latitude prices each LLM call from its token counts using public model prices. If you pay a negotiated rate, use a fine-tuned or self-hosted model, or already know what each call cost, tell the SDK and Latitude uses your figure instead. All amounts are in USD.
+
+There are four ways to set it. When more than one applies to the same span, the first in this list wins:
+
+1. **`set_llm_cost(span, input=, output=, total=)`**: the cost of one specific span you hold.
+2. **`capture(name, ..., cost=...)`**: a cost per LLM call, applied to every LLM call inside that capture.
+3. **`cost_resolver`**: a function that prices each LLM call.
+4. **`pricing`**: a per-model price table.
+
+If none of them sets a cost, Latitude prices the span itself, as before.
+
+```python
+import openai
+
+from latitude_telemetry import Latitude, LlmCost, LlmUsage, capture, set_llm_cost
+
+
+def resolve_cost(usage: LlmUsage) -> LlmCost | None:
+    if usage.model and usage.model.startswith("ft:"):
+        return {"total": (usage.input_tokens or 0) * 3 / 1_000_000}
+    return None  # fall back to `pricing`, then to Latitude's own prices
+
+
+latitude = Latitude(
+    api_key="your-api-key",
+    project="my-project",
+    instrumentations={"openai": openai},
+    # USD per 1M tokens, keyed by "<provider>/<model>" (case-insensitive)
+    pricing={
+        "openai/gpt-4o": {"input_per_1m": 2.0, "output_per_1m": 8.0},
+        "openai/text-embedding-3-small": {"input_per_1m": 0.015},
+    },
+    cost_resolver=resolve_cost,
+)
+
+
+# Per LLM call: EACH LLM call inside this capture costs $0.002 in and $0.004 out
+@capture("handle-user-request", cost={"input": 0.002, "output": 0.004})
+def handle_request():
+    ...
+```
+
+`cost` can also go in the options dict: `capture("run", fn, {"cost": {"total": 0.01}})`.
+
+A cost is a dict: either `{"input": ..., "output": ...}`, `{"total": ...}`, or all three. When you leave out `total`, the SDK sets it to `input + output`. An explicit `0` is a real cost of zero, not "unset". Negative or non-numeric amounts are ignored with a warning.
+
+<Warning>
+  **`capture(cost=...)` is a cost per LLM call.** It is applied to **every** LLM call inside the capture, not split across them, so a capture that makes 3 LLM calls records 3× the cost. If the calls inside a capture cost different amounts, use `pricing=` or `cost_resolver=` to price each call, or `set_llm_cost()` for one specific span.
+</Warning>
+
+```python
+# 3 LLM calls inside one capture, each with cost {"input": 0.002, "output": 0.004}
+@capture("research-agent", cost={"input": 0.002, "output": 0.004})
+def research_agent():
+    plan = client.chat.completions.create(...)    # span cost: total $0.006
+    answer = client.chat.completions.create(...)  # span cost: total $0.006
+    review = client.chat.completions.create(...)  # span cost: total $0.006
+    # Trace total: 3 × $0.006 = $0.018. The capture's own wrapper span gets no cost.
+```
+
+The capture's own wrapper span never gets a cost. Nested captures inherit the cost unless they set their own.
+
+`set_llm_cost()` writes onto a live span, typically one you created yourself:
+
+```python
+with tracer.start_as_current_span(
+    "my-llm-call",
+    attributes={"gen_ai.operation.name": "chat", "gen_ai.request.model": "my-model"},
+) as span:
+    set_llm_cost(span, input=0.01, output=0.03)
+```
+
+### What the SDK reads and writes
+
+The SDK only prices LLM-call spans: spans whose `gen_ai.operation.name` is `chat`, `text_completion`, `generate_content`, `embeddings` or `rerank`/`reranker`, or the equivalent OpenInference (`openinference.span.kind` `LLM`/`EMBEDDING`/`RERANKER`), OpenLLMetry (`llm.request.type`) or Vercel AI SDK leaf (`ai.*.doGenerate`/`doStream`/`doEmbed`) spans, plus CrewAI's `AGENT` span, which carries its LLM usage. `set_llm_cost()` applies to whatever span you pass it.
+
+For `cost_resolver` and `pricing` it reads the fields below. `cost_resolver` receives them as an `LlmUsage` with `provider`, `model`, `input_tokens`, `output_tokens`, `operation`, `span_name` and `attributes`; any of the first four can be `None`.
+
+| Field | Attributes, first present wins |
+| --- | --- |
+| provider | `gen_ai.provider.name`, `gen_ai.model.provider`, `gen_ai.system`, `llm.system`, `llm.provider`, `ai.model.provider` (vendor part only, e.g. `openai.chat` → `openai`) |
+| model | `gen_ai.response.model`, `gen_ai.request.model`, `llm.model_name`, `ai.model.id` |
+| input tokens | `gen_ai.usage.input_tokens`, `gen_ai.usage.prompt_tokens`, `llm.token_count.prompt`, `ai.usage.promptTokens`, `ai.usage.inputTokens` |
+| output tokens | `gen_ai.usage.output_tokens`, `gen_ai.usage.completion_tokens`, `llm.token_count.completion`, `ai.usage.completionTokens`, `ai.usage.outputTokens` |
+
+`pricing` tries the response model first, then the requested model. It needs a provider, a matching model and at least one token count, and treats a missing token count or rate as 0. Cache and reasoning tokens are not priced separately. Use `cost_resolver` if you need that; it also receives the span's raw `attributes`. If `cost_resolver` throws, the SDK logs a warning and falls back to `pricing`. Cost is resolved when each span ends, before redaction, so `cost_resolver` runs on your application's thread; keep it fast and side-effect free.
+
+Where the SDK sets a cost it writes the standard `gen_ai.usage.input_cost`, `gen_ai.usage.output_cost` and `gen_ai.usage.total_cost` attributes plus `latitude.cost.source = "user"` (exported as `ATTRIBUTES.cost_input`, `cost_output`, `cost_total`, `cost_source` and `COST_SOURCE_USER`). It replaces any cost your instrumentation already wrote on that span, including a `total`-only cost removing the instrumentation's input and output costs so the numbers stay consistent. Spans the SDK doesn't price keep whatever cost the instrumentation wrote. The cost is written as the span is exported to Latitude, so other exporters on the same OpenTelemetry provider see the span unchanged.
+
 ## Existing OpenTelemetry setup
 
 If your app already has an OpenTelemetry provider, add Latitude to the existing setup and register the LLM instrumentations against that provider.

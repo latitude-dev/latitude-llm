@@ -21,9 +21,14 @@ from latitude_telemetry.sdk.types import (
     LatitudeSpanProcessorOptions,
     SmartFilterOptions,
 )
+from latitude_telemetry.telemetry.cost import LlmCost, LlmUsage, ModelPricing, set_llm_cost
 
 __all__ = [
     "capture",
+    "set_llm_cost",
+    "LlmCost",
+    "LlmUsage",
+    "ModelPricing",
     "CaptureScope",
     "get_latitude_context",
     "Latitude",

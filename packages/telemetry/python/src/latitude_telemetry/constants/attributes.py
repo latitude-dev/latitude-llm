@@ -11,6 +11,16 @@ class ATTRIBUTES:
     user_id = "user.id"
     user_email = "user.email"
     project = "latitude.project"
+    # Customer-supplied LLM cost (USD). Written by `capture(cost=...)`, `pricing`,
+    # `cost_resolver` and `set_llm_cost()`; see "Bring your own cost" in the docs.
+    cost_input = "gen_ai.usage.input_cost"
+    cost_output = "gen_ai.usage.output_cost"
+    cost_total = "gen_ai.usage.total_cost"
+    # Marker set to `COST_SOURCE_USER` on every span whose cost the SDK set.
+    cost_source = "latitude.cost.source"
+
+
+COST_SOURCE_USER = "user"
 
 
 class MEMORY_ATTRIBUTES:

@@ -7,6 +7,7 @@ from typing import Callable, Literal, NotRequired, Required, TypedDict
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import SpanExporter
 
+from latitude_telemetry.telemetry.cost import CostResolver, LlmCost, ModelPricing
 from latitude_telemetry.telemetry.redact_span_processor import RedactSpanProcessorOptions
 
 InstrumentationName = Literal[
@@ -65,6 +66,11 @@ class ContextOptions(TypedDict, total=False):
     # DEPRECATED: renamed to `project`. Still accepted for backwards compatibility and will
     # be removed in a future release. When both are set, `project` wins.
     project_slug: str
+    # Cost (USD) per LLM call: `{"input": .., "output": ..}` or `{"total": ..}`, stamped on EVERY
+    # LLM-call span inside this capture (3 calls = 3x the cost), never on the capture's own wrapper
+    # span. For calls that cost different amounts use `pricing` / `cost_resolver`. Nested captures
+    # inherit it unless they set their own.
+    cost: LlmCost
 
 
 class LatitudeOptions(SmartFilterOptions, total=False):
@@ -84,6 +90,10 @@ class LatitudeOptions(SmartFilterOptions, total=False):
     exporter: SpanExporter
     tracer_provider: TracerProvider
     service_name: str
+    # `{"<provider>/<model>": {"input_per_1m": .., "output_per_1m": ..}}` (USD per 1M tokens).
+    pricing: dict[str, ModelPricing]
+    # Called per LLM-call span; return a cost dict, or None to fall back to `pricing`.
+    cost_resolver: CostResolver
 
 
 class InitLatitudeOptions(LatitudeOptions, total=False):

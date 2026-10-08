@@ -10,6 +10,7 @@ from opentelemetry.trace import Span, Status, StatusCode
 
 from latitude_telemetry.sdk._deprecation import warn_project_slug_deprecated
 from latitude_telemetry.sdk.types import ContextOptions
+from latitude_telemetry.telemetry.cost import LlmCost, normalize_cost
 
 LATITUDE_CONTEXT_KEY = "latitude-internal-context"
 LATITUDE_CAPTURE_SCOPE_KEY = "latitude-internal-capture-scope"
@@ -45,6 +46,7 @@ class _LatitudeContextData:
         user_id: str | None = None,
         user_email: str | None = None,
         project: str | None = None,
+        cost: dict[str, float] | None = None,
     ):
         self.name = name
         self.tags = tags
@@ -53,6 +55,8 @@ class _LatitudeContextData:
         self.user_id = user_id
         self.user_email = user_email
         self.project = project
+        # Normalized `capture(cost=...)`; stamped at export onto LLM-call spans inside the capture.
+        self.cost = cost
 
 
 class CaptureScope:
@@ -102,6 +106,7 @@ def _set_capture_context(name: str, base_context: Context, options: ContextOptio
         user_id=opts.get("user_id") or (existing_data.user_id if existing_data else None),
         user_email=opts.get("user_email") or (existing_data.user_email if existing_data else None),
         project=project_from_opts or (existing_data.project if existing_data else None),
+        cost=normalize_cost(opts.get("cost"), source="capture") or (existing_data.cost if existing_data else None),
     )
 
     return otel_context.set_value(LATITUDE_CONTEXT_KEY, merged_data, base_context)
@@ -222,12 +227,22 @@ def _execute_with_context(name: str, fn: Callable[[], T], options: ContextOption
     return result
 
 
+def _with_cost(options: ContextOptions | None, cost: LlmCost | None) -> ContextOptions | None:
+    if cost is None:
+        return options
+    merged: ContextOptions = {**(options or {})}
+    merged["cost"] = cost
+    return merged
+
+
 class _CaptureAPI:
     @overload
     def __call__(
         self,
         name: str,
         fn_or_options: ContextOptions | None = None,
+        *,
+        cost: LlmCost | None = None,
     ) -> Callable[[F], F]: ...
 
     @overload
@@ -236,6 +251,8 @@ class _CaptureAPI:
         name: str,
         fn_or_options: Callable[[], T],
         options: ContextOptions | None = None,
+        *,
+        cost: LlmCost | None = None,
     ) -> T: ...
 
     def __call__(
@@ -243,18 +260,29 @@ class _CaptureAPI:
         name: str,
         fn_or_options: Callable[[], object] | ContextOptions | None = None,
         options: ContextOptions | None = None,
+        *,
+        cost: LlmCost | None = None,
     ) -> object:
+        """
+        `cost` (USD) is a cost per LLM call: it is stamped on EVERY LLM-call span inside the capture,
+        not split across them, so 3 LLM calls record 3x the cost. For example,
+        `capture("agent", fn, cost={"input": 0.002, "output": 0.004})` where `fn` makes 3 LLM calls
+        gives each call a $0.006 total, $0.018 for the trace. The capture's own wrapper span gets no
+        cost. For calls that cost different amounts, use `Latitude(pricing=...)` or
+        `Latitude(cost_resolver=...)`. `cost` can also be passed as `options["cost"]`; the keyword
+        wins when both are given.
+        """
         if fn_or_options is None:
-            return _create_decorator(name, None)
+            return _create_decorator(name, _with_cost(None, cost))
 
         if callable(fn_or_options):
-            return _execute_with_context(name, fn_or_options, options)
+            return _execute_with_context(name, fn_or_options, _with_cost(options, cost))
 
         opts = fn_or_options if isinstance(fn_or_options, dict) else None
-        return _create_decorator(name, opts)
+        return _create_decorator(name, _with_cost(opts, cost))
 
-    def start(self, name: str, options: ContextOptions | None = None) -> CaptureScope:
-        return _start_capture_scope(name, options)
+    def start(self, name: str, options: ContextOptions | None = None, *, cost: LlmCost | None = None) -> CaptureScope:
+        return _start_capture_scope(name, _with_cost(options, cost))
 
     def end(self, scope: CaptureScope | BaseException | None = None, error: BaseException | None = None) -> None:
         _end_capture_scope(scope, error)

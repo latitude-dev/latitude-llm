@@ -41,7 +41,7 @@ Example (Advanced - Existing OTel Setup):
     register_latitude_instrumentations({"openai": openai}, provider)
 """
 
-from latitude_telemetry.constants import ATTRIBUTES, MEMORY_ATTRIBUTES, MEMORY_OPERATIONS
+from latitude_telemetry.constants import ATTRIBUTES, COST_SOURCE_USER, MEMORY_ATTRIBUTES, MEMORY_OPERATIONS
 from latitude_telemetry.sdk import (
     CaptureScope,
     ContextOptions,
@@ -52,15 +52,19 @@ from latitude_telemetry.sdk import (
     Latitude,
     LatitudeOptions,
     LatitudeSpanProcessorOptions,
+    LlmCost,
+    LlmUsage,
     MemoryRecord,
     MemoryRedactInfo,
     MemoryTelemetry,
+    ModelPricing,
     SmartFilterOptions,
     capture,
     create_memory_telemetry,
     get_latitude_context,
     init_latitude,
     register_latitude_instrumentations,
+    set_llm_cost,
 )
 from latitude_telemetry.telemetry.latitude_span_processor import (
     LatitudeSpanProcessor,
@@ -87,6 +91,7 @@ __all__ = [
     "register_latitude_instrumentations",
     "get_latitude_context",
     "create_memory_telemetry",
+    "set_llm_cost",
     # Types
     "ContextOptions",
     "CaptureScope",
@@ -96,6 +101,9 @@ __all__ = [
     "InstrumentationType",
     "LatitudeOptions",
     "LatitudeSpanProcessorOptions",
+    "LlmCost",
+    "LlmUsage",
+    "ModelPricing",
     "MemoryTelemetry",
     "MemoryRecord",
     "MemoryRedactInfo",
@@ -115,6 +123,7 @@ __all__ = [
     "default_redact_span_processor",
     # Constants
     "ATTRIBUTES",
+    "COST_SOURCE_USER",
     "MEMORY_ATTRIBUTES",
     "MEMORY_OPERATIONS",
 ]
