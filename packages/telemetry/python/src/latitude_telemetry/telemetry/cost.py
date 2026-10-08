@@ -86,8 +86,9 @@ _COST_KEYS_TO_STRIP: tuple[str, ...] = (
 )
 
 # ─── LLM-call span detection ──────────────────────────────────────────────────
-# Mirrors Latitude ingest (packages/domain/spans/src/otlp/resolvers/operation.ts): the trace
-# rollup only counts usage/cost on these operations, so those are the only spans the SDK prices.
+# USAGE_OPERATIONS mirrors packages/domain/spans/src/entities/span.ts: trace/session rollups and the
+# Cost page only count usage/cost on these operations, so those are the only spans the SDK prices.
+# The mapping to an operation mirrors packages/domain/spans/src/otlp/resolvers/operation.ts.
 
 USAGE_OPERATIONS: frozenset[str] = frozenset({"chat", "text_completion", "generate_content", "embeddings", "reranker"})
 
@@ -156,7 +157,7 @@ def _first_int(attrs: Mapping[str, typing.Any], keys: Sequence[str]) -> int | No
     return None
 
 
-def _scope_name(span: ReadableSpan) -> str:
+def _scope_name(span: ReadableSpan | ApiSpan) -> str:
     scope = getattr(span, "instrumentation_scope", None)
     return (getattr(scope, "name", "") or "") if scope is not None else ""
 
@@ -317,6 +318,36 @@ def _remember(
         store.popitem(last=False)
 
 
+_not_usage_span_warned = False
+_not_usage_span_lock = threading.Lock()
+
+
+def _warn_if_not_usage_span(span: ApiSpan) -> None:
+    global _not_usage_span_warned
+    if _not_usage_span_warned:
+        return
+    raw = getattr(span, "attributes", None)
+    if not isinstance(raw, Mapping):
+        # Not an SDK span we can inspect, so there is no way to tell; never warn on a guess.
+        return
+    attrs = typing.cast(Mapping[str, typing.Any], raw)
+    if usage_operation(attrs, _scope_name(span)) is not None:
+        return
+    with _not_usage_span_lock:
+        if _not_usage_span_warned:
+            return
+        _not_usage_span_warned = True
+    logger.warning(
+        "[Latitude] set_llm_cost was called on span %r, which is not an LLM-call span "
+        "(gen_ai.operation.name=%r; expected one of %s). The cost is still set on the span, but trace "
+        "and session totals and the Cost page will not count it. Call set_llm_cost on the LLM-call "
+        "span. This warning is logged once.",
+        getattr(span, "name", None),
+        attrs.get("gen_ai.operation.name"),
+        ", ".join(sorted(USAGE_OPERATIONS)),
+    )
+
+
 def set_llm_cost(
     span: ApiSpan,
     *,
@@ -331,6 +362,12 @@ def set_llm_cost(
     on the live span. When `total` is omitted it is input + output. A cost set here wins over
     `capture(cost=...)`, `cost_resolver` and `pricing`, and over any cost an instrumentor writes on
     the same span (Latitude re-applies it at export). An explicit 0 is honoured.
+
+    Call it on the LLM-call span, with `gen_ai.operation.name` already set to `chat`,
+    `text_completion`, `generate_content`, `embeddings` or `rerank`/`reranker` (or the
+    OpenInference, OpenLLMetry or Vercel AI SDK equivalent). Trace and session totals and the Cost
+    page only count cost on those spans. On any other span the cost is still set, and a warning is
+    logged once per process.
     """
     cost = normalize_cost({"input": input, "output": output, "total": total}, source="set_llm_cost")
     if cost is None:
@@ -338,6 +375,7 @@ def set_llm_cost(
         return
     if not span.is_recording():
         return
+    _warn_if_not_usage_span(span)
     for key, attribute in (("input", ATTRIBUTES.cost_input), ("output", ATTRIBUTES.cost_output)):
         if key in cost:
             span.set_attribute(attribute, cost[key])

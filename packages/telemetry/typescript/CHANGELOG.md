@@ -5,6 +5,14 @@ All notable changes to the TypeScript Telemetry SDK will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.1] - 2026-10-08
+
+### Fixed
+
+- `setLlmCost` logs a one-time warning when called on a span that is not an LLM-call span
+  (no usage `gen_ai.operation.name` or equivalent). The cost attributes are still set; the
+  warning exists because trace/session totals and the Cost page only count usage operations.
+
 ## [4.2.0] - 2026-10-08
 
 ### Added

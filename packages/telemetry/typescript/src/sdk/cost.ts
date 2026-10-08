@@ -66,8 +66,9 @@ const COST_KEYS_TO_STRIP: ReadonlySet<string> = new Set([
 ])
 
 // ─── LLM-call span detection ───────────────────────────────────────────────────
-// Mirrors Latitude ingest (packages/domain/spans/src/otlp/resolvers/operation.ts): the trace rollup
-// only counts usage/cost on these operations, so those are the only spans the SDK prices.
+// USAGE_OPERATIONS mirrors packages/domain/spans/src/entities/span.ts: trace/session rollups and the
+// Cost page only count usage/cost on these operations, so those are the only spans the SDK prices.
+// The mapping to an operation mirrors packages/domain/spans/src/otlp/resolvers/operation.ts.
 
 const USAGE_OPERATIONS: ReadonlySet<string> = new Set([
   "chat",
@@ -257,6 +258,25 @@ function price(table: PricingTable, span: ReadableSpan, usage: LlmUsage): Normal
 // Keyed by the live span object, which is the same object the exporter later receives.
 const explicitCosts = new WeakMap<object, NormalizedCost>()
 
+let notUsageSpanWarned = false
+
+function warnIfNotUsageSpan(span: ApiSpan): void {
+  if (notUsageSpanWarned) return
+  // The API span type hides attributes; the SDK span exposes them, as ReadableSpan does.
+  const readable = span as Partial<Pick<ReadableSpan, "attributes" | "instrumentationScope" | "name">>
+  const attrs = readable.attributes
+  // Not an SDK span we can inspect, so there is no way to tell; never warn on a guess.
+  if (attrs === null || typeof attrs !== "object") return
+  if (usageOperation(attrs, readable.instrumentationScope?.name ?? "") !== undefined) return
+  notUsageSpanWarned = true
+  console.warn(
+    `[Latitude] setLlmCost was called on span "${readable.name}", which is not an LLM-call span ` +
+      `(gen_ai.operation.name=${JSON.stringify(attrs["gen_ai.operation.name"])}; expected one of ` +
+      `${[...USAGE_OPERATIONS].join(", ")}). The cost is still set on the span, but trace and session ` +
+      "totals and the Cost page will not count it. Call setLlmCost on the LLM-call span. This warning is logged once.",
+  )
+}
+
 /**
  * Sets the cost (USD) of the LLM call `span` represents.
  *
@@ -264,6 +284,12 @@ const explicitCosts = new WeakMap<object, NormalizedCost>()
  * on the live span. When `total` is omitted it is input + output. A cost set here wins over
  * `capture(..., { cost })`, `costResolver` and `pricing`, and over any cost an instrumentor writes on
  * the same span (Latitude re-applies it at export). An explicit 0 is honoured.
+ *
+ * Call it on the LLM-call span, with `gen_ai.operation.name` already set to `chat`,
+ * `text_completion`, `generate_content`, `embeddings` or `rerank`/`reranker` (or the OpenInference,
+ * OpenLLMetry or Vercel AI SDK equivalent). Trace and session totals and the Cost page only count
+ * cost on those spans. On any other span the cost is still set, and a warning is logged once per
+ * process.
  */
 export function setLlmCost(span: ApiSpan, cost: LlmCost): void {
   const normalized = normalizeCost(cost, "setLlmCost")
@@ -272,6 +298,7 @@ export function setLlmCost(span: ApiSpan, cost: LlmCost): void {
     return
   }
   if (!span.isRecording()) return
+  warnIfNotUsageSpan(span)
   const attributes: Attributes = {
     [ATTRIBUTES.costTotal]: normalized.total,
     [ATTRIBUTES.costSource]: COST_SOURCE_USER,
