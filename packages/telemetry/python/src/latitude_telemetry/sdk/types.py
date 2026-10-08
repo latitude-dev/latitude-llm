@@ -66,9 +66,10 @@ class ContextOptions(TypedDict, total=False):
     # DEPRECATED: renamed to `project`. Still accepted for backwards compatibility and will
     # be removed in a future release. When both are set, `project` wins.
     project_slug: str
-    # Cost (USD) of each LLM-call span inside this capture: `{"input": .., "output": ..}` or
-    # `{"total": ..}`. Not stamped on the capture's own wrapper span. Nested captures inherit it
-    # unless they set their own.
+    # Cost (USD) per LLM call: `{"input": .., "output": ..}` or `{"total": ..}`, stamped on EVERY
+    # LLM-call span inside this capture (3 calls = 3x the cost), never on the capture's own wrapper
+    # span. For calls that cost different amounts use `pricing` / `cost_resolver`. Nested captures
+    # inherit it unless they set their own.
     cost: LlmCost
 
 

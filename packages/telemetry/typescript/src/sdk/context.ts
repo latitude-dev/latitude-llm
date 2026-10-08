@@ -49,6 +49,16 @@ type AttachCapableContextManager = {
 }
 
 type CaptureFunction = {
+  /**
+   * Runs `fn` inside a Latitude capture, so spans created inside it carry the capture's context.
+   *
+   * `options.cost` (USD) is a cost per LLM call: it is stamped on EVERY LLM-call span inside the
+   * capture, not split across them, so 3 LLM calls record 3x the cost. For example,
+   * `capture("agent", fn, { cost: { input: 0.002, output: 0.004 } })` where `fn` makes 3 LLM calls
+   * gives each call a $0.006 total, $0.018 for the trace. The capture's own wrapper span gets no
+   * cost. For calls that cost different amounts, use the `pricing` or `costResolver` option of
+   * `new Latitude()`.
+   */
   <T>(name: string, fn: () => T | Promise<T>, options?: ContextOptions): T | Promise<T>
   start(name: string, options?: ContextOptions): CaptureScope
   end(scope?: CaptureScope, error?: unknown): void
@@ -216,6 +226,16 @@ function captureWrapper<T>(name: string, fn: () => T | Promise<T>, options: Cont
   })
 }
 
+/**
+ * Runs `fn` inside a Latitude capture, so spans created inside it carry the capture's context.
+ *
+ * `options.cost` (USD) is a cost per LLM call: it is stamped on EVERY LLM-call span inside the
+ * capture, not split across them, so 3 LLM calls record 3x the cost. For example,
+ * `capture("agent", fn, { cost: { input: 0.002, output: 0.004 } })` where `fn` makes 3 LLM calls
+ * gives each call a $0.006 total, $0.018 for the trace. The capture's own wrapper span gets no
+ * cost. For calls that cost different amounts, use the `pricing` or `costResolver` option of
+ * `new Latitude()`.
+ */
 export const capture: CaptureFunction = Object.assign(captureWrapper, {
   start: startCaptureScope,
   end: endCaptureScope,

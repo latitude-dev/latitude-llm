@@ -130,7 +130,7 @@ By default Latitude prices each LLM call from its token counts using public mode
 There are four ways to set it. When more than one applies to the same span, the first in this list wins:
 
 1. **`setLlmCost(span, cost)`**: the cost of one specific span you hold.
-2. **`capture(name, fn, { cost })`**: the cost of every LLM call inside that capture.
+2. **`capture(name, fn, { cost })`**: a cost per LLM call, applied to every LLM call inside that capture.
 3. **`costResolver`**: a function that prices each LLM call.
 4. **`pricing`**: a per-model price table.
 
@@ -153,13 +153,31 @@ const latitude = new Latitude({
     usage.model?.startsWith("ft:") ? { total: ((usage.inputTokens ?? 0) * 3) / 1_000_000 } : undefined,
 })
 
-// Every LLM call inside this capture costs $0.002 in and $0.004 out
+// Per LLM call: EACH LLM call inside this capture costs $0.002 in and $0.004 out
 await capture("handle-user-request", () => runAgent(), { cost: { input: 0.002, output: 0.004 } })
 ```
 
 A cost is either `{ input, output }`, `{ total }`, or all three. When you leave out `total`, the SDK sets it to `input + output`. An explicit `0` is a real cost of zero, not "unset". Negative or non-numeric amounts are ignored with a warning.
 
-`capture()` cost applies to **each** LLM call inside the capture, not to the capture as a whole, and it is never put on the capture's own wrapper span. If one capture makes several calls that cost different amounts, give each call its own capture, or use `setLlmCost()`. Nested captures inherit the cost unless they set their own. Cost does not travel through `injectTraceContext()` carriers, so set it on each side.
+<Warning>
+  **`capture(name, fn, { cost })` is a cost per LLM call.** It is applied to **every** LLM call inside the capture, not split across them, so a capture that makes 3 LLM calls records 3× the cost. If the calls inside a capture cost different amounts, use `pricing` or `costResolver` to price each call, or `setLlmCost()` for one specific span.
+</Warning>
+
+```typescript
+// 3 LLM calls inside one capture, each with cost { input: 0.002, output: 0.004 }
+await capture(
+  "research-agent",
+  async () => {
+    const plan = await openai.chat.completions.create({ ... })   // span cost: total $0.006
+    const answer = await openai.chat.completions.create({ ... }) // span cost: total $0.006
+    const review = await openai.chat.completions.create({ ... }) // span cost: total $0.006
+    // Trace total: 3 × $0.006 = $0.018. The capture's own wrapper span gets no cost.
+  },
+  { cost: { input: 0.002, output: 0.004 } },
+)
+```
+
+The capture's own wrapper span never gets a cost. Nested captures inherit the cost unless they set their own. Cost does not travel through `injectTraceContext()` carriers, so set it on each side.
 
 `setLlmCost()` writes onto a live span, typically one you created yourself:
 

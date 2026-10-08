@@ -130,7 +130,7 @@ By default Latitude prices each LLM call from its token counts using public mode
 There are four ways to set it. When more than one applies to the same span, the first in this list wins:
 
 1. **`set_llm_cost(span, input=, output=, total=)`**: the cost of one specific span you hold.
-2. **`capture(name, ..., cost=...)`**: the cost of every LLM call inside that capture.
+2. **`capture(name, ..., cost=...)`**: a cost per LLM call, applied to every LLM call inside that capture.
 3. **`cost_resolver`**: a function that prices each LLM call.
 4. **`pricing`**: a per-model price table.
 
@@ -161,7 +161,7 @@ latitude = Latitude(
 )
 
 
-# Every LLM call inside this capture costs $0.002 in and $0.004 out
+# Per LLM call: EACH LLM call inside this capture costs $0.002 in and $0.004 out
 @capture("handle-user-request", cost={"input": 0.002, "output": 0.004})
 def handle_request():
     ...
@@ -171,7 +171,21 @@ def handle_request():
 
 A cost is a dict: either `{"input": ..., "output": ...}`, `{"total": ...}`, or all three. When you leave out `total`, the SDK sets it to `input + output`. An explicit `0` is a real cost of zero, not "unset". Negative or non-numeric amounts are ignored with a warning.
 
-`capture()` cost applies to **each** LLM call inside the capture, not to the capture as a whole, and it is never put on the capture's own wrapper span. If one capture makes several calls that cost different amounts, give each call its own capture, or use `set_llm_cost()`. Nested captures inherit the cost unless they set their own.
+<Warning>
+  **`capture(cost=...)` is a cost per LLM call.** It is applied to **every** LLM call inside the capture, not split across them, so a capture that makes 3 LLM calls records 3× the cost. If the calls inside a capture cost different amounts, use `pricing=` or `cost_resolver=` to price each call, or `set_llm_cost()` for one specific span.
+</Warning>
+
+```python
+# 3 LLM calls inside one capture, each with cost {"input": 0.002, "output": 0.004}
+@capture("research-agent", cost={"input": 0.002, "output": 0.004})
+def research_agent():
+    plan = client.chat.completions.create(...)    # span cost: total $0.006
+    answer = client.chat.completions.create(...)  # span cost: total $0.006
+    review = client.chat.completions.create(...)  # span cost: total $0.006
+    # Trace total: 3 × $0.006 = $0.018. The capture's own wrapper span gets no cost.
+```
+
+The capture's own wrapper span never gets a cost. Nested captures inherit the cost unless they set their own.
 
 `set_llm_cost()` writes onto a live span, typically one you created yourself:
 

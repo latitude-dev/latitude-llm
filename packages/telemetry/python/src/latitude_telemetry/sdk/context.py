@@ -264,9 +264,13 @@ class _CaptureAPI:
         cost: LlmCost | None = None,
     ) -> object:
         """
-        `cost` (USD), e.g. `{"input": 0.002, "output": 0.004}` or `{"total": 0.006}`, is stamped on
-        every LLM-call span inside the capture (not on the capture's own wrapper span). It can also
-        be passed as `options["cost"]`; the keyword wins when both are given.
+        `cost` (USD) is a cost per LLM call: it is stamped on EVERY LLM-call span inside the capture,
+        not split across them, so 3 LLM calls record 3x the cost. For example,
+        `capture("agent", fn, cost={"input": 0.002, "output": 0.004})` where `fn` makes 3 LLM calls
+        gives each call a $0.006 total, $0.018 for the trace. The capture's own wrapper span gets no
+        cost. For calls that cost different amounts, use `Latitude(pricing=...)` or
+        `Latitude(cost_resolver=...)`. `cost` can also be passed as `options["cost"]`; the keyword
+        wins when both are given.
         """
         if fn_or_options is None:
             return _create_decorator(name, _with_cost(None, cost))

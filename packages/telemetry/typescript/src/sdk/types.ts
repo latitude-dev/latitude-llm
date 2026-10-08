@@ -25,9 +25,10 @@ export type ContextOptions = {
    */
   projectSlug?: string
   /**
-   * Cost (USD) of each LLM-call span inside this capture: `{ input, output }` or `{ total }`.
-   * Not stamped on the capture's own wrapper span. Nested captures inherit it unless they set their
-   * own. See "Bring your own cost" in the docs.
+   * Cost (USD) per LLM call: `{ input, output }` or `{ total }`, stamped on EVERY LLM-call span
+   * inside this capture (3 calls = 3x the cost), never on the capture's own wrapper span. For calls
+   * that cost different amounts use `pricing` / `costResolver`. Nested captures inherit it unless
+   * they set their own. See "Bring your own cost" in the docs.
    */
   cost?: LlmCost
 }

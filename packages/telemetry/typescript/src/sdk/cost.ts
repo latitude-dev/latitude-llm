@@ -17,7 +17,10 @@ import type { ExportResult } from "@opentelemetry/core"
 import type { ReadableSpan, SpanExporter } from "@opentelemetry/sdk-trace-node"
 import { ATTRIBUTES, COST_SOURCE_USER } from "../constants/index.ts"
 
-/** Cost of one LLM call in USD. Give `input`/`output`, `total`, or all three. */
+/**
+ * Cost of one LLM call in USD. Give `input`/`output`, `total`, or all three. Passed as
+ * `capture(name, fn, { cost })`, it is a cost per LLM call applied to every LLM call in the capture.
+ */
 export type LlmCost = {
   input?: number
   output?: number

@@ -41,7 +41,10 @@ logger = logging.getLogger(__name__)
 
 
 class LlmCost(TypedDict, total=False):
-    """Cost of one LLM call in USD. Give `input`/`output`, `total`, or all three."""
+    """Cost of one LLM call in USD. Give `input`/`output`, `total`, or all three.
+
+    Passed to `capture(cost=...)`, it is a cost per LLM call applied to every LLM call in the capture.
+    """
 
     input: float
     output: float
