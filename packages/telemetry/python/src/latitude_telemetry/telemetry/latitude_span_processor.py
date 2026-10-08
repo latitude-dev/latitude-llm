@@ -20,12 +20,12 @@ from latitude_telemetry.env import env
 from latitude_telemetry.exporter import ExporterOptions, create_exporter
 from latitude_telemetry.sdk.context import get_latitude_context
 from latitude_telemetry.telemetry.cost import (
-    CostAttributesExporter,
     CostResolution,
     CostResolver,
     ModelPricing,
     SpanCostTracker,
 )
+from latitude_telemetry.telemetry.export_view import ExportViewExporter
 from latitude_telemetry.telemetry.redact_span_processor import (
     RedactSpanProcessor,
     RedactSpanProcessorOptions,
@@ -33,7 +33,6 @@ from latitude_telemetry.telemetry.redact_span_processor import (
 )
 from latitude_telemetry.telemetry.span_filter import (
     ExportFilterSpanProcessor,
-    RedactThenExportSpanProcessor,
     build_should_export_span,
 )
 
@@ -129,11 +128,9 @@ class LatitudeSpanProcessor(SpanProcessor):
         service_exporter = (
             _ServiceNameResourceExporter(base_exporter, raw_service_name) if raw_service_name else base_exporter
         )
-        # Cost wrapper is outermost: it must see the original ended spans to find their resolved cost.
         self._cost_tracker = SpanCostTracker(
             CostResolution(pricing=options.pricing, cost_resolver=options.cost_resolver)
         )
-        exporter: SpanExporter = CostAttributesExporter(service_exporter, self._cost_tracker)
 
         if options.disable_redact:
             redact: RedactSpanProcessor | None = None
@@ -145,6 +142,11 @@ class LatitudeSpanProcessor(SpanProcessor):
         else:
             redact = default_redact_span_processor()
 
+        # Ended spans are frozen and shared with other processors, so redaction and cost are applied
+        # to an export-time view, never to the span. The view wrapper is outermost: it must see the
+        # original ended spans to find their resolved cost.
+        exporter: SpanExporter = ExportViewExporter(service_exporter, cost_tracker=self._cost_tracker, redact=redact)
+
         batch_or_simple: SpanProcessor = (
             SimpleSpanProcessor(exporter) if options.disable_batch else BatchSpanProcessor(exporter)
         )
@@ -154,10 +156,9 @@ class LatitudeSpanProcessor(SpanProcessor):
             should_export_span=options.should_export_span,
             blocked_instrumentation_scopes=options.blocked_instrumentation_scopes,
         )
-        redact_then_export = RedactThenExportSpanProcessor(redact, batch_or_simple)
         self._tail: SpanProcessor = ExportFilterSpanProcessor(
             should_export,
-            redact_then_export,
+            batch_or_simple,
             blocked_instrumentation_scopes=options.blocked_instrumentation_scopes,
         )
 
@@ -199,7 +200,7 @@ class LatitudeSpanProcessor(SpanProcessor):
         self._tail.on_start(span, parent_context)
 
     def on_end(self, span: ReadableSpan) -> None:
-        # Resolve cost before the tail redacts the span in place.
+        # Resolve cost from the unredacted span; redaction only happens in the export view.
         self._cost_tracker.on_end(span)
         self._tail.on_end(span)
 

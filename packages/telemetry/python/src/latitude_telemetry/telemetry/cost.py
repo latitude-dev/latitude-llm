@@ -1,14 +1,15 @@
 """
 Customer-supplied LLM cost ("bring your own cost").
 
-Cost is applied at export time by `CostAttributesExporter`, which wraps each exported span in an
-attribute-override view. The original span is never mutated, so other span processors / exporters
-on the host TracerProvider keep seeing exactly what the instrumentor wrote.
+Cost is resolved when each span ends (`SpanCostTracker`) and applied at export time by
+`ExportViewExporter` (see `export_view.py`), which wraps each exported span in an attribute-override
+view. The original span is never mutated, so other span processors / exporters on the host
+TracerProvider keep seeing exactly what the instrumentor wrote.
 
 Where the SDK sets cost on a span it writes the standard OTel GenAI cost attributes
 (`gen_ai.usage.input_cost`, `gen_ai.usage.output_cost`, `gen_ai.usage.total_cost`, USD) plus the
 marker `latitude.cost.source = "user"`, and it owns the whole cost triple on that span: any cost
-attribute an instrumentor already wrote is replaced or removed (see `_apply_cost`).
+attribute an instrumentor already wrote is replaced or removed (see `apply_cost`).
 
 Precedence, highest first:
 
@@ -32,7 +33,6 @@ from dataclasses import dataclass
 from typing import TypedDict
 
 from opentelemetry.sdk.trace import ReadableSpan
-from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.trace import Span as ApiSpan
 
 from latitude_telemetry.constants import ATTRIBUTES, COST_SOURCE_USER
@@ -415,22 +415,7 @@ class SpanCostTracker:
             self._costs.clear()
 
 
-class _AttributeOverrideSpan:
-    """ReadableSpan-shaped view that replaces `attributes` and delegates everything else."""
-
-    def __init__(self, span: ReadableSpan, attributes: Mapping[str, typing.Any]) -> None:
-        self._span = span
-        self._attributes_override = attributes
-
-    @property
-    def attributes(self) -> Mapping[str, typing.Any]:
-        return self._attributes_override
-
-    def __getattr__(self, name: str) -> typing.Any:
-        return getattr(self._span, name)
-
-
-def _apply_cost(attrs: Mapping[str, typing.Any], cost: Mapping[str, float]) -> dict[str, typing.Any]:
+def apply_cost(attrs: Mapping[str, typing.Any], cost: Mapping[str, float]) -> dict[str, typing.Any]:
     """
     The SDK owns the cost triple once it sets cost: every instrumentor cost key is dropped, then the
     SDK's keys are written. Total-only therefore drops instrumentor input/output costs instead of
@@ -487,33 +472,3 @@ class CostResolution:
             if resolved is not None:
                 return resolved
         return _price(self._pricing, span, usage)
-
-
-class CostAttributesExporter(SpanExporter):
-    """
-    Wraps a SpanExporter and stamps the cost `SpanCostTracker` resolved at `on_end` onto each
-    exported span through an attribute-override view (same pattern as
-    `_ServiceNameResourceExporter`). Spans the SDK has no cost for pass through as the original objects.
-    """
-
-    def __init__(self, inner: SpanExporter, tracker: SpanCostTracker) -> None:
-        self._inner = inner
-        self._tracker = tracker
-
-    def export(self, spans: typing.Sequence[ReadableSpan]) -> SpanExportResult:
-        out: list[ReadableSpan] = []
-        for span in spans:
-            cost = self._tracker.cost_for(span)
-            if cost is None:
-                out.append(span)
-            else:
-                out.append(
-                    typing.cast(ReadableSpan, _AttributeOverrideSpan(span, _apply_cost(span.attributes or {}, cost)))
-                )
-        return self._inner.export(out)
-
-    def shutdown(self) -> None:
-        self._inner.shutdown()
-
-    def force_flush(self, timeout_millis: int = 30000) -> bool:
-        return self._inner.force_flush(timeout_millis)

@@ -5,6 +5,23 @@ All notable changes to the Python Telemetry SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.1] - 2026-10-08
+
+### Fixed
+
+- Redaction no longer raises `TypeError` or drops spans when a pattern matches
+  ([#4833](https://github.com/latitude-dev/latitude-llm/issues/4833)). OpenTelemetry freezes a
+  span's attributes when it ends, and the redaction processor tried to write into them, so any
+  match, including the default `db.statement` pattern, raised into application code and the span
+  was never exported. `LatitudeSpanProcessor` now redacts span and event attributes in an
+  export-time view, so the span itself (shared with other processors on the provider) is never
+  modified. The SDK's own cost attributes are written after redaction, so a broad pattern such as
+  `^gen_ai\.` can't mask them, and cost is still resolved from the unredacted span. Redaction never
+  raises: a failing `mask` or pattern masks that value with `******` (fail closed) and the span is
+  still exported. Used standalone, `RedactSpanProcessor` now points the ended span at redacted
+  copies instead of writing into frozen attributes. It also tracks processed spans in a weak set,
+  so its memory no longer grows with every span and a recycled object id can't skip redaction.
+
 ## [3.8.0] - 2026-10-08
 
 ### Added
