@@ -103,3 +103,66 @@ describe("transformOtlpToSpans — int64 precision", () => {
     expect(span?.attrInt["gen_ai.usage.input_tokens"]).toBe(215813)
   })
 })
+
+describe("transformOtlpToSpans — reported cost", () => {
+  const chat: OtlpKeyValue[] = [
+    { key: "gen_ai.operation.name", value: { stringValue: "chat" } },
+    { key: "gen_ai.provider.name", value: { stringValue: "openai" } },
+    { key: "gen_ai.request.model", value: { stringValue: "gpt-4o" } },
+    { key: "gen_ai.usage.input_tokens", value: { intValue: "1000" } },
+    { key: "gen_ai.usage.output_tokens", value: { intValue: "500" } },
+  ]
+
+  it("stores a customer-reported cost as user_reported, exactly as sent", () => {
+    const { spans, invalidCostAttributes } = transformOtlpToSpans(
+      requestWithSpanAttributes([
+        ...chat,
+        { key: "latitude.cost.source", value: { stringValue: "user" } },
+        { key: "gen_ai.usage.total_cost", value: { stringValue: "0.0123" } },
+      ]),
+      context,
+    )
+
+    expect(spans[0]).toMatchObject({
+      costInputMicrocents: 0,
+      costOutputMicrocents: 0,
+      costTotalMicrocents: 1_230_000,
+      costIsEstimated: false,
+      costSource: "user_reported",
+      costPricedProvider: "",
+      costPricedModel: "",
+    })
+    expect(invalidCostAttributes).toEqual([])
+  })
+
+  it("stores a customer-reported zero as free", () => {
+    const { spans } = transformOtlpToSpans(
+      requestWithSpanAttributes([
+        ...chat,
+        { key: "latitude.cost.source", value: { stringValue: "user" } },
+        { key: "gen_ai.usage.total_cost", value: { doubleValue: 0 } },
+      ]),
+      context,
+    )
+
+    expect(spans[0]?.costTotalMicrocents).toBe(0)
+    expect(spans[0]?.costSource).toBe("user_reported")
+  })
+
+  it("keeps the span, drops the invalid figures and counts them by key", () => {
+    const request = requestWithSpanAttributes([
+      ...chat,
+      { key: "gen_ai.usage.total_cost", value: { doubleValue: -5 } },
+      { key: "llm.cost.prompt", value: { stringValue: "not a number" } },
+    ])
+    const { spans, invalidCostAttributes } = transformOtlpToSpans(request, context)
+
+    expect(spans).toHaveLength(1)
+    expect(spans[0]?.costSource).toBe("estimated")
+    expect(spans[0]?.costTotalMicrocents).toBe(750_000)
+    expect(invalidCostAttributes).toEqual([
+      { key: "llm.cost.prompt", spans: 1 },
+      { key: "gen_ai.usage.total_cost", spans: 1 },
+    ])
+  })
+})

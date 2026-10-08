@@ -22,6 +22,10 @@ describe("classifyGenerationPricing", () => {
     expect(classifyGenerationPricing({ ...generation, costSource: "estimated" })).toBe("registryEstimated")
   })
 
+  it("counts a customer-reported cost as reported, not estimated", () => {
+    expect(classifyGenerationPricing({ ...generation, costSource: "user_reported" })).toBe("providerReported")
+  })
+
   it("treats a non-usage operation and a token-free span as carrying no spend", () => {
     expect(classifyGenerationPricing({ ...generation, operation: "execute_tool", costSource: "estimated" })).toBe(
       "notSpendBearing",

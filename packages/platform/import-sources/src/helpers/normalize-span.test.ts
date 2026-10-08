@@ -546,6 +546,14 @@ describe("buildSpanFromNormalized cost", () => {
     expect(span.costIsEstimated).toBe(false)
   })
 
+  it.each([-0.001, Number.NaN, Number.POSITIVE_INFINITY])("ignores a reported cost of %s", (bad) => {
+    const span = withUsage({ provider: "openai", model: "gpt-4o-mini", cost: { inputUsd: bad, totalUsd: bad } })
+
+    expect(span.costInputMicrocents).toBeGreaterThan(0)
+    expect(span.costTotalMicrocents).toBe(span.costInputMicrocents + span.costOutputMicrocents)
+    expect(span.costSource).toBe("estimated")
+  })
+
   it("still reports zero cost as unestimated when the model is not in models.dev", () => {
     const span = withUsage({ provider: "openai", model: "some-model-that-does-not-exist" })
 

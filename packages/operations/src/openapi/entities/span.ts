@@ -1,4 +1,4 @@
-import type { Span, SpanDetail } from "@domain/spans"
+import { costSourceSchema, type Span, type SpanDetail } from "@domain/spans"
 import { z } from "@hono/zod-openapi"
 
 const nullableString = () => z.string().nullable()
@@ -55,6 +55,11 @@ const spanListFields = {
   costIsEstimated: z
     .boolean()
     .describe("`true` when the cost was derived from public pricing tables instead of the provider's bill."),
+  costSource: z
+    .enum(costSourceSchema.options)
+    .describe(
+      "Where the cost came from. `provider_reported`: the instrumentation sent it. `user_reported`: you sent it with `latitude.cost.source` set to `user`. `estimated`: priced from public model pricing. `unpriced`: tokens were reported but no pricing matched, so the cost is 0 but not free. `no_tokens`: nothing to price. `unknown`: ingested before cost sources were tracked, so a 0 cannot be read as free.",
+    ),
   timeToFirstTokenNs: z
     .number()
     .describe("Nanoseconds from the start of the span to its first emitted token. `0` if not measured."),
@@ -163,6 +168,7 @@ export const toSpanResponse = (span: Span) => ({
   costOutputMicrocents: span.costOutputMicrocents,
   costTotalMicrocents: span.costTotalMicrocents,
   costIsEstimated: span.costIsEstimated,
+  costSource: span.costSource,
   timeToFirstTokenNs: span.timeToFirstTokenNs,
   isStreaming: span.isStreaming,
   responseId: emptyToNull(span.responseId),

@@ -6,6 +6,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .span_cost_source import SpanCostSource
 from .span_kind import SpanKind
 from .span_status_code import SpanStatusCode
 
@@ -316,6 +317,18 @@ class Span(UniversalBaseModel):
     ]
     """
     `true` when the cost was derived from public pricing tables instead of the provider's bill.
+    """
+
+    cost_source: typing_extensions.Annotated[
+        SpanCostSource,
+        FieldMetadata(alias="costSource"),
+        pydantic.Field(
+            alias="costSource",
+            description="Where the cost came from. `provider_reported`: the instrumentation sent it. `user_reported`: you sent it with `latitude.cost.source` set to `user`. `estimated`: priced from public model pricing. `unpriced`: tokens were reported but no pricing matched, so the cost is 0 but not free. `no_tokens`: nothing to price. `unknown`: ingested before cost sources were tracked, so a 0 cannot be read as free.",
+        ),
+    ]
+    """
+    Where the cost came from. `provider_reported`: the instrumentation sent it. `user_reported`: you sent it with `latitude.cost.source` set to `user`. `estimated`: priced from public model pricing. `unpriced`: tokens were reported but no pricing matched, so the cost is 0 but not free. `no_tokens`: nothing to price. `unknown`: ingested before cost sources were tracked, so a 0 cannot be read as free.
     """
 
     time_to_first_token_ns: typing_extensions.Annotated[

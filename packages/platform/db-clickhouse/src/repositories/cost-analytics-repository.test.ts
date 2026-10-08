@@ -20,6 +20,8 @@ const CACHE_PROJECT_ID = ProjectId("costcache00000000000000a")
 // Cadence lives on its own project: the ceiling is read from inter-call gaps, so it
 // needs timestamps chosen for their spacing rather than for the token columns.
 const CADENCE_PROJECT_ID = ProjectId("costcadence000000000000a")
+// Own project so the verified share reads off a fixture mixing both reported sources.
+const REPORTED_PROJECT_ID = ProjectId("costreported00000000000a")
 
 const DAY1 = new Date("2026-06-01T10:00:00.000Z")
 const DAY2 = new Date("2026-06-02T10:00:00.000Z")
@@ -121,6 +123,7 @@ const breakdownScope = { ...scope, projectId: BREAKDOWN_PROJECT_ID }
 const modelUsageScope = { ...scope, projectId: MODEL_USAGE_PROJECT_ID }
 const cacheScope = { ...scope, projectId: CACHE_PROJECT_ID }
 const cadenceScope = { ...scope, projectId: CADENCE_PROJECT_ID }
+const reportedScope = { ...scope, projectId: REPORTED_PROJECT_ID }
 
 const cacheSpan = (n: number, startTime: Date, opts: Omit<SpanOpts, "project">): CostSpanRow =>
   span(n, startTime, { ...opts, project: CACHE_PROJECT_ID })
@@ -324,6 +327,11 @@ describe("CostAnalyticsRepositoryLive", () => {
         // unit when it is set, so neither call is warm.
         cadenceSpan(54, 0, { model: "named-agents", serviceName: "shared-service", agentName: "billing" }),
         cadenceSpan(55, 60, { model: "named-agents", serviceName: "shared-service", agentName: "support" }),
+
+        span(91, DAY1, { project: REPORTED_PROJECT_ID, costTotal: 200, costSource: "provider_reported" }),
+        span(92, DAY1, { project: REPORTED_PROJECT_ID, costTotal: 300, costSource: "user_reported" }),
+        span(93, DAY2, { project: REPORTED_PROJECT_ID, costTotal: 0, tokensInput: 50, costSource: "user_reported" }),
+        span(94, DAY2, { project: REPORTED_PROJECT_ID, costTotal: 100, isEstimated: true, costSource: "estimated" }),
       ]),
     )
   })
@@ -349,6 +357,16 @@ describe("CostAnalyticsRepositoryLive", () => {
       expect(confidence.verifiedMicrocents).toBe(200)
       expect(confidence.estimatedMicrocents).toBe(400)
       expect(confidence.billableTokens).toBe(900)
+    })
+
+    it("counts a customer-reported cost as verified, beside the provider's", async () => {
+      const { totalMicrocents, confidence } = await runCh(repo.getCostOverview(reportedScope))
+
+      expect(totalMicrocents).toBe(600)
+      expect(confidence.verifiedMicrocents).toBe(500)
+      expect(confidence.estimatedMicrocents).toBe(100)
+      expect(confidence.unpricedCalls).toBe(0)
+      expect(confidence.unknownCalls).toBe(0)
     })
 
     it("counts what ingestion recorded as unpriced, and nothing else", async () => {

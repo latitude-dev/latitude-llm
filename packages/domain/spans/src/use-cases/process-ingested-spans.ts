@@ -16,7 +16,7 @@ import { Effect } from "effect"
 import type { SpanDetail } from "../entities/span.ts"
 import { RedactionError, SpanDecodingError } from "../errors.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
-import { transformOtlpToSpans, type UnpricedSpanGroup } from "../otlp/transform.ts"
+import { type InvalidCostAttributeCount, transformOtlpToSpans, type UnpricedSpanGroup } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
 import { SpanRepository } from "../ports/span-repository.ts"
 import { redactSpans, type SpanRedactionSummary } from "../redaction/redact-spans.ts"
@@ -115,7 +115,7 @@ function decodeAndTransform(
       return { spans: [], unpricedSpanGroups: [] }
     }
 
-    const { spans, rejectedSpans, unpricedSpanGroups } = transformOtlpToSpans(request, {
+    const { spans, rejectedSpans, unpricedSpanGroups, invalidCostAttributes } = transformOtlpToSpans(request, {
       organizationId: input.organizationId,
       apiKeyId: input.apiKeyId,
       ingestedAt: input.ingestedAt,
@@ -127,7 +127,25 @@ function decodeAndTransform(
       yield* Effect.annotateCurrentSpan("rejectedSpans", rejectedSpans)
     }
 
+    yield* reportInvalidCostAttributes(invalidCostAttributes, input.organizationId)
+
     return { spans, unpricedSpanGroups }
+  })
+}
+
+function reportInvalidCostAttributes(
+  invalid: readonly InvalidCostAttributeCount[],
+  organizationId: string,
+): Effect.Effect<void> {
+  if (invalid.length === 0) return Effect.void
+
+  return Effect.gen(function* () {
+    const spans = invalid.reduce((sum, entry) => sum + entry.spans, 0)
+    yield* Effect.annotateCurrentSpan("invalidCostAttributes", spans)
+    yield* Effect.logWarning("Ignored cost attributes that are not a finite, non-negative number", {
+      organizationId,
+      attributes: Object.fromEntries(invalid.map((entry) => [entry.key, entry.spans])),
+    })
   })
 }
 

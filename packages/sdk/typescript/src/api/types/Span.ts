@@ -67,6 +67,8 @@ export interface Span {
     costTotalMicrocents: number;
     /** `true` when the cost was derived from public pricing tables instead of the provider's bill. */
     costIsEstimated: boolean;
+    /** Where the cost came from. `provider_reported`: the instrumentation sent it. `user_reported`: you sent it with `latitude.cost.source` set to `user`. `estimated`: priced from public model pricing. `unpriced`: tokens were reported but no pricing matched, so the cost is 0 but not free. `no_tokens`: nothing to price. `unknown`: ingested before cost sources were tracked, so a 0 cannot be read as free. */
+    costSource: Span.CostSource;
     /** Nanoseconds from the start of the span to its first emitted token. `0` if not measured. */
     timeToFirstTokenNs: number;
     /** `true` when the span was produced by a streaming LLM call. */
@@ -103,4 +105,14 @@ export namespace Span {
         Error: "error",
     } as const;
     export type StatusCode = (typeof StatusCode)[keyof typeof StatusCode];
+    /** Where the cost came from. `provider_reported`: the instrumentation sent it. `user_reported`: you sent it with `latitude.cost.source` set to `user`. `estimated`: priced from public model pricing. `unpriced`: tokens were reported but no pricing matched, so the cost is 0 but not free. `no_tokens`: nothing to price. `unknown`: ingested before cost sources were tracked, so a 0 cannot be read as free. */
+    export const CostSource = {
+        ProviderReported: "provider_reported",
+        UserReported: "user_reported",
+        Estimated: "estimated",
+        Unpriced: "unpriced",
+        NoTokens: "no_tokens",
+        Unknown: "unknown",
+    } as const;
+    export type CostSource = (typeof CostSource)[keyof typeof CostSource];
 }

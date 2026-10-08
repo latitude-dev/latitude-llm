@@ -1,25 +1,60 @@
 import type { CostSource, SpanTokenCounts } from "../../entities/span.ts"
-import { resolveSpanCost, usdToMicrocents } from "../../helpers/estimate-span-cost.ts"
-import { stringAttr } from "../attributes.ts"
+import { parseReportedUsd, resolveSpanCost, usdToMicrocents } from "../../helpers/estimate-span-cost.ts"
+import { attrArray, stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import { resolveTokens } from "./usage/tokens.ts"
-import { first, fromFloat } from "./utils.ts"
 
-const costInputCandidates = [
-  fromFloat("gen_ai.usage.input_cost", usdToMicrocents),
-  fromFloat("llm.cost.prompt", usdToMicrocents),
-]
+const COST_INPUT_KEYS = ["gen_ai.usage.input_cost", "llm.cost.prompt"] as const
+const COST_OUTPUT_KEYS = ["gen_ai.usage.output_cost", "llm.cost.completion"] as const
+const COST_TOTAL_KEYS = ["gen_ai.usage.total_cost", "gen_ai.usage.cost", "llm.cost.total"] as const
+const COST_ATTRIBUTE_KEYS = [...COST_INPUT_KEYS, ...COST_OUTPUT_KEYS, ...COST_TOTAL_KEYS] as const
 
-const costOutputCandidates = [
-  fromFloat("gen_ai.usage.output_cost", usdToMicrocents),
-  fromFloat("llm.cost.completion", usdToMicrocents),
-]
+const COST_SOURCE_MARKER_KEY = "latitude.cost.source"
+const USER_COST_SOURCE = "user"
 
-const costTotalCandidates = [
-  fromFloat("gen_ai.usage.total_cost", (v) => (v ? usdToMicrocents(v) : undefined)),
-  fromFloat("gen_ai.usage.cost", (v) => (v ? usdToMicrocents(v) : undefined)),
-  fromFloat("llm.cost.total", (v) => (v ? usdToMicrocents(v) : undefined)),
-]
+function rawCostValue(attrs: readonly OtlpKeyValue[], key: string): number | string | undefined {
+  const value = attrArray(attrs).find((a) => a.key === key)?.value
+  if (!value) return undefined
+  if (value.doubleValue !== undefined) return value.doubleValue
+  if (value.intValue !== undefined) return Number(value.intValue)
+  return value.stringValue || undefined
+}
+
+function firstReportedMicrocents(
+  attrs: readonly OtlpKeyValue[],
+  keys: readonly string[],
+  { ignoreZero }: { readonly ignoreZero: boolean },
+): number | undefined {
+  for (const key of keys) {
+    const raw = rawCostValue(attrs, key)
+    if (raw === undefined) continue
+    const usd = parseReportedUsd(raw)
+    if (usd === undefined || (ignoreZero && usd === 0)) continue
+    return usdToMicrocents(usd)
+  }
+  return undefined
+}
+
+export function findInvalidCostAttributes(attrs: readonly OtlpKeyValue[]): readonly string[] {
+  return COST_ATTRIBUTE_KEYS.filter((key) => {
+    const raw = rawCostValue(attrs, key)
+    return raw !== undefined && parseReportedUsd(raw) === undefined
+  })
+}
+
+const tokenCountsOf = ({
+  tokensInput,
+  tokensOutput,
+  tokensCacheRead,
+  tokensCacheCreate,
+  tokensReasoning,
+}: SpanTokenCounts): SpanTokenCounts => ({
+  tokensInput,
+  tokensOutput,
+  tokensCacheRead,
+  tokensCacheCreate,
+  tokensReasoning,
+})
 
 // ─── Resolve ─────────────────────────────────────────────
 
@@ -128,24 +163,24 @@ interface ResolveUsageInput {
 }
 
 export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): ResolvedUsage {
+  const userReported = stringAttr(attrs, COST_SOURCE_MARKER_KEY) === USER_COST_SOURCE
+  const reported = {
+    inputMicrocents: firstReportedMicrocents(attrs, COST_INPUT_KEYS, { ignoreZero: false }),
+    outputMicrocents: firstReportedMicrocents(attrs, COST_OUTPUT_KEYS, { ignoreZero: false }),
+    // Without the marker a lone zero total is not read as a price.
+    totalMicrocents: firstReportedMicrocents(attrs, COST_TOTAL_KEYS, { ignoreZero: !userReported }),
+  }
+  const hasUserCost = userReported && Object.values(reported).some((value) => value !== undefined)
+
   // Some instrumentations carry usage in the message payload rather than as flat
   // gen_ai.usage.* attrs (OpenClaw) — prefer that when present.
   const embedded = resolveEmbeddedMessageUsage(attrs, provider, model)
-  if (embedded) return embedded
+  if (embedded && !hasUserCost) return embedded
 
-  const tokens = resolveTokens(attrs, provider)
+  const tokens = embedded ? tokenCountsOf(embedded) : resolveTokens(attrs, provider)
 
   return {
     ...tokens,
-    ...resolveSpanCost({
-      reported: {
-        inputMicrocents: first(costInputCandidates, attrs),
-        outputMicrocents: first(costOutputCandidates, attrs),
-        totalMicrocents: first(costTotalCandidates, attrs),
-      },
-      provider,
-      model,
-      tokens,
-    }),
+    ...resolveSpanCost({ reported, reportedBy: userReported ? "user" : "provider", provider, model, tokens }),
   }
 }

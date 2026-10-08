@@ -9,7 +9,7 @@ const stored = (overrides: Partial<StoredCostSignals> = {}): StoredCostSignals =
 })
 
 describe("parseCostSource", () => {
-  it.each(["provider_reported", "estimated", "unpriced", "no_tokens", "unknown"])(
+  it.each(["provider_reported", "user_reported", "estimated", "unpriced", "no_tokens", "unknown"])(
     "passes through the stored value %s",
     (value) => {
       // Signals that would classify differently, to prove the stored value wins.

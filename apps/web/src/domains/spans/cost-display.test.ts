@@ -45,9 +45,12 @@ describe("spanCostDisplay", () => {
     ...over,
   })
 
-  it.each(["provider_reported", "estimated"] as const)("shows Free for a priced zero from %s", (costSource) => {
-    expect(spanCostDisplay(span({ costSource }))).toEqual({ label: "Free" })
-  })
+  it.each(["provider_reported", "user_reported", "estimated"] as const)(
+    "shows Free for a priced zero from %s",
+    (costSource) => {
+      expect(spanCostDisplay(span({ costSource }))).toEqual({ label: "Free" })
+    },
+  )
 
   it("shows a gap for an unpriced span", () => {
     const display = spanCostDisplay(span({ costSource: "unpriced", costPricedProvider: "", costPricedModel: "" }))

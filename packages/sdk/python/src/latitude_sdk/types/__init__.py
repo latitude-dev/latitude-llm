@@ -1078,7 +1078,9 @@ if typing.TYPE_CHECKING:
     from .signals_lifecycle_body import SignalsLifecycleBody
     from .signals_lifecycle_response import SignalsLifecycleResponse
     from .span import Span
+    from .span_cost_source import SpanCostSource
     from .span_detail import SpanDetail
+    from .span_detail_cost_source import SpanDetailCostSource
     from .span_detail_kind import SpanDetailKind
     from .span_detail_status_code import SpanDetailStatusCode
     from .span_kind import SpanKind
@@ -2078,7 +2080,9 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SignalsLifecycleBody": ".signals_lifecycle_body",
     "SignalsLifecycleResponse": ".signals_lifecycle_response",
     "Span": ".span",
+    "SpanCostSource": ".span_cost_source",
     "SpanDetail": ".span_detail",
+    "SpanDetailCostSource": ".span_detail_cost_source",
     "SpanDetailKind": ".span_detail_kind",
     "SpanDetailStatusCode": ".span_detail_status_code",
     "SpanKind": ".span_kind",
@@ -3106,7 +3110,9 @@ __all__ = [
     "SignalsLifecycleBody",
     "SignalsLifecycleResponse",
     "Span",
+    "SpanCostSource",
     "SpanDetail",
+    "SpanDetailCostSource",
     "SpanDetailKind",
     "SpanDetailStatusCode",
     "SpanKind",

@@ -498,7 +498,7 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
                   // can filter on it without nesting inside the alias.
                   query: `SELECT
                         sum(cost_total_microcents) AS total_microcents,
-                        sumIf(cost_total_microcents, cost_source = 'provider_reported') AS verified_microcents,
+                        sumIf(cost_total_microcents, cost_source IN ('provider_reported', 'user_reported')) AS verified_microcents,
                         sumIf(cost_total_microcents, cost_source = 'estimated') AS estimated_microcents,
                         uniqExact(trace_id) AS traces_with_usage,
                         sum(tokens_total) AS billable_tokens,

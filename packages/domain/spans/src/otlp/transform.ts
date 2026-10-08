@@ -19,6 +19,7 @@ import { resolveAttributes } from "./resolvers/index.ts"
 import { resolvePerformance } from "./resolvers/performance.ts"
 import { resolveStatusCode } from "./resolvers/status.ts"
 import { resolveToolExecution } from "./resolvers/tool-execution.ts"
+import { findInvalidCostAttributes } from "./resolvers/usage.ts"
 import type { OtlpAnyValue, OtlpExportTraceServiceRequest, OtlpKeyValue, OtlpResource, OtlpSpan } from "./types.ts"
 
 const INT_TO_SPAN_KIND: Record<number, SpanKind> = {
@@ -107,11 +108,18 @@ export interface UnpricedSpanGroup {
   readonly spans: number
 }
 
+export interface InvalidCostAttributeCount {
+  readonly key: string
+  readonly spans: number
+}
+
 interface TransformResult {
   readonly spans: readonly SpanDetail[]
   /** Spans skipped for lacking a resolvable `projectId` or a valid `traceId`. */
   readonly rejectedSpans: number
   readonly unpricedSpanGroups: readonly UnpricedSpanGroup[]
+  /** Cost attributes ignored for not being a finite, non-negative number, by key. */
+  readonly invalidCostAttributes: readonly InvalidCostAttributeCount[]
 }
 
 /** Reads `latitude.project` from span attrs first, falling back to resource attrs. */
@@ -282,6 +290,12 @@ function transformSpan({
   return detail
 }
 
+function countInvalidCostAttributes(span: OtlpSpan, counts: Map<string, number>): void {
+  for (const key of findInvalidCostAttributes(attrArray(span.attributes))) {
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+}
+
 export function transformOtlpToSpans(
   request: OtlpExportTraceServiceRequest,
   context: TransformContext,
@@ -289,6 +303,7 @@ export function transformOtlpToSpans(
   const spans: SpanDetail[] = []
   let rejectedSpans = 0
   const unpricedByKey = new Map<string, { projectId: string; provider: string; model: string; spans: number }>()
+  const invalidCostByKey = new Map<string, number>()
   const { ingestedAt } = context
 
   for (const resourceSpans of request.resourceSpans ?? []) {
@@ -325,6 +340,7 @@ export function transformOtlpToSpans(
           ingestedAt,
         })
         spans.push(transformed)
+        countInvalidCostAttributes(span, invalidCostByKey)
 
         // Reporting only. `costSource` keeps every unpriced span marked, so the stored record and
         // the Cost page's coverage stay exact; the filter just withholds the alert.
@@ -339,5 +355,10 @@ export function transformOtlpToSpans(
     }
   }
 
-  return { spans, rejectedSpans, unpricedSpanGroups: [...unpricedByKey.values()] }
+  return {
+    spans,
+    rejectedSpans,
+    unpricedSpanGroups: [...unpricedByKey.values()],
+    invalidCostAttributes: [...invalidCostByKey].map(([key, count]) => ({ key, spans: count })),
+  }
 }

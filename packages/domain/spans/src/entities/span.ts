@@ -20,6 +20,7 @@ export type SpanStatusCode = z.infer<typeof spanStatusCodeSchema>
  * Where a span's cost came from, so a stored 0 can be read.
  *
  * - `provider_reported` — the instrumentation sent a cost, authoritative.
+ * - `user_reported` — the customer sent their own cost under `latitude.cost.source = "user"`, stored as sent.
  * - `estimated` — we priced the tokens off models.dev.
  * - `unpriced` — tokens were reported but no models.dev pricing matched, so cost stayed 0. A 0 here
  *   understates the real spend; it is not free.
@@ -27,9 +28,16 @@ export type SpanStatusCode = z.infer<typeof spanStatusCodeSchema>
  * - `unknown` — ingested before the column existed. Never written by ingestion: spans stored before
  *   the split cannot say whether a 0 was free or unpriced, so they must not be read as either.
  *
- * `provider_reported` and `estimated` at 0 mean the call genuinely cost nothing.
+ * `provider_reported`, `user_reported` and `estimated` at 0 mean the call genuinely cost nothing.
  */
-export const costSourceSchema = z.enum(["provider_reported", "estimated", "unpriced", "no_tokens", "unknown"])
+export const costSourceSchema = z.enum([
+  "provider_reported",
+  "user_reported",
+  "estimated",
+  "unpriced",
+  "no_tokens",
+  "unknown",
+])
 export type CostSource = z.infer<typeof costSourceSchema>
 
 const COST_SOURCE_SET: ReadonlySet<string> = new Set(costSourceSchema.options)
