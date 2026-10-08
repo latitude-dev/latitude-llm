@@ -13,8 +13,6 @@ import {
   ForbiddenError,
   OrganizationId,
   organizationRedactionSettingSchema,
-  rejectInvalidRedactionRules,
-  rejectionMessage,
   UserId,
 } from "@domain/shared"
 import { ApiKeyCacheInvalidatorLive } from "@platform/api-key-auth"
@@ -210,11 +208,6 @@ export const updateOrganizationRedaction = createServerFn({ method: "POST" })
           return yield* new ForbiddenError({
             message: "Only the organization owner can change the organization redaction policy",
           })
-        }
-
-        const rejected = rejectInvalidRedactionRules(data.redaction)
-        if (rejected) {
-          return yield* new BadRequestError({ message: rejectionMessage(rejected) })
         }
 
         return yield* updateOrganizationRedactionUseCase({ actorUserId: userId, redaction: data.redaction })
