@@ -102,10 +102,28 @@ _VERCEL_OPERATION = {
     "ai.embedMany.doEmbed": "embeddings",
 }
 
-_INPUT_TOKEN_KEYS = ("gen_ai.usage.input_tokens", "gen_ai.usage.prompt_tokens", "llm.token_count.prompt")
-_OUTPUT_TOKEN_KEYS = ("gen_ai.usage.output_tokens", "gen_ai.usage.completion_tokens", "llm.token_count.completion")
-_PROVIDER_KEYS = ("gen_ai.provider.name", "gen_ai.system", "llm.provider", "llm.system")
-_MODEL_KEYS = ("gen_ai.response.model", "gen_ai.request.model", "llm.model_name")
+# CrewAI's OpenInference instrumentor puts the whole conversation (and usage) on its AGENT span,
+# with no LLM leaf; ingest counts that span as `chat`, so the SDK prices it too.
+_CREWAI_OPENINFERENCE_SCOPE = "openinference.instrumentation.crewai"
+
+_INPUT_TOKEN_KEYS = (
+    "gen_ai.usage.input_tokens",
+    "gen_ai.usage.prompt_tokens",
+    "llm.token_count.prompt",
+    "ai.usage.promptTokens",
+    "ai.usage.inputTokens",
+)
+_OUTPUT_TOKEN_KEYS = (
+    "gen_ai.usage.output_tokens",
+    "gen_ai.usage.completion_tokens",
+    "llm.token_count.completion",
+    "ai.usage.completionTokens",
+    "ai.usage.outputTokens",
+)
+_PROVIDER_KEYS = ("gen_ai.provider.name", "gen_ai.model.provider", "gen_ai.system", "llm.system", "llm.provider")
+# Vercel AI SDK names the provider by its API surface ("openai.chat"); only the vendor is kept.
+_VERCEL_PROVIDER_KEY = "ai.model.provider"
+_MODEL_KEYS = ("gen_ai.response.model", "gen_ai.request.model", "llm.model_name", "ai.model.id")
 
 
 def _str_attr(attrs: Mapping[str, typing.Any], key: str) -> str | None:
@@ -135,7 +153,20 @@ def _first_int(attrs: Mapping[str, typing.Any], keys: Sequence[str]) -> int | No
     return None
 
 
-def usage_operation(attrs: Mapping[str, typing.Any]) -> str | None:
+def _scope_name(span: ReadableSpan) -> str:
+    scope = getattr(span, "instrumentation_scope", None)
+    return (getattr(scope, "name", "") or "") if scope is not None else ""
+
+
+def _provider(attrs: Mapping[str, typing.Any]) -> str | None:
+    provider = _first_str(attrs, _PROVIDER_KEYS)
+    if provider is not None:
+        return provider
+    vercel = _str_attr(attrs, _VERCEL_PROVIDER_KEY)
+    return vercel.split(".", 1)[0] if vercel is not None else None
+
+
+def usage_operation(attrs: Mapping[str, typing.Any], scope_name: str = "") -> str | None:
     """The span's operation if it is an LLM call Latitude counts usage for, else None."""
     if attrs.get("latitude.capture.root"):
         return None
@@ -145,7 +176,9 @@ def usage_operation(attrs: Mapping[str, typing.Any]) -> str | None:
         operation = _GENAI_OPERATION.get(genai, genai)
     else:
         kind = _str_attr(attrs, "openinference.span.kind")
-        if kind is not None:
+        if kind is not None and kind.upper() == "AGENT" and scope_name.startswith(_CREWAI_OPENINFERENCE_SCOPE):
+            operation = "chat"
+        elif kind is not None:
             operation = _OPENINFERENCE_OPERATION.get(kind.upper(), kind.lower())
         else:
             request_type = _str_attr(attrs, "llm.request.type")
@@ -161,7 +194,7 @@ def usage_operation(attrs: Mapping[str, typing.Any]) -> str | None:
 def extract_usage(span: ReadableSpan, operation: str) -> LlmUsage:
     attrs: Mapping[str, typing.Any] = span.attributes or {}
     return LlmUsage(
-        provider=_first_str(attrs, _PROVIDER_KEYS),
+        provider=_provider(attrs),
         model=_first_str(attrs, _MODEL_KEYS),
         input_tokens=_first_int(attrs, _INPUT_TOKEN_KEYS),
         output_tokens=_first_int(attrs, _OUTPUT_TOKEN_KEYS),
@@ -321,25 +354,21 @@ def _pop_explicit_cost(key: tuple[int, int]) -> dict[str, float] | None:
 # ─── Per-processor bookkeeping and export wrapper ─────────────────────────────
 
 
-@dataclass(frozen=True)
-class _CostHints:
-    explicit: dict[str, float] | None
-    capture: dict[str, float] | None
-
-
 class SpanCostTracker:
     """
-    Carries per-span cost hints from `on_start`/`on_end` to export without touching the span.
+    Resolves each span's cost when it ends and carries it to export without touching the span.
 
-    `on_start` records the capture-context cost by span id; `on_end` moves it (and any
-    `set_llm_cost` value) onto the ended ReadableSpan through a WeakKeyDictionary, which the export
-    wrapper reads by identity. Entries vanish with the span, so filtered-out spans don't leak.
+    `on_start` records the capture-context cost by span id. `on_end` resolves the final cost from
+    the ended span *before* redaction runs (so a redaction rule can't hide the attributes cost is
+    resolved from) and keeps it in a WeakKeyDictionary keyed by the ended ReadableSpan, which the
+    export wrapper reads by identity. Entries vanish with the span, so filtered-out spans don't leak.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, resolution: CostResolution) -> None:
+        self._resolution = resolution
         self._lock = threading.Lock()
         self._capture: OrderedDict[tuple[int, int], dict[str, float]] = OrderedDict()
-        self._hints: weakref.WeakKeyDictionary[ReadableSpan, _CostHints] = weakref.WeakKeyDictionary()
+        self._costs: weakref.WeakKeyDictionary[ReadableSpan, dict[str, float]] = weakref.WeakKeyDictionary()
 
     def on_start(self, span: ReadableSpan, capture_cost: dict[str, float] | None) -> None:
         if capture_cost is None:
@@ -357,20 +386,30 @@ class SpanCostTracker:
         explicit = _pop_explicit_cost(key)
         with self._lock:
             capture = self._capture.pop(key, None)
-            if explicit is not None or capture is not None:
-                self._hints[span] = _CostHints(explicit=explicit, capture=capture)
-
-    def hints_for(self, span: ReadableSpan) -> _CostHints | None:
+        try:
+            cost = self._resolution.resolve(span, explicit=explicit, capture=capture)
+        except Exception:
+            logger.warning("[Latitude] Failed to resolve LLM cost; exporting span unchanged", exc_info=True)
+            return
+        if cost is None:
+            return
         with self._lock:
             try:
-                return self._hints.get(span)
-            except TypeError:  # unhashable / non-weakrefable custom span
+                self._costs[span] = cost
+            except TypeError:  # non-weakrefable custom span
+                return
+
+    def cost_for(self, span: ReadableSpan) -> dict[str, float] | None:
+        with self._lock:
+            try:
+                return self._costs.get(span)
+            except TypeError:
                 return None
 
     def clear(self) -> None:
         with self._lock:
             self._capture.clear()
-            self._hints.clear()
+            self._costs.clear()
 
 
 class _AttributeOverrideSpan:
@@ -409,27 +448,30 @@ class CostResolution:
 
     def __init__(
         self,
-        tracker: SpanCostTracker,
         pricing: Mapping[str, ModelPricing] | None = None,
         cost_resolver: CostResolver | None = None,
     ) -> None:
-        self._tracker = tracker
         self._pricing = normalize_pricing(pricing)
         self._resolver = cost_resolver
 
-    def resolve(self, span: ReadableSpan) -> dict[str, float] | None:
-        hints = self._tracker.hints_for(span)
-        if hints is not None and hints.explicit is not None:
-            return hints.explicit
+    def resolve(
+        self,
+        span: ReadableSpan,
+        *,
+        explicit: dict[str, float] | None = None,
+        capture: dict[str, float] | None = None,
+    ) -> dict[str, float] | None:
+        if explicit is not None:
+            return explicit
         attrs: Mapping[str, typing.Any] = span.attributes or {}
         if attrs.get(ATTRIBUTES.cost_source) == COST_SOURCE_USER:
             # Marked by the user (set_llm_cost from another process, or set by hand): trust it as-is.
             return None
-        operation = usage_operation(attrs)
+        operation = usage_operation(attrs, _scope_name(span))
         if operation is None:
             return None
-        if hints is not None and hints.capture is not None:
-            return hints.capture
+        if capture is not None:
+            return capture
         if self._resolver is None and not self._pricing:
             return None
         usage = extract_usage(span, operation)
@@ -446,23 +488,19 @@ class CostResolution:
 
 class CostAttributesExporter(SpanExporter):
     """
-    Wraps a SpanExporter and stamps the SDK-resolved cost onto each exported span through an
-    attribute-override view (same pattern as `_ServiceNameResourceExporter`). Spans the SDK has no
-    cost for pass through as the original objects.
+    Wraps a SpanExporter and stamps the cost `SpanCostTracker` resolved at `on_end` onto each
+    exported span through an attribute-override view (same pattern as
+    `_ServiceNameResourceExporter`). Spans the SDK has no cost for pass through as the original objects.
     """
 
-    def __init__(self, inner: SpanExporter, resolution: CostResolution) -> None:
+    def __init__(self, inner: SpanExporter, tracker: SpanCostTracker) -> None:
         self._inner = inner
-        self._resolution = resolution
+        self._tracker = tracker
 
     def export(self, spans: typing.Sequence[ReadableSpan]) -> SpanExportResult:
         out: list[ReadableSpan] = []
         for span in spans:
-            try:
-                cost = self._resolution.resolve(span)
-            except Exception:
-                logger.warning("[Latitude] Failed to resolve LLM cost; exporting span unchanged", exc_info=True)
-                cost = None
+            cost = self._tracker.cost_for(span)
             if cost is None:
                 out.append(span)
             else:

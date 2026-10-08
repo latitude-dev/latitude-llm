@@ -92,10 +92,28 @@ const VERCEL_OPERATION: Record<string, string> = {
   "ai.embedMany.doEmbed": "embeddings",
 }
 
-const INPUT_TOKEN_KEYS = ["gen_ai.usage.input_tokens", "gen_ai.usage.prompt_tokens", "llm.token_count.prompt"]
-const OUTPUT_TOKEN_KEYS = ["gen_ai.usage.output_tokens", "gen_ai.usage.completion_tokens", "llm.token_count.completion"]
-const PROVIDER_KEYS = ["gen_ai.provider.name", "gen_ai.system", "llm.provider", "llm.system"]
-const MODEL_KEYS = ["gen_ai.response.model", "gen_ai.request.model", "llm.model_name"]
+// CrewAI's OpenInference instrumentor puts the whole conversation (and usage) on its AGENT span, with
+// no LLM leaf; ingest counts that span as `chat`, so the SDK prices it too.
+const CREWAI_OPENINFERENCE_SCOPE = "openinference.instrumentation.crewai"
+
+const INPUT_TOKEN_KEYS = [
+  "gen_ai.usage.input_tokens",
+  "gen_ai.usage.prompt_tokens",
+  "llm.token_count.prompt",
+  "ai.usage.promptTokens",
+  "ai.usage.inputTokens",
+]
+const OUTPUT_TOKEN_KEYS = [
+  "gen_ai.usage.output_tokens",
+  "gen_ai.usage.completion_tokens",
+  "llm.token_count.completion",
+  "ai.usage.completionTokens",
+  "ai.usage.outputTokens",
+]
+const PROVIDER_KEYS = ["gen_ai.provider.name", "gen_ai.model.provider", "gen_ai.system", "llm.system", "llm.provider"]
+// Vercel AI SDK names the provider by its API surface ("openai.chat"); only the vendor is kept.
+const VERCEL_PROVIDER_KEY = "ai.model.provider"
+const MODEL_KEYS = ["gen_ai.response.model", "gen_ai.request.model", "llm.model_name", "ai.model.id"]
 
 function strAttr(attrs: Attributes, key: string): string | undefined {
   const value = attrs[key]
@@ -118,8 +136,18 @@ function firstInt(attrs: Attributes, keys: readonly string[]): number | undefine
   return undefined
 }
 
+function providerOf(attrs: Attributes): string | undefined {
+  return firstStr(attrs, PROVIDER_KEYS) ?? strAttr(attrs, VERCEL_PROVIDER_KEY)?.split(".")[0]
+}
+
+function openInferenceOperation(kind: string, scopeName: string): string {
+  const upper = kind.toUpperCase()
+  if (upper === "AGENT" && scopeName.startsWith(CREWAI_OPENINFERENCE_SCOPE)) return "chat"
+  return OPENINFERENCE_OPERATION[upper] ?? kind.toLowerCase()
+}
+
 /** The span's operation if it is an LLM call Latitude counts usage for, else undefined. */
-function usageOperation(attrs: Attributes): string | undefined {
+function usageOperation(attrs: Attributes, scopeName: string): string | undefined {
   if (attrs["latitude.capture.root"]) return undefined
   let operation: string | undefined
   const genai = strAttr(attrs, "gen_ai.operation.name")
@@ -127,7 +155,7 @@ function usageOperation(attrs: Attributes): string | undefined {
   const requestType = strAttr(attrs, "llm.request.type")
   const vercel = strAttr(attrs, "ai.operationId")
   if (genai !== undefined) operation = GENAI_OPERATION[genai] ?? genai
-  else if (kind !== undefined) operation = OPENINFERENCE_OPERATION[kind.toUpperCase()] ?? kind.toLowerCase()
+  else if (kind !== undefined) operation = openInferenceOperation(kind, scopeName)
   else if (requestType !== undefined) operation = OPENLLMETRY_OPERATION[requestType] ?? requestType
   else if (vercel !== undefined) operation = VERCEL_OPERATION[vercel]
   return operation !== undefined && USAGE_OPERATIONS.has(operation) ? operation : undefined
@@ -136,7 +164,7 @@ function usageOperation(attrs: Attributes): string | undefined {
 function extractUsage(span: ReadableSpan, operation: string): LlmUsage {
   const attrs = span.attributes ?? {}
   return {
-    provider: firstStr(attrs, PROVIDER_KEYS),
+    provider: providerOf(attrs),
     model: firstStr(attrs, MODEL_KEYS),
     inputTokens: firstInt(attrs, INPUT_TOKEN_KEYS),
     outputTokens: firstInt(attrs, OUTPUT_TOKEN_KEYS),
@@ -251,28 +279,7 @@ export function setLlmCost(span: ApiSpan, cost: LlmCost): void {
   explicitCosts.set(span, normalized)
 }
 
-// ─── Capture-context bookkeeping and export wrapper ────────────────────────────
-
-/**
- * Remembers the capture-context cost per span (from `onStart`) without touching the span. Whether
- * the span is an LLM call is only known at export, since instrumentors often set gen_ai.* late.
- * WeakMap entries vanish with the span, so filtered-out spans don't leak.
- */
-export class SpanCostTracker {
-  private captureCosts = new WeakMap<object, NormalizedCost>()
-
-  onStart(span: object, cost: NormalizedCost): void {
-    this.captureCosts.set(span, cost)
-  }
-
-  captureCostFor(span: object): NormalizedCost | undefined {
-    return this.captureCosts.get(span)
-  }
-
-  clear(): void {
-    this.captureCosts = new WeakMap()
-  }
-}
+// ─── Resolution, bookkeeping and export wrapper ────────────────────────────────
 
 type CostResolutionOptions = {
   pricing?: Record<string, ModelPricing> | undefined
@@ -283,23 +290,19 @@ export class CostResolution {
   private readonly pricing: PricingTable
   private readonly resolver: CostResolver | undefined
 
-  constructor(
-    private readonly tracker: SpanCostTracker,
-    options: CostResolutionOptions = {},
-  ) {
+  constructor(options: CostResolutionOptions = {}) {
     this.pricing = normalizePricing(options.pricing)
     this.resolver = options.costResolver
   }
 
-  resolve(span: ReadableSpan): NormalizedCost | undefined {
+  resolve(span: ReadableSpan, captured: NormalizedCost | undefined): NormalizedCost | undefined {
     const explicit = explicitCosts.get(span)
     if (explicit) return explicit
     const attrs = span.attributes ?? {}
     // Marked by the user (set by hand, or setLlmCost on a span we can't correlate): trust it as-is.
     if (attrs[ATTRIBUTES.costSource] === COST_SOURCE_USER) return undefined
-    const operation = usageOperation(attrs)
+    const operation = usageOperation(attrs, span.instrumentationScope?.name ?? "")
     if (operation === undefined) return undefined
-    const captured = this.tracker.captureCostFor(span)
     if (captured) return captured
     if (!this.resolver && this.pricing.size === 0) return undefined
     const usage = extractUsage(span, operation)
@@ -313,6 +316,43 @@ export class CostResolution {
       if (resolved) return resolved
     }
     return price(this.pricing, span, usage)
+  }
+}
+
+/**
+ * Resolves each span's cost when it ends and carries it to export without touching the span.
+ * `onStart` remembers the capture-context cost; `onEnd` resolves the final cost *before* redaction
+ * runs (so a redaction rule can't hide the attributes cost is resolved from). WeakMap entries vanish
+ * with the span, so filtered-out spans don't leak.
+ */
+export class SpanCostTracker {
+  private captureCosts = new WeakMap<object, NormalizedCost>()
+  private resolvedCosts = new WeakMap<object, NormalizedCost>()
+
+  constructor(private readonly resolution: CostResolution) {}
+
+  onStart(span: object, cost: NormalizedCost): void {
+    this.captureCosts.set(span, cost)
+  }
+
+  onEnd(span: ReadableSpan): void {
+    let cost: NormalizedCost | undefined
+    try {
+      cost = this.resolution.resolve(span, this.captureCosts.get(span))
+    } catch (error) {
+      console.warn("[Latitude] Failed to resolve LLM cost; exporting span unchanged:", error)
+    }
+    this.captureCosts.delete(span)
+    if (cost) this.resolvedCosts.set(span, cost)
+  }
+
+  costFor(span: object): NormalizedCost | undefined {
+    return this.resolvedCosts.get(span)
+  }
+
+  clear(): void {
+    this.captureCosts = new WeakMap()
+    this.resolvedCosts = new WeakMap()
   }
 }
 
@@ -334,23 +374,19 @@ function applyCost(attrs: Attributes, cost: NormalizedCost): Attributes {
 }
 
 /**
- * Wraps a SpanExporter and stamps the SDK-resolved cost onto each exported span through a Proxy
- * (same pattern as `ServiceNameResourceExporter`). Spans with no SDK cost pass through unchanged.
+ * Wraps a SpanExporter and stamps the cost `SpanCostTracker` resolved at `onEnd` onto each exported
+ * span through a Proxy (same pattern as `ServiceNameResourceExporter`). Spans with no SDK cost pass
+ * through unchanged.
  */
 export class CostAttributesExporter implements SpanExporter {
   constructor(
     private readonly inner: SpanExporter,
-    private readonly resolution: CostResolution,
+    private readonly tracker: SpanCostTracker,
   ) {}
 
   export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
     const out = spans.map((span) => {
-      let cost: NormalizedCost | undefined
-      try {
-        cost = this.resolution.resolve(span)
-      } catch (error) {
-        console.warn("[Latitude] Failed to resolve LLM cost; exporting span unchanged:", error)
-      }
+      const cost = this.tracker.costFor(span)
       if (!cost) return span
       const attributes = applyCost(span.attributes ?? {}, cost)
       return new Proxy(span, {

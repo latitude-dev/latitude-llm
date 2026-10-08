@@ -240,6 +240,36 @@ class TestPricing:
         assert cost_of(h.attrs("agent-run")) == {}
         assert h.attrs("openai.chat")[ATTRIBUTES.cost_source] == COST_SOURCE_USER
 
+    def test_vercel_ai_sdk_attributes(self, harness_factory: Any) -> None:
+        h = harness_factory(pricing=PRICING)
+        with h.tracer.start_as_current_span(
+            "ai.generateText.doGenerate",
+            attributes={
+                "ai.operationId": "ai.generateText.doGenerate",
+                "ai.model.provider": "openai.chat",
+                "ai.model.id": "gpt-4o",
+                "ai.usage.promptTokens": 1000,
+                "ai.usage.completionTokens": 500,
+            },
+        ):
+            pass
+        assert h.attrs("ai.generateText.doGenerate")[ATTRIBUTES.cost_total] == pytest.approx(0.0075)
+
+    def test_crewai_agent_span_is_an_llm_call(self, harness_factory: Any) -> None:
+        h = harness_factory()
+        crewai = h.provider.get_tracer("openinference.instrumentation.crewai")
+        other = h.provider.get_tracer("openinference.instrumentation.langchain")
+
+        def run() -> None:
+            with crewai.start_as_current_span("crew-agent", attributes={"openinference.span.kind": "AGENT"}):
+                pass
+            with other.start_as_current_span("other-agent", attributes={"openinference.span.kind": "AGENT"}):
+                pass
+
+        capture("crew", run, cost={"total": 0.4})
+        assert h.attrs("crew-agent")[ATTRIBUTES.cost_total] == 0.4
+        assert cost_of(h.attrs("other-agent")) == {}
+
 
 class TestCostResolver:
     def test_receives_usage_and_sets_cost(self, harness_factory: Any) -> None:

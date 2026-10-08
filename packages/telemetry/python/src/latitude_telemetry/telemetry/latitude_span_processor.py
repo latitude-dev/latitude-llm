@@ -129,12 +129,11 @@ class LatitudeSpanProcessor(SpanProcessor):
         service_exporter = (
             _ServiceNameResourceExporter(base_exporter, raw_service_name) if raw_service_name else base_exporter
         )
-        # Cost wrapper is outermost: it must see the original ended spans to find their cost hints.
-        self._cost_tracker = SpanCostTracker()
-        exporter: SpanExporter = CostAttributesExporter(
-            service_exporter,
-            CostResolution(self._cost_tracker, pricing=options.pricing, cost_resolver=options.cost_resolver),
+        # Cost wrapper is outermost: it must see the original ended spans to find their resolved cost.
+        self._cost_tracker = SpanCostTracker(
+            CostResolution(pricing=options.pricing, cost_resolver=options.cost_resolver)
         )
+        exporter: SpanExporter = CostAttributesExporter(service_exporter, self._cost_tracker)
 
         if options.disable_redact:
             redact: RedactSpanProcessor | None = None
@@ -200,6 +199,7 @@ class LatitudeSpanProcessor(SpanProcessor):
         self._tail.on_start(span, parent_context)
 
     def on_end(self, span: ReadableSpan) -> None:
+        # Resolve cost before the tail redacts the span in place.
         self._cost_tracker.on_end(span)
         self._tail.on_end(span)
 

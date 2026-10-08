@@ -15,7 +15,11 @@ function costOf(attrs: Attributes): Attributes {
   return Object.fromEntries(COST_KEYS.filter((k) => k in attrs).map((k) => [k, attrs[k]]))
 }
 
-type HarnessOptions = { pricing?: Record<string, ModelPricing>; costResolver?: CostResolver }
+type HarnessOptions = {
+  pricing?: Record<string, ModelPricing>
+  costResolver?: CostResolver
+  redact?: { attributes: (string | RegExp)[] }
+}
 
 function harness(options: HarnessOptions = {}) {
   const exporter = new InMemorySpanExporter()
@@ -239,6 +243,47 @@ describe("customer-supplied LLM cost", () => {
       capture("agent-run", () => h.llmCall())
       expect(costOf(h.attrs("agent-run"))).toEqual({})
       expect(h.attrs("openai.chat")[ATTRIBUTES.costSource]).toBe(COST_SOURCE_USER)
+    })
+
+    it("reads Vercel AI SDK attributes", () => {
+      const h = harness({ pricing: PRICING })
+      h.tracer
+        .startSpan("ai.generateText.doGenerate", {
+          attributes: {
+            "ai.operationId": "ai.generateText.doGenerate",
+            "ai.model.provider": "openai.chat",
+            "ai.model.id": "gpt-4o",
+            "ai.usage.inputTokens": 1000,
+            "ai.usage.outputTokens": 500,
+          },
+        })
+        .end()
+      expect(h.attrs("ai.generateText.doGenerate")[ATTRIBUTES.costTotal]).toBeCloseTo(0.0075)
+    })
+
+    it("treats CrewAI's AGENT span as an LLM call", () => {
+      const h = harness()
+      const crewai = h.provider.getTracer("openinference.instrumentation.crewai")
+      const other = h.provider.getTracer("openinference.instrumentation.langchain")
+      capture(
+        "crew",
+        () => {
+          crewai.startSpan("crew-agent", { attributes: { "openinference.span.kind": "AGENT" } }).end()
+          other.startSpan("other-agent", { attributes: { "openinference.span.kind": "AGENT" } }).end()
+        },
+        { cost: { total: 0.4 } },
+      )
+      expect(h.attrs("crew-agent")[ATTRIBUTES.costTotal]).toBe(0.4)
+      expect(costOf(h.attrs("other-agent"))).toEqual({})
+    })
+
+    it("resolves cost before redaction masks the attributes it reads", () => {
+      const h = harness({ pricing: PRICING, redact: { attributes: [/^gen_ai\./] } })
+      h.llmCall()
+      const attrs = h.attrs("openai.chat")
+      expect(attrs["gen_ai.request.model"]).toBe("******")
+      expect(attrs[ATTRIBUTES.costTotal]).toBeCloseTo(0.0075)
+      expect(attrs[ATTRIBUTES.costSource]).toBe(COST_SOURCE_USER)
     })
   })
 

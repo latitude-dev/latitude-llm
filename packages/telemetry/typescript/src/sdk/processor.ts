@@ -62,7 +62,7 @@ class ServiceNameResourceExporter implements SpanExporter {
 
 export class LatitudeSpanProcessor implements SpanProcessor {
   private readonly tail: SpanProcessor
-  private readonly costTracker = new SpanCostTracker()
+  private readonly costTracker: SpanCostTracker
 
   constructor(apiKey: string, project: string | undefined, options?: LatitudeSpanProcessorOptions) {
     if (!apiKey || apiKey.trim() === "") {
@@ -89,10 +89,10 @@ export class LatitudeSpanProcessor implements SpanProcessor {
       ? new ServiceNameResourceExporter(baseExporter, rawServiceName)
       : baseExporter
     // Cost wrapper is outermost: it must see the original span objects to find their cost hints.
-    const exporter = new CostAttributesExporter(
-      serviceExporter,
-      new CostResolution(this.costTracker, { pricing: options?.pricing, costResolver: options?.costResolver }),
+    this.costTracker = new SpanCostTracker(
+      new CostResolution({ pricing: options?.pricing, costResolver: options?.costResolver }),
     )
+    const exporter = new CostAttributesExporter(serviceExporter, this.costTracker)
 
     const redact = options?.disableRedact
       ? null
@@ -160,6 +160,8 @@ export class LatitudeSpanProcessor implements SpanProcessor {
   }
 
   onEnd(span: ReadableSpan): void {
+    // Resolve cost before the tail redacts the span in place.
+    this.costTracker.onEnd(span)
     this.tail.onEnd(span)
   }
 

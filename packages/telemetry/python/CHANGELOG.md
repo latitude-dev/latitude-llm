@@ -23,7 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at export through an attribute-override wrapper, so other processors on a shared provider see the
   span unchanged. New exports: `set_llm_cost`, `LlmCost`, `LlmUsage`, `ModelPricing`,
   `COST_SOURCE_USER` and the `ATTRIBUTES.cost_input` / `cost_output` / `cost_total` / `cost_source`
-  constants.
+  constants. LLM calls, provider, model and token counts are read from OpenTelemetry GenAI,
+  OpenInference (including CrewAI's `AGENT` span), OpenLLMetry and Vercel AI SDK attributes, and
+  cost is resolved when each span ends, before redaction.
 
 ### Changed
 
