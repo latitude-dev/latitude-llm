@@ -197,6 +197,21 @@ function misresolvedBareIds(provider: string, ids: readonly string[]): string[] 
   return misresolved
 }
 
+/**
+ * Whether a catalog key spells the requested id itself, allowing for version punctuation and a vendor
+ * or Bedrock region prefix on either side. A prefix match that absorbed part of the request does not.
+ */
+function spellsSameModel(catalogId: string, requestedId: string): boolean {
+  const canonical = (id: string) => id.toLowerCase().replace(/(\d)\.(?=\d)/g, "$1-")
+  const [listed, requested] = [canonical(catalogId), canonical(requestedId)]
+  return (
+    listed === requested ||
+    listed.endsWith(`/${requested}`) ||
+    listed.endsWith(`.${requested}`) ||
+    requested.endsWith(`.${listed}`)
+  )
+}
+
 describe("getModelForProvider", () => {
   it("finds a model for a provider", () => {
     const model = getModelForProvider("openai", "gpt-4o")
@@ -318,19 +333,37 @@ describe("getModelForProvider", () => {
   })
 
   // The fallback absorbs a snapshot date or qualifier; a version bump is another model at its own rate.
-  it("does not answer a version bump with the version it is a bump of", () => {
-    const answeredByPreviousVersion: string[] = []
+  it("leaves a version the catalog does not list unpriced", () => {
+    const answeredByAnotherModel: string[] = []
     for (const model of getAllModels()) {
-      const trailingVersion = /^(.*\D)(\d+)$/.exec(model.id.toLowerCase())
-      if (!trailingVersion) continue
-      const bumped = `${trailingVersion[1]}${trailingVersion[2]}.5`
-      const resolved = getModelForProvider(model.provider, bumped)
-      if (resolved?.id.toLowerCase() === model.id.toLowerCase()) {
-        answeredByPreviousVersion.push(`${model.provider}/${bumped} answered with ${model.id}`)
+      if (!/\d$/.test(model.id)) continue
+      // `.5` and `-5` spell one bump. `-12` must not stop at a listed `-1`, and `-1.5` must not fall
+      // back past a listed `-1` to the version below it.
+      for (const bump of [".5", "-5", "-12", "-1.5"]) {
+        const bumped = `${model.id}${bump}`
+        const resolved = getModelForProvider(model.provider, bumped)
+        if (resolved && !spellsSameModel(resolved.id, bumped)) {
+          answeredByAnotherModel.push(`${model.provider}/${bumped} answered with ${resolved.id}`)
+        }
       }
     }
 
-    expect(answeredByPreviousVersion).toEqual([])
+    expect(answeredByAnotherModel).toEqual([])
+  })
+
+  it("resolves a snapshot date to the model it is a snapshot of", () => {
+    const misresolved: string[] = []
+    for (const model of getAllModels()) {
+      for (const snapshot of [`${model.id}-20250414`, `${model.id}-2025-04-14`]) {
+        const resolved = getModelForProvider(model.provider, snapshot)
+        const answersBase = resolved?.id.toLowerCase() === model.id.toLowerCase()
+        // The catalog may list the snapshot itself, which is the better answer.
+        if (answersBase || (resolved && spellsSameModel(resolved.id, snapshot))) continue
+        misresolved.push(`${model.provider}/${snapshot} answered with ${resolved?.id}, expected ${model.id}`)
+      }
+    }
+
+    expect(misresolved).toEqual([])
   })
 })
 

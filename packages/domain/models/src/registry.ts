@@ -110,13 +110,27 @@ function findModelExact(models: Model[], modelId: string): Model | undefined {
 /**
  * A prefix may absorb a snapshot date or a trailing qualifier, but never a version bump. `minimax-m2`
  * offered for `minimax-m2.5` is a different, later model at its own rate, so answering with it reports
- * a confident wrong price where no price is the honest result. The boundary is the same version dot
- * `normalizeVersionPunctuation` recognises — a `.` between two digits.
+ * a confident wrong price where no price is the honest result.
+ *
+ * Both separators `normalizeVersionPunctuation` treats as interchangeable spell a bump: `5.2` and `5-2`
+ * are the same version. A hyphen also introduces a snapshot (`gpt-4-0613`, `o1-2024-12-17`), so it
+ * counts only before a one- or two-digit component that ends there; a run followed by a letter is a
+ * size (`qwen3-30b`), not a version.
  */
-const VERSION_BOUNDARY_RE = /^\d\.\d/
+const VERSION_BUMP_RE = /^\d(?:\.\d|-\d{1,2}(?![\da-z]))/
 
 function crossesVersionBoundary(needle: string, prefixLength: number): boolean {
-  return VERSION_BOUNDARY_RE.test(needle.slice(prefixLength - 1, prefixLength + 2))
+  return VERSION_BUMP_RE.test(needle.slice(prefixLength - 1))
+}
+
+/**
+ * A prefix ending between two digits cuts a number in half: `gpt-5-2` is not where `gpt-5-2025-04-14`
+ * ends, and `claude-fable-5-1` is not `claude-fable-5-12`.
+ */
+const SPLIT_NUMBER_RE = /^\d\d/
+
+function splitsNumber(needle: string, prefixLength: number): boolean {
+  return SPLIT_NUMBER_RE.test(needle.slice(prefixLength - 1))
 }
 
 /**
@@ -127,24 +141,32 @@ function crossesVersionBoundary(needle: string, prefixLength: number): boolean {
  * stops at a `:` modifier (`:free`, `:thinking`, a context size), which selects a variant the catalog
  * lists and prices separately; matching past one would answer with the unmodified model, and a free
  * tier would come back at the paid rate.
+ *
+ * A prefix rejected for a version bump also rules out every shorter one: the requested id names a
+ * version the catalog does not list, and a shorter prefix is only further from it. `claude-fable-5-1.5`
+ * must not fall back to `claude-fable-5` once `claude-fable-5-1` has declined.
  */
 function findModelByPrefix(models: Model[], modelId: string): Model | undefined {
   const needle = modelId.toLowerCase()
 
   let best: Model | undefined
   let bestLen = 0
+  let bumpedLen = 0
 
   for (const m of models) {
     const id = m.id.toLowerCase()
     if (!needle.startsWith(id) || id.length <= bestLen) continue
-    if (needle[id.length] === ":") continue
-    if (crossesVersionBoundary(needle, id.length)) continue
+    if (needle[id.length] === ":" || splitsNumber(needle, id.length)) continue
+    if (crossesVersionBoundary(needle, id.length)) {
+      bumpedLen = Math.max(bumpedLen, id.length)
+      continue
+    }
 
     best = m
     bestLen = id.length
   }
 
-  return best
+  return bestLen > bumpedLen ? best : undefined
 }
 
 /**
