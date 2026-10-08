@@ -5,6 +5,26 @@ All notable changes to the TypeScript Telemetry SDK will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2026-10-08
+
+### Added
+
+- Bring your own LLM cost. `capture(name, fn, { cost: { input, output } | { total } })` sets the
+  cost (USD) of every LLM-call span inside the capture (never the capture's own wrapper span).
+  `new Latitude({ pricing: { "<provider>/<model>": { inputPer1M, outputPer1M } } })` prices LLM
+  calls from their token counts, and `new Latitude({ costResolver })` lets `costResolver(usage)`
+  return a cost or `undefined` to fall back. `setLlmCost(span, { input, output, total })` sets the
+  cost of one span. Precedence: `setLlmCost` > `capture` cost > `costResolver` > `pricing` >
+  Latitude's server-side pricing.
+- Where the SDK sets cost it writes `gen_ai.usage.input_cost`, `gen_ai.usage.output_cost` and
+  `gen_ai.usage.total_cost` plus `latitude.cost.source="user"`, replacing any cost the
+  instrumentation wrote on that span. `total` defaults to `input + output`, a `total`-only cost
+  drops the instrumentation's input/output costs, and an explicit `0` is honoured. Cost is applied
+  at export through an exporter wrapper, so other processors on a shared provider see the span
+  unchanged. New exports: `setLlmCost`, `ATTRIBUTES` (now including `costInput` / `costOutput` /
+  `costTotal` / `costSource`), `COST_SOURCE_USER` and the `LlmCost`, `LlmUsage`, `ModelPricing`
+  and `CostResolver` types.
+
 ## [4.1.0] - 2026-09-01
 
 ### Added

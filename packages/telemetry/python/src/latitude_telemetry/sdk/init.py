@@ -22,6 +22,7 @@ from latitude_telemetry.sdk._deprecation import warn_project_slug_deprecated
 from latitude_telemetry.sdk.instrumentations import register_latitude_instrumentations
 from latitude_telemetry.sdk.tracer import get_latitude_tracer
 from latitude_telemetry.sdk.types import ContextOptions, InstrumentationsInput, SmartFilterOptions
+from latitude_telemetry.telemetry.cost import CostResolver, ModelPricing
 from latitude_telemetry.telemetry.latitude_span_processor import LatitudeSpanProcessor, LatitudeSpanProcessorOptions
 from latitude_telemetry.telemetry.redact_span_processor import RedactSpanProcessorOptions
 
@@ -87,7 +88,15 @@ class Latitude:
         exporter: SpanExporter | None = None,
         tracer_provider: TracerProvider | None = None,
         service_name: str | None = None,
+        pricing: dict[str, ModelPricing] | None = None,
+        cost_resolver: CostResolver | None = None,
     ):
+        """
+        `pricing` (`{"<provider>/<model>": {"input_per_1m": .., "output_per_1m": ..}}`, USD) and
+        `cost_resolver` (`fn(usage) -> {"input", "output"} | {"total"} | None`) set the cost of
+        LLM-call spans at export. Precedence: `set_llm_cost()` > `capture(cost=...)` >
+        `cost_resolver` > `pricing` > Latitude's server-side pricing.
+        """
         if not api_key or not api_key.strip():
             raise ValueError("[Latitude] api_key is required and cannot be empty")
 
@@ -116,6 +125,8 @@ class Latitude:
                 blocked_instrumentation_scopes=tuple(blocked_instrumentation_scopes or []),
                 exporter=exporter,
                 service_name=processor_service_name,
+                pricing=pricing,
+                cost_resolver=cost_resolver,
             ),
         )
 
@@ -212,6 +223,8 @@ def init_latitude(
     exporter: SpanExporter | None = None,
     tracer_provider: TracerProvider | None = None,
     service_name: str | None = None,
+    pricing: dict[str, ModelPricing] | None = None,
+    cost_resolver: CostResolver | None = None,
     **kwargs: SmartFilterOptions,
 ) -> _InitLatitudeResult:
     """
@@ -234,6 +247,8 @@ def init_latitude(
         exporter=exporter,
         tracer_provider=tracer_provider,
         service_name=service_name,
+        pricing=pricing,
+        cost_resolver=cost_resolver,
         disable_smart_filter=kwargs.get("disable_smart_filter", False),  # type: ignore[arg-type]
         should_export_span=should_export_span,
         blocked_instrumentation_scopes=blocked_instrumentation_scopes,

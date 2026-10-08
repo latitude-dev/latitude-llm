@@ -6,7 +6,16 @@ export const ATTRIBUTES = {
   userId: "user.id",
   userEmail: "user.email",
   project: "latitude.project",
+  // Customer-supplied LLM cost (USD). Written by `capture(..., { cost })`, `pricing`,
+  // `costResolver` and `setLlmCost()`; see "Bring your own cost" in the docs.
+  costInput: "gen_ai.usage.input_cost",
+  costOutput: "gen_ai.usage.output_cost",
+  costTotal: "gen_ai.usage.total_cost",
+  /** Marker set to {@link COST_SOURCE_USER} on every span whose cost the SDK set. */
+  costSource: "latitude.cost.source",
 } as const
+
+export const COST_SOURCE_USER = "user"
 
 export const GEN_AI_MEMORY_ATTRIBUTES = {
   operationName: "gen_ai.operation.name",

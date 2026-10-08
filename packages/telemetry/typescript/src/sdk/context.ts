@@ -1,5 +1,6 @@
 import { type Context, context, createContextKey, type Span, SpanStatusCode, trace } from "@opentelemetry/api"
 import { warnProjectSlugDeprecated } from "./_deprecation.ts"
+import { type NormalizedCost, normalizeCost } from "./cost.ts"
 import type { ContextOptions } from "./types.ts"
 
 export const LATITUDE_CONTEXT_KEY = createContextKey("latitude-internal-context")
@@ -26,6 +27,8 @@ type LatitudeContextData = {
   userId: string | undefined
   userEmail: string | undefined
   project: string | undefined
+  /** Normalized `capture(..., { cost })`; stamped at export onto LLM-call spans inside the capture. */
+  cost?: NormalizedCost | undefined
 }
 
 export type CaptureScope = {
@@ -109,6 +112,7 @@ export function setLatitudeContext(ctx: Context, options: ContextOptions): Conte
     userId: options.userId ?? existingData?.userId,
     userEmail: options.userEmail ?? existingData?.userEmail,
     project: options.project ?? options.projectSlug ?? existingData?.project,
+    cost: normalizeCost(options.cost, "capture") ?? existingData?.cost,
   }
 
   return ctx.setValue(LATITUDE_CONTEXT_KEY, mergedData)

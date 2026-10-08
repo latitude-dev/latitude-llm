@@ -5,7 +5,25 @@ All notable changes to the Python Telemetry SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.8.0] - 2026-10-08
+
+### Added
+
+- Bring your own LLM cost. `capture(name, ..., cost={"input": .., "output": ..} | {"total": ..})`
+  sets the cost (USD) of every LLM-call span inside the capture (never the capture's own wrapper
+  span). `Latitude(pricing={"<provider>/<model>": {"input_per_1m": .., "output_per_1m": ..}})`
+  prices LLM calls from their token counts, and `Latitude(cost_resolver=fn)` lets `fn(usage)`
+  return a cost or `None` to fall back. `set_llm_cost(span, input=, output=, total=)` sets the cost of
+  one span. Precedence: `set_llm_cost` > `capture(cost=)` > `cost_resolver` > `pricing` > Latitude's
+  server-side pricing.
+- Where the SDK sets cost it writes `gen_ai.usage.input_cost`, `gen_ai.usage.output_cost` and
+  `gen_ai.usage.total_cost` plus `latitude.cost.source="user"`, replacing any cost the
+  instrumentation wrote on that span. `total` defaults to `input + output`, a `total`-only cost
+  drops the instrumentation's input/output costs, and an explicit `0` is honoured. Cost is applied
+  at export through an attribute-override wrapper, so other processors on a shared provider see the
+  span unchanged. New exports: `set_llm_cost`, `LlmCost`, `LlmUsage`, `ModelPricing`,
+  `COST_SOURCE_USER` and the `ATTRIBUTES.cost_input` / `cost_output` / `cost_total` / `cost_source`
+  constants.
 
 ### Changed
 

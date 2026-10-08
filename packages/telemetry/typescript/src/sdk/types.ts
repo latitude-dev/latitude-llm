@@ -1,5 +1,6 @@
 import type { TracerProvider } from "@opentelemetry/api"
 import type { SpanExporter } from "@opentelemetry/sdk-trace-node"
+import type { CostResolver, LlmCost, ModelPricing } from "./cost.ts"
 import type { InstrumentationsInput } from "./instrumentations.ts"
 import type { RedactSpanProcessorOptions } from "./redact.ts"
 import type { SmartFilterOptions } from "./span-filter.ts"
@@ -23,6 +24,12 @@ export type ContextOptions = {
    * removed in a future release. When both are set, `project` wins.
    */
   projectSlug?: string
+  /**
+   * Cost (USD) of each LLM-call span inside this capture: `{ input, output }` or `{ total }`.
+   * Not stamped on the capture's own wrapper span. Nested captures inherit it unless they set their
+   * own. See "Bring your own cost" in the docs.
+   */
+  cost?: LlmCost
 }
 
 export type LatitudeOptions = SmartFilterOptions & {
@@ -63,6 +70,14 @@ export type LatitudeOptions = SmartFilterOptions & {
    * silently relabel spans the host SDK also processes.
    */
   serviceName?: string
+  /**
+   * `{ "<provider>/<model>": { inputPer1M, outputPer1M } }`, USD per 1M tokens (keys are
+   * case-insensitive). Prices LLM-call spans from their token counts at export. Precedence:
+   * `setLlmCost()` > `capture(..., { cost })` > `costResolver` > `pricing` > Latitude's server-side pricing.
+   */
+  pricing?: Record<string, ModelPricing>
+  /** Called per LLM-call span; return a cost, or `null`/`undefined` to fall back to `pricing`. */
+  costResolver?: CostResolver
 }
 
 /**
@@ -81,6 +96,14 @@ export type LatitudeSpanProcessorOptions = SmartFilterOptions & {
    * to see the host's original resource.
    */
   serviceName?: string
+  /**
+   * `{ "<provider>/<model>": { inputPer1M, outputPer1M } }`, USD per 1M tokens (keys are
+   * case-insensitive). Prices LLM-call spans from their token counts at export. Precedence:
+   * `setLlmCost()` > `capture(..., { cost })` > `costResolver` > `pricing` > Latitude's server-side pricing.
+   */
+  pricing?: Record<string, ModelPricing>
+  /** Called per LLM-call span; return a cost, or `null`/`undefined` to fall back to `pricing`. */
+  costResolver?: CostResolver
 }
 
 export type { RedactSpanProcessorOptions } from "./redact.ts"

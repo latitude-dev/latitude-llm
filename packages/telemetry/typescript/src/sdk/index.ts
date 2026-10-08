@@ -1,5 +1,6 @@
-export { GEN_AI_MEMORY_ATTRIBUTES, MEMORY_OPERATIONS } from "../constants/attributes.ts"
+export { ATTRIBUTES, COST_SOURCE_USER, GEN_AI_MEMORY_ATTRIBUTES, MEMORY_OPERATIONS } from "../constants/attributes.ts"
 export { type CaptureScope, capture } from "./context.ts"
+export { type CostResolver, type LlmCost, type LlmUsage, type ModelPricing, setLlmCost } from "./cost.ts"
 export { initLatitude, Latitude } from "./init.ts"
 export type { InstrumentationsInput } from "./instrumentations.ts"
 export { registerLatitudeInstrumentations } from "./instrumentations.ts"

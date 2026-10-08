@@ -14,6 +14,7 @@ import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
 import { ATTRIBUTES } from "../constants/index.ts"
 import { env } from "../env/index.ts"
 import { getLatitudeContext } from "./context.ts"
+import { CostAttributesExporter, CostResolution, type NormalizedCost, SpanCostTracker } from "./cost.ts"
 import { DEFAULT_REDACT_SPAN_PROCESSOR, RedactSpanProcessor } from "./redact.ts"
 import {
   buildShouldExportSpanFromFields,
@@ -61,6 +62,7 @@ class ServiceNameResourceExporter implements SpanExporter {
 
 export class LatitudeSpanProcessor implements SpanProcessor {
   private readonly tail: SpanProcessor
+  private readonly costTracker = new SpanCostTracker()
 
   constructor(apiKey: string, project: string | undefined, options?: LatitudeSpanProcessorOptions) {
     if (!apiKey || apiKey.trim() === "") {
@@ -83,7 +85,14 @@ export class LatitudeSpanProcessor implements SpanProcessor {
       })
 
     const rawServiceName = options?.serviceName?.trim()
-    const exporter = rawServiceName ? new ServiceNameResourceExporter(baseExporter, rawServiceName) : baseExporter
+    const serviceExporter = rawServiceName
+      ? new ServiceNameResourceExporter(baseExporter, rawServiceName)
+      : baseExporter
+    // Cost wrapper is outermost: it must see the original span objects to find their cost hints.
+    const exporter = new CostAttributesExporter(
+      serviceExporter,
+      new CostResolution(this.costTracker, { pricing: options?.pricing, costResolver: options?.costResolver }),
+    )
 
     const redact = options?.disableRedact
       ? null
@@ -139,7 +148,15 @@ export class LatitudeSpanProcessor implements SpanProcessor {
       }
     }
 
+    this.recordCaptureCost(span, latitudeData?.cost)
     this.tail.onStart(span, parentContext)
+  }
+
+  // Whether this is an LLM-call span is only known at export (instrumentors often set gen_ai.* late),
+  // so remember the capture cost per span and let the export wrapper decide.
+  private recordCaptureCost(span: Span, cost: NormalizedCost | undefined): void {
+    if (!cost || span.attributes?.["latitude.capture.root"]) return
+    this.costTracker.onStart(span, cost)
   }
 
   onEnd(span: ReadableSpan): void {
@@ -152,5 +169,6 @@ export class LatitudeSpanProcessor implements SpanProcessor {
 
   async shutdown(): Promise<void> {
     await this.tail.shutdown()
+    this.costTracker.clear()
   }
 }

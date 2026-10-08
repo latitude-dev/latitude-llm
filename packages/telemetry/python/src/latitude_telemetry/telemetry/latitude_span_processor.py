@@ -19,6 +19,13 @@ from latitude_telemetry.constants import ATTRIBUTES
 from latitude_telemetry.env import env
 from latitude_telemetry.exporter import ExporterOptions, create_exporter
 from latitude_telemetry.sdk.context import get_latitude_context
+from latitude_telemetry.telemetry.cost import (
+    CostAttributesExporter,
+    CostResolution,
+    CostResolver,
+    ModelPricing,
+    SpanCostTracker,
+)
 from latitude_telemetry.telemetry.redact_span_processor import (
     RedactSpanProcessor,
     RedactSpanProcessorOptions,
@@ -87,6 +94,10 @@ class LatitudeSpanProcessorOptions:
     blocked_instrumentation_scopes: tuple[str, ...] = ()
     exporter: SpanExporter | None = None
     service_name: str | None = None
+    # `{"<provider>/<model>": {"input_per_1m": .., "output_per_1m": ..}}`, USD per 1M tokens.
+    pricing: typing.Mapping[str, ModelPricing] | None = None
+    # Per-LLM-call cost hook; return a cost dict or None to fall back to `pricing`.
+    cost_resolver: CostResolver | None = None
 
 
 class LatitudeSpanProcessor(SpanProcessor):
@@ -115,7 +126,15 @@ class LatitudeSpanProcessor(SpanProcessor):
         )
 
         raw_service_name = options.service_name.strip() if options.service_name else ""
-        exporter = _ServiceNameResourceExporter(base_exporter, raw_service_name) if raw_service_name else base_exporter
+        service_exporter = (
+            _ServiceNameResourceExporter(base_exporter, raw_service_name) if raw_service_name else base_exporter
+        )
+        # Cost wrapper is outermost: it must see the original ended spans to find their cost hints.
+        self._cost_tracker = SpanCostTracker()
+        exporter: SpanExporter = CostAttributesExporter(
+            service_exporter,
+            CostResolution(self._cost_tracker, pricing=options.pricing, cost_resolver=options.cost_resolver),
+        )
 
         if options.disable_redact:
             redact: RedactSpanProcessor | None = None
@@ -173,14 +192,20 @@ class LatitudeSpanProcessor(SpanProcessor):
                 span.set_attribute(ATTRIBUTES.user_email, latitude_data.user_email)
             if latitude_data.project:
                 span.set_attribute(ATTRIBUTES.project, latitude_data.project)
+            if latitude_data.cost is not None and not (span.attributes or {}).get("latitude.capture.root"):
+                # Whether this is an LLM-call span is only known at export (instrumentors often set
+                # gen_ai.* late), so remember the capture cost by span id and decide then.
+                self._cost_tracker.on_start(span, latitude_data.cost)
 
         self._tail.on_start(span, parent_context)
 
     def on_end(self, span: ReadableSpan) -> None:
+        self._cost_tracker.on_end(span)
         self._tail.on_end(span)
 
     def shutdown(self) -> None:
         self._tail.shutdown()
+        self._cost_tracker.clear()
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:
         return self._tail.force_flush(timeout_millis)

@@ -123,6 +123,71 @@ capture.end(scope)
 
 Nested `capture()` calls inherit parent context and can override local values. Metadata is shallow-merged, and tags are appended and deduplicated.
 
+## Bring your own cost
+
+By default Latitude prices each LLM call from its token counts using public model prices. If you pay a negotiated rate, use a fine-tuned or self-hosted model, or already know what each call cost, tell the SDK and Latitude uses your figure instead. All amounts are in USD.
+
+There are four ways to set it. When more than one applies to the same span, the first in this list wins:
+
+1. **`setLlmCost(span, cost)`**: the cost of one specific span you hold.
+2. **`capture(name, fn, { cost })`**: the cost of every LLM call inside that capture.
+3. **`costResolver`**: a function that prices each LLM call.
+4. **`pricing`**: a per-model price table.
+
+If none of them sets a cost, Latitude prices the span itself, as before.
+
+```ts
+import { Latitude, capture, setLlmCost, type LlmUsage } from "@latitude-data/telemetry"
+
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
+  // USD per 1M tokens, keyed by "<provider>/<model>" (case-insensitive)
+  pricing: {
+    "openai/gpt-4o": { inputPer1M: 2.0, outputPer1M: 8.0 },
+    "openai/text-embedding-3-small": { inputPer1M: 0.015 },
+  },
+  // Return a cost, or undefined to fall back to `pricing` and then to Latitude's own prices
+  costResolver: (usage: LlmUsage) =>
+    usage.model?.startsWith("ft:") ? { total: ((usage.inputTokens ?? 0) * 3) / 1_000_000 } : undefined,
+})
+
+// Every LLM call inside this capture costs $0.002 in and $0.004 out
+await capture("handle-user-request", () => runAgent(), { cost: { input: 0.002, output: 0.004 } })
+```
+
+A cost is either `{ input, output }`, `{ total }`, or all three. When you leave out `total`, the SDK sets it to `input + output`. An explicit `0` is a real cost of zero, not "unset". Negative or non-numeric amounts are ignored with a warning.
+
+`capture()` cost applies to **each** LLM call inside the capture, not to the capture as a whole, and it is never put on the capture's own wrapper span. If one capture makes several calls that cost different amounts, give each call its own capture, or use `setLlmCost()`. Nested captures inherit the cost unless they set their own. Cost does not travel through `injectTraceContext()` carriers, so set it on each side.
+
+`setLlmCost()` writes onto a live span, typically one you created yourself:
+
+```ts
+const span = tracer.startSpan("my-llm-call", {
+  attributes: { "gen_ai.operation.name": "chat", "gen_ai.request.model": "my-model" },
+})
+setLlmCost(span, { input: 0.01, output: 0.03 })
+span.end()
+```
+
+### What the SDK reads and writes
+
+The SDK only prices LLM-call spans: spans whose `gen_ai.operation.name` is `chat`, `text_completion`, `generate_content`, `embeddings` or `rerank`/`reranker`, or the equivalent OpenInference (`openinference.span.kind` `LLM`/`EMBEDDING`/`RERANKER`), OpenLLMetry (`llm.request.type`) or Vercel AI SDK leaf (`ai.*.doGenerate`/`doStream`/`doEmbed`) spans. `setLlmCost()` applies to whatever span you pass it.
+
+For `costResolver` and `pricing` it reads the fields below. `costResolver` receives them as an `LlmUsage` with `provider`, `model`, `inputTokens`, `outputTokens`, `operation`, `spanName` and `attributes`; any of the first four can be `undefined`.
+
+| Field | Attributes, first present wins |
+| --- | --- |
+| provider | `gen_ai.provider.name`, `gen_ai.system`, `llm.provider`, `llm.system` |
+| model | `gen_ai.response.model`, `gen_ai.request.model`, `llm.model_name` |
+| input tokens | `gen_ai.usage.input_tokens`, `gen_ai.usage.prompt_tokens`, `llm.token_count.prompt` |
+| output tokens | `gen_ai.usage.output_tokens`, `gen_ai.usage.completion_tokens`, `llm.token_count.completion` |
+
+`pricing` tries the response model first, then the requested model. It needs a provider, a matching model and at least one token count, and treats a missing token count or rate as 0. Cache and reasoning tokens are not priced separately. Use `costResolver` if you need that; it also receives the span's raw `attributes`. If `costResolver` throws, the SDK logs a warning and falls back to `pricing`.
+
+Where the SDK sets a cost it writes the standard `gen_ai.usage.input_cost`, `gen_ai.usage.output_cost` and `gen_ai.usage.total_cost` attributes plus `latitude.cost.source = "user"` (exported as `ATTRIBUTES.costInput`, `costOutput`, `costTotal`, `costSource` and `COST_SOURCE_USER`). It replaces any cost your instrumentation already wrote on that span, including a `total`-only cost removing the instrumentation's input and output costs so the numbers stay consistent. Spans the SDK doesn't price keep whatever cost the instrumentation wrote. The cost is applied as the span is exported to Latitude, so other exporters on the same OpenTelemetry provider see the span unchanged.
+
 ## Existing Sentry or OpenTelemetry setup
 
 If your app already uses Sentry, Datadog, New Relic, Honeycomb, or another OpenTelemetry-compatible SDK, initialize that SDK first and construct `Latitude` second. Latitude will attach its span processor to the existing provider when possible.
