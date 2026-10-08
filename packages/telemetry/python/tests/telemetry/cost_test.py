@@ -1,8 +1,10 @@
 """Tests for customer-supplied LLM cost: capture(cost=...), pricing, cost_resolver and set_llm_cost."""
 
+import logging
 import re
 from collections.abc import Iterator
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from opentelemetry import trace
@@ -20,6 +22,7 @@ from latitude_telemetry import (
     capture,
     set_llm_cost,
 )
+from latitude_telemetry.telemetry import cost as cost_module
 from latitude_telemetry.telemetry.latitude_span_processor import LatitudeSpanProcessorOptions
 from latitude_telemetry.telemetry.redact_span_processor import RedactSpanProcessorOptions
 
@@ -391,6 +394,77 @@ class TestPrecedence:
         h = harness_factory()
         h.llm_call(**{"gen_ai.usage.input_cost": 1.0, "gen_ai.usage.total_cost": 1.5})
         assert cost_of(h.attrs("openai.chat")) == {ATTRIBUTES.cost_input: 1.0, ATTRIBUTES.cost_total: 1.5}
+
+
+class TestSetLlmCostOperationWarning:
+    @pytest.fixture(autouse=True)
+    def _fresh_warning(self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+        monkeypatch.setattr(cost_module, "_not_usage_span_warned", False)
+        caplog.set_level(logging.WARNING, logger=cost_module.__name__)
+
+    @staticmethod
+    def _warnings(caplog: pytest.LogCaptureFixture) -> list[str]:
+        return [r.getMessage() for r in caplog.records if "not an LLM-call span" in r.getMessage()]
+
+    def _set_cost(self, h: Harness, name: str, attributes: dict[str, Any]) -> dict[str, Any]:
+        with h.tracer.start_as_current_span(name, attributes=attributes) as span:
+            set_llm_cost(span, input=0.01, output=0.02)
+        return cost_of(h.attrs(name))
+
+    def test_warns_on_missing_operation_and_still_sets_cost(
+        self, harness_factory: Any, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        h = harness_factory()
+        assert self._set_cost(h, "no-op", {}) == {
+            ATTRIBUTES.cost_input: 0.01,
+            ATTRIBUTES.cost_output: 0.02,
+            ATTRIBUTES.cost_total: pytest.approx(0.03),
+            ATTRIBUTES.cost_source: COST_SOURCE_USER,
+        }
+        [message] = self._warnings(caplog)
+        assert "'no-op'" in message
+        assert "gen_ai.operation.name=None" in message
+
+    def test_warns_on_non_usage_operation_and_still_sets_cost(
+        self, harness_factory: Any, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        h = harness_factory()
+        cost = self._set_cost(h, "tool", {"gen_ai.operation.name": "execute_tool"})
+        assert cost[ATTRIBUTES.cost_total] == pytest.approx(0.03)
+        assert cost[ATTRIBUTES.cost_source] == COST_SOURCE_USER
+        [message] = self._warnings(caplog)
+        assert "gen_ai.operation.name='execute_tool'" in message
+
+    @pytest.mark.parametrize(
+        "attributes",
+        [
+            {"gen_ai.operation.name": "chat"},
+            {"gen_ai.operation.name": "rerank"},
+            {"openinference.span.kind": "LLM"},
+        ],
+    )
+    def test_no_warning_on_usage_operation(
+        self, harness_factory: Any, caplog: pytest.LogCaptureFixture, attributes: dict[str, Any]
+    ) -> None:
+        h = harness_factory()
+        assert self._set_cost(h, "llm", attributes)[ATTRIBUTES.cost_total] == pytest.approx(0.03)
+        assert self._warnings(caplog) == []
+
+    def test_warns_once_per_process(self, harness_factory: Any, caplog: pytest.LogCaptureFixture) -> None:
+        h = harness_factory()
+        self._set_cost(h, "first", {})
+        self._set_cost(h, "second", {"gen_ai.operation.name": "invoke_agent"})
+        assert self._set_cost(h, "third", {})[ATTRIBUTES.cost_total] == pytest.approx(0.03)
+        assert len(self._warnings(caplog)) == 1
+
+    def test_no_warning_when_attributes_cannot_be_read(self, caplog: pytest.LogCaptureFixture) -> None:
+        span = MagicMock(spec=["is_recording", "set_attribute", "get_span_context"])
+        span.is_recording.return_value = True
+        span.get_span_context.return_value = None
+        set_llm_cost(span, total=0.5)
+        span.set_attribute.assert_any_call(ATTRIBUTES.cost_total, 0.5)
+        span.set_attribute.assert_any_call(ATTRIBUTES.cost_source, COST_SOURCE_USER)
+        assert self._warnings(caplog) == []
 
 
 class TestLatitudeBootstrap:

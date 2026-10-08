@@ -1,7 +1,7 @@
 import { type Attributes, context, trace } from "@opentelemetry/api"
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
 import { InMemorySpanExporter, NodeTracerProvider, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-node"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest"
 import { ATTRIBUTES, COST_SOURCE_USER } from "../constants/index.ts"
 import { capture } from "./context.ts"
 import { type CostResolver, type LlmUsage, type ModelPricing, setLlmCost } from "./cost.ts"
@@ -428,6 +428,79 @@ describe("customer-supplied LLM cost", () => {
         [ATTRIBUTES.costInput]: 1,
         [ATTRIBUTES.costTotal]: 1.5,
       })
+    })
+  })
+
+  describe("setLlmCost operation warning", () => {
+    // The warning is once per process, so each test loads a fresh copy of the module.
+    let freshSetLlmCost: typeof setLlmCost
+    let warn: MockInstance<typeof console.warn>
+
+    beforeEach(async () => {
+      vi.resetModules()
+      freshSetLlmCost = (await import("./cost.ts")).setLlmCost
+      warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    })
+
+    const operationWarnings = () =>
+      warn.mock.calls.map((args) => String(args[0])).filter((message) => message.includes("not an LLM-call span"))
+
+    const setCost = (name: string, attributes: Attributes): Attributes => {
+      const span = harness().tracer.startSpan(name, { attributes })
+      freshSetLlmCost(span, { input: 0.01, output: 0.02 })
+      const live = { ...(span as unknown as { attributes: Attributes }).attributes }
+      span.end()
+      return costOf(live)
+    }
+
+    it("warns on a span without gen_ai.operation.name and still sets the cost", () => {
+      expect(setCost("no-op", {})).toEqual({
+        [ATTRIBUTES.costInput]: 0.01,
+        [ATTRIBUTES.costOutput]: 0.02,
+        [ATTRIBUTES.costTotal]: 0.03,
+        [ATTRIBUTES.costSource]: COST_SOURCE_USER,
+      })
+      const [message, ...rest] = operationWarnings()
+      expect(rest).toEqual([])
+      expect(message).toContain('span "no-op"')
+      expect(message).toContain("gen_ai.operation.name=undefined")
+    })
+
+    it("warns on a non-usage operation and still sets the cost", () => {
+      expect(setCost("tool", { "gen_ai.operation.name": "execute_tool" })).toMatchObject({
+        [ATTRIBUTES.costTotal]: 0.03,
+        [ATTRIBUTES.costSource]: COST_SOURCE_USER,
+      })
+      const [message, ...rest] = operationWarnings()
+      expect(rest).toEqual([])
+      expect(message).toContain('gen_ai.operation.name="execute_tool"')
+    })
+
+    it.each([
+      { "gen_ai.operation.name": "chat" },
+      { "gen_ai.operation.name": "rerank" },
+      { "openinference.span.kind": "LLM" },
+    ])("does not warn on a usage operation (%o)", (attributes) => {
+      expect(setCost("llm", attributes)[ATTRIBUTES.costTotal]).toBe(0.03)
+      expect(operationWarnings()).toEqual([])
+    })
+
+    it("warns once per process", () => {
+      setCost("first", {})
+      setCost("second", { "gen_ai.operation.name": "invoke_agent" })
+      expect(setCost("third", {})[ATTRIBUTES.costTotal]).toBe(0.03)
+      expect(operationWarnings()).toHaveLength(1)
+    })
+
+    it("does not warn when the span's attributes cannot be read", () => {
+      const setAttributes = vi.fn()
+      const span = { isRecording: () => true, setAttributes } as unknown as Parameters<typeof setLlmCost>[0]
+      freshSetLlmCost(span, { total: 0.5 })
+      expect(setAttributes).toHaveBeenCalledWith({
+        [ATTRIBUTES.costTotal]: 0.5,
+        [ATTRIBUTES.costSource]: COST_SOURCE_USER,
+      })
+      expect(operationWarnings()).toEqual([])
     })
   })
 

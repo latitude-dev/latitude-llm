@@ -78,12 +78,15 @@ An explicit `0` is honoured, including a `0` total, so you can mark a call as fr
 Any other value of `latitude.cost.source`, or no marker at all, means the cost is treated as provider reported. In that case a lone `0` total is ignored and the span is estimated, and a total sent without sides gets its input and output costs estimated from public pricing where it is available. If the marker is set but no valid cost attribute is present, the span is estimated as usual.
 
 ```python
+span.set_attribute("gen_ai.operation.name", "chat")
 span.set_attribute("latitude.cost.source", "user")
 span.set_attribute("gen_ai.usage.input_cost", 0.00042)
 span.set_attribute("gen_ai.usage.output_cost", 0.0011)
 ```
 
 Reported cost, yours or the provider's, counts as **verified** spend on the Cost page. Estimated cost does not.
+
+Report the cost on the LLM-call span itself, with `gen_ai.operation.name` set to `chat`, `text_completion`, `generate_content`, `embeddings` or `rerank`/`reranker` (or the OpenInference, OpenLLMetry or Vercel AI SDK equivalent). Trace and session totals and the Cost page only count cost on those operations, so a cost on any other span is stored on that span but not counted. This applies to the telemetry SDKs' `set_llm_cost` (Python) and `setLlmCost` (TypeScript) too; they log a warning, once per process, when called on a span that is not an LLM call.
 
 ### Validation
 

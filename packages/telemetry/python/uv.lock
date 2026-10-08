@@ -614,7 +614,7 @@ wheels = [
 
 [[package]]
 name = "latitude-telemetry"
-version = "3.8.3"
+version = "3.8.4"
 source = { editable = "." }
 dependencies = [
     { name = "openinference-instrumentation-crewai" },

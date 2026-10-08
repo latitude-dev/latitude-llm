@@ -43,6 +43,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the defaults rather than adding to them. New `ATTRIBUTES` keys for the exempt attributes.
 - A "Redaction" section in the TypeScript telemetry docs.
 
+## [4.2.1] - 2026-10-08
+
+### Fixed
+
+- `setLlmCost` logs a one-time warning when called on a span that is not an LLM-call span
+  (no usage `gen_ai.operation.name` or equivalent). The cost attributes are still set; the
+  warning exists because trace/session totals and the Cost page only count usage operations.
+
 ## [4.2.0] - 2026-10-08
 
 ### Added
