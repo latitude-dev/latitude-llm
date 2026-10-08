@@ -12,6 +12,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from latitude_telemetry import (
     ATTRIBUTES,
     COST_SOURCE_USER,
+    REDACTION_EXEMPT_ATTRIBUTES,
     LatitudeSpanProcessor,
     RedactSpanProcessor,
     RedactThenExportSpanProcessor,
@@ -145,12 +146,12 @@ class TestLatitudeSpanProcessorRedaction:
         assert span.events == ()
 
     def test_cost_and_redaction_compose(self, harness_factory: Any) -> None:
-        # `^gen_ai\.` masks the model and token counts cost is priced from, and matches the cost keys.
+        # `^gen_ai\.` masks the token counts cost is priced from, and matches the cost keys.
         h = harness_factory(pricing=PRICING, redact=RedactSpanProcessorOptions(attributes=[re.compile(r"^gen_ai\.")]))
         h.llm_call(**{"gen_ai.usage.input_cost": 99.0})
         attrs = h.span().attributes or {}
-        assert attrs["gen_ai.request.model"] == FALLBACK_MASK
         assert attrs["gen_ai.usage.input_tokens"] == FALLBACK_MASK
+        assert attrs["gen_ai.usage.output_tokens"] == FALLBACK_MASK
         # Priced from the unredacted tokens, written after redaction, so never masked.
         assert attrs[ATTRIBUTES.cost_input] == pytest.approx(0.0025)
         assert attrs[ATTRIBUTES.cost_total] == pytest.approx(0.0075)
@@ -160,7 +161,7 @@ class TestLatitudeSpanProcessorRedaction:
         h = harness_factory(redact=RedactSpanProcessorOptions(attributes=[re.compile(r"^gen_ai\.")]))
         capture("agent", lambda: h.llm_call(), cost={"total": 0.5})
         attrs = h.span().attributes or {}
-        assert attrs["gen_ai.operation.name"] == FALLBACK_MASK
+        assert attrs["gen_ai.usage.input_tokens"] == FALLBACK_MASK
         assert attrs[ATTRIBUTES.cost_total] == 0.5
 
     def test_instrumentor_cost_is_redacted_when_the_sdk_sets_none(self, harness_factory: Any) -> None:
@@ -169,6 +170,63 @@ class TestLatitudeSpanProcessorRedaction:
         attrs = h.span().attributes or {}
         assert attrs["gen_ai.usage.total_cost"] == FALLBACK_MASK
         assert ATTRIBUTES.cost_source not in attrs
+
+
+ATTRIBUTION = {
+    ATTRIBUTES.operation_name: "chat",
+    ATTRIBUTES.provider_name: "openai",
+    ATTRIBUTES.system: "openai",
+    ATTRIBUTES.request_model: "gpt-4o",
+    ATTRIBUTES.response_model: "gpt-4o-2024-08-06",
+}
+SDK_COST_KEYS = {ATTRIBUTES.cost_input, ATTRIBUTES.cost_output, ATTRIBUTES.cost_total, ATTRIBUTES.cost_source}
+
+
+class TestAttributionAttributesAreExempt:
+    """Regex patterns never mask the operation/provider/model keys Latitude needs to attribute a span."""
+
+    def _assert_only_attribution_survives(self, attrs: Any) -> None:
+        for key, value in attrs.items():
+            if key in REDACTION_EXEMPT_ATTRIBUTES:
+                assert value == ATTRIBUTION[key], key
+            elif key not in SDK_COST_KEYS:
+                assert value == FALLBACK_MASK, key
+        assert set(ATTRIBUTION) <= set(attrs)
+
+    def test_exempt_keys_match_the_attribute_constants(self) -> None:
+        assert REDACTION_EXEMPT_ATTRIBUTES == frozenset(ATTRIBUTION)
+
+    def test_broad_pattern_with_sdk_cost(self, harness_factory: Any) -> None:
+        h = harness_factory(pricing=PRICING, redact=RedactSpanProcessorOptions(attributes=[re.compile(r".*")]))
+        h.llm_call(**ATTRIBUTION, **{"gen_ai.prompt.0.content": "secret prompt", "user.email": "a@b.c"})
+        attrs = h.span().attributes or {}
+        self._assert_only_attribution_survives(attrs)
+        assert attrs["gen_ai.prompt.0.content"] == FALLBACK_MASK
+        assert attrs[ATTRIBUTES.cost_total] == pytest.approx(0.0075)
+        assert attrs[ATTRIBUTES.cost_source] == COST_SOURCE_USER
+
+    def test_broad_pattern_without_sdk_cost(self, harness_factory: Any) -> None:
+        # Exempt regardless of cost: ingest still needs them to classify and price the span itself.
+        h = harness_factory(redact=RedactSpanProcessorOptions(attributes=[re.compile(r"^gen_ai\."), re.compile(r".*")]))
+        h.llm_call(event={ATTRIBUTES.request_model: "gpt-4o", "detail": "x"}, **ATTRIBUTION)
+        span = h.span()
+        attrs = span.attributes or {}
+        self._assert_only_attribution_survives(attrs)
+        assert attrs["gen_ai.usage.input_tokens"] == FALLBACK_MASK
+        assert ATTRIBUTES.cost_source not in attrs
+        assert dict(span.events[0].attributes or {}) == {ATTRIBUTES.request_model: "gpt-4o", "detail": FALLBACK_MASK}
+
+    def test_exact_string_pattern_still_redacts(self, harness_factory: Any) -> None:
+        h = harness_factory(redact=RedactSpanProcessorOptions(attributes=[ATTRIBUTES.request_model, re.compile(r".*")]))
+        h.llm_call(**ATTRIBUTION)
+        attrs = h.span().attributes or {}
+        assert attrs[ATTRIBUTES.request_model] == FALLBACK_MASK
+        assert attrs[ATTRIBUTES.response_model] == ATTRIBUTION[ATTRIBUTES.response_model]
+        assert attrs[ATTRIBUTES.operation_name] == "chat"
+
+    def test_standalone_processor_applies_the_same_rule(self) -> None:
+        redact = RedactSpanProcessor(attributes=[re.compile(r".*")])
+        assert redact.redact_attributes({**ATTRIBUTION, "secret": "s"}) == {**ATTRIBUTION, "secret": FALLBACK_MASK}
 
 
 class TestStandaloneRedactSpanProcessor:

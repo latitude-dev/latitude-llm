@@ -18,6 +18,13 @@ class ATTRIBUTES:
     cost_total = "gen_ai.usage.total_cost"
     # Marker set to `COST_SOURCE_USER` on every span whose cost the SDK set.
     cost_source = "latitude.cost.source"
+    # OTel GenAI attribution keys Latitude reads to classify, attribute and price LLM spans. Regex
+    # redaction patterns never mask them (see `REDACTION_EXEMPT_ATTRIBUTES`).
+    operation_name = "gen_ai.operation.name"
+    provider_name = "gen_ai.provider.name"
+    system = "gen_ai.system"
+    request_model = "gen_ai.request.model"
+    response_model = "gen_ai.response.model"
 
 
 COST_SOURCE_USER = "user"

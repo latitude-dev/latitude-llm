@@ -14,11 +14,27 @@ from opentelemetry.context import Context
 from opentelemetry.sdk.trace import Event, ReadableSpan, Span, SpanProcessor
 from opentelemetry.sdk.util import BoundedList
 
+from latitude_telemetry.constants import ATTRIBUTES
+
 logger = logging.getLogger(__name__)
 
 # Used when a custom `mask` raises or returns something that isn't a valid attribute value: fail
 # closed (mask) rather than leak the raw value or drop the span.
 FALLBACK_MASK = "******"
+
+
+# Which operation a span is and which provider/model served it. Latitude needs them to count the
+# span in cost and usage rollups, attribute it to a model and price it, so regex patterns never mask
+# them. They name a model, not user data. Listing one as an exact string pattern still redacts it.
+REDACTION_EXEMPT_ATTRIBUTES: frozenset[str] = frozenset(
+    {
+        ATTRIBUTES.operation_name,
+        ATTRIBUTES.provider_name,
+        ATTRIBUTES.system,
+        ATTRIBUTES.request_model,
+        ATTRIBUTES.response_model,
+    }
+)
 
 
 def _default_mask(attr: str, value: object) -> str:
@@ -41,6 +57,8 @@ class RedactSpanProcessor(SpanProcessor):
     applies to an export-time view of the span. Used standalone, `on_end` points the ended span
     snapshot at redacted copies so processors after it export redacted values. Redaction never
     raises: a pattern or `mask` failure masks that value with `FALLBACK_MASK`.
+
+    Regex patterns never match `REDACTION_EXEMPT_ATTRIBUTES`; an exact string pattern does.
     """
 
     def __init__(
@@ -132,7 +150,7 @@ class RedactSpanProcessor(SpanProcessor):
                     if attribute == pattern:
                         return True
                 elif isinstance(pattern, re.Pattern):
-                    if pattern.search(attribute):
+                    if attribute not in REDACTION_EXEMPT_ATTRIBUTES and pattern.search(attribute):
                         return True
             except Exception:
                 # Fail closed: a broken pattern redacts rather than leaks.
