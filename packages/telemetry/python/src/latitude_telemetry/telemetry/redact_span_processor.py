@@ -23,16 +23,34 @@ logger = logging.getLogger(__name__)
 FALLBACK_MASK = "******"
 
 
-# Which operation a span is and which provider/model served it. Latitude needs them to count the
-# span in cost and usage rollups, attribute it to a model and price it, so regex patterns never mask
-# them. They name a model, not user data. Listing one as an exact string pattern still redacts it.
+# Which operation a span is and which provider/model served it, in every convention Latitude's
+# ingest resolves them from. Latitude needs them to count the span in cost and usage rollups,
+# attribute it to a model and price it, so regex patterns never mask them. They name an operation,
+# provider or model, never user content. Listing one as an exact string pattern still redacts it.
 REDACTION_EXEMPT_ATTRIBUTES: frozenset[str] = frozenset(
     {
+        # Operation
         ATTRIBUTES.operation_name,
+        ATTRIBUTES.openinference_span_kind,
+        ATTRIBUTES.llm_request_type,
+        ATTRIBUTES.ai_operation_id,
+        ATTRIBUTES.latitude_span_kind,
+        ATTRIBUTES.span_type,
+        # Provider
         ATTRIBUTES.provider_name,
         ATTRIBUTES.system,
+        ATTRIBUTES.model_provider,
+        ATTRIBUTES.llm_system,
+        ATTRIBUTES.llm_provider,
+        ATTRIBUTES.ai_model_provider,
+        # Model
         ATTRIBUTES.request_model,
         ATTRIBUTES.response_model,
+        ATTRIBUTES.llm_model_name,
+        ATTRIBUTES.embedding_model_name,
+        ATTRIBUTES.reranker_model_name,
+        ATTRIBUTES.ai_model_id,
+        ATTRIBUTES.ai_response_model,
     }
 )
 

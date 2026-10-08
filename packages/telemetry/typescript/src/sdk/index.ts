@@ -14,6 +14,8 @@ export {
 } from "./memory.ts"
 export { LatitudeSpanProcessor } from "./processor.ts"
 export {
+  DEFAULT_REDACT_PATTERNS,
+  REDACTION_EXEMPT_ATTRIBUTES,
   RedactSpanProcessor,
   type RedactSpanProcessorOptions,
 } from "./redact.ts"

@@ -5,6 +5,18 @@ All notable changes to the Python Telemetry SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.3] - 2026-10-08
+
+### Changed
+
+- The redaction exemption now covers every attribute Latitude's ingest reads to classify, attribute
+  and price a span, not just the OTel GenAI ones. Added: `openinference.span.kind`,
+  `llm.request.type`, `ai.operationId`, `latitude.span.kind`, `span.type`, `gen_ai.model.provider`,
+  `llm.system`, `llm.provider`, `ai.model.provider`, `llm.model_name`, `embedding.model_name`,
+  `reranker.model_name`, `ai.model.id` and `ai.response.model`. This keeps OpenInference,
+  OpenLLMetry and Vercel AI SDK spans attributed under broad patterns. Listing one as an exact
+  string still redacts it. New `ATTRIBUTES` constants for each key.
+
 ## [3.8.2] - 2026-10-08
 
 ### Changed

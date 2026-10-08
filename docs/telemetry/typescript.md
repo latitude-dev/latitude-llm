@@ -206,6 +206,54 @@ For `costResolver` and `pricing` it reads the fields below. `costResolver` recei
 
 Where the SDK sets a cost it writes the standard `gen_ai.usage.input_cost`, `gen_ai.usage.output_cost` and `gen_ai.usage.total_cost` attributes plus `latitude.cost.source = "user"` (exported as `ATTRIBUTES.costInput`, `costOutput`, `costTotal`, `costSource` and `COST_SOURCE_USER`). It replaces any cost your instrumentation already wrote on that span, including a `total`-only cost removing the instrumentation's input and output costs so the numbers stay consistent. Spans the SDK doesn't price keep whatever cost the instrumentation wrote. The cost is written as the span is exported to Latitude, so other exporters on the same OpenTelemetry provider see the span unchanged.
 
+## Redaction
+
+Before exporting a span, Latitude masks the values of sensitive attributes with `******`. By default it masks these attributes, matched case-insensitively:
+
+| Pattern | Matches |
+| ------- | ------- |
+| `/^http\.request\.header\.authorization$/i` | `http.request.header.authorization` |
+| `/^http\.request\.header\.cookie$/i` | `http.request.header.cookie` |
+| `/^http\.request\.header\.x[-_]api[-_]key$/i` | `http.request.header.x-api-key`, `http.request.header.x_api_key` |
+| `/^db\.statement$/i` | `db.statement` |
+
+To redact other attributes, pass `redact`. A string matches one attribute key exactly, and a regular expression matches any key it finds a match in. `mask` is optional: it receives the attribute key and value and returns the string to export instead.
+
+```ts
+import { DEFAULT_REDACT_PATTERNS, Latitude } from "@latitude-data/telemetry"
+
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
+  redact: {
+    attributes: [
+      ...DEFAULT_REDACT_PATTERNS, // keep the defaults
+      "app.customer.ssn",
+      /^gen_ai\.(prompt|completion)\./,
+    ],
+    mask: (key, value) => "[redacted]",
+  },
+})
+```
+
+<Warning>
+  A custom `redact` **replaces** the default patterns rather than adding to them. This is existing behaviour. To keep the defaults, include `...DEFAULT_REDACT_PATTERNS` in `attributes` as above. Pass `disableRedact: true` to turn redaction off entirely.
+</Warning>
+
+Redaction covers span attributes, event attributes and link attributes. It never throws into your code and never drops a span: if your `mask` throws or returns something that isn't a string, number or boolean, that value is exported as `******` instead.
+
+Regular expressions never mask the attributes Latitude needs to tell which operation a span is and which provider and model served it, even a broad pattern such as `/^gen_ai\./` or `/.*/`:
+
+| What | Attributes |
+| ---- | ---------- |
+| Operation | `gen_ai.operation.name`, `openinference.span.kind`, `llm.request.type`, `ai.operationId`, `latitude.span.kind`, `span.type` |
+| Provider | `gen_ai.provider.name`, `gen_ai.system`, `gen_ai.model.provider`, `llm.system`, `llm.provider`, `ai.model.provider` |
+| Model | `gen_ai.request.model`, `gen_ai.response.model`, `llm.model_name`, `embedding.model_name`, `reranker.model_name`, `ai.model.id`, `ai.response.model` |
+
+Without them Latitude can't count the span in cost and usage, attribute it to a model, or price it. They name an operation, provider or model, never your data. If you still need to hide one, list its exact key as a string: exact-key patterns always apply. The exempt keys are exported as `REDACTION_EXEMPT_ATTRIBUTES`. Cost attributes the SDK sets itself (see [Bring your own cost](#bring-your-own-cost)) are written after redaction, so patterns never mask them either.
+
+Redaction applies only to what Latitude exports. Latitude never modifies the span itself, so other span processors and exporters on the same tracer provider (see [Existing Sentry or OpenTelemetry setup](#existing-sentry-or-opentelemetry-setup)) still see the raw values. Configure redaction for those separately.
+
 ## Existing Sentry or OpenTelemetry setup
 
 If your app already uses Sentry, Datadog, New Relic, Honeycomb, or another OpenTelemetry-compatible SDK, initialize that SDK first and construct `Latitude` second. Latitude will attach its span processor to the existing provider when possible.

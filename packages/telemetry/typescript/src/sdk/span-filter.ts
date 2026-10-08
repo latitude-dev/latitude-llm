@@ -1,6 +1,7 @@
 import { type Context, isValidSpanId, trace } from "@opentelemetry/api"
 import type { ReadableSpan, Span, SpanProcessor } from "@opentelemetry/sdk-trace-node"
 import { SCOPE_LATITUDE } from "../constants/scope.ts"
+import { RedactSpanProcessor, withSpanOverrides } from "./redact.ts"
 
 const MAX_TRACKED_SPANS = 2048
 
@@ -294,7 +295,10 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
   }
 }
 
-/** Runs optional redaction then the export processor (batch/simple). */
+/**
+ * Runs optional redaction then the export processor (batch/simple). A `RedactSpanProcessor` redacts an
+ * export-time view of the span, so other processors on the provider keep seeing raw values.
+ */
 export class RedactThenExportSpanProcessor implements SpanProcessor {
   private readonly redact: SpanProcessor | null
   private readonly exportProcessor: SpanProcessor
@@ -310,6 +314,11 @@ export class RedactThenExportSpanProcessor implements SpanProcessor {
   }
 
   onEnd(span: ReadableSpan): void {
+    // A RedactSpanProcessor redacts an export-time view, so other processors keep the raw span.
+    if (this.redact instanceof RedactSpanProcessor) {
+      this.exportProcessor.onEnd(withSpanOverrides(span, this.redact.redactSpan(span)))
+      return
+    }
     this.redact?.onEnd(span)
     this.exportProcessor.onEnd(span)
   }

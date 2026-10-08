@@ -13,6 +13,31 @@ export const ATTRIBUTES = {
   costTotal: "gen_ai.usage.total_cost",
   /** Marker set to {@link COST_SOURCE_USER} on every span whose cost the SDK set. */
   costSource: "latitude.cost.source",
+  // Attribution keys Latitude reads to classify a span (operation) and attribute and price it
+  // (provider, model), across the conventions it ingests. Regex redaction patterns never mask them
+  // (see `REDACTION_EXEMPT_ATTRIBUTES`).
+  // Operation:
+  operationName: "gen_ai.operation.name", // OTel GenAI
+  openinferenceSpanKind: "openinference.span.kind", // OpenInference
+  llmRequestType: "llm.request.type", // OpenLLMetry / Traceloop
+  aiOperationId: "ai.operationId", // Vercel AI SDK
+  latitudeSpanKind: "latitude.span.kind", // OpenAI Agents bridge
+  spanType: "span.type", // Claude Code
+  // Provider:
+  providerName: "gen_ai.provider.name", // OTel GenAI
+  system: "gen_ai.system", // OTel GenAI (deprecated)
+  modelProvider: "gen_ai.model.provider", // Cloudflare AI Gateway
+  llmSystem: "llm.system", // OpenInference
+  llmProvider: "llm.provider", // OpenInference (DSPy, LiteLLM)
+  aiModelProvider: "ai.model.provider", // Vercel AI SDK
+  // Model:
+  requestModel: "gen_ai.request.model", // OTel GenAI
+  responseModel: "gen_ai.response.model", // OTel GenAI
+  llmModelName: "llm.model_name", // OpenInference
+  embeddingModelName: "embedding.model_name", // OpenInference embeddings
+  rerankerModelName: "reranker.model_name", // OpenInference reranker
+  aiModelId: "ai.model.id", // Vercel AI SDK
+  aiResponseModel: "ai.response.model", // Vercel AI SDK
 } as const
 
 export const COST_SOURCE_USER = "user"

@@ -254,11 +254,13 @@ Redaction covers span attributes and event attributes. It never raises into your
 
 Regular expressions never mask the attributes Latitude needs to tell which operation a span is and which provider and model served it, even a broad pattern such as `^gen_ai\.` or `.*`:
 
-- `gen_ai.operation.name`
-- `gen_ai.provider.name` and `gen_ai.system`
-- `gen_ai.request.model` and `gen_ai.response.model`
+| What | Attributes |
+| ---- | ---------- |
+| Operation | `gen_ai.operation.name`, `openinference.span.kind`, `llm.request.type`, `ai.operationId`, `latitude.span.kind`, `span.type` |
+| Provider | `gen_ai.provider.name`, `gen_ai.system`, `gen_ai.model.provider`, `llm.system`, `llm.provider`, `ai.model.provider` |
+| Model | `gen_ai.request.model`, `gen_ai.response.model`, `llm.model_name`, `embedding.model_name`, `reranker.model_name`, `ai.model.id`, `ai.response.model` |
 
-Without them Latitude can't count the span in cost and usage, attribute it to a model, or price it. They identify a model, not your data. If you still need to hide one, list its exact key as a string: exact-key patterns always apply. The exempt keys are exported as `REDACTION_EXEMPT_ATTRIBUTES`. Cost attributes the SDK sets itself (see [Bring your own cost](#bring-your-own-cost)) are written after redaction, so patterns never mask them either.
+Without them Latitude can't count the span in cost and usage, attribute it to a model, or price it. They name an operation, provider or model, never your data. If you still need to hide one, list its exact key as a string: exact-key patterns always apply. The exempt keys are exported as `REDACTION_EXEMPT_ATTRIBUTES`. Cost attributes the SDK sets itself (see [Bring your own cost](#bring-your-own-cost)) are written after redaction, so patterns never mask them either.
 
 Redaction applies only to what Latitude exports. Latitude never modifies the span itself, so other span processors and exporters on the same tracer provider (see [Existing OpenTelemetry setup](#existing-opentelemetry-setup)) still see the raw values. Configure redaction for those separately.
 

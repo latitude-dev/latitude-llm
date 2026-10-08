@@ -281,7 +281,7 @@ describe("customer-supplied LLM cost", () => {
       const h = harness({ pricing: PRICING, redact: { attributes: [/^gen_ai\./] } })
       h.llmCall()
       const attrs = h.attrs("openai.chat")
-      expect(attrs["gen_ai.request.model"]).toBe("******")
+      expect(attrs["gen_ai.usage.input_tokens"]).toBe("******")
       expect(attrs[ATTRIBUTES.costTotal]).toBeCloseTo(0.0075)
       expect(attrs[ATTRIBUTES.costSource]).toBe(COST_SOURCE_USER)
     })

@@ -5,6 +5,42 @@ All notable changes to the TypeScript Telemetry SDK will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] - 2026-10-08
+
+### Changed
+
+- Redaction no longer modifies the span. `LatitudeSpanProcessor` used to mask span, event and link
+  attributes in place on the shared span object, so every other processor and exporter on the same
+  provider also got Latitude's masked values. It now redacts an export-time view (the same pattern
+  as the cost view), so other processors see the raw span. Configure their redaction separately.
+  `RedactThenExportSpanProcessor` with a `RedactSpanProcessor` also redacts a view now. A
+  `RedactSpanProcessor` registered directly on a provider still masks in place, because that is the
+  only way a bare processor can affect what later processors export.
+- Regex redaction patterns no longer mask the attributes Latitude needs to classify, attribute and
+  price a span: `gen_ai.operation.name`, `openinference.span.kind`, `llm.request.type`,
+  `ai.operationId`, `latitude.span.kind`, `span.type`, `gen_ai.provider.name`, `gen_ai.system`,
+  `gen_ai.model.provider`, `llm.system`, `llm.provider`, `ai.model.provider`,
+  `gen_ai.request.model`, `gen_ai.response.model`, `llm.model_name`, `embedding.model_name`,
+  `reranker.model_name`, `ai.model.id` and `ai.response.model`. A broad pattern such as
+  `/^gen_ai\./` or `/.*/` used to mask them, so Latitude dropped the span from cost and usage
+  rollups and lost its model attribution. Listing one as an exact string still redacts it.
+- Redaction never throws: a `mask` that throws or returns a non-attribute value masks that value
+  with `******`, and the span is still exported. Cost is still resolved from the unredacted span, and
+  the SDK's own cost attributes are written after redaction, so patterns never mask them.
+
+### Fixed
+
+- A regex pattern with the `g` or `y` flag no longer skips every other matching attribute.
+  Patterns are matched with `String.prototype.search`, which ignores `lastIndex`.
+- `RedactSpanProcessor` no longer writes its default `mask` into the options object it was given.
+
+### Added
+
+- `DEFAULT_REDACT_PATTERNS` and `REDACTION_EXEMPT_ATTRIBUTES` exports, so a custom `redact` can keep
+  the defaults (`attributes: [...DEFAULT_REDACT_PATTERNS, ...]`). A custom `redact` still replaces
+  the defaults rather than adding to them. New `ATTRIBUTES` keys for the exempt attributes.
+- A "Redaction" section in the TypeScript telemetry docs.
+
 ## [4.2.0] - 2026-10-08
 
 ### Added
