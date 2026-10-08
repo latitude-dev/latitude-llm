@@ -15,7 +15,8 @@ export type GenerationContentState = (typeof GENERATION_CONTENT_STATES)[number]
 /**
  * Where a generation's spend figure stands, in the terms a Cost denominator needs.
  *
- * - `providerReported` — the instrumentation sent a cost.
+ * - `providerReported` — the instrumentation sent a cost, or the customer reported their own
+ *   (`user_reported`). Either way the figure was stated rather than priced by us.
  * - `registryEstimated` — priced from the model catalog. The expected case.
  * - `knownFree` — a local runtime or an explicit free tier: a real zero.
  * - `unpriced` — tokens with no usable rate, including a catalog that declines to price the pair.
@@ -62,6 +63,7 @@ export const classifyGenerationPricing = ({
   if (!isUsageOperation(operation)) return "notSpendBearing"
   switch (costSource) {
     case "provider_reported":
+    case "user_reported":
       return "providerReported"
     case "estimated":
       return "registryEstimated"

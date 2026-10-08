@@ -201,6 +201,60 @@ const cloudflareAiGatewayRequest = {
   ],
 }
 
+// A chat span carrying the customer's own cost, marked with `latitude.cost.source = "user"`, beside
+// one sending an invalid figure. The pair is priced by the catalog (openai / gpt-4o) so any
+// estimate leaking into the customer's span would show.
+const customerCostSpan = (spanId: string, attributes: readonly { key: string; value: Record<string, unknown> }[]) => ({
+  traceId: "33333333333333333333333333333333",
+  spanId,
+  name: "chat gpt-4o",
+  kind: 3,
+  startTimeUnixNano: "1710590400000000000",
+  endTimeUnixNano: "1710590401000000000",
+  attributes: [
+    { key: "gen_ai.operation.name", value: { stringValue: "chat" } },
+    { key: "gen_ai.provider.name", value: { stringValue: "openai" } },
+    { key: "gen_ai.request.model", value: { stringValue: "gpt-4o" } },
+    { key: "gen_ai.usage.input_tokens", value: { intValue: "1000" } },
+    { key: "gen_ai.usage.output_tokens", value: { intValue: "500" } },
+    ...attributes,
+  ],
+  status: { code: 1 },
+})
+
+const customerReportedCostRequest = {
+  resourceSpans: [
+    {
+      resource: { attributes: [{ key: "service.name", value: { stringValue: "byo-cost" } }] },
+      scopeSpans: [
+        {
+          scope: { name: "byo-cost-test" },
+          spans: [
+            // Total only, sent as a numeric string.
+            customerCostSpan("d000000000000001", [
+              { key: "latitude.cost.source", value: { stringValue: "user" } },
+              { key: "gen_ai.usage.total_cost", value: { stringValue: "0.0123" } },
+            ]),
+            // Sides only: the total is their sum.
+            customerCostSpan("d000000000000002", [
+              { key: "latitude.cost.source", value: { stringValue: "user" } },
+              { key: "gen_ai.usage.input_cost", value: { doubleValue: 0.00042 } },
+              { key: "gen_ai.usage.output_cost", value: { intValue: "1" } },
+            ]),
+            // An explicit zero total is free.
+            customerCostSpan("d000000000000003", [
+              { key: "latitude.cost.source", value: { stringValue: "user" } },
+              { key: "gen_ai.usage.total_cost", value: { doubleValue: 0 } },
+            ]),
+            // A negative total, no marker: ignored, so the catalog prices the span.
+            customerCostSpan("d000000000000004", [{ key: "gen_ai.usage.total_cost", value: { doubleValue: -0.5 } }]),
+          ],
+        },
+      ],
+    },
+  ],
+}
+
 describe("createSpanIngestionWorker", () => {
   beforeEach(() => {
     vi.stubEnv("LAT_BILLING_ENABLED", "true")
@@ -573,6 +627,84 @@ describe("createSpanIngestionWorker", () => {
         traceIds: ["22222222222222222222222222222222"],
       },
     })
+  })
+
+  it("stores a customer-reported cost to the microcent and never a negative one", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const fileKey = "span-ingestion/test-customer-reported-cost.json"
+    disk.putBytes(fileKey, Buffer.from(JSON.stringify(customerReportedCostRequest), "utf-8"))
+
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: createFakeEventsPublisher(),
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
+
+    await consumer.dispatchTask("span-ingestion", "ingest", {
+      fileKey,
+      inlinePayload: null,
+      contentType: "application/json",
+      organizationId: "org_byo_cost_test",
+      apiKeyId: "api_key_byo_cost_test",
+      ingestedAt: "2026-03-18T10:00:00.000Z",
+      defaultProjectId: "proj_byo_cost_test",
+      projectIdBySlug: {},
+    })
+
+    const rows = await Effect.runPromise(
+      queryClickhouse<{
+        span_id: string
+        cost_input_microcents: string
+        cost_output_microcents: string
+        cost_total_microcents: string
+        cost_is_estimated: number
+        cost_source: string
+      }>(
+        ch.client,
+        `SELECT span_id, cost_input_microcents, cost_output_microcents, cost_total_microcents, cost_is_estimated, cost_source
+         FROM spans
+         WHERE organization_id = {organizationId:String}
+         ORDER BY span_id`,
+        { organizationId: "org_byo_cost_test" },
+      ),
+    )
+
+    const stored = rows.map((row) => ({
+      spanId: row.span_id,
+      input: Number(row.cost_input_microcents),
+      output: Number(row.cost_output_microcents),
+      total: Number(row.cost_total_microcents),
+      estimated: Number(row.cost_is_estimated) === 1,
+      source: row.cost_source,
+    }))
+
+    expect(stored).toEqual([
+      // "0.0123" USD → 1,230,000 microcents, sides left at zero.
+      { spanId: "d000000000000001", input: 0, output: 0, total: 1_230_000, estimated: false, source: "user_reported" },
+      // 0.00042 + 1 USD → 42,000 + 100,000,000 microcents.
+      {
+        spanId: "d000000000000002",
+        input: 42_000,
+        output: 100_000_000,
+        total: 100_042_000,
+        estimated: false,
+        source: "user_reported",
+      },
+      { spanId: "d000000000000003", input: 0, output: 0, total: 0, estimated: false, source: "user_reported" },
+      // The -0.5 was dropped; gpt-4o at 1,000 in / 500 out prices at 750,000 microcents.
+      {
+        spanId: "d000000000000004",
+        input: 250_000,
+        output: 500_000,
+        total: 750_000,
+        estimated: true,
+        source: "estimated",
+      },
+    ])
   })
 
   it("stamps the short sandbox retention on spans for sandbox orgs", async () => {

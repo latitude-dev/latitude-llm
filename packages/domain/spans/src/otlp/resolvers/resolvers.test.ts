@@ -4,7 +4,7 @@ import { resolveAttributes } from "./index.ts"
 import { resolvePerformance, resolveReportedPerformance } from "./performance.ts"
 import { resolveStatusCode } from "./status.ts"
 import { resolveToolExecution } from "./tool-execution.ts"
-import { resolveUsage } from "./usage.ts"
+import { findInvalidCostAttributes, resolveUsage } from "./usage.ts"
 import { first, fromFloat, fromInt, fromString, fromStringArray } from "./utils.ts"
 
 function strAttr(key: string, value: string): OtlpKeyValue {
@@ -795,6 +795,26 @@ describe("resolveAttributes", () => {
       expect(result.costTotalMicrocents).toBe(0)
     })
 
+    it("reads a numeric string cost the same as a double", () => {
+      const attrs: OtlpKeyValue[] = [
+        intAttr("gen_ai.usage.input_tokens", 100),
+        intAttr("gen_ai.usage.output_tokens", 50),
+        strAttr("gen_ai.usage.input_cost", "0.001"),
+        strAttr("gen_ai.usage.output_cost", " 2e-3 "),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.costInputMicrocents).toBe(100_000)
+      expect(result.costOutputMicrocents).toBe(200_000)
+      expect(result.costTotalMicrocents).toBe(300_000)
+      expect(result.costSource).toBe("provider_reported")
+    })
+
+    it("reads an int cost as whole dollars", () => {
+      const attrs: OtlpKeyValue[] = [intAttr("gen_ai.usage.total_cost", 2)]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.costTotalMicrocents).toBe(200_000_000)
+    })
+
     it("estimates cost for Google ADK gcp.vertex.agent provider after alias", () => {
       const attrs: OtlpKeyValue[] = [
         strAttr("llm.provider", "gcp.vertex.agent"),
@@ -806,6 +826,230 @@ describe("resolveAttributes", () => {
       expect(result.provider).toBe("google-vertex")
       expect(result.costIsEstimated).toBe(true)
       expect(result.costTotalMicrocents).toBeGreaterThan(0)
+    })
+  })
+
+  // The unsigned cost columns cannot hold a negative, and NaN or Infinity price nothing. A bad value
+  // is dropped as if unsent, so the next candidate (or the catalog) still prices the span.
+  describe("cost validation", () => {
+    const PRICED: OtlpKeyValue[] = [
+      strAttr("gen_ai.provider.name", "openai"),
+      strAttr("gen_ai.request.model", "gpt-4o"),
+      intAttr("gen_ai.usage.input_tokens", 1_000),
+      intAttr("gen_ai.usage.output_tokens", 500),
+    ]
+
+    it.each([
+      ["a negative", floatAttr("gen_ai.usage.total_cost", -0.5)],
+      ["NaN", floatAttr("gen_ai.usage.total_cost", Number.NaN)],
+      ["Infinity", floatAttr("gen_ai.usage.total_cost", Number.POSITIVE_INFINITY)],
+      ["a non-numeric string", strAttr("gen_ai.usage.total_cost", "about a cent")],
+      ["a hex string", strAttr("gen_ai.usage.total_cost", "0x10")],
+      ["a negative numeric string", strAttr("gen_ai.usage.total_cost", "-1")],
+    ])("ignores %s total and estimates instead", (_label, attr) => {
+      const result = resolveAttributes({ spanAttrs: [...PRICED, attr], statusCode: "unset" })
+      expect(result.costTotalMicrocents).toBe(750_000)
+      expect(result.costSource).toBe("estimated")
+    })
+
+    it("ignores a negative side without letting it reach the stored columns", () => {
+      const result = resolveAttributes({
+        spanAttrs: [...PRICED, floatAttr("gen_ai.usage.input_cost", -1), floatAttr("gen_ai.usage.output_cost", 0.01)],
+        statusCode: "unset",
+      })
+      expect(result.costOutputMicrocents).toBe(1_000_000)
+      expect(result.costInputMicrocents).toBeGreaterThanOrEqual(0)
+      expect(result.costInputMicrocents).toBe(250_000)
+    })
+
+    it("falls through an invalid candidate to the next key", () => {
+      const result = resolveAttributes({
+        spanAttrs: [...PRICED, floatAttr("gen_ai.usage.total_cost", -1), floatAttr("llm.cost.total", 0.02)],
+        statusCode: "unset",
+      })
+      expect(result.costTotalMicrocents).toBe(2_000_000)
+      expect(result.costSource).toBe("provider_reported")
+    })
+
+    it("lists every invalid cost attribute, and only those", () => {
+      expect(
+        findInvalidCostAttributes([
+          floatAttr("gen_ai.usage.input_cost", -1),
+          strAttr("llm.cost.completion", "NaN"),
+          floatAttr("gen_ai.usage.total_cost", 0),
+          strAttr("llm.cost.total", "0.5"),
+          floatAttr("some.other.cost", -1),
+        ]),
+      ).toEqual(["gen_ai.usage.input_cost", "llm.cost.completion"])
+    })
+  })
+
+  // Without the marker a lone zero total is not a price, which is how it has always been read.
+  describe("cost without the customer marker", () => {
+    const PRICED: OtlpKeyValue[] = [
+      strAttr("gen_ai.provider.name", "openai"),
+      strAttr("gen_ai.request.model", "gpt-4o"),
+      intAttr("gen_ai.usage.input_tokens", 1_000),
+      intAttr("gen_ai.usage.output_tokens", 500),
+    ]
+
+    it("still ignores a lone zero total", () => {
+      const result = resolveAttributes({
+        spanAttrs: [...PRICED, floatAttr("gen_ai.usage.cost", 0)],
+        statusCode: "unset",
+      })
+      expect(result.costTotalMicrocents).toBe(750_000)
+      expect(result.costSource).toBe("estimated")
+    })
+
+    it.each(["provider", "USER", "users", ""])("treats a %j marker as no marker", (marker) => {
+      const result = resolveAttributes({
+        spanAttrs: [...PRICED, strAttr("latitude.cost.source", marker), floatAttr("gen_ai.usage.total_cost", 0.5)],
+        statusCode: "unset",
+      })
+      expect(result.costSource).toBe("provider_reported")
+      expect(result.costTotalMicrocents).toBe(50_000_000)
+      // A provider-reported total still gets estimated sides beside it.
+      expect(result.costIsEstimated).toBe(true)
+      expect(result.costInputMicrocents).toBe(250_000)
+    })
+  })
+
+  // `latitude.cost.source = "user"` marks the cost attributes as the customer's own figure: stored
+  // exactly as sent, with nothing filled from the catalog.
+  describe("customer-reported cost", () => {
+    const USER_PRICED: OtlpKeyValue[] = [
+      strAttr("gen_ai.provider.name", "openai"),
+      strAttr("gen_ai.request.model", "gpt-4o"),
+      intAttr("gen_ai.usage.input_tokens", 1_000),
+      intAttr("gen_ai.usage.output_tokens", 500),
+      strAttr("latitude.cost.source", "user"),
+    ]
+    const resolveUser = (...attrs: OtlpKeyValue[]) =>
+      resolveAttributes({ spanAttrs: [...USER_PRICED, ...attrs], statusCode: "unset" })
+
+    it("keeps a total with zero sides rather than estimating them", () => {
+      const result = resolveUser(floatAttr("gen_ai.usage.total_cost", 0.5))
+      expect(result).toMatchObject({
+        costInputMicrocents: 0,
+        costOutputMicrocents: 0,
+        costTotalMicrocents: 50_000_000,
+        costIsEstimated: false,
+        costSource: "user_reported",
+        costPricedProvider: "",
+        costPricedModel: "",
+      })
+    })
+
+    it("honours an explicit zero total as free", () => {
+      const result = resolveUser(floatAttr("gen_ai.usage.total_cost", 0))
+      expect(result).toMatchObject({
+        costInputMicrocents: 0,
+        costOutputMicrocents: 0,
+        costTotalMicrocents: 0,
+        costIsEstimated: false,
+        costSource: "user_reported",
+      })
+    })
+
+    it("honours an explicit zero on gen_ai.usage.cost too", () => {
+      const result = resolveUser(intAttr("gen_ai.usage.cost", 0))
+      expect(result.costTotalMicrocents).toBe(0)
+      expect(result.costSource).toBe("user_reported")
+    })
+
+    it("sums the sides when no total was sent", () => {
+      const result = resolveUser(
+        floatAttr("gen_ai.usage.input_cost", 0.01),
+        strAttr("gen_ai.usage.output_cost", "0.02"),
+      )
+      expect(result).toMatchObject({
+        costInputMicrocents: 1_000_000,
+        costOutputMicrocents: 2_000_000,
+        costTotalMicrocents: 3_000_000,
+        costIsEstimated: false,
+        costSource: "user_reported",
+      })
+    })
+
+    it("leaves a missing side at zero rather than estimating it", () => {
+      const result = resolveUser(floatAttr("gen_ai.usage.input_cost", 0.01))
+      expect(result).toMatchObject({
+        costInputMicrocents: 1_000_000,
+        costOutputMicrocents: 0,
+        costTotalMicrocents: 1_000_000,
+        costIsEstimated: false,
+        costSource: "user_reported",
+      })
+    })
+
+    it("honours zero sides", () => {
+      const result = resolveUser(floatAttr("gen_ai.usage.input_cost", 0), floatAttr("gen_ai.usage.output_cost", 0))
+      expect(result.costTotalMicrocents).toBe(0)
+      expect(result.costSource).toBe("user_reported")
+    })
+
+    it("keeps sides and total exactly as sent, even when they do not reconcile", () => {
+      const result = resolveUser(
+        floatAttr("gen_ai.usage.input_cost", 0.01),
+        floatAttr("gen_ai.usage.output_cost", 0.02),
+        floatAttr("gen_ai.usage.total_cost", 0.05),
+      )
+      expect(result.costInputMicrocents).toBe(1_000_000)
+      expect(result.costOutputMicrocents).toBe(2_000_000)
+      expect(result.costTotalMicrocents).toBe(5_000_000)
+      expect(result.costSource).toBe("user_reported")
+    })
+
+    it("reads the OpenInference keys under the marker as well", () => {
+      const result = resolveUser(floatAttr("llm.cost.total", 0.03))
+      expect(result.costTotalMicrocents).toBe(3_000_000)
+      expect(result.costSource).toBe("user_reported")
+    })
+
+    it("still prefers gen_ai.usage.total_cost over the other total keys", () => {
+      const result = resolveUser(floatAttr("gen_ai.usage.total_cost", 0), floatAttr("llm.cost.total", 0.03))
+      expect(result.costTotalMicrocents).toBe(0)
+    })
+
+    it("prices a pair the catalog does not know", () => {
+      const result = resolveAttributes({
+        spanAttrs: [
+          strAttr("gen_ai.provider.name", "acme"),
+          strAttr("gen_ai.request.model", "acme-1"),
+          intAttr("gen_ai.usage.input_tokens", 10),
+          strAttr("latitude.cost.source", "user"),
+          floatAttr("gen_ai.usage.total_cost", 0.07),
+        ],
+        statusCode: "unset",
+      })
+      expect(result.costTotalMicrocents).toBe(7_000_000)
+      expect(result.costSource).toBe("user_reported")
+    })
+
+    it("ignores an invalid value and keeps the rest of what the customer sent", () => {
+      const result = resolveUser(
+        floatAttr("gen_ai.usage.input_cost", -0.01),
+        floatAttr("gen_ai.usage.output_cost", 0.02),
+      )
+      expect(result).toMatchObject({
+        costInputMicrocents: 0,
+        costOutputMicrocents: 2_000_000,
+        costTotalMicrocents: 2_000_000,
+        costSource: "user_reported",
+      })
+    })
+
+    it.each([
+      ["no cost attribute", []],
+      [
+        "only invalid cost attributes",
+        [floatAttr("gen_ai.usage.total_cost", Number.NaN), strAttr("llm.cost.prompt", "-3")],
+      ],
+    ])("falls back to the catalog with the marker but %s", (_label, attrs) => {
+      const result = resolveUser(...attrs)
+      expect(result.costSource).toBe("estimated")
+      expect(result.costTotalMicrocents).toBe(750_000)
     })
   })
 

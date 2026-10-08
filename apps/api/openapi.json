@@ -2289,6 +2289,18 @@
             "type": "boolean",
             "description": "`true` when the cost was derived from public pricing tables instead of the provider's bill."
           },
+          "costSource": {
+            "type": "string",
+            "enum": [
+              "provider_reported",
+              "user_reported",
+              "estimated",
+              "unpriced",
+              "no_tokens",
+              "unknown"
+            ],
+            "description": "Where the cost came from. `provider_reported`: the instrumentation sent it. `user_reported`: you sent it with `latitude.cost.source` set to `user`. `estimated`: priced from public model pricing. `unpriced`: tokens were reported but no pricing matched, so the cost is 0 but not free. `no_tokens`: nothing to price. `unknown`: ingested before cost sources were tracked, so a 0 cannot be read as free."
+          },
           "timeToFirstTokenNs": {
             "type": "number",
             "description": "Nanoseconds from the start of the span to its first emitted token. `0` if not measured."
@@ -2363,6 +2375,7 @@
           "costOutputMicrocents",
           "costTotalMicrocents",
           "costIsEstimated",
+          "costSource",
           "timeToFirstTokenNs",
           "isStreaming",
           "responseId",
@@ -2550,6 +2563,18 @@
             "type": "boolean",
             "description": "`true` when the cost was derived from public pricing tables instead of the provider's bill."
           },
+          "costSource": {
+            "type": "string",
+            "enum": [
+              "provider_reported",
+              "user_reported",
+              "estimated",
+              "unpriced",
+              "no_tokens",
+              "unknown"
+            ],
+            "description": "Where the cost came from. `provider_reported`: the instrumentation sent it. `user_reported`: you sent it with `latitude.cost.source` set to `user`. `estimated`: priced from public model pricing. `unpriced`: tokens were reported but no pricing matched, so the cost is 0 but not free. `no_tokens`: nothing to price. `unknown`: ingested before cost sources were tracked, so a 0 cannot be read as free."
+          },
           "timeToFirstTokenNs": {
             "type": "number",
             "description": "Nanoseconds from the start of the span to its first emitted token. `0` if not measured."
@@ -2714,6 +2739,7 @@
           "costOutputMicrocents",
           "costTotalMicrocents",
           "costIsEstimated",
+          "costSource",
           "timeToFirstTokenNs",
           "isStreaming",
           "responseId",

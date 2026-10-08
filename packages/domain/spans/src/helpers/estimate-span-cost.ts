@@ -5,6 +5,42 @@ const MICROCENTS_PER_USD = 100_000_000
 
 export const usdToMicrocents = (usd: number): number => Math.round(usd * MICROCENTS_PER_USD)
 
+// A decimal number with an optional exponent. Stricter than `Number()`, which also reads `""`, `"0x1f"`
+// and `"Infinity"` as numbers.
+const DECIMAL_NUMBER = /^\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s*$/
+
+/**
+ * A cost a source stated, in USD, or `undefined` when it is not one we can store.
+ *
+ * Takes a number or a numeric string: OTLP carries an attribute as a double, an int or a string, and
+ * instrumentations and vendor exports are loose about which they use. The value must be finite and
+ * non-negative. The cost columns are unsigned, so a negative cannot be stored, and NaN or Infinity
+ * prices nothing. It must also fit a safe integer once in microcents (about $90M), past which the
+ * conversion stops being exact. A zero is kept: a source pricing a call at nothing is still stating a
+ * price.
+ *
+ * Every sink that reads a stated cost validates it here, live ingestion and trace imports alike, so
+ * the same malformed value is dropped the same way however the span arrived.
+ */
+export function parseReportedUsd(value: unknown): number | undefined {
+  const usd =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && DECIMAL_NUMBER.test(value)
+        ? Number(value)
+        : undefined
+  if (usd === undefined || !Number.isFinite(usd) || usd < 0) return undefined
+  if (usdToMicrocents(usd) > Number.MAX_SAFE_INTEGER) return undefined
+  // `-0` passes `usd < 0`; store it as the zero it means.
+  return usd === 0 ? 0 : usd
+}
+
+/** {@link parseReportedUsd} in microcents. */
+export const reportedUsdToMicrocents = (value: unknown): number | undefined => {
+  const usd = parseReportedUsd(value)
+  return usd === undefined ? undefined : usdToMicrocents(usd)
+}
+
 /** Additive counts: `input` excludes cache, `output` excludes reasoning. */
 interface SpanTokenCounts {
   readonly tokensInput: number
@@ -108,6 +144,44 @@ interface ResolvedSpanCost {
 }
 
 /**
+ * Who stated a reported cost.
+ *
+ * - `provider` — an instrumentation or vendor export passing on what the provider charged.
+ * - `user` — the customer's own figure, marked with `latitude.cost.source = "user"`.
+ */
+type CostReporter = "provider" | "user"
+
+/**
+ * A cost the customer stated, taken exactly as sent.
+ *
+ * The customer is the authority on what they paid, so the catalog never fills a side they left out:
+ * a total with no breakdown keeps zero sides, and sides with no total sum to it. `undefined` when the
+ * customer stated nothing usable, which leaves the span to the ordinary rules.
+ */
+function resolveUserReportedCost({
+  inputMicrocents,
+  outputMicrocents,
+  totalMicrocents,
+}: ReportedSpanCost): ResolvedSpanCost | undefined {
+  if (inputMicrocents === undefined && outputMicrocents === undefined && totalMicrocents === undefined) {
+    return undefined
+  }
+
+  const costInputMicrocents = inputMicrocents ?? 0
+  const costOutputMicrocents = outputMicrocents ?? 0
+
+  return {
+    costInputMicrocents,
+    costOutputMicrocents,
+    costTotalMicrocents: totalMicrocents ?? costInputMicrocents + costOutputMicrocents,
+    costIsEstimated: false,
+    costSource: "user_reported",
+    costPricedProvider: "",
+    costPricedModel: "",
+  }
+}
+
+/**
  * What a span cost, from whatever the source stated and models.dev pricing for the rest.
  *
  * A stated figure always wins: the source saw the provider's real rate, including a discount or
@@ -115,11 +189,27 @@ interface ResolvedSpanCost {
  * source that gives a total and no breakdown gets estimated sides beside its own total, rather than
  * two zeros that say the call was free on both halves.
  *
+ * A cost the customer reported (`reportedBy: "user"`) is the exception: it is stored exactly as sent,
+ * with no estimated sides, under `user_reported`. A customer who marked the span but sent no usable
+ * cost falls back to the rules above.
+ *
  * Every sink that writes a span's cost resolves it here — live ingestion, the OpenClaw embedded-usage
  * path and trace imports — so `cost_source` classifies on the same terms however the span arrived,
  * and a zero means the same thing in all three.
  */
-export function resolveSpanCost({
+export function resolveSpanCost(input: {
+  readonly reported: ReportedSpanCost
+  readonly reportedBy?: CostReporter
+  readonly provider: string
+  readonly model: string
+  readonly tokens: SpanTokenCounts
+}): ResolvedSpanCost {
+  const userReported = input.reportedBy === "user" ? resolveUserReportedCost(input.reported) : undefined
+  return userReported ?? resolveStatedOrEstimatedCost(input)
+}
+
+/** The ordinary rules: a stated figure wins per side, and the catalog fills whatever was not stated. */
+function resolveStatedOrEstimatedCost({
   reported,
   provider,
   model,

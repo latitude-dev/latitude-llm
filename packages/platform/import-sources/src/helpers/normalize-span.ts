@@ -3,6 +3,7 @@ import { IMPORT_ID_NAMESPACE, type ImportSource } from "@domain/imports"
 import type { OrganizationId, ProjectId } from "@domain/shared"
 import {
   parseMessagePayload,
+  reportedUsdToMicrocents,
   resolveErrorTypeFromMetadata,
   resolveReportedPerformance,
   resolveSpanCost,
@@ -11,7 +12,6 @@ import {
   type SpanDetail,
   type SpanTokenCounts,
   toolDefinitionsFrom,
-  usdToMicrocents,
 } from "@domain/spans"
 
 /**
@@ -92,19 +92,17 @@ export const mapSourceId = (
 }
 
 /**
- * USD as microcents, or `undefined` when the source stated nothing usable. A real zero survives, so
- * a source pricing a call at nothing still reads as a price rather than as a gap in our pricing.
+ * The source's own figures in the units the shared cost policy resolves over. A figure that is not
+ * finite and non-negative reads as unstated, the same validation live ingestion applies; a real zero
+ * survives, so a source pricing a call at nothing still reads as a price rather than as a gap in our
+ * pricing.
  */
-const reportedMicrocents = (usd: number | undefined): number | undefined =>
-  typeof usd === "number" && Number.isFinite(usd) && usd >= 0 ? usdToMicrocents(usd) : undefined
-
-/** The source's own figures in the units the shared cost policy resolves over. */
 const resolveCost = (input: NormalizedSpanInput, tokens: SpanTokenCounts) =>
   resolveSpanCost({
     reported: {
-      inputMicrocents: reportedMicrocents(input.cost?.inputUsd),
-      outputMicrocents: reportedMicrocents(input.cost?.outputUsd),
-      totalMicrocents: reportedMicrocents(input.cost?.totalUsd),
+      inputMicrocents: reportedUsdToMicrocents(input.cost?.inputUsd),
+      outputMicrocents: reportedUsdToMicrocents(input.cost?.outputUsd),
+      totalMicrocents: reportedUsdToMicrocents(input.cost?.totalUsd),
     },
     provider: input.provider ?? "",
     model: input.model,

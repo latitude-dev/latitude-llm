@@ -323,7 +323,7 @@ export interface CostModelSpend {
  * How much of the window's spend we can stand behind, read from each span's
  * `costSource` rather than inferred from a zero.
  *
- * `verifiedMicrocents` is spend the provider reported; the remainder is priced
+ * `verifiedMicrocents` is spend the provider or the customer reported; the remainder is priced
  * by Latitude from token counts. In practice almost nothing is provider-reported,
  * so that split states the *method* and does not move — the figure that moves,
  * and the one worth showing as a share, is priced coverage: `billableTokens`

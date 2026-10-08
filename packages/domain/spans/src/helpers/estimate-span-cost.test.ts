@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { resolveSpanCost, usdToMicrocents } from "./estimate-span-cost.ts"
+import { parseReportedUsd, reportedUsdToMicrocents, resolveSpanCost, usdToMicrocents } from "./estimate-span-cost.ts"
 
 const TOKENS = { tokensInput: 1_000, tokensOutput: 500, tokensCacheRead: 0, tokensCacheCreate: 0, tokensReasoning: 0 }
 const NO_TOKENS = { tokensInput: 0, tokensOutput: 0, tokensCacheRead: 0, tokensCacheCreate: 0, tokensReasoning: 0 }
@@ -109,6 +109,92 @@ describe("resolveSpanCost", () => {
 
       expect(cost.costTotalMicrocents).toBe(500_000)
       expect(cost.costSource).toBe("provider_reported")
+    })
+  })
+
+  // The customer's own figure: authoritative, and never topped up from the catalog.
+  describe("what the customer reported", () => {
+    const resolveUser = (reported: Parameters<typeof resolveSpanCost>[0]["reported"], pair = PRICED) =>
+      resolveSpanCost({ reported, reportedBy: "user", ...pair, tokens: TOKENS })
+
+    it("keeps a total alone, with zero sides and no estimate", () => {
+      expect(resolveUser({ totalMicrocents: 500_000 })).toEqual({
+        costInputMicrocents: 0,
+        costOutputMicrocents: 0,
+        costTotalMicrocents: 500_000,
+        costIsEstimated: false,
+        costSource: "user_reported",
+        costPricedProvider: "",
+        costPricedModel: "",
+      })
+    })
+
+    it("keeps a zero total as free", () => {
+      const cost = resolveUser({ totalMicrocents: 0 })
+
+      expect(cost.costTotalMicrocents).toBe(0)
+      expect(cost.costSource).toBe("user_reported")
+    })
+
+    it("sums the sides it was given, counting a missing side as zero", () => {
+      expect(resolveUser({ inputMicrocents: 100_000, outputMicrocents: 200_000 }).costTotalMicrocents).toBe(300_000)
+      expect(resolveUser({ outputMicrocents: 200_000 })).toMatchObject({
+        costInputMicrocents: 0,
+        costOutputMicrocents: 200_000,
+        costTotalMicrocents: 200_000,
+        costIsEstimated: false,
+      })
+    })
+
+    it("keeps sides and total as sent", () => {
+      expect(resolveUser({ inputMicrocents: 1, outputMicrocents: 2, totalMicrocents: 10 })).toMatchObject({
+        costInputMicrocents: 1,
+        costOutputMicrocents: 2,
+        costTotalMicrocents: 10,
+      })
+    })
+
+    it("falls back to the ordinary rules when nothing usable was reported", () => {
+      expect(resolveUser({}).costSource).toBe("estimated")
+      expect(resolveUser({}, { provider: "acme", model: "acme-1" }).costSource).toBe("unpriced")
+    })
+  })
+
+  describe("parseReportedUsd", () => {
+    it.each([
+      [0.25, 0.25],
+      [0, 0],
+      [-0, 0],
+      [3, 3],
+      ["0.25", 0.25],
+      [" 1e-3 ", 0.001],
+      ["0", 0],
+    ])("accepts %j", (value, expected) => {
+      expect(parseReportedUsd(value)).toBe(expected)
+    })
+
+    it.each([
+      -0.01,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      "-1",
+      "",
+      " ",
+      "abc",
+      "0x10",
+      "Infinity",
+      "1,5",
+      1e12,
+      undefined,
+      null,
+      true,
+    ])("rejects %j", (value) => {
+      expect(parseReportedUsd(value)).toBeUndefined()
+    })
+
+    it("converts what it accepts to microcents", () => {
+      expect(reportedUsdToMicrocents("0.0025")).toBe(250_000)
+      expect(reportedUsdToMicrocents(-1)).toBeUndefined()
     })
   })
 

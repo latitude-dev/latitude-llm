@@ -99,6 +99,7 @@ export function spanCostDisplay({
 
   switch (costSource) {
     case "provider_reported":
+    case "user_reported":
     case "estimated":
       return pricedAs ? { label: "Free", note: pricedAs } : { label: "Free" }
     case "unpriced":
