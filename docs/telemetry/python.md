@@ -199,7 +199,7 @@ with tracer.start_as_current_span(
 
 ### What the SDK reads and writes
 
-The SDK only prices LLM-call spans: spans whose `gen_ai.operation.name` is `chat`, `text_completion`, `generate_content`, `embeddings` or `rerank`/`reranker`, or the equivalent OpenInference (`openinference.span.kind` `LLM`/`EMBEDDING`/`RERANKER`), OpenLLMetry (`llm.request.type`) or Vercel AI SDK leaf (`ai.*.doGenerate`/`doStream`/`doEmbed`) spans, plus CrewAI's `AGENT` span, which carries its LLM usage. `set_llm_cost()` applies to whatever span you pass it.
+The SDK only prices LLM-call spans: spans whose `gen_ai.operation.name` is `chat`, `text_completion`, `generate_content`, `embeddings` or `rerank`/`reranker`, or the equivalent OpenInference (`openinference.span.kind` `LLM`/`EMBEDDING`/`RERANKER`), OpenLLMetry (`llm.request.type`) or Vercel AI SDK leaf (`ai.*.doGenerate`/`doStream`/`doEmbed`) spans, plus CrewAI's `AGENT` span, which carries its LLM usage. `set_llm_cost()` must be called on one of those LLM-call spans: trace and session totals and the Cost page only count cost on usage operations. Calling it on any other span still sets the cost attributes, and the SDK logs a warning once per process.
 
 For `cost_resolver` and `pricing` it reads the fields below. `cost_resolver` receives them as an `LlmUsage` with `provider`, `model`, `input_tokens`, `output_tokens`, `operation`, `span_name` and `attributes`; any of the first four can be `None`.
 
