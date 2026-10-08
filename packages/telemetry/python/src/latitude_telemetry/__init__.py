@@ -70,6 +70,8 @@ from latitude_telemetry.telemetry.latitude_span_processor import (
     LatitudeSpanProcessor,
 )
 from latitude_telemetry.telemetry.redact_span_processor import (
+    DEFAULT_REDACT_PATTERNS,
+    REDACTION_EXEMPT_ATTRIBUTES,
     RedactSpanProcessor,
     RedactSpanProcessorOptions,
     default_redact_span_processor,
@@ -121,6 +123,8 @@ __all__ = [
     "RedactSpanProcessor",
     "RedactSpanProcessorOptions",
     "default_redact_span_processor",
+    "DEFAULT_REDACT_PATTERNS",
+    "REDACTION_EXEMPT_ATTRIBUTES",
     # Constants
     "ATTRIBUTES",
     "COST_SOURCE_USER",

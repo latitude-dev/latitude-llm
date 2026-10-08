@@ -279,7 +279,7 @@ class TestPricing:
         h = harness_factory(pricing=PRICING, redact=RedactSpanProcessorOptions(attributes=[re.compile(r"^gen_ai\.")]))
         h.llm_call()
         attrs = h.attrs("openai.chat")
-        assert attrs["gen_ai.request.model"] == "******"
+        assert attrs["gen_ai.usage.input_tokens"] == "******"
         assert attrs[ATTRIBUTES.cost_total] == pytest.approx(0.0075)
         assert attrs[ATTRIBUTES.cost_source] == COST_SOURCE_USER
 

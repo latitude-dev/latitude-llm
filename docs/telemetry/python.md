@@ -214,6 +214,54 @@ For `cost_resolver` and `pricing` it reads the fields below. `cost_resolver` rec
 
 Where the SDK sets a cost it writes the standard `gen_ai.usage.input_cost`, `gen_ai.usage.output_cost` and `gen_ai.usage.total_cost` attributes plus `latitude.cost.source = "user"` (exported as `ATTRIBUTES.cost_input`, `cost_output`, `cost_total`, `cost_source` and `COST_SOURCE_USER`). It replaces any cost your instrumentation already wrote on that span, including a `total`-only cost removing the instrumentation's input and output costs so the numbers stay consistent. Spans the SDK doesn't price keep whatever cost the instrumentation wrote. The cost is written as the span is exported to Latitude, so other exporters on the same OpenTelemetry provider see the span unchanged.
 
+## Redaction
+
+Before exporting a span, Latitude masks the values of sensitive attributes with `******`. By default it masks these attributes, matched case-insensitively:
+
+| Pattern | Matches |
+| ------- | ------- |
+| `^http\.request\.header\.authorization$` | `http.request.header.authorization` |
+| `^http\.request\.header\.cookie$` | `http.request.header.cookie` |
+| `^http\.request\.header\.x[-_]api[-_]key$` | `http.request.header.x-api-key`, `http.request.header.x_api_key` |
+| `^db\.statement$` | `db.statement` |
+
+To redact other attributes, pass `redact`. A string matches one attribute key exactly, and a compiled regular expression matches any key it finds a match in. `mask` is optional: it receives the attribute key and value and returns the string to export instead.
+
+```python
+import re
+
+from latitude_telemetry import DEFAULT_REDACT_PATTERNS, Latitude, RedactSpanProcessorOptions
+
+latitude = Latitude(
+    api_key="your-api-key",
+    project="your-project-slug",
+    redact=RedactSpanProcessorOptions(
+        attributes=[
+            *DEFAULT_REDACT_PATTERNS,  # keep the defaults
+            "app.customer.ssn",
+            re.compile(r"^gen_ai\.(prompt|completion)\."),
+        ],
+        mask=lambda key, value: "[redacted]",
+    ),
+)
+```
+
+<Warning>
+  A custom `redact` **replaces** the default patterns rather than adding to them. This is existing behaviour. To keep the defaults, include `*DEFAULT_REDACT_PATTERNS` in `attributes` as above. Pass `disable_redact=True` to turn redaction off entirely.
+</Warning>
+
+Redaction covers span attributes and event attributes. It never raises into your code and never drops a span: if your `mask` throws or returns something that isn't a string, number or boolean, that value is exported as `******` instead.
+
+Regular expressions never mask the attributes Latitude needs to tell which operation a span is and which provider and model served it, even a broad pattern such as `^gen_ai\.` or `.*`:
+
+- `gen_ai.operation.name`
+- `gen_ai.provider.name` and `gen_ai.system`
+- `gen_ai.request.model` and `gen_ai.response.model`
+
+Without them Latitude can't count the span in cost and usage, attribute it to a model, or price it. They identify a model, not your data. If you still need to hide one, list its exact key as a string: exact-key patterns always apply. The exempt keys are exported as `REDACTION_EXEMPT_ATTRIBUTES`. Cost attributes the SDK sets itself (see [Bring your own cost](#bring-your-own-cost)) are written after redaction, so patterns never mask them either.
+
+Redaction applies only to what Latitude exports. Latitude never modifies the span itself, so other span processors and exporters on the same tracer provider (see [Existing OpenTelemetry setup](#existing-opentelemetry-setup)) still see the raw values. Configure redaction for those separately.
+
 ## Existing OpenTelemetry setup
 
 If your app already has an OpenTelemetry provider, add Latitude to the existing setup and register the LLM instrumentations against that provider.
