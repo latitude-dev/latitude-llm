@@ -1,5 +1,11 @@
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
-import { OrganizationId, type OrganizationRedactionSetting, SqlClient, type SqlClientShape } from "@domain/shared"
+import {
+  OrganizationId,
+  type OrganizationRedactionSetting,
+  REDACTION_VALIDATOR_VERSION,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Organization } from "../entities/organization.ts"
@@ -52,6 +58,27 @@ const run = (org: Organization, redaction: OrganizationRedactionSetting | null) 
   return Effect.runPromise(
     updateOrganizationRedactionUseCase({ actorUserId: ACTOR, redaction }).pipe(Effect.provide(layer)),
   ).then((updated) => ({ updated, organizations, written }))
+}
+
+const runFailure = async (org: Organization, redaction: OrganizationRedactionSetting | null) => {
+  const { repository, organizations } = createFakeOrganizationRepository()
+  organizations.set(ORG_ID, org)
+  const written: OutboxWriteEvent[] = []
+  const layer = Layer.mergeAll(
+    Layer.succeed(OrganizationRepository, repository),
+    Layer.succeed(SqlClient, sqlClient),
+    Layer.succeed(OutboxEventWriter, {
+      write: (event) => {
+        written.push(event)
+        return Effect.void
+      },
+    }),
+  )
+  const error = await Effect.runPromise(
+    updateOrganizationRedactionUseCase({ actorUserId: ACTOR, redaction }).pipe(Effect.provide(layer), Effect.flip),
+  )
+
+  return { error, organizations, written }
 }
 
 describe("updateOrganizationRedactionUseCase", () => {
@@ -138,6 +165,35 @@ describe("updateOrganizationRedactionUseCase", () => {
   })
 
   // An empty array is the dashboard saying "no rules", which is different from not mentioning them.
+  it("rejects an unsafe incoming pattern without saving or auditing", async () => {
+    const org = seedOrg({ redaction: { mode: "off" } })
+    const redaction: OrganizationRedactionSetting = {
+      ...LOCKED,
+      rules: [{ id: "r1", label: "ACCOUNT_NUMBER", kind: "pattern", pattern: "(a+)+$", validatorVersion: 99 }],
+    }
+    const { error, organizations, written } = await runFailure(org, redaction)
+
+    expect(error._tag).toBe("InvalidRedactionRuleError")
+    expect(error.message).toBe(
+      'Rule "ACCOUNT_NUMBER": nests one unbounded repetition inside another, which can backtrack exponentially',
+    )
+    expect(error.httpStatus).toBe(400)
+    expect(organizations.get(ORG_ID)).toBe(org)
+    expect(written).toEqual([])
+  })
+
+  it("stamps valid incoming patterns with the server validator version", async () => {
+    const redaction: OrganizationRedactionSetting = {
+      ...LOCKED,
+      rules: [{ id: "r1", label: "ACCOUNT_NUMBER", kind: "pattern", pattern: "ACCT-\\d{9}", validatorVersion: 99 }],
+    }
+    const { organizations } = await run(seedOrg({ redaction: { mode: "off" } }), redaction)
+
+    expect(organizations.get(ORG_ID)?.settings?.redaction?.rules?.[0]).toMatchObject({
+      validatorVersion: REDACTION_VALIDATOR_VERSION,
+    })
+  })
+
   it("clears stored rules when the write says so explicitly", async () => {
     const stored: OrganizationRedactionSetting["rules"] = [
       { id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] },

@@ -33,6 +33,7 @@ export {
   type PollingOutboxConsumerConfig,
 } from "./outbox-consumer.ts"
 export { createOutboxWriter, OutboxEventWriterLive } from "./outbox-writer.ts"
+export { ProjectRedactionAuthorizerLive } from "./project-redaction-authorizer.ts"
 export { AdminAgentScoreHistoryRepositoryLive } from "./repositories/admin-agent-score-history-repository.ts"
 export { AdminFeatureFlagRepositoryLive } from "./repositories/admin-feature-flag-repository.ts"
 export { AdminOrganizationRepositoryLive } from "./repositories/admin-organization-repository.ts"

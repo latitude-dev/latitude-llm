@@ -190,6 +190,15 @@ export class BadRequestError extends Data.TaggedError("BadRequestError")<{
   }
 }
 
+export class InvalidRedactionRuleError extends Data.TaggedError("InvalidRedactionRuleError")<{
+  readonly message: string
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.message
+  }
+}
+
 export class PermissionError extends Data.TaggedError("PermissionError")<{
   readonly message: string
   readonly organizationId: string
@@ -223,6 +232,7 @@ export type DomainError =
   | ForbiddenError
   | RateLimitError
   | BadRequestError
+  | InvalidRedactionRuleError
   | PermissionError
   | ReadOnlyProjectError
 

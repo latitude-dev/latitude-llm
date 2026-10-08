@@ -14,6 +14,8 @@ import {
   projectSettingsSchema,
   redactionRuleSchema,
   redactionSettingSchema,
+  rejectInvalidRedactionRules,
+  rejectionMessage,
   resolveRedactionPolicy,
 } from "@domain/shared"
 import {
@@ -26,6 +28,7 @@ import { SpanRepositoryLive } from "@platform/db-clickhouse"
 import {
   MembershipRepositoryLive,
   OutboxEventWriterLive,
+  ProjectRedactionAuthorizerLive,
   ProjectRepositoryLive,
   SqlClientLive,
   withPostgres,
@@ -35,7 +38,6 @@ import { createServerFn } from "@tanstack/react-start"
 import { getCookies, setCookie } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { rejectInvalidRedactionRules, rejectionMessage } from "../../lib/redaction-rules.ts"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
@@ -210,28 +212,19 @@ export const updateProjectRedaction = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     const project = await Effect.runPromise(
-      Effect.gen(function* () {
-        const memberships = yield* MembershipRepository
-        const isAdmin = yield* memberships.isAdmin(organizationId, userId)
-        if (!isAdmin) {
-          return yield* new ForbiddenError({
-            message: "Only organization owners and admins can change the redaction policy",
-          })
-        }
-
-        const rejected = rejectInvalidRedactionRules(data.redaction)
-        if (rejected) {
-          return yield* new BadRequestError({ message: rejectionMessage(rejected) })
-        }
-
-        return yield* updateProjectRedactionUseCase({
-          projectId: ProjectId(data.projectId),
-          actorUserId: userId,
-          redaction: data.redaction,
-        })
+      updateProjectRedactionUseCase({
+        projectId: ProjectId(data.projectId),
+        actorUserId: userId,
+        redaction: data.redaction,
       }).pipe(
+        Effect.catchTag("RedactionPolicyForbiddenError", (error) =>
+          Effect.fail(new ForbiddenError({ message: error.message })),
+        ),
+        Effect.catchTag("InvalidRedactionRuleError", (error) =>
+          Effect.fail(new BadRequestError({ message: error.message })),
+        ),
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MembershipRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(ProjectRepositoryLive, ProjectRedactionAuthorizerLive, OutboxEventWriterLive),
           client,
           organizationId,
         ),

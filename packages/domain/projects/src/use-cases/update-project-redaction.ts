@@ -1,17 +1,22 @@
 import { OutboxEventWriter } from "@domain/events"
 import {
+  InvalidRedactionRuleError,
   isSameRedactionSetting,
   type NotFoundError,
   type ProjectId,
   type RedactionSetting,
   type RepositoryError,
+  rejectInvalidRedactionRules,
+  rejectionMessage,
   SqlClient,
   toRepositoryError,
   withPreservedRedactionRules,
+  withServerValidatorVersion,
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Project } from "../entities/project.ts"
-import { ProjectNotFoundError } from "../errors.ts"
+import { ProjectNotFoundError, RedactionPolicyForbiddenError } from "../errors.ts"
+import { ProjectRedactionAuthorizer } from "../ports/project-redaction-authorizer.ts"
 import { ProjectRepository } from "../ports/project-repository.ts"
 
 export interface UpdateProjectRedactionInput {
@@ -21,7 +26,12 @@ export interface UpdateProjectRedactionInput {
   readonly redaction: RedactionSetting | null
 }
 
-export type UpdateProjectRedactionError = RepositoryError | NotFoundError | ProjectNotFoundError
+export type UpdateProjectRedactionError =
+  | RepositoryError
+  | NotFoundError
+  | ProjectNotFoundError
+  | RedactionPolicyForbiddenError
+  | InvalidRedactionRuleError
 
 export const updateProjectRedactionUseCase = Effect.fn("projects.updateProjectRedaction")(function* (
   input: UpdateProjectRedactionInput,
@@ -31,6 +41,14 @@ export const updateProjectRedactionUseCase = Effect.fn("projects.updateProjectRe
 
   const sqlClient = yield* SqlClient
   const { organizationId } = sqlClient
+  const authorizer = yield* ProjectRedactionAuthorizer
+  const isAdmin = input.actorUserId ? yield* authorizer.isOrganizationAdmin(organizationId, input.actorUserId) : false
+  if (!isAdmin) return yield* new RedactionPolicyForbiddenError()
+
+  const rejected = rejectInvalidRedactionRules(input.redaction)
+  if (rejected) return yield* new InvalidRedactionRuleError({ message: rejectionMessage(rejected) })
+
+  const incomingRedaction = withServerValidatorVersion(input.redaction)
 
   return yield* sqlClient.transaction(
     Effect.gen(function* () {
@@ -44,7 +62,7 @@ export const updateProjectRedactionUseCase = Effect.fn("projects.updateProjectRe
         )
 
       const fromRedaction = existing.settings?.redaction ?? null
-      const toRedaction = withPreservedRedactionRules(fromRedaction, input.redaction)
+      const toRedaction = withPreservedRedactionRules(fromRedaction, incomingRedaction)
 
       if (isSameRedactionSetting(fromRedaction, toRedaction)) return existing
 

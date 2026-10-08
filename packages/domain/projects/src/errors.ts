@@ -23,6 +23,18 @@ export class InvalidProjectSlugError extends Data.TaggedError("InvalidProjectSlu
   }
 }
 
+export class RedactionPolicyForbiddenError extends Data.TaggedError("RedactionPolicyForbiddenError")<{
+  readonly message?: string
+}> {
+  readonly httpStatus = 403
+  readonly httpMessage = "Only organization owners and admins can change the redaction policy"
+
+  constructor(args: { readonly message?: string } = {}) {
+    super(args)
+    this.message = this.httpMessage
+  }
+}
+
 export class ProjectNotFoundError extends Data.TaggedError("ProjectNotFoundError")<{
   readonly id: ProjectId
   readonly organizationId: OrganizationId
