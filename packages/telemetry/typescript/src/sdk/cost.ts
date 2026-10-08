@@ -1,8 +1,9 @@
 /**
  * Customer-supplied LLM cost ("bring your own cost").
  *
- * Cost is applied at export time by `CostAttributesExporter`, which hands the inner exporter a
- * Proxy whose `attributes` carry the SDK cost. The original span is never mutated, so other span
+ * Cost is resolved when each span ends (`SpanCostTracker`) and applied at export time by
+ * `ExportViewExporter` (see `export-view.ts`), which hands the inner exporter a Proxy whose
+ * `attributes` carry the SDK cost. The original span is never mutated, so other span
  * processors / exporters on the host provider keep seeing exactly what the instrumentor wrote.
  *
  * Where the SDK sets cost it writes `gen_ai.usage.input_cost` / `output_cost` / `total_cost` (USD)
@@ -13,8 +14,7 @@
  * `pricing` > nothing (the span is exported untouched and Latitude prices it server-side).
  */
 import type { Span as ApiSpan, Attributes, AttributeValue } from "@opentelemetry/api"
-import type { ExportResult } from "@opentelemetry/core"
-import type { ReadableSpan, SpanExporter } from "@opentelemetry/sdk-trace-node"
+import type { ReadableSpan } from "@opentelemetry/sdk-trace-node"
 import { ATTRIBUTES, COST_SOURCE_USER } from "../constants/index.ts"
 
 /**
@@ -391,7 +391,7 @@ export class SpanCostTracker {
  * SDK's keys are written. Total-only therefore drops instrumentor input/output costs instead of
  * leaving sides that no longer add up to the user's total.
  */
-function applyCost(attrs: Attributes, cost: NormalizedCost): Attributes {
+export function applyCost(attrs: Attributes, cost: NormalizedCost): Attributes {
   const merged: Record<string, AttributeValue | undefined> = {}
   for (const [key, value] of Object.entries(attrs)) {
     if (!COST_KEYS_TO_STRIP.has(key)) merged[key] = value
@@ -401,39 +401,4 @@ function applyCost(attrs: Attributes, cost: NormalizedCost): Attributes {
   merged[ATTRIBUTES.costTotal] = cost.total
   merged[ATTRIBUTES.costSource] = COST_SOURCE_USER
   return merged
-}
-
-/**
- * Wraps a SpanExporter and stamps the cost `SpanCostTracker` resolved at `onEnd` onto each exported
- * span through a Proxy (same pattern as `ServiceNameResourceExporter`). Spans with no SDK cost pass
- * through unchanged.
- */
-export class CostAttributesExporter implements SpanExporter {
-  constructor(
-    private readonly inner: SpanExporter,
-    private readonly tracker: SpanCostTracker,
-  ) {}
-
-  export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
-    const out = spans.map((span) => {
-      const cost = this.tracker.costFor(span)
-      if (!cost) return span
-      const attributes = applyCost(span.attributes ?? {}, cost)
-      return new Proxy(span, {
-        get(target, prop, receiver) {
-          if (prop === "attributes") return attributes
-          return Reflect.get(target, prop, receiver)
-        },
-      })
-    })
-    this.inner.export(out, resultCallback)
-  }
-
-  shutdown(): Promise<void> {
-    return this.inner.shutdown()
-  }
-
-  forceFlush(): Promise<void> {
-    return this.inner.forceFlush?.() ?? Promise.resolve()
-  }
 }

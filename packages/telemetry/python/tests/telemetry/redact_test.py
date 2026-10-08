@@ -185,16 +185,81 @@ SDK_COST_KEYS = {ATTRIBUTES.cost_input, ATTRIBUTES.cost_output, ATTRIBUTES.cost_
 class TestAttributionAttributesAreExempt:
     """Regex patterns never mask the operation/provider/model keys Latitude needs to attribute a span."""
 
-    def _assert_only_attribution_survives(self, attrs: Any) -> None:
+    def _assert_only_attribution_survives(self, attrs: Any, expected: Any = ATTRIBUTION) -> None:
         for key, value in attrs.items():
             if key in REDACTION_EXEMPT_ATTRIBUTES:
-                assert value == ATTRIBUTION[key], key
+                assert value == expected[key], key
             elif key not in SDK_COST_KEYS:
                 assert value == FALLBACK_MASK, key
-        assert set(ATTRIBUTION) <= set(attrs)
+        assert set(expected) <= set(attrs)
 
-    def test_exempt_keys_match_the_attribute_constants(self) -> None:
-        assert REDACTION_EXEMPT_ATTRIBUTES == frozenset(ATTRIBUTION)
+    def test_exempt_keys_are_the_ingest_attribution_keys(self) -> None:
+        # Mirrors packages/domain/spans/src/otlp/resolvers/{operation,identity}.ts; keep in sync.
+        assert REDACTION_EXEMPT_ATTRIBUTES == frozenset(
+            {
+                "gen_ai.operation.name",
+                "openinference.span.kind",
+                "llm.request.type",
+                "ai.operationId",
+                "latitude.span.kind",
+                "span.type",
+                "gen_ai.provider.name",
+                "gen_ai.system",
+                "gen_ai.model.provider",
+                "llm.system",
+                "llm.provider",
+                "ai.model.provider",
+                "gen_ai.request.model",
+                "gen_ai.response.model",
+                "llm.model_name",
+                "embedding.model_name",
+                "reranker.model_name",
+                "ai.model.id",
+                "ai.response.model",
+            }
+        )
+
+    @pytest.mark.parametrize(
+        "attribution",
+        [
+            pytest.param(
+                {
+                    ATTRIBUTES.openinference_span_kind: "LLM",
+                    ATTRIBUTES.llm_system: "openai",
+                    ATTRIBUTES.llm_provider: "openai",
+                    ATTRIBUTES.llm_model_name: "gpt-4o",
+                },
+                id="openinference",
+            ),
+            pytest.param(
+                {
+                    ATTRIBUTES.ai_operation_id: "ai.generateText.doGenerate",
+                    ATTRIBUTES.ai_model_provider: "openai.chat",
+                    ATTRIBUTES.ai_model_id: "gpt-4o",
+                    ATTRIBUTES.ai_response_model: "gpt-4o-2024-08-06",
+                },
+                id="vercel",
+            ),
+            pytest.param(
+                {
+                    ATTRIBUTES.llm_request_type: "embedding",
+                    ATTRIBUTES.model_provider: "openai",
+                    ATTRIBUTES.embedding_model_name: "text-embedding-3-small",
+                    ATTRIBUTES.reranker_model_name: "rerank-v3",
+                    ATTRIBUTES.latitude_span_kind: "generation",
+                    ATTRIBUTES.span_type: "llm_request",
+                },
+                id="other-conventions",
+            ),
+        ],
+    )
+    def test_other_conventions_survive_a_broad_pattern(self, harness_factory: Any, attribution: Any) -> None:
+        h = harness_factory(redact=RedactSpanProcessorOptions(attributes=[re.compile(r".*")]))
+        with h.tracer.start_as_current_span("llm", attributes={**attribution, "llm.input_messages": "secret"}):
+            pass
+        attrs = h.span("llm").attributes or {}
+        self._assert_only_attribution_survives(attrs, attribution)
+        assert attrs["llm.input_messages"] == FALLBACK_MASK
 
     def test_broad_pattern_with_sdk_cost(self, harness_factory: Any) -> None:
         h = harness_factory(pricing=PRICING, redact=RedactSpanProcessorOptions(attributes=[re.compile(r".*")]))

@@ -14,13 +14,10 @@ import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
 import { ATTRIBUTES } from "../constants/index.ts"
 import { env } from "../env/index.ts"
 import { getLatitudeContext } from "./context.ts"
-import { CostAttributesExporter, CostResolution, type NormalizedCost, SpanCostTracker } from "./cost.ts"
+import { CostResolution, type NormalizedCost, SpanCostTracker } from "./cost.ts"
+import { ExportViewExporter } from "./export-view.ts"
 import { DEFAULT_REDACT_SPAN_PROCESSOR, RedactSpanProcessor } from "./redact.ts"
-import {
-  buildShouldExportSpanFromFields,
-  ExportFilterSpanProcessor,
-  RedactThenExportSpanProcessor,
-} from "./span-filter.ts"
+import { buildShouldExportSpanFromFields, ExportFilterSpanProcessor } from "./span-filter.ts"
 import type { LatitudeSpanProcessorOptions } from "./types.ts"
 
 // `service.name` is a resource attribute per OTel semantic conventions, not a span attribute.
@@ -88,17 +85,20 @@ export class LatitudeSpanProcessor implements SpanProcessor {
     const serviceExporter = rawServiceName
       ? new ServiceNameResourceExporter(baseExporter, rawServiceName)
       : baseExporter
-    // Cost wrapper is outermost: it must see the original span objects to find their cost hints.
     this.costTracker = new SpanCostTracker(
       new CostResolution({ pricing: options?.pricing, costResolver: options?.costResolver }),
     )
-    const exporter = new CostAttributesExporter(serviceExporter, this.costTracker)
 
     const redact = options?.disableRedact
       ? null
       : options?.redact
         ? new RedactSpanProcessor(options.redact)
         : DEFAULT_REDACT_SPAN_PROCESSOR()
+
+    // The span object is shared with other processors, so redaction and cost are applied to an
+    // export-time view, never to the span. The view wrapper is outermost: it must see the original
+    // span objects to find their resolved cost.
+    const exporter = new ExportViewExporter(serviceExporter, this.costTracker, redact)
 
     const batchOrSimple = options?.disableBatch ? new SimpleSpanProcessor(exporter) : new BatchSpanProcessor(exporter)
 
@@ -108,8 +108,7 @@ export class LatitudeSpanProcessor implements SpanProcessor {
       blockedInstrumentationScopes: options?.blockedInstrumentationScopes,
     })
 
-    const redactThenExport = new RedactThenExportSpanProcessor(redact, batchOrSimple)
-    this.tail = new ExportFilterSpanProcessor(shouldExport, redactThenExport, {
+    this.tail = new ExportFilterSpanProcessor(shouldExport, batchOrSimple, {
       ...(options?.blockedInstrumentationScopes !== undefined
         ? { blockedInstrumentationScopes: options.blockedInstrumentationScopes }
         : {}),
@@ -160,7 +159,7 @@ export class LatitudeSpanProcessor implements SpanProcessor {
   }
 
   onEnd(span: ReadableSpan): void {
-    // Resolve cost before the tail redacts the span in place.
+    // Resolve cost from the unredacted span; redaction only happens in the export view.
     this.costTracker.onEnd(span)
     this.tail.onEnd(span)
   }
