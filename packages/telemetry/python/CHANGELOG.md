@@ -5,6 +5,26 @@ All notable changes to the Python Telemetry SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.2] - 2026-10-08
+
+### Changed
+
+- Regex redaction patterns no longer mask the attributes Latitude needs to attribute an LLM span:
+  `gen_ai.operation.name`, `gen_ai.provider.name`, `gen_ai.system`, `gen_ai.request.model` and
+  `gen_ai.response.model`. A broad pattern such as `^gen_ai\.` or `.*` used to mask them, so
+  Latitude dropped the span from cost and usage rollups and lost its model attribution. They are
+  exempt whether or not the SDK set a cost, because Latitude also needs them to price spans the SDK
+  didn't. Listing one of these keys as an exact string pattern still redacts it.
+
+### Added
+
+- `DEFAULT_REDACT_PATTERNS` and `REDACTION_EXEMPT_ATTRIBUTES` are exported, so a custom `redact`
+  can keep the defaults (`attributes=[*DEFAULT_REDACT_PATTERNS, ...]`). A custom `redact` still
+  replaces the defaults rather than adding to them. New `ATTRIBUTES.operation_name`,
+  `provider_name`, `system`, `request_model` and `response_model` constants.
+- A "Redaction" section in the Python telemetry docs: the default patterns, custom patterns and
+  `mask`, the exempt attributes, and the fact that redaction applies only to what Latitude exports.
+
 ## [3.8.1] - 2026-10-08
 
 ### Fixed
