@@ -1,5 +1,6 @@
 """Tests for customer-supplied LLM cost: capture(cost=...), pricing, cost_resolver and set_llm_cost."""
 
+import re
 from collections.abc import Iterator
 from typing import Any
 
@@ -20,6 +21,7 @@ from latitude_telemetry import (
     set_llm_cost,
 )
 from latitude_telemetry.telemetry.latitude_span_processor import LatitudeSpanProcessorOptions
+from latitude_telemetry.telemetry.redact_span_processor import RedactSpanProcessorOptions
 
 COST_KEYS = (ATTRIBUTES.cost_input, ATTRIBUTES.cost_output, ATTRIBUTES.cost_total, ATTRIBUTES.cost_source)
 
@@ -269,6 +271,14 @@ class TestPricing:
         capture("crew", run, cost={"total": 0.4})
         assert h.attrs("crew-agent")[ATTRIBUTES.cost_total] == 0.4
         assert cost_of(h.attrs("other-agent")) == {}
+
+    def test_cost_is_resolved_before_redaction(self, harness_factory: Any) -> None:
+        h = harness_factory(pricing=PRICING, redact=RedactSpanProcessorOptions(attributes=[re.compile(r"^gen_ai\.")]))
+        h.llm_call()
+        attrs = h.attrs("openai.chat")
+        assert attrs["gen_ai.request.model"] == "******"
+        assert attrs[ATTRIBUTES.cost_total] == pytest.approx(0.0075)
+        assert attrs[ATTRIBUTES.cost_source] == COST_SOURCE_USER
 
 
 class TestCostResolver:
