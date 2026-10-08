@@ -68,7 +68,7 @@ class RedactSpanProcessor(SpanProcessor):
         try:
             self._processed_spans.add(span)
         except TypeError:
-            pass
+            pass  # not weak-referenceable: can't remember it, so a repeat on_end redacts again
 
     def shutdown(self) -> None:
         self._processed_spans.clear()

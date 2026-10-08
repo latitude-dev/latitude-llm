@@ -95,8 +95,9 @@ class ExportViewExporter(SpanExporter):
             return self._redact.redact_attributes(span.attributes), self._redact.redact_events(span.events)
         except Exception:
             # Per-value failures are already masked inside the redactor; reaching here means the span
-            # itself couldn't be read. Fail closed: mask every attribute value and drop events rather
-            # than export raw values or lose the span.
+            # itself couldn't be read. Fail closed: mask every attribute value (or drop them all if
+            # even the keys can't be read) and drop events, rather than export raw values or lose the
+            # span.
             logger.warning(
                 "[Latitude] Failed to redact span %r; masking all attributes",
                 getattr(span, "name", None),
