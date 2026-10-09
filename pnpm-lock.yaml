@@ -58,8 +58,8 @@ catalogs:
       specifier: 8.16.0
       version: 8.16.0
     promptl-ai:
-      specifier: 0.11.0
-      version: 0.11.0
+      specifier: 0.12.1
+      version: 0.12.1
     react:
       specifier: 19.2.4
       version: 19.2.4
@@ -204,7 +204,7 @@ importers:
         version: 4.17.21
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.11.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.12.1(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -406,7 +406,7 @@ importers:
         version: 1.298.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.11.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.12.1(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -646,8 +646,8 @@ importers:
   packages/cli:
     dependencies:
       '@latitude-data/sdk':
-        specifier: ^5.1.0
-        version: 5.1.0(typescript@5.9.3)(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        specifier: workspace:*
+        version: link:../sdks/typescript
       chalk:
         specifier: ^5.4.1
         version: 5.6.2
@@ -723,7 +723,7 @@ importers:
         version: 0.4.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.11.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.12.1(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       zod:
         specifier: 'catalog:'
         version: 4.1.8
@@ -946,7 +946,7 @@ importers:
         version: 5.14.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.11.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.12.1(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -1153,7 +1153,7 @@ importers:
         version: 2.0.1
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.11.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.12.1(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
@@ -1311,7 +1311,7 @@ importers:
         version: 6.17.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@4.1.8)
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.11.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.12.1(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rollup:
         specifier: ^4.53.3
         version: 4.53.3
@@ -1537,7 +1537,7 @@ importers:
         version: 16.1.1(postcss@8.5.6)
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.11.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.12.1(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       recast:
         specifier: ^0.23.4
         version: 0.23.11
@@ -3604,11 +3604,6 @@ packages:
   '@langchain/core@0.3.78':
     resolution: {integrity: sha512-Nn0x9erQlK3zgtRU1Z8NUjLuyW0gzdclMsvLQ6wwLeDqV91pE+YKl6uQb+L2NUDs4F0N7c2Zncgz46HxrvPzuA==}
     engines: {node: '>=18'}
-
-  '@latitude-data/sdk@5.1.0':
-    resolution: {integrity: sha512-AIV8ilhXY46Rz8uAnNtxoMIYWbcPIPkjskVJvgQDDsnTD1BJ9QXZevJMgO2tms55JJZb3sB6Lciw1zoEtPkKUw==}
-    peerDependencies:
-      typescript: ^5.5.4
 
   '@latitude-data/socket.io-react-hook@2.4.5':
     resolution: {integrity: sha512-otajd00jgJw6+wHM7LRjUuE+wg6vb0U8aQxyDdEFBTCf7BXIxvv94piXGZW2YivR0b41Gmh4qWgjodI/8TcE9g==}
@@ -12026,11 +12021,8 @@ packages:
     resolution: {integrity: sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==}
     engines: {node: '>=0.4.0'}
 
-  promptl-ai@0.11.0:
-    resolution: {integrity: sha512-Ek6/doPCDJF7j83O7Id5rqobejR9Jungtir17Jn1YY5LmAnBzgleimnmvvgPa8kx+zaCMj/91oDDRAGNQag+zA==}
-
-  promptl-ai@0.7.5:
-    resolution: {integrity: sha512-qDJggAR34qqxc5/X6xqagMCVNVQK8U3ycohtKJNG1/1Ap5VJ/UzF4ERphWAmLrspl4KYcT2ITKQhq28TAcw3Qg==}
+  promptl-ai@0.12.1:
+    resolution: {integrity: sha512-7jB8WuanVBN/xnL2AqIX+l/yguIIZujZqx+tVNwDpRhzz787z8NT83IRwbQHWYk/w/EA+9qmGIRCqO10JSQPWw==}
 
   prompts@2.4.2:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}
@@ -14251,9 +14243,6 @@ packages:
 
   zod@3.23.8:
     resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
-
-  zod@3.24.2:
-    resolution: {integrity: sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ==}
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
@@ -17854,17 +17843,6 @@ snapshots:
       - '@opentelemetry/exporter-trace-otlp-proto'
       - '@opentelemetry/sdk-trace-base'
       - openai
-
-  '@latitude-data/sdk@5.1.0(typescript@5.9.3)(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))':
-    dependencies:
-      eventsource-parser: 2.0.1
-      node-fetch: 2.7.0
-      promptl-ai: 0.7.5(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))
-      typescript: 5.9.3
-      zod: 3.24.2
-    transitivePeerDependencies:
-      - encoding
-      - ws
 
   '@latitude-data/socket.io-react-hook@2.4.5(bufferutil@4.0.9)(react@19.2.4)(utf-8-validate@6.0.5)':
     dependencies:
@@ -27284,21 +27262,6 @@ snapshots:
       is-docker: 2.2.1
       is-wsl: 2.2.0
 
-  openai@4.104.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@3.25.76):
-    dependencies:
-      '@types/node': 18.19.129
-      '@types/node-fetch': 2.6.13
-      abort-controller: 3.0.0
-      agentkeepalive: 4.6.0
-      form-data-encoder: 1.7.2
-      formdata-node: 4.4.1
-      node-fetch: 2.7.0
-    optionalDependencies:
-      ws: 8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5)
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - encoding
-
   openai@4.104.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@4.1.8):
     dependencies:
       '@types/node': 18.19.129
@@ -27832,7 +27795,7 @@ snapshots:
 
   progress@2.0.3: {}
 
-  promptl-ai@0.11.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5)):
+  promptl-ai@0.12.1(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5)):
     dependencies:
       acorn: 8.15.0
       code-red: 1.0.4
@@ -27841,19 +27804,6 @@ snapshots:
       openai: 4.104.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@4.1.8)
       yaml: 2.4.5
       zod: 4.1.8
-    transitivePeerDependencies:
-      - encoding
-      - ws
-
-  promptl-ai@0.7.5(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5)):
-    dependencies:
-      acorn: 8.15.0
-      code-red: 1.0.4
-      fast-sha256: 1.3.0
-      locate-character: 3.0.0
-      openai: 4.104.0(ws@8.20.1(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@3.25.76)
-      yaml: 2.8.1
-      zod: 3.25.76
     transitivePeerDependencies:
       - encoding
       - ws
@@ -30850,8 +30800,6 @@ snapshots:
       zod: 4.1.8
 
   zod@3.23.8: {}
-
-  zod@3.24.2: {}
 
   zod@3.25.76: {}
 
