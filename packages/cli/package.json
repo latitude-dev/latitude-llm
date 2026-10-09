@@ -12,7 +12,8 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/cli"
+    "url": "git+https://github.com/latitude-dev/latitude-llm.git",
+    "directory": "packages/cli"
   },
   "homepage": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/cli#readme",
   "scripts": {
