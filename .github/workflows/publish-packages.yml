@@ -1,0 +1,339 @@
+name: Publish Packages
+
+on:
+  push:
+    branches:
+      - latitude-v1
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-packages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish-typescript-sdk:
+    name: Publish TypeScript SDK
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Upgrade npm for trusted publishing
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Get package version
+        id: get_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./packages/sdks/typescript/package.json').version")
+          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check version on npm
+        id: check_version
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          if [ -n "$(npm view "@latitude-data/sdk@$VERSION" version 2>/dev/null)" ]; then
+            echo "@latitude-data/sdk@$VERSION is already published"
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm install --filter=@latitude-data/sdk...
+
+      - name: Build package (with workspace dependencies)
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm exec turbo run build --filter=@latitude-data/sdk...
+
+      - name: Run linter
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm exec turbo run lint --filter=@latitude-data/sdk...
+
+      - name: Run typescript checker
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm exec turbo run tc --filter=@latitude-data/sdk...
+
+      - name: Run tests
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm exec turbo run test --filter=@latitude-data/sdk...
+
+      - name: Check for internal dependencies
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: node tools/check-sdk-dependencies.js packages/sdks/typescript/package.json
+
+      - name: Pack package
+        if: steps.check_version.outputs.should_publish == 'true'
+        id: pack
+        working-directory: packages/sdks/typescript
+        run: |
+          TARBALL=$(pnpm pack --pack-destination "$RUNNER_TEMP" | tail -n 1)
+          test -f "$TARBALL"
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to npm
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: npm publish "${{ steps.pack.outputs.tarball }}" --provenance --access public --tag latitude-v1
+
+      - name: Verify npm installation
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          for attempt in $(seq 1 20); do
+            if [ -n "$(npm view "@latitude-data/sdk@$VERSION" version --prefer-online 2>/dev/null)" ]; then
+              break
+            fi
+            echo "Waiting for @latitude-data/sdk@$VERSION to be available ($attempt/20)..."
+            sleep 30
+          done
+
+          TEST_DIR=$(mktemp -d)
+          cd "$TEST_DIR"
+          npm init -y
+          npm install "@latitude-data/sdk@$VERSION"
+          node -e "
+            const sdk = require('@latitude-data/sdk');
+            if (!sdk.Latitude) {
+              console.error('ERROR: Latitude class not found in package exports');
+              process.exit(1);
+            }
+            console.log('SUCCESS: Package installed and imports correctly');
+          "
+          cd -
+          rm -rf "$TEST_DIR"
+
+      - name: Extract changelog for current version
+        if: steps.check_version.outputs.should_publish == 'true'
+        id: extract_changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          CHANGELOG_FILE="packages/sdks/typescript/CHANGELOG.md"
+
+          if [ ! -f "$CHANGELOG_FILE" ]; then
+            echo "## What's Changed" > release_notes.md
+            echo "" >> release_notes.md
+            echo "- Package updates and improvements" >> release_notes.md
+          else
+            awk -v version="$VERSION" '
+              BEGIN { found=0; content="" }
+              /^## \[/ {
+                if (found) exit
+                if ($0 ~ "\\[" version "\\]") {
+                  found=1
+                  next
+                }
+              }
+              found && /^## \[/ { exit }
+              found { content = content $0 "\n" }
+              END {
+                if (content == "") {
+                  print "## What'\''s Changed\n\n- Package updates and improvements\n"
+                } else {
+                  print content
+                }
+              }
+            ' "$CHANGELOG_FILE" > release_notes.md
+          fi
+
+          {
+            echo "changelog<<EOF"
+            cat release_notes.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        if: steps.check_version.outputs.should_publish == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: typescript-sdk-${{ steps.get_version.outputs.version }}
+          name: TypeScript SDK v${{ steps.get_version.outputs.version }}
+          body: ${{ steps.extract_changelog.outputs.changelog }}
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'rc') }}
+
+  publish-cli:
+    name: Publish Latitude CLI
+    runs-on: ubuntu-latest
+    needs: publish-typescript-sdk
+    if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Upgrade npm for trusted publishing
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Get package version
+        id: get_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./packages/cli/package.json').version")
+          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check version on npm
+        id: check_version
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          if [ -n "$(npm view "@latitude-data/cli@$VERSION" version 2>/dev/null)" ]; then
+            echo "@latitude-data/cli@$VERSION is already published"
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ensure workspace SDK version is published
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          SDK_VERSION=$(node -p "require('./packages/sdks/typescript/package.json').version")
+          for attempt in $(seq 1 20); do
+            if [ -n "$(npm view "@latitude-data/sdk@$SDK_VERSION" version --prefer-online 2>/dev/null)" ]; then
+              echo "@latitude-data/sdk@$SDK_VERSION is on npm"
+              exit 0
+            fi
+            echo "Waiting for @latitude-data/sdk@$SDK_VERSION to be available ($attempt/20)..."
+            sleep 30
+          done
+          echo "@latitude-data/sdk@$SDK_VERSION is not on npm yet; publish the SDK first"
+          exit 1
+
+      - name: Install dependencies
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm install --filter=@latitude-data/cli... --filter=@latitude-data/sdk...
+
+      - name: Build package (with workspace dependencies)
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm exec turbo run build --filter=@latitude-data/cli... --filter=@latitude-data/sdk...
+
+      - name: Run linter
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm exec turbo run lint --filter=@latitude-data/cli...
+
+      - name: Run typescript checker
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm exec turbo run tc --filter=@latitude-data/cli...
+
+      - name: Run tests
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm exec turbo run test --filter=@latitude-data/cli...
+
+      - name: Pack package
+        if: steps.check_version.outputs.should_publish == 'true'
+        id: pack
+        working-directory: packages/cli
+        run: |
+          TARBALL=$(pnpm pack --pack-destination "$RUNNER_TEMP" | tail -n 1)
+          test -f "$TARBALL"
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to npm
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: npm publish "${{ steps.pack.outputs.tarball }}" --provenance --access public --tag latitude-v1
+
+      - name: Extract changelog for current version
+        if: steps.check_version.outputs.should_publish == 'true'
+        id: extract_changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          CHANGELOG_FILE="packages/cli/CHANGELOG.md"
+
+          if [ ! -f "$CHANGELOG_FILE" ]; then
+            echo "## What's Changed" > release_notes.md
+            echo "" >> release_notes.md
+            echo "- Package updates and improvements" >> release_notes.md
+          else
+            awk -v version="$VERSION" '
+              BEGIN { found=0; content="" }
+              /^## \[/ {
+                if (found) exit
+                if ($0 ~ "\\[" version "\\]") {
+                  found=1
+                  next
+                }
+              }
+              found && /^## \[/ { exit }
+              found { content = content $0 "\n" }
+              END {
+                if (content == "") {
+                  print "## What'\''s Changed\n\n- Package updates and improvements\n"
+                } else {
+                  print content
+                }
+              }
+            ' "$CHANGELOG_FILE" > release_notes.md
+          fi
+
+          {
+            echo "changelog<<EOF"
+            cat release_notes.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        if: steps.check_version.outputs.should_publish == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: cli-${{ steps.get_version.outputs.version }}
+          name: Latitude CLI v${{ steps.get_version.outputs.version }}
+          body: ${{ steps.extract_changelog.outputs.changelog }}
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'rc') }}

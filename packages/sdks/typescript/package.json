@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/sdk",
-  "version": "5.7.0",
+  "version": "5.7.1",
   "description": "Latitude SDK for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -12,7 +12,8 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/typescript"
+    "url": "git+https://github.com/latitude-dev/latitude-llm.git",
+    "directory": "packages/sdks/typescript"
   },
   "homepage": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/typescript#readme",
   "scripts": {

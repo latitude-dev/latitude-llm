@@ -5,6 +5,12 @@ All notable changes to the TypeScript SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.7.1] - 2026-10-09
+
+### Security
+
+- Bump promptl-ai to 0.12.1 (GHSA-w66j-r3gv-h3rv).
+
 ## [5.7.0] - 2026-02-25
 
 ### Added
