@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## v0.3.122 - 2026-10-09
+
+### Telemetry and costs
+
+- Added customer-supplied LLM costs, custom pricing and cost resolvers to TypeScript/Python telemetry; ingestion preserves user-reported costs without estimating missing breakdowns and exposes cost source through UI/API/SDKs (ref: #4831, #4832).
+- Fixed Python redaction of frozen span attributes by redacting export views; aligned TS redaction and kept attribution attributes exempt from regex redaction; documented client-side redaction (ref: #4834, #4837, #4838).
+- Added warnings when `setLlmCost`/`set_llm_cost` targets a non-LLM-call span (ref: #4835).
+
+### Security
+
+- Restricted project redaction updates through public API to OAuth-authenticated org owners/admins, validated rules consistently for org/project settings, and made redaction/name/settings changes transactional (ref: #4839).
+
+### Agent Score
+
+- Counted length-truncated final prose as a reliability failure without treating ordinary tool calls or structured JSON as damaged prose (ref: #4729).
+
+### AI
+
+- Routed Anthropic structured-output schemas with unsupported constraint keywords through JSON tool mode, avoiding provider 400 errors while preserving caller overrides (ref: #4676).
+
 ## v0.3.121 - 2026-10-05
 
 ### Web
