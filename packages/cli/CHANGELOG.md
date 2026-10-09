@@ -49,7 +49,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 - Fixes escaping of special characters in prompts when pulled into JS/TS projects.
 
-[Unreleased]: https://github.com/latitude-dev/latitude-llm/compare/cli-4.0.0...HEAD
+[Unreleased]: https://github.com/latitude-dev/latitude-llm/compare/cli-4.0.1...HEAD
+[4.0.1]: https://github.com/latitude-dev/latitude-llm/releases/tag/cli-4.0.1
 [4.0.0]: https://github.com/latitude-dev/latitude-llm/releases/tag/cli-4.0.0
 [3.0.0]: https://github.com/latitude-dev/latitude-llm/releases/tag/cli-3.0.0
 [2.0.5]: https://github.com/latitude-dev/latitude-llm/releases/tag/cli-2.0.5
