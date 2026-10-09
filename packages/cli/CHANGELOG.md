@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-10-09
+
+### Security
+
+- Depend on `@latitude-data/sdk` 5.7.1, which ships promptl-ai 0.12.1 (GHSA-w66j-r3gv-h3rv).
+
 ## [4.0.0] - 2026-01-22
 
 ### Changed
