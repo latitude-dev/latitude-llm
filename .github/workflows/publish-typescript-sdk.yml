@@ -50,8 +50,6 @@ jobs:
         id: check_version
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
-          # Check this exact version rather than `npm view @latitude-data/sdk version`,
-          # which reads the `latest` dist-tag (owned by another release line).
           if [ -n "$(npm view "@latitude-data/sdk@$VERSION" version 2>/dev/null)" ]; then
             echo "@latitude-data/sdk@$VERSION is already published"
             echo "should_publish=false" >> $GITHUB_OUTPUT

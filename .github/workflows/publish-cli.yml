@@ -50,8 +50,6 @@ jobs:
         id: check_version
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
-          # Check this exact version rather than `npm view @latitude-data/cli version`,
-          # which reads the `latest` dist-tag (owned by another release line).
           if [ -n "$(npm view "@latitude-data/cli@$VERSION" version 2>/dev/null)" ]; then
             echo "@latitude-data/cli@$VERSION is already published"
             echo "should_publish=false" >> $GITHUB_OUTPUT
@@ -62,8 +60,6 @@ jobs:
       - name: Ensure workspace SDK version is published
         if: steps.check_version.outputs.should_publish == 'true'
         run: |
-          # The CLI depends on the workspace SDK, which is pinned to its exact
-          # version on publish, so that SDK version must already be on npm.
           SDK_VERSION=$(node -p "require('./packages/sdks/typescript/package.json').version")
           if [ -z "$(npm view "@latitude-data/sdk@$SDK_VERSION" version 2>/dev/null)" ]; then
             echo "@latitude-data/sdk@$SDK_VERSION is not on npm yet; publish the SDK first"
