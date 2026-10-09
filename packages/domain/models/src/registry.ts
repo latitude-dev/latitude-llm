@@ -90,44 +90,95 @@ function normalizeVersionPunctuation(id: string): string {
 }
 
 /**
+ * Find a model whose catalog key names the requested `modelId` outright: an exact match, or one that
+ * differs only in how a version is separated (`claude-opus-4.8` vs `claude-opus-4-8`).
+ *
+ * The punctuation match requires a single candidate: collapsing a dot must never pick between two
+ * genuinely different entries.
+ */
+function findModelExact(models: Model[], modelId: string): Model | undefined {
+  const needle = modelId.toLowerCase()
+
+  const exact = models.find((m) => m.id.toLowerCase() === needle)
+  if (exact) return exact
+
+  const normalizedNeedle = normalizeVersionPunctuation(needle)
+  const punctuationMatches = models.filter((m) => normalizeVersionPunctuation(m.id.toLowerCase()) === normalizedNeedle)
+  return punctuationMatches.length === 1 ? punctuationMatches[0] : undefined
+}
+
+/**
+ * A prefix may absorb a snapshot date or a trailing qualifier, but never a version bump. `minimax-m2`
+ * offered for `minimax-m2.5` is a different, later model at its own rate, so answering with it reports
+ * a confident wrong price where no price is the honest result.
+ *
+ * Both separators `normalizeVersionPunctuation` treats as interchangeable spell a bump: `5.2` and `5-2`
+ * are the same version. A hyphen also introduces a snapshot (`gpt-4-0613`, `o1-2024-12-17`), so it
+ * counts only before a one- or two-digit component that ends there; a run followed by a letter is a
+ * size (`qwen3-30b`), not a version.
+ */
+const VERSION_BUMP_RE = /^\d(?:\.\d|-\d{1,2}(?![\da-z]))/
+
+function crossesVersionBoundary(needle: string, prefixLength: number): boolean {
+  return VERSION_BUMP_RE.test(needle.slice(prefixLength - 1))
+}
+
+/**
+ * A prefix ending between two digits cuts a number in half: `gpt-5-2` is not where `gpt-5-2025-04-14`
+ * ends, and `claude-fable-5-1` is not `claude-fable-5-12`.
+ */
+const SPLIT_NUMBER_RE = /^\d\d/
+
+function splitsNumber(needle: string, prefixLength: number): boolean {
+  return SPLIT_NUMBER_RE.test(needle.slice(prefixLength - 1))
+}
+
+/**
+ * Find the model whose ID is the longest prefix of the requested `modelId`, so a versioned name like
+ * `gpt-4.1-2025-04-14` still resolves to `gpt-4.1`.
+ *
+ * This is the loosest match in the registry and answers only once every exact one has declined. It
+ * stops at a `:` modifier (`:free`, `:thinking`, a context size), which selects a variant the catalog
+ * lists and prices separately; matching past one would answer with the unmodified model, and a free
+ * tier would come back at the paid rate.
+ *
+ * A prefix rejected for a version bump also rules out every shorter one: the requested id names a
+ * version the catalog does not list, and a shorter prefix is only further from it. `claude-fable-5-1.5`
+ * must not fall back to `claude-fable-5` once `claude-fable-5-1` has declined.
+ */
+function findModelByPrefix(models: Model[], modelId: string): Model | undefined {
+  const needle = modelId.toLowerCase()
+
+  let best: Model | undefined
+  let bestLen = 0
+  let bumpedLen = 0
+
+  for (const m of models) {
+    const id = m.id.toLowerCase()
+    if (!needle.startsWith(id) || id.length <= bestLen) continue
+    if (needle[id.length] === ":" || splitsNumber(needle, id.length)) continue
+    if (crossesVersionBoundary(needle, id.length)) {
+      bumpedLen = Math.max(bumpedLen, id.length)
+      continue
+    }
+
+    best = m
+    bestLen = id.length
+  }
+
+  return bestLen > bumpedLen ? best : undefined
+}
+
+/**
  * Find a model by ID (case-insensitive) with prefix fallback.
  *
  * First tries an exact match; then a version-punctuation match, so an id that differs from its
  * catalog key only in how a version is separated (`claude-opus-4.8` vs `claude-opus-4-8`) still
  * resolves; then falls back to the model whose ID is the longest prefix of the requested `modelId`.
  * Useful for versioned model names like `gpt-4.1-2025-04-14` matching `gpt-4.1`.
- *
- * The punctuation match requires a single candidate: collapsing a dot must never pick between two
- * genuinely different entries. The prefix fallback stops at a `:` modifier (`:free`, `:thinking`, a
- * context size), which selects a variant the catalog lists and prices separately. Matching past one
- * would answer with the unmodified model, and a free tier would come back at the paid rate.
  */
 export function findModel(models: Model[], modelId: string): Model | undefined {
-  const needle = modelId.toLowerCase()
-
-  const exact = models.find((m) => m.id.toLowerCase() === needle)
-  if (exact) return exact
-
-  // Same version, different punctuation. Match on the normalised form so `claude-opus-4.8` finds the
-  // catalog's `claude-opus-4-8` (and the reverse), but only when exactly one entry normalises to it,
-  // so a punctuation-only collapse can never resolve one model to a different one.
-  const normalizedNeedle = normalizeVersionPunctuation(needle)
-  const punctuationMatches = models.filter((m) => normalizeVersionPunctuation(m.id.toLowerCase()) === normalizedNeedle)
-  if (punctuationMatches.length === 1) return punctuationMatches[0]
-
-  let best: Model | undefined
-  let bestLen = 0
-
-  for (const m of models) {
-    const id = m.id.toLowerCase()
-    if (!needle.startsWith(id) || id.length <= bestLen) continue
-    if (needle[id.length] === ":") continue
-
-    best = m
-    bestLen = id.length
-  }
-
-  return best
+  return findModelExact(models, modelId) ?? findModelByPrefix(models, modelId)
 }
 
 /**
@@ -190,33 +241,40 @@ function findModelByVendorPrefix({
 /**
  * Find a specific model within a provider's model list.
  *
+ * Every match that names a catalog entry outright is tried before the prefix fallback, which is the
+ * only one that can answer with a model the requested id does not name. Asking it first let it hijack
+ * ids the catalog spells exactly: `minimax-m2.5` on a provider listing `minimax/minimax-m2.5` came
+ * back as the neighbouring `MiniMax-M2`, at that older model's rate.
+ *
  * For Bedrock models, tries the original model ID first (some models in
  * models.dev include the regional prefix), then falls back to stripping
  * the prefix (`eu.`, `us.`, `apac.`) for models that don't.
  */
 export function getModelForProvider(provider: string, modelId: string): Model | undefined {
   const models = getModelsForProvider(provider)
-  const match = findModel(models, modelId)
-  if (match) return match
-
   const resolvedProvider = resolveProviderName(provider)
+
   if (resolvedProvider === "amazon-bedrock") {
     const stripped = stripBedrockRegionPrefix(modelId)
-    if (stripped !== modelId) {
-      const strippedMatch = findModel(models, stripped)
-      if (strippedMatch) return strippedMatch
-    }
-    return findBedrockModelByBareId(models, stripped)
+    return (
+      findModelExact(models, modelId) ??
+      findModelExact(models, stripped) ??
+      findBedrockModelByBareId(models, stripped) ??
+      findModelByPrefix(models, modelId) ??
+      findModelByPrefix(models, stripped)
+    )
   }
 
-  const bareIdMatch = findModelByBareId(models, modelId)
-  if (bareIdMatch) return bareIdMatch
-
-  return findModelByVendorPrefix({
-    modelId,
-    reportedProvider: resolvedProvider,
-    reportedProviderIsKnown: models.length > 0,
-  })
+  return (
+    findModelExact(models, modelId) ??
+    findModelByBareId(models, modelId) ??
+    findModelByVendorPrefix({
+      modelId,
+      reportedProvider: resolvedProvider,
+      reportedProviderIsKnown: models.length > 0,
+    }) ??
+    findModelByPrefix(models, modelId)
+  )
 }
 
 /**

@@ -168,6 +168,50 @@ function findGatewaySlugAlsoSoldByItsVendor(): { slug: string; vendor: string; b
   throw new Error("bundled catalog lists no priced Vercel gateway slug whose vendor prices the bare model")
 }
 
+/** Bare ids a provider only implies through its `<vendor>/<model>` keys, mapped to the keys implying them. */
+function slugsByBareId(ids: readonly string[]): Map<string, string[]> {
+  const keyed = new Set(ids.map((id) => id.toLowerCase()))
+  const bare = new Map<string, string[]>()
+  for (const id of ids) {
+    const separator = id.indexOf("/")
+    if (separator <= 0) continue
+    const bareId = id.slice(separator + 1).toLowerCase()
+    // A remainder that still has a separator is a nested vendor slug, not a bare id.
+    if (bareId.includes("/") || keyed.has(bareId)) continue
+    bare.set(bareId, [...(bare.get(bareId) ?? []), id])
+  }
+  return bare
+}
+
+/** Bare ids the provider answers with a catalog entry other than the single slug that implies them. */
+function misresolvedBareIds(provider: string, ids: readonly string[]): string[] {
+  const misresolved: string[] = []
+  for (const [bareId, slugs] of slugsByBareId(ids)) {
+    // Two vendors offering the same bare id is ambiguous; the tests above cover that path.
+    if (slugs.length !== 1) continue
+    const resolved = getModelForProvider(provider, bareId)
+    if (resolved && resolved.id.toLowerCase() !== slugs[0]?.toLowerCase()) {
+      misresolved.push(`${provider}/${bareId} answered with ${resolved.id}, expected ${slugs[0]}`)
+    }
+  }
+  return misresolved
+}
+
+/**
+ * Whether a catalog key spells the requested id itself, allowing for version punctuation and a vendor
+ * or Bedrock region prefix on either side. A prefix match that absorbed part of the request does not.
+ */
+function spellsSameModel(catalogId: string, requestedId: string): boolean {
+  const canonical = (id: string) => id.toLowerCase().replace(/(\d)\.(?=\d)/g, "$1-")
+  const [listed, requested] = [canonical(catalogId), canonical(requestedId)]
+  return (
+    listed === requested ||
+    listed.endsWith(`/${requested}`) ||
+    listed.endsWith(`.${requested}`) ||
+    requested.endsWith(`.${listed}`)
+  )
+}
+
 describe("getModelForProvider", () => {
   it("finds a model for a provider", () => {
     const model = getModelForProvider("openai", "gpt-4o")
@@ -274,6 +318,52 @@ describe("getModelForProvider", () => {
   it("does not price a non-Anthropic bare model id assumed to be Anthropic", () => {
     expect(getModelForProvider("anthropic", "qwen3.7-max")).toBeUndefined()
     expect(getCostSpec("anthropic", "qwen3.7-max").costImplemented).toBe(false)
+  })
+
+  // Derived from the catalog, so a models.dev refresh cannot reintroduce the hazard under new ids.
+  it("never answers an unambiguous bare id with a different catalog entry", () => {
+    const idsByProvider = new Map<string, string[]>()
+    for (const model of getAllModels()) {
+      idsByProvider.set(model.provider, [...(idsByProvider.get(model.provider) ?? []), model.id])
+    }
+
+    const misresolved = [...idsByProvider].flatMap(([provider, ids]) => misresolvedBareIds(provider, ids))
+
+    expect(misresolved).toEqual([])
+  })
+
+  // The fallback absorbs a snapshot date or qualifier; a version bump is another model at its own rate.
+  it("leaves a version the catalog does not list unpriced", () => {
+    const answeredByAnotherModel: string[] = []
+    for (const model of getAllModels()) {
+      if (!/\d$/.test(model.id)) continue
+      // `.5` and `-5` spell one bump. `-12` must not stop at a listed `-1`, and `-1.5` must not fall
+      // back past a listed `-1` to the version below it.
+      for (const bump of [".5", "-5", "-12", "-1.5"]) {
+        const bumped = `${model.id}${bump}`
+        const resolved = getModelForProvider(model.provider, bumped)
+        if (resolved && !spellsSameModel(resolved.id, bumped)) {
+          answeredByAnotherModel.push(`${model.provider}/${bumped} answered with ${resolved.id}`)
+        }
+      }
+    }
+
+    expect(answeredByAnotherModel).toEqual([])
+  })
+
+  it("resolves a snapshot date to the model it is a snapshot of", () => {
+    const misresolved: string[] = []
+    for (const model of getAllModels()) {
+      for (const snapshot of [`${model.id}-20250414`, `${model.id}-2025-04-14`]) {
+        const resolved = getModelForProvider(model.provider, snapshot)
+        const answersBase = resolved?.id.toLowerCase() === model.id.toLowerCase()
+        // The catalog may list the snapshot itself, which is the better answer.
+        if (answersBase || (resolved && spellsSameModel(resolved.id, snapshot))) continue
+        misresolved.push(`${model.provider}/${snapshot} answered with ${resolved?.id}, expected ${model.id}`)
+      }
+    }
+
+    expect(misresolved).toEqual([])
   })
 })
 
