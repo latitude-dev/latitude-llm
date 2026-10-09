@@ -49,11 +49,21 @@ jobs:
       - name: Check version on npm
         id: check_version
         run: |
-          NPM_VERSION=$(npm view @latitude-data/cli version 2>/dev/null || echo "0.0.0")
-          if [ "${{ steps.get_version.outputs.version }}" != "$NPM_VERSION" ]; then
-            echo "should_publish=true" >> $GITHUB_OUTPUT
-          else
+          VERSION="${{ steps.get_version.outputs.version }}"
+          if [ -n "$(npm view "@latitude-data/cli@$VERSION" version 2>/dev/null)" ]; then
+            echo "@latitude-data/cli@$VERSION is already published"
             echo "should_publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Ensure workspace SDK version is published
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          SDK_VERSION=$(node -p "require('./packages/sdks/typescript/package.json').version")
+          if [ -z "$(npm view "@latitude-data/sdk@$SDK_VERSION" version 2>/dev/null)" ]; then
+            echo "@latitude-data/sdk@$SDK_VERSION is not on npm yet; publish the SDK first"
+            exit 1
           fi
 
       - name: Install dependencies
@@ -78,7 +88,7 @@ jobs:
 
       - name: Publish to npm
         if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm publish --access public --filter=@latitude-data/cli --no-git-checks
+        run: pnpm publish --access public --tag latitude-v1 --filter=@latitude-data/cli --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

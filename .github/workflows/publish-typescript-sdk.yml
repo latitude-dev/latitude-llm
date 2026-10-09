@@ -49,11 +49,12 @@ jobs:
       - name: Check version on npm
         id: check_version
         run: |
-          NPM_VERSION=$(npm view @latitude-data/sdk version 2>/dev/null || echo "0.0.0")
-          if [ "${{ steps.get_version.outputs.version }}" != "$NPM_VERSION" ]; then
-            echo "should_publish=true" >> $GITHUB_OUTPUT
-          else
+          VERSION="${{ steps.get_version.outputs.version }}"
+          if [ -n "$(npm view "@latitude-data/sdk@$VERSION" version 2>/dev/null)" ]; then
+            echo "@latitude-data/sdk@$VERSION is already published"
             echo "should_publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_publish=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Install dependencies
@@ -82,7 +83,7 @@ jobs:
 
       - name: Publish to npm
         if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm publish --access public --filter=@latitude-data/sdk --no-git-checks
+        run: pnpm publish --access public --tag latitude-v1 --filter=@latitude-data/sdk --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
