@@ -683,7 +683,10 @@ describe("resolveTokens", () => {
         ).toBeCloseTo(read / (input + write))
       })
 
-      it.each([500, 2_000])("preserves writes that fit the input, even when noCache is %s", (noCache) => {
+      it.each([
+        { noCache: 500, scenario: "noCache disagrees with read-inclusive input" },
+        { noCache: 2_000, scenario: "writes fit within input, leaving separate-write accounting unresolved" },
+      ])("preserves legacy normalization when $scenario", ({ noCache }) => {
         const r = resolveTokens(usage({ input: 10_000, read: 8_000, noCache, write: 1_500 }), "openrouter")
 
         expect(r.tokensInput).toBe(500)
@@ -692,7 +695,7 @@ describe("resolveTokens", () => {
       })
 
       it.each(["ai.usage.totalTokens", "ai.usage.inputTokenDetails.noCacheTokens"])(
-        "keeps the fallback input interpretation without %s",
+        "preserves legacy inflated input for the separate-write fixture without %s",
         (missing) => {
           const r = resolveTokens(
             usage().filter((a) => a.key !== missing),
@@ -712,7 +715,7 @@ describe("resolveTokens", () => {
         expect(r.tokensCacheCreate).toBe(20_335)
       })
 
-      it("keeps the existing interpretation when reads plus writes exactly equal input", () => {
+      it("preserves legacy zero input at the read-plus-write boundary, leaving separate writes unresolved", () => {
         const r = resolveTokens(usage({ input: 10_000, read: 8_000, write: 2_000 }), "openrouter")
         expect(r.tokensInput).toBe(0)
         expect(r.tokensCacheCreate).toBe(2_000)
