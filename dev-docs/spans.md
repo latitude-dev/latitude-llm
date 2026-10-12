@@ -198,6 +198,16 @@ The `traces` materialized view carries forward `max(retention_days)` from its so
 
 Incoming OTLP spans are normalized into the canonical span model by the resolvers under `packages/domain/spans/src/otlp/`. Metadata (operation, provider, model, token usage, cost, identity) resolves from a prioritized list of attribute candidates spanning the conventions each supported source emits (OTEL GenAI semconv, OpenInference, OpenLLMetry/Traceloop, Vercel AI SDK, Claude Code, and others). Message content is parsed by a first-match chain of content parsers keyed on the attributes a source uses.
 
+### Cost resolution
+
+Token usage resolves from the same convention-specific candidate lists. Cost resolves in `resolveUsage` (`otlp/resolvers/usage.ts`) through `resolveSpanCost` (`helpers/estimate-span-cost.ts`), which every sink shares: live ingest, OpenClaw embedded usage, and trace imports.
+
+Accepted cost attribute keys are `gen_ai.usage.{input,output,total}_cost`, `gen_ai.usage.cost`, and `llm.cost.{prompt,completion,total}`. Each value must be a finite, non-negative number (double, int, or numeric string); otherwise the attribute is ignored, counted on the ingest transform span, and logged. A stated figure wins over models.dev estimation on the sides it covers; estimation never overwrites a `reportedBy: "user"` figure.
+
+**Customer-supplied cost** is opt-in: set `latitude.cost.source = "user"` alongside the cost attributes. Ingest stores the figure as sent with `cost_source = user_reported` and does not estimate missing sides from the catalog. A total alone keeps zero input/output sides; sides alone sum to the total; both are kept; an explicit zero (total included) is honoured. Without the marker, behaviour is unchanged, including ignoring a lone zero total so instrumentation cannot accidentally zero out cost.
+
+The Latitude telemetry SDKs set the same marker when pricing via `capture({ cost })`, `pricing`, `costResolver` / `cost_resolver`, or `setLlmCost` / `set_llm_cost` on LLM-call spans. Product docs: [`docs/telemetry/typescript.md`](../docs/telemetry/typescript.md) and [`docs/telemetry/python.md`](../docs/telemetry/python.md). See [`telemetry-sdk.md`](./telemetry-sdk.md#bring-your-own-cost).
+
 ### Cloudflare AI Gateway
 
 Cloudflare AI Gateway is ingested as a plain OTLP GenAI source; there is no SDK. Its spans carry standard `gen_ai.*` metadata (`gen_ai.provider.name` or `gen_ai.model.provider`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`/`output_tokens`, `gen_ai.usage.cost`, `gen_ai.operation.name`), so provider, model, tokens, and cost resolve through the normal candidate lists. Two source-specific behaviors are deliberate:

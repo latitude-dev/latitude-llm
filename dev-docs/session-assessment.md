@@ -22,6 +22,12 @@ The public model is Zod-first in `src/entities/session-assessment.ts`. Internal 
 
 `readSessionAssessmentSources` converts source-domain facts into `NormalizedSessionAssessmentInput`. It reads deterministic flagger findings, finish reasons, provider errors, scores and linked signals, and conversation moments. It does not run an LLM.
 
+### Finish-reason findings
+
+Finish reasons on generation endpoints are normalized and classified in `classifyFinishReason` (`packages/domain/spans/src/helpers/classify-finish-reason.ts`). Unreliable reasons become `finishFailure` metric findings (`metricId: spans.finish_failure`) with a classified `findingKind` (`length`, `contentFilter`, `guardrail`, `malformedFunctionCall`, `generationError`, …).
+
+Length-limited stops (`length`, `max_tokens`, `max_output_tokens`, and the other `LENGTH_FINISH_REASONS` aliases) set `requiresOutputDamage: true`. They count as Reliability failures only when the session shows **output damage** on the final generation: either a deterministic `outputDamage` flagger finding on the final endpoint, or a **final prose completion** — the last assistant turn is text-only (no tool parts), non-empty, and not structured JSON (arrays/objects are distinguished from bracket-numbered prose such as `[1] Step one`). A length-limited call that is not final, that ends in tool calls, or that is followed by a later successful prose turn does not surface as a finish failure. Other unreliable finish reasons do not require output damage.
+
 `resolveSessionAssessment` then applies the shared pure pipeline:
 
 1. map each normalized finding to dimension effects;

@@ -112,6 +112,14 @@ The class-based bootstrap should be constructed after any existing OpenTelemetry
 
 For manual setups, applications can still add `LatitudeSpanProcessor` directly to their own provider and call the instrumentation registration helper.
 
+## Bring your own cost
+
+Both SDKs can stamp LLM-call spans with customer cost at export time: `capture(name, fn, { cost })` (per LLM call inside the capture), `pricing` / `costResolver` (Python: `cost_resolver`) on the bootstrap options, or `setLlmCost(span, cost)` / `set_llm_cost(span, cost)` on a span the app holds. Cost resolves when the span ends, before export redaction. The exporter writes `gen_ai.usage.{input,output,total}_cost` and `latitude.cost.source = "user"`, replacing any prior cost on that span so totals stay consistent. `setLlmCost` on a non-LLM-call span still sets attributes but logs a one-per-process warning. Ingest treats the marker as authoritative (`cost_source = user_reported`); see [`spans.md`](./spans.md#cost-resolution).
+
+## Export-time attribute redaction
+
+Optional `redact` on the bootstrap masks attribute values in the **export view** sent to Latitude, not the live span in the process. TypeScript `LatitudeSpanProcessor` builds a redacted view then applies SDK cost last; other processors and exporters on the same provider still see raw values. A custom `redact` replaces the default pattern list (spread `DEFAULT_REDACT_PATTERNS` to keep defaults). `REDACTION_EXEMPT_ATTRIBUTES` covers operation, provider, model, and token keys Latitude needs for attribution and pricing; exact-string patterns can still redact a specific key. Regex patterns use `search()` so `/g` and `/y` behave correctly. Redaction never throws; invalid masks fail closed to `******`. Server-side PII redaction after ingest is separate; see [`spans.md`](./spans.md#pii-redaction-stage) and the product guides [`docs/telemetry/typescript.md`](../docs/telemetry/typescript.md) / [`docs/telemetry/python.md`](../docs/telemetry/python.md).
+
 ## Python compatibility
 
 `init_latitude()` remains available in the Python package as a backwards-compatible wrapper. New docs and examples should prefer `Latitude(...)`; legacy code using `init_latitude()` receives the previous dict shape containing `provider`, `flush`, and `shutdown`.
