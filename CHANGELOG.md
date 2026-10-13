@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.3.124 - 2026-10-13
+
+### Sessions
+
+- Selected session IDs for non-search listings before loading complete records, preserving filters, ordering, and nanosecond cursor precision (ref: #4865).
+- Waited for both findings and scores to load before showing the Scores tab, preventing provisional duplicate scores; removed the session-wide feedback form (ref: #4866).
+
 ## v0.3.123 - 2026-10-13
 
 ### Web
