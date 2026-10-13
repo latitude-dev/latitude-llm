@@ -103,6 +103,14 @@ Sessions are needed so that:
 - score rollups can aggregate at session level
 - issue and simulation drilldowns can show the right granularity
 
+## Session List Pagination
+
+Non-search session listings use two organization- and project-scoped queries. The first selects session IDs and raw sort values with `limit + 1`; its outer projection lets ClickHouse prune aggregate expressions not needed by sorting or filters. The second merges full session records only for the visible page IDs, excluding the extra pagination sentinel. Records are returned in the first query's order, and cursors use its raw sort values to preserve DateTime64 nanosecond precision.
+
+The two reads do not form a snapshot: concurrent ingestion can update displayed metrics after page selection. Cursors stay anchored to selection values. If a selected session is unavailable during hydration, the request fails rather than silently skipping it as the cursor advances.
+
+Telemetry filters remain in `HAVING` over complete session aggregates. Pushing them onto individual source rows can change session membership or truncate totals. Search listings retain their search-specific candidate and hydration path.
+
 ## Score Analytics Over Telemetry
 
 Reliability should not depend on hot joins from spans to raw scores for every query.

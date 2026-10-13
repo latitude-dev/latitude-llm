@@ -421,17 +421,16 @@ const toDomainSessionDetail = (row: SessionDetailRow): SessionDetail => ({
 interface SortColumn {
   readonly expr: string
   readonly chType: string
-  readonly rowKey: keyof SessionListRow
 }
 
 const SORT_COLUMNS: Record<string, SortColumn> = {
-  lastActivity: { expr: "last_activity_time", chType: "DateTime64(9, 'UTC')", rowKey: "last_activity_time" },
-  startTime: { expr: "start_time", chType: "DateTime64(9, 'UTC')", rowKey: "start_time" },
-  duration: { expr: "duration_ns", chType: "Int64", rowKey: "duration_ns" },
-  ttft: { expr: "time_to_first_token_ns", chType: "Int64", rowKey: "time_to_first_token_ns" },
-  cost: { expr: "cost_total_microcents", chType: "UInt64", rowKey: "cost_total_microcents" },
-  spans: { expr: "span_count", chType: "UInt64", rowKey: "span_count" },
-  traceCount: { expr: "trace_count", chType: "UInt64", rowKey: "trace_count" },
+  lastActivity: { expr: "last_activity_time", chType: "DateTime64(9, 'UTC')" },
+  startTime: { expr: "start_time", chType: "DateTime64(9, 'UTC')" },
+  duration: { expr: "duration_ns", chType: "Int64" },
+  ttft: { expr: "time_to_first_token_ns", chType: "Int64" },
+  cost: { expr: "cost_total_microcents", chType: "UInt64" },
+  spans: { expr: "span_count", chType: "UInt64" },
+  traceCount: { expr: "trace_count", chType: "UInt64" },
 }
 
 export function buildSessionFilterClauses(filters: FilterSet | undefined): {
@@ -623,6 +622,38 @@ export const SessionRepositoryLive = Layer.effect(
           return new Map(rows.map((r) => [normalizeCHString(r.session_id), toDomainSession(r)] as const))
         })
 
+    const hydrateSessionPage = ({
+      organizationId,
+      projectId,
+      rows,
+      limit,
+    }: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly rows: readonly { session_id: string; sort_value: string }[]
+      readonly limit: number
+    }) =>
+      Effect.gen(function* () {
+        const hasMore = rows.length > limit
+        const pageRows = hasMore ? rows.slice(0, limit) : rows
+        const sessions = yield* fetchFullSessionsByIds(organizationId, projectId)(pageRows.map((row) => row.session_id))
+        const items = yield* Effect.forEach(pageRows, (row) => {
+          const session = sessions.get(normalizeCHString(row.session_id))
+          return session
+            ? Effect.succeed(session)
+            : Effect.fail(
+                toRepositoryError(new Error("Selected session is unavailable during hydration"), "listByProjectId"),
+              )
+        })
+        const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+        if (!last) return { items, hasMore }
+        return {
+          items,
+          hasMore,
+          nextCursor: { sortValue: String(last.sort_value), sessionId: last.session_id },
+        } satisfies SessionListPage
+      })
+
     const listByProjectId: SessionRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -647,9 +678,6 @@ export const SessionRepositoryLive = Layer.effect(
           })
         }
 
-        // Non-search path: unchanged from before. `searchMatches` is
-        // omitted (undefined) so consumers fall through to the plain
-        // session listing rendering.
         const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
         const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
         const cmp = orderDir === "DESC" ? "<" : ">"
@@ -667,17 +695,20 @@ export const SessionRepositoryLive = Layer.effect(
         const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-        return yield* chSqlClient
+        const rows = yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              query: `SELECT ${LIST_SELECT}
-                      FROM sessions
-                      WHERE organization_id = {organizationId:String}
-                        AND project_id = {projectId:String}
-                        ${extraWhere}
-                      GROUP BY organization_id, project_id, session_id
-                      ${havingClause}
-                      ORDER BY ${sort.expr} ${orderDir}, session_id ${orderDir}
+              query: `SELECT session_id, ${sort.expr} AS sort_value
+                      FROM (
+                        SELECT ${LIST_SELECT}
+                        FROM sessions
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          ${extraWhere}
+                        GROUP BY organization_id, project_id, session_id
+                        ${havingClause}
+                      )
+                      ORDER BY sort_value ${orderDir}, session_id ${orderDir}
                       LIMIT {limit:UInt32}`,
               query_params: {
                 organizationId: organizationId as string,
@@ -693,23 +724,11 @@ export const SessionRepositoryLive = Layer.effect(
               },
               format: "JSONEachRow",
             })
-            return result.json<SessionListRow>()
+            return result.json<{ session_id: string; sort_value: string }>()
           })
-          .pipe(
-            Effect.map((rows): SessionListPage => {
-              const hasMore = rows.length > limit
-              const pageRows = hasMore ? rows.slice(0, limit) : rows
-              const items = pageRows.map(toDomainSession)
-              const last = hasMore ? pageRows[pageRows.length - 1] : undefined
-              if (!last) return { items, hasMore }
-              return {
-                items,
-                hasMore,
-                nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
-              }
-            }),
-            Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
-          )
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "listByProjectId")))
+
+        return yield* hydrateSessionPage({ organizationId, projectId, rows, limit })
       })
 
     const getCohortBaseline: SessionRepositoryShape["getCohortBaseline"] = ({
