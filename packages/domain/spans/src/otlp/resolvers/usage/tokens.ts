@@ -1,4 +1,5 @@
 import type { SpanTokenCounts } from "../../../entities/span.ts"
+import { intAttr } from "../../attributes.ts"
 import type { OtlpKeyValue } from "../../types.ts"
 import { first, firstKeyed, fromInt, keyedFromInt } from "../utils.ts"
 
@@ -100,9 +101,7 @@ const totalCandidates = [
 // Claude Code telemetry among them) land here and would
 // otherwise be misread as inclusive by strategy 2.
 //
-// This assumes rawInput covers both cache_read and
-// cache_create or neither; an emitter that folds only
-// cache_read into input is not representable either way.
+// Read-inclusive spans with separately reported writes are reconciled before this check.
 function isInclusiveInputPossible(rawInput: number, cache: number): boolean {
   return rawInput >= cache
 }
@@ -212,6 +211,34 @@ function toAdditive(raw: number, subCategories: number, inclusive: boolean): num
   return Math.max(0, raw - subCategories)
 }
 
+function hasSeparateVercelCacheWrites({
+  attrs,
+  rawInput,
+  rawOutput,
+  rawTotal,
+  cacheRead,
+  cacheCreate,
+}: {
+  attrs: readonly OtlpKeyValue[]
+  rawInput: number
+  rawOutput: number
+  rawTotal: number | undefined
+  cacheRead: number
+  cacheCreate: number
+}): boolean {
+  const noCache = intAttr(attrs, "ai.usage.inputTokenDetails.noCacheTokens")
+  return (
+    noCache !== undefined &&
+    noCache >= 0 &&
+    cacheRead + cacheCreate > rawInput &&
+    intAttr(attrs, "ai.usage.inputTokens") === rawInput &&
+    intAttr(attrs, "ai.usage.inputTokenDetails.cacheReadTokens") === cacheRead &&
+    intAttr(attrs, "ai.usage.inputTokenDetails.cacheWriteTokens") === cacheCreate &&
+    noCache + cacheRead === rawInput &&
+    rawInput + rawOutput === rawTotal
+  )
+}
+
 // ─── Resolve ─────────────────────────────────────────────
 
 export function resolveTokens(attrs: readonly OtlpKeyValue[], provider: string): SpanTokenCounts {
@@ -223,7 +250,10 @@ export function resolveTokens(attrs: readonly OtlpKeyValue[], provider: string):
   const reasoning = first(reasoningCandidates, attrs) ?? 0
   const rawTotal = first(totalCandidates, attrs)
 
-  const cache = cacheRead + cacheCreate
+  // Separate cache writes remain billable but must not be subtracted from read-inclusive input.
+  const cache = hasSeparateVercelCacheWrites({ attrs, rawInput, rawOutput, rawTotal, cacheRead, cacheCreate })
+    ? cacheRead
+    : cacheRead + cacheCreate
 
   // Strategy 1: infer from rawTotal arithmetic
   const inferred = rawTotal ? inferFromTotal(rawInput, rawOutput, cache, reasoning, rawTotal) : null

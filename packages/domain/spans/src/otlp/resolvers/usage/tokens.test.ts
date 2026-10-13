@@ -1,3 +1,4 @@
+import { cacheHitRate } from "@repo/utils"
 import { describe, expect, it } from "vitest"
 import type { OtlpKeyValue } from "../../types.ts"
 import { resolveTokens } from "./tokens.ts"
@@ -644,6 +645,106 @@ describe("resolveTokens", () => {
   // ═══════════════════════════════════════════════════════
 
   describe("real-world payloads", () => {
+    describe("Vercel AI SDK input including reads but excluding cache writes", () => {
+      function usage(options: { input?: number; read?: number; noCache?: number; write?: number } = {}) {
+        const { input = 26_127, read = 20_335, noCache = input - read, write = read } = options
+        return [
+          int("gen_ai.usage.input_tokens", input),
+          int("gen_ai.usage.output_tokens", 139),
+          int("ai.usage.inputTokens", input),
+          int("ai.usage.outputTokens", 139),
+          int("ai.usage.totalTokens", input + 139),
+          int("ai.usage.cachedInputTokens", read),
+          int("ai.usage.inputTokenDetails.cacheReadTokens", read),
+          int("ai.usage.inputTokenDetails.cacheWriteTokens", write),
+          int("ai.usage.inputTokenDetails.noCacheTokens", noCache),
+          int("ai.usage.outputTokenDetails.reasoningTokens", 105),
+        ]
+      }
+
+      it.each([
+        { input: 26_127, read: 20_335, write: 20_335 },
+        { input: 10_000, read: 8_000, write: 3_000 },
+        { input: 20_335, read: 20_335, write: 20_335 },
+      ])("preserves $write separate writes for $read cached tokens out of $input", ({ input, read, write }) => {
+        const r = resolveTokens(usage({ input, read, write }), "openrouter")
+
+        expect(r).toEqual({
+          tokensInput: input - read,
+          tokensCacheRead: read,
+          tokensCacheCreate: write,
+          tokensOutput: 34,
+          tokensReasoning: 105,
+        })
+        expect(r.tokensInput + r.tokensCacheRead).toBe(input)
+        expect(r.tokensInput + r.tokensCacheRead + r.tokensCacheCreate).toBe(input + write)
+        expect(
+          cacheHitRate({ input: r.tokensInput, cacheRead: r.tokensCacheRead, cacheCreate: r.tokensCacheCreate }),
+        ).toBeCloseTo(read / (input + write))
+      })
+
+      it.each([
+        { noCache: 500, scenario: "noCache disagrees with read-inclusive input" },
+        { noCache: 2_000, scenario: "writes fit within input, leaving separate-write accounting unresolved" },
+      ])("preserves legacy normalization when $scenario", ({ noCache }) => {
+        const r = resolveTokens(usage({ input: 10_000, read: 8_000, noCache, write: 1_500 }), "openrouter")
+
+        expect(r.tokensInput).toBe(500)
+        expect(r.tokensCacheRead).toBe(8_000)
+        expect(r.tokensCacheCreate).toBe(1_500)
+      })
+
+      it.each(["ai.usage.totalTokens", "ai.usage.inputTokenDetails.noCacheTokens"])(
+        "preserves legacy inflated input for the separate-write fixture without %s",
+        (missing) => {
+          const r = resolveTokens(
+            usage().filter((a) => a.key !== missing),
+            "openrouter",
+          )
+
+          expect(r.tokensInput).toBe(26_127)
+          expect(r.tokensCacheCreate).toBe(20_335)
+        },
+      )
+
+      it("preserves writes when the total proves additive input", () => {
+        const attrs = usage().map((a) => (a.key === "ai.usage.totalTokens" ? int(a.key, 26_127 + 20_335 * 2 + 139) : a))
+        const r = resolveTokens(attrs, "openrouter")
+
+        expect(r.tokensInput).toBe(26_127)
+        expect(r.tokensCacheCreate).toBe(20_335)
+      })
+
+      it("preserves legacy zero input at the read-plus-write boundary, leaving separate writes unresolved", () => {
+        const r = resolveTokens(usage({ input: 10_000, read: 8_000, write: 2_000 }), "openrouter")
+        expect(r.tokensInput).toBe(0)
+        expect(r.tokensCacheCreate).toBe(2_000)
+      })
+
+      it.each([
+        ["ai.usage.totalTokens", 99_999],
+        ["ai.usage.inputTokens", 99_999],
+        ["ai.usage.inputTokenDetails.noCacheTokens", 100],
+        ["ai.usage.inputTokenDetails.cacheReadTokens", 100],
+        ["ai.usage.inputTokenDetails.cacheWriteTokens", 100],
+      ] as const)("keeps the fallback when %s disagrees", (key, value) => {
+        const attrs = usage().filter((a) => a.key !== key)
+        if (key === "ai.usage.inputTokenDetails.cacheWriteTokens") {
+          attrs.push(int("gen_ai.usage.cache_creation.input_tokens", 20_335))
+        }
+        const r = resolveTokens([...attrs, int(key, value)], "openrouter")
+        expect(r.tokensInput).toBe(26_127)
+        expect(r.tokensCacheCreate).toBe(20_335)
+      })
+
+      it("does not use a negative non-cached count to reconcile writes", () => {
+        const r = resolveTokens(usage({ input: 10_000, read: 12_000, noCache: -2_000 }), "openrouter")
+
+        expect(r.tokensInput).toBe(10_000)
+        expect(r.tokensCacheCreate).toBe(12_000)
+      })
+    })
+
     it("Vercel AI SDK v6 with OpenAI cache hit (total present)", () => {
       const attrs = [
         int("ai.usage.cachedInputTokens", 4429),
