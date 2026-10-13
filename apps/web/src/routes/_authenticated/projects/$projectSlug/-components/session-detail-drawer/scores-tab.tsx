@@ -1,9 +1,6 @@
 import type { SessionAssessmentItem, SessionEvidenceDestination } from "@domain/agent-score"
-import { Button, Text } from "@repo/ui"
-import {
-  useCreateAnnotation,
-  useUpdateAnnotation,
-} from "../../../../../../domains/annotations/annotations.collection.ts"
+import { Text } from "@repo/ui"
+import { useUpdateAnnotation } from "../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
 import { useScoresBySession } from "../../../../../../domains/scores/scores.collection.ts"
 import { useSessionAssessment } from "../../../../../../domains/session-assessments/session-assessments.collection.ts"
@@ -13,11 +10,6 @@ import { ScoreList } from "../scores/score-list.tsx"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
 import { SessionAssessmentSection } from "./session-assessment.tsx"
 
-/**
- * Session-wide scores — every score source across the session's traces.
- * Annotation create still targets the latest trace; editing targets each
- * annotation's own trace.
- */
 export function ScoresTab({
   projectId,
   sessionId,
@@ -28,7 +20,6 @@ export function ScoresTab({
   onOpenTrace,
   onOpenSpan,
   onOpenSignal,
-  onOpenConversation,
 }: {
   readonly projectId: string
   readonly sessionId: string
@@ -39,12 +30,10 @@ export function ScoresTab({
   readonly onOpenTrace: (traceId: string, options?: OpenTraceOptions) => void
   readonly onOpenSpan: (spanId: string, traceId?: string) => void
   readonly onOpenSignal: (signalId: string) => void
-  readonly onOpenConversation: () => void
 }) {
   const { data, isLoading, isError } = useScoresBySession({ projectId, traceIds, limit: 100 })
   const assessment = useSessionAssessment({ projectId, sessionId })
   const { data: signals = [] } = useSessionSignals({ projectId, traceIds })
-  const createMutation = useCreateAnnotation()
   const updateMutation = useUpdateAnnotation()
   const representedScoreIds = new Set(assessment.data?.items.flatMap((item) => item.scoreIds) ?? [])
   const otherScores = (data?.items ?? []).filter((score) => !representedScoreIds.has(score.id))
@@ -114,11 +103,13 @@ export function ScoresTab({
     }
   }
 
+  const isInitialLoading = isLoading || assessment.isLoading
+
   return (
     <ScoreList
       projectId={projectId}
-      scores={otherScores}
-      isLoading={isLoading}
+      scores={isInitialLoading ? [] : otherScores}
+      isLoading={false}
       isError={isError}
       listLabel="Other annotations and evaluations"
       intro={
@@ -128,7 +119,7 @@ export function ScoresTab({
             assessment={assessment.data}
             scores={data?.items ?? []}
             signals={signals}
-            isLoading={assessment.isLoading || isLoading}
+            isLoading={isInitialLoading}
             isError={assessment.isError}
             isUpdateLoading={updateMutation.isPending}
             onUpdate={updateAnnotation}
@@ -137,33 +128,10 @@ export function ScoresTab({
             isLoadingMore={assessment.isFetchingNextPage}
             onLoadMore={assessment.fetchNextPage}
           />
-          {latestTraceId.length > 0 ? (
-            <div className="flex flex-col items-start gap-1">
-              <Text.H6B>Missing something?</Text.H6B>
-              <Text.H6 color="foregroundMuted">
-                Add feedback about the whole session below, or select a specific part in Conversation to annotate it
-                there.
-              </Text.H6>
-              <Button type="button" variant="link" size="sm" className="h-auto px-0 py-0" onClick={onOpenConversation}>
-                Open conversation
-              </Button>
-            </div>
-          ) : null}
         </div>
       }
-      showCreateForm={latestTraceId.length > 0}
-      createPending={createMutation.isPending}
-      onCreate={(annotationData) => {
-        if (!latestTraceId) return
-        createMutation.mutate({
-          projectId,
-          traceId: latestTraceId,
-          value: annotationData.passed ? 1 : 0,
-          passed: annotationData.passed,
-          feedback: annotationData.comment.trim(),
-          ...(annotationData.signalId ? { signalId: annotationData.signalId } : {}),
-        })
-      }}
+      showCreateForm={false}
+      onCreate={() => {}}
       updatePending={updateMutation.isPending}
       onUpdate={updateAnnotation}
       onScoreClick={(score) => {
