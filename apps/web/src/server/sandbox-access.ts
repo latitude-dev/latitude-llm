@@ -13,15 +13,11 @@ import { getAdminPostgresClient, getPostgresClient } from "./clients.ts"
 
 /**
  * The sandbox authorization *logic*, as a plain server function — no HTTP/RPC
- * layer. Both the `authorizeSandboxAccess` server fn (used by `sandboxMiddleware`)
- * and `resolveOrgScope` (used inside other server fns) call this directly, so a
- * server fn never invokes another server fn. The caller supplies the already-
- * resolved `userId`; this verifies the sandbox exists and that the user is a
- * member of its *parent* org (the sandbox itself has no member rows).
- *
- * Lives in a server-only module reached exclusively from server-fn handlers, so
- * its Node-only imports are stripped from the browser bundle — the same property
- * the `.functions.ts` wrapper gives `authorizeSandboxAccess`.
+ * layer. Both `sandboxMiddleware` and `resolveOrgScope` (used inside other
+ * server fns) call this directly, so a server fn never invokes another server
+ * fn. The caller supplies the already-resolved `userId`; this verifies the
+ * sandbox exists and that the user is a member of its *parent* org (the
+ * sandbox itself has no member rows).
  */
 
 interface ResolvedSandboxAccess {

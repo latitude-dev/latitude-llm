@@ -1,4 +1,5 @@
-import { createFileRoute, notFound, redirect } from "@tanstack/react-router"
+import { Text } from "@repo/ui"
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router"
 import { getSandbox } from "../../../domains/sandbox/sandbox.functions.ts"
 import { parseServerError } from "../../../lib/errors.ts"
 import { SandboxShell } from "./-components/sandbox-shell.tsx"
@@ -32,4 +33,17 @@ export const Route = createFileRoute("/sandbox/$sandboxOrgId")({
     }
   },
   component: SandboxShell,
+  // Must stay on this route: without it the notFound bubbles to root and SandboxShell renders with no `sandbox` in context.
+  notFoundComponent: SandboxNotFound,
 })
+
+function SandboxNotFound() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
+      <Text.H4>This sandbox doesn't exist or you don't have access to it.</Text.H4>
+      <Link to="/" className="text-primary underline">
+        Go home
+      </Link>
+    </div>
+  )
+}
