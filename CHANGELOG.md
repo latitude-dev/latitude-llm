@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.123 - 2026-10-13
+
+### Web
+
+- Fixed sandbox (Test Mode) pages failing with "This page is out of date" and a 500 since v0.3.121: sandbox access checks no longer go through a server function that the upgraded TanStack Start could not resolve, and a missing sandbox now shows a not-found screen instead of crashing (ref: #4864).
+
 ## v0.3.122 - 2026-10-09
 
 ### Telemetry and costs
