@@ -140,6 +140,150 @@ describe("SessionRepository", () => {
     )
   })
 
+  it.each(["asc", "desc"] as const)("paginates tied non-search sessions in %s order", async (sortDirection) => {
+    const startTime = new Date("2026-01-01T10:00:00.000Z")
+    await insertSpans(
+      ["session-a", "session-b", "session-c"].map((sessionId, index) =>
+        makeSpanRow({
+          sessionId,
+          traceId: String(index + 1).repeat(32),
+          spanId: String(index + 1).repeat(16),
+          startTime,
+          model: "test-model",
+        }),
+      ),
+    )
+    const options = {
+      limit: 2,
+      sortDirection,
+      filters: { hasLlmActivity: [{ op: "eq" as const, value: true }] },
+    }
+    const first = await runCh(repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options }))
+    const second = await runCh(
+      repo.listByProjectId({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        options: { ...options, cursor: nonNull(first.nextCursor) },
+      }),
+    )
+    const expected =
+      sortDirection === "asc" ? ["session-a", "session-b", "session-c"] : ["session-c", "session-b", "session-a"]
+    expect([...first.items, ...second.items].map((session) => session.sessionId)).toEqual(expected)
+    expect(first.hasMore).toBe(true)
+    expect(second.hasMore).toBe(false)
+    expect(second.nextCursor).toBeUndefined()
+  })
+
+  it("returns an empty non-search page without a cursor", async () => {
+    const page = await runCh(
+      repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options: { limit: 1 } }),
+    )
+    expect(page).toEqual({ items: [], hasMore: false })
+  })
+
+  it("preserves nanosecond sort values across page boundaries", async () => {
+    const startTime = new Date("2026-01-01T10:00:00.000Z")
+    await insertSpans(
+      [1, 2].map((index) => ({
+        ...makeSpanRow({
+          sessionId: `session-${index}`,
+          traceId: String(index).repeat(32),
+          spanId: String(index).repeat(16),
+          startTime,
+        }),
+        start_time: `2026-01-01 10:00:00.00000000${index}`,
+      })),
+    )
+    const first = await runCh(
+      repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options: { limit: 1 } }),
+    )
+    expect(first.nextCursor?.sortValue).toBe("2026-01-01 10:00:00.000000002")
+    const second = await runCh(
+      repo.listByProjectId({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        options: { limit: 1, cursor: nonNull(first.nextCursor) },
+      }),
+    )
+    expect(first.items.map((session) => session.sessionId)).toEqual(["session-2"])
+    expect(second.items.map((session) => session.sessionId)).toEqual(["session-1"])
+    expect(second.hasMore).toBe(false)
+  })
+
+  it("paginates numeric sorts in selected order", async () => {
+    const startTime = new Date("2026-01-01T10:00:00.000Z")
+    await insertSpans(
+      [20, 100, 3].map((costTotalMicrocents, index) =>
+        makeSpanRow({
+          sessionId: `session-${index}`,
+          traceId: String(index + 1).repeat(32),
+          spanId: String(index + 1).repeat(16),
+          startTime,
+          costTotalMicrocents,
+        }),
+      ),
+    )
+    const options = { limit: 2, sortBy: "cost", sortDirection: "asc" as const }
+    const first = await runCh(repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options }))
+    expect(first.nextCursor?.sortValue).toBe("20")
+    const second = await runCh(
+      repo.listByProjectId({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        options: { ...options, cursor: nonNull(first.nextCursor) },
+      }),
+    )
+    expect([...first.items, ...second.items].map((session) => session.costTotalMicrocents)).toEqual([3, 20, 100])
+    expect(second.hasMore).toBe(false)
+  })
+
+  it("hydrates complete aggregate state for the filtered page within its tenant and project", async () => {
+    const startTime = new Date("2026-01-01T10:00:00.000Z")
+    const firstSpan = makeSpanRow({
+      sessionId: "selected",
+      traceId: "1".repeat(32),
+      spanId: "1".repeat(16),
+      startTime,
+      costTotalMicrocents: 40,
+      tokensInput: 10,
+      metadata: { first: "value" },
+    })
+    await insertSpans([firstSpan])
+    await insertSpans([
+      makeSpanRow({
+        sessionId: "selected",
+        traceId: "2".repeat(32),
+        spanId: "2".repeat(16),
+        startTime: new Date(startTime.getTime() + 1_000),
+        costTotalMicrocents: 60,
+        tokensInput: 20,
+        metadata: { second: "value" },
+      }),
+      makeSpanRow({ sessionId: "other", traceId: "3".repeat(32), spanId: "3".repeat(16), startTime }),
+      { ...firstSpan, organization_id: "another-organization", cost_total_microcents: 999 },
+      { ...firstSpan, project_id: "another-project", cost_total_microcents: 999 },
+    ])
+    const page = await runCh(
+      repo.listByProjectId({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        options: { limit: 1, sortBy: "cost", filters: { cost: [{ op: "gte", value: 100 }] } },
+      }),
+    )
+    expect(page.items).toHaveLength(1)
+    expect(page.items[0]).toMatchObject({
+      sessionId: "selected",
+      costTotalMicrocents: 100,
+      tokensInput: 30,
+      spanCount: 2,
+      traceCount: 2,
+      metadata: { first: "value", second: "value" },
+    })
+    expect([...nonNull(page.items[0]).traceIds].sort()).toEqual(["1".repeat(32), "2".repeat(32)])
+    expect(page.hasMore).toBe(false)
+    expect(page.nextCursor).toBeUndefined()
+  })
+
   it("lists a cutoff-bounded session snapshot after later activity", async () => {
     const sessionId = SessionId("bulk-session")
     const firstTraceId = "f".repeat(32)
