@@ -3,7 +3,7 @@ import { EvaluationId, ProjectId, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import type { LoadedEvaluationAlignmentState } from "../../alignment/types.ts"
 import { emptyEvaluationAlignment } from "../../entities/evaluation.ts"
-import { isArchivedEvaluation, isDeletedEvaluation } from "../../helpers.ts"
+import { isArchivedEvaluation, isDeletedEvaluation, resolveEvaluationScript } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 
@@ -73,7 +73,8 @@ export const loadAlignmentStateOrInactiveUseCase = Effect.fn("evaluations.loadAl
     }
 
     const issue = yield* signalRepository.findById(SignalId(input.signalId))
-    const currentScriptHash = yield* Effect.tryPromise(() => hashOptimizationCandidateText(evaluation.script))
+    const resolvedScript = resolveEvaluationScript(evaluation)
+    const currentScriptHash = yield* Effect.tryPromise(() => hashOptimizationCandidateText(resolvedScript))
 
     // An unaligned judge (alignment accrues as annotations land) has no matrix yet: present an empty
     // one and force a full rebuild (incrementalEligible = false).
@@ -88,7 +89,7 @@ export const loadAlignmentStateOrInactiveUseCase = Effect.fn("evaluations.loadAl
         description: evaluation.description,
         alignedAt: (evaluation.alignedAt ?? evaluation.updatedAt).toISOString(),
         draft: {
-          script: evaluation.script,
+          script: resolvedScript,
           evaluationHash: evaluation.alignment?.evaluationHash ?? currentScriptHash,
           trigger: evaluation.trigger,
         },
