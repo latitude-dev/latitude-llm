@@ -93,7 +93,7 @@ catalog:
   vitest: 5.0.3
   zod: 4.3.6
   voyageai: 0.2.1
-  "@modelcontextprotocol/sdk": 1.29.0
+  "@modelcontextprotocol/sdk": 1.31.0
   "@modelcontextprotocol/inspector": 0.21.2
 
 # pdfjs-dist pulls @napi-rs/canvas for its Node rasterization path, which we never take. It
