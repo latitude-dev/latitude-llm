@@ -58,6 +58,8 @@ export type AuthContext =
 
 The middleware writes the chosen variant onto `c.var.auth`. `c.var.organization` carries the resolved org. Routes that need a human actor (e.g. annotation `annotatorId`) read `c.var.auth.method === "oauth" ? c.var.auth.userId : null`.
 
+`PATCH /v1/projects/{projectSlug}` follows the same split: name, generic `settings` patches, and flagger toggles accept API keys when the route is in scope. A body that includes `settings.redaction` requires OAuth so `updateProjectRedactionUseCase` can authorize the actor (admin or owner) and validate custom rules; API keys receive **403**. See [`settings.md`](./settings.md#redaction).
+
 ### Validators
 
 Both validators live in dedicated platform packages so they can be reused by other resource servers without pulling in HTTP middleware:
