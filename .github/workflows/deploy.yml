@@ -347,14 +347,14 @@ jobs:
               --cluster "${CLUSTER}" \
               --services "${SERVICE_ARN}" \
               --output json | jq -r --arg service "${SERVICE}" '
-                .services[0] as $service |
-                "[" + $service + "] desired=\($service.desiredCount // 0) running=\($service.runningCount // 0) pending=\($service.pendingCount // 0)",
+                .services[0] as $svc |
+                "[" + $service + "] desired=\($svc.desiredCount // 0) running=\($svc.runningCount // 0) pending=\($svc.pendingCount // 0)",
                 (
-                  $service.deployments[]? |
+                  $svc.deployments[]? |
                   "[" + $service + "] deployment status=\(.status // "unknown") rollout=\(.rolloutState // "n/a") taskDef=\(.taskDefinition | split("/")[-1]) running=\(.runningCount // 0) pending=\(.pendingCount // 0) created=\(.createdAt // "n/a") updated=\(.updatedAt // "n/a")"
                 ),
                 (
-                  $service.events[0:10][]? |
+                  $svc.events[0:10][]? |
                   "[" + $service + "] event: \(.createdAt // "n/a") \(.message // "")"
                 )
               '
@@ -738,14 +738,14 @@ jobs:
               --cluster "${CLUSTER}" \
               --services "${SERVICE_ARN}" \
               --output json | jq -r --arg service "${SERVICE}" '
-                .services[0] as $service |
-                "[" + $service + "] desired=\($service.desiredCount // 0) running=\($service.runningCount // 0) pending=\($service.pendingCount // 0)",
+                .services[0] as $svc |
+                "[" + $service + "] desired=\($svc.desiredCount // 0) running=\($svc.runningCount // 0) pending=\($svc.pendingCount // 0)",
                 (
-                  $service.deployments[]? |
+                  $svc.deployments[]? |
                   "[" + $service + "] deployment status=\(.status // "unknown") rollout=\(.rolloutState // "n/a") taskDef=\(.taskDefinition | split("/")[-1]) running=\(.runningCount // 0) pending=\(.pendingCount // 0) created=\(.createdAt // "n/a") updated=\(.updatedAt // "n/a")"
                 ),
                 (
-                  $service.events[0:10][]? |
+                  $svc.events[0:10][]? |
                   "[" + $service + "] event: \(.createdAt // "n/a") \(.message // "")"
                 )
               '
