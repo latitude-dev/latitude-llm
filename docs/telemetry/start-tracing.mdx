@@ -11,12 +11,19 @@ description: Connect your agent to Latitude and send your first traces.
 
 Use your agent to add Latitude tracing to your app or agent harness. The `latitude-setup` skill inspects your codebase, detects your LLM providers and existing OpenTelemetry setup, installs the right SDK or harness plugin, verifies that traces arrive in your project, and builds your first [Artifact](/more/artifacts) from them. If you don't have a Latitude account yet, it bootstraps a temporary one from the terminal, no signup, and gives you a link to claim it.
 
+<Note>
+  The coding agent that receives the prompt performs the setup. It is not necessarily what
+  Latitude will trace. For example, pasting the application prompt into Hermes instruments the
+  application in the current repository; it does not trace Hermes's own conversations. To trace
+  Hermes itself, use the [Hermes telemetry guide](./hermes).
+</Note>
+
 <Steps>
   <Step title="Ask your agent to install tracing">
     Paste this prompt into Claude Code, Cursor, Codex, OpenCode, Hermes, or any other agent:
 
     ```text
-    Install the `latitude-setup` skill from `github.com/latitude-dev/skills` and use it to set up Latitude tracing here, following best practices.
+    Install the `latitude-setup` skill from `github.com/latitude-dev/skills` and use it to add Latitude tracing to the application in this repository, following best practices.
     ```
 
   </Step>
