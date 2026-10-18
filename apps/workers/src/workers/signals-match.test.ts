@@ -8,6 +8,7 @@ import {
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { evaluationScoreSchema } from "@domain/scores"
 import { createSignalCentroid } from "@domain/signals"
+import type { EvaluationSettings } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
 import { scores } from "@platform/db-postgres/schema/scores"
@@ -124,6 +125,7 @@ const makeEvaluationRow = (input: {
   readonly projectId?: string
   readonly signalId?: string
   readonly script?: string
+  readonly settings?: EvaluationSettings | null
 }) =>
   evaluationSchema.parse({
     id: input.id,
@@ -133,6 +135,7 @@ const makeEvaluationRow = (input: {
     name: `evaluation-${input.id.slice(0, 6)}`,
     description: "Signals match worker live evaluation",
     script: input.script ?? "export default async function evaluate() { return { value: 1 } }",
+    settings: input.settings ?? null,
     trigger: {
       ...defaultEvaluationTrigger(),
       filter: input.filter ?? {},
@@ -448,6 +451,54 @@ describe("runSignalsMatchJob", () => {
         traceId,
       })}:embeddings-ready`,
     })
+  })
+
+  it("on embeddings-ready, recompiles settings-backed semantic evals so a stale stored script is not skipped", async () => {
+    const projectId = "z".repeat(24)
+    const traceId = "x".repeat(32)
+    const semanticEvalId = "9".repeat(24)
+    const semanticSettings: EvaluationSettings = {
+      kind: "rule",
+      match: "all",
+      conditions: [{ type: "semantic_similarity", query: "frustration", operator: "gte", threshold: 0.5 }],
+    }
+
+    const signalId = "f".repeat(24)
+    await insertTraceRows([makeTraceRow({ projectId, traceId })])
+    await pg.db.insert(signals).values([
+      makeSignalRow({ id: signalId, projectId, uuid: "77777777-7777-4777-8777-777777777777" }),
+    ])
+    await pg.db.insert(evaluations).values([
+      makeEvaluationRow({
+        id: semanticEvalId,
+        projectId,
+        signalId,
+        script: "export default async function evaluate() { return Passed(1) }",
+        settings: semanticSettings,
+      }),
+    ])
+
+    const { publisher, published } = createFakeQueuePublisher()
+    const redisClient = createFakeRedisClient()
+
+    const result = await Effect.runPromise(
+      runSignalsMatchJob({
+        publisher,
+        postgresClient: pg.appPostgresClient,
+        clickhouseClient: ch.client,
+        redisClient,
+      })({
+        organizationId: ORGANIZATION_ID,
+        projectId,
+        traceId,
+        reason: "embeddings-ready",
+      }),
+    )
+
+    expect(result.action).toBe("completed")
+    const executePublishes = published.filter((p) => p.queue === "live-evaluations" && p.task === "execute")
+    expect(executePublishes).toHaveLength(1)
+    expect(executePublishes[0]?.payload).toMatchObject({ evaluationId: semanticEvalId })
   })
 })
 
