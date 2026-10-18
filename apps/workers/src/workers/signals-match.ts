@@ -2,6 +2,7 @@ import {
   buildTraceEndEvaluationSelectionInputs,
   listAllActiveEvaluations,
   orchestrateTraceEndLiveEvaluationExecutesUseCase,
+  resolveEvaluationScript,
 } from "@domain/evaluations"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { requiresEmbedding } from "@domain/sandbox"
@@ -151,7 +152,7 @@ export const runSignalsMatchJob =
       // deferred waiting for vectors. Non-semantic evals already ran on the ingest pass.
       const isEmbeddingsReady = payload.reason === "embeddings-ready"
       const evaluationsToPublish = isEmbeddingsReady
-        ? selectedEvaluations.filter((evaluation) => requiresEmbedding(evaluation.script))
+        ? selectedEvaluations.filter((evaluation) => requiresEmbedding(resolveEvaluationScript(evaluation)))
         : selectedEvaluations
 
       const { skippedTurnCount, publishedExecuteCount } = yield* orchestrateTraceEndLiveEvaluationExecutesUseCase({
