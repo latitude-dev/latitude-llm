@@ -293,6 +293,74 @@ describe("enrichAnnotationForPublicationUseCase", () => {
     expect(capturedPrompt).toContain("Here is a short summary.")
     expect(capturedPrompt).not.toContain("Highlighted text")
   })
+
+  it("truncates an oversized conversation so the prompt never overflows the model context window", async () => {
+    const hugeTurn = "x".repeat(200_000)
+    const allMessages: GenAIMessage[] = [
+      { role: "user", parts: [{ type: "text", content: `head-marker ${hugeTurn}` }] },
+      { role: "assistant", parts: [{ type: "text", content: `${hugeTurn} tail-marker` }] },
+    ]
+    const draft = {
+      ...buildDraftAnnotationScore(),
+      metadata: {
+        rawFeedback: "The whole reply missed the point",
+      },
+    } as Score
+
+    let capturedPrompt = ""
+    const { layer } = createEnrichLayers(
+      draft,
+      <T>(input: GenerateInput<T>) => {
+        capturedPrompt = input.prompt
+        return Effect.succeed({
+          object: { reasoning: "test", enrichedFeedback: "Enriched" } as T,
+          tokens: 15,
+          duration: 50_000_000,
+        } as GenerateResult<T>)
+      },
+      makeTraceDetail(allMessages),
+    )
+
+    await Effect.runPromise(enrichAnnotationForPublicationUseCase({ scoreId: scoreCuid }).pipe(Effect.provide(layer)))
+
+    expect(capturedPrompt.length).toBeLessThan(130_000)
+    expect(capturedPrompt).toContain("chars omitted from the middle of the conversation")
+    expect(capturedPrompt).toContain("head-marker")
+    expect(capturedPrompt).toContain("tail-marker")
+  })
+
+  it("leaves a conversation under the truncation cap untouched", async () => {
+    const allMessages: GenAIMessage[] = [
+      { role: "user", parts: [{ type: "text", content: "A short question" }] },
+      { role: "assistant", parts: [{ type: "text", content: "A short answer" }] },
+    ]
+    const draft = {
+      ...buildDraftAnnotationScore(),
+      metadata: {
+        rawFeedback: "The whole reply missed the point",
+      },
+    } as Score
+
+    let capturedPrompt = ""
+    const { layer } = createEnrichLayers(
+      draft,
+      <T>(input: GenerateInput<T>) => {
+        capturedPrompt = input.prompt
+        return Effect.succeed({
+          object: { reasoning: "test", enrichedFeedback: "Enriched" } as T,
+          tokens: 15,
+          duration: 50_000_000,
+        } as GenerateResult<T>)
+      },
+      makeTraceDetail(allMessages),
+    )
+
+    await Effect.runPromise(enrichAnnotationForPublicationUseCase({ scoreId: scoreCuid }).pipe(Effect.provide(layer)))
+
+    expect(capturedPrompt).not.toContain("chars omitted")
+    expect(capturedPrompt).toContain("A short question")
+    expect(capturedPrompt).toContain("A short answer")
+  })
 })
 
 describe("formatGenAIMessagesForEnrichmentPrompt", () => {
