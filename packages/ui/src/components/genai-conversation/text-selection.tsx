@@ -31,7 +31,7 @@ interface TextSelectionContextValue {
   detected: DetectedSelection | null
   anchor: TextSelectionAnchor | null
   resolveAndAnnotate: (clickPosition?: { x: number; y: number }, passed?: boolean | null) => TextSelectionAnchor | null
-  resolveAndCopy: () => void
+  resolveAndCopy: () => Promise<boolean>
   clearSelection: () => void
   getHighlightsForBlock: (messageIndex: number, partIndex: number) => HighlightRange[]
   /** Part containing the first search hit; MarkdownContent auto-expands its collapsed middle if so. */
@@ -39,6 +39,29 @@ interface TextSelectionContextValue {
 }
 
 export const TextSelectionContext = createContext<TextSelectionContextValue | null>(null)
+
+function finishSelectionCopy({
+  copied,
+  clearDetection,
+  mounted,
+}: {
+  readonly copied: DetectedSelection
+  readonly clearDetection: ReturnType<typeof useSelectionDetector>["clearDetection"]
+  readonly mounted: boolean
+}) {
+  if (!mounted) return false
+  const selection = window.getSelection()
+  const currentRange = selection?.rangeCount ? selection.getRangeAt(0) : null
+  if (
+    !currentRange ||
+    (currentRange.compareBoundaryPoints(Range.START_TO_START, copied.range) === 0 &&
+      currentRange.compareBoundaryPoints(Range.END_TO_END, copied.range) === 0)
+  ) {
+    selection?.removeAllRanges()
+  }
+  clearDetection(copied)
+  return true
+}
 
 export function TextSelectionProvider({
   messages,
@@ -62,6 +85,7 @@ export function TextSelectionProvider({
   readonly children: ReactNode
 }) {
   const [anchor, setAnchor] = useState<TextSelectionAnchor | null>(null)
+  const mountedRef = useRef(false)
   const { detected, clearDetection } = useSelectionDetector(containerRef, messages)
 
   const messagesRef = useMemo(() => ({ current: messages }), [messages])
@@ -87,8 +111,8 @@ export function TextSelectionProvider({
     [detected, messagesRef, onSelect, clearDetection],
   )
 
-  const resolveAndCopy = useCallback(() => {
-    if (!detected) return
+  const resolveAndCopy = useCallback(async () => {
+    if (!detected) return false
 
     if (detected.isSinglePart) {
       const result = resolveSourceOffsets(
@@ -101,9 +125,9 @@ export function TextSelectionProvider({
         const fullText = getPartText(messagesRef.current, result.messageIndex, result.partIndex)
         const effective = fullText ? formatPartText(fullText, result.textFormat) : null
         const markdown = effective?.slice(result.startOffset, result.endOffset) ?? detected.selectedText
-        navigator.clipboard.writeText(markdown)
+        await navigator.clipboard.writeText(markdown)
       } else {
-        navigator.clipboard.writeText(detected.selectedText)
+        await navigator.clipboard.writeText(detected.selectedText)
       }
     } else {
       // Multi-message: map start/end messages, full markdown for middle
@@ -133,11 +157,10 @@ export function TextSelectionProvider({
         }
       }
 
-      navigator.clipboard.writeText(parts.length > 0 ? parts.join("\n\n") : detected.selectedText)
+      await navigator.clipboard.writeText(parts.length > 0 ? parts.join("\n\n") : detected.selectedText)
     }
 
-    window.getSelection()?.removeAllRanges()
-    clearDetection()
+    return finishSelectionCopy({ copied: detected, clearDetection, mounted: mountedRef.current })
   }, [detected, messagesRef, clearDetection])
 
   const clearSelection = useCallback(() => {
@@ -158,13 +181,17 @@ export function TextSelectionProvider({
   }
 
   useMountEffect(() => {
+    mountedRef.current = true
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         clearSelectionFnRef.current()
       }
     }
     document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
+    return () => {
+      mountedRef.current = false
+      document.removeEventListener("keydown", handleKeyDown)
+    }
   })
 
   const rangeIndex = useMemo(() => {

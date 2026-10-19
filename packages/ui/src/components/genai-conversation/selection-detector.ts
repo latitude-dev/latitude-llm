@@ -24,11 +24,11 @@ export interface DetectedSelection {
 export function useSelectionDetector(
   containerRef: RefObject<HTMLElement | null>,
   _messages: readonly (GenAIMessage | null)[],
-): { detected: DetectedSelection | null; clearDetection: () => void } {
+): { detected: DetectedSelection | null; clearDetection: (expected?: DetectedSelection) => void } {
   const [detected, setDetected] = useState<DetectedSelection | null>(null)
 
-  const clearDetection = useCallback(() => {
-    setDetected(null)
+  const clearDetection = useCallback((expected?: DetectedSelection) => {
+    setDetected((current) => (expected && current !== expected ? current : null))
   }, [])
 
   useMountEffect(() => {

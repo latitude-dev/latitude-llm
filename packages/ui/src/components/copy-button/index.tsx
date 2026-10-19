@@ -5,6 +5,7 @@ import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { Button } from "../button/button.tsx"
 import { Icon, type IconSize } from "../icons/icons.tsx"
 import { Text } from "../text/text.tsx"
+import { useToast } from "../toast/useToast.ts"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 
 export function CopyButton({
@@ -18,22 +19,32 @@ export function CopyButton({
   readonly tooltip?: string
   size?: IconSize
 }) {
+  const { toast } = useToast()
   const [copied, setCopied] = useState(false)
+  const mountedRef = useRef(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleCopy = useCallback(
-    (e: MouseEvent) => {
+    async (e: MouseEvent) => {
       e.stopPropagation()
-      navigator.clipboard.writeText(value)
-      setCopied(true)
+      setCopied(false)
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
-      timeoutRef.current = setTimeout(() => setCopied(false), 2000)
+      try {
+        await navigator.clipboard.writeText(value)
+        if (!mountedRef.current) return
+        setCopied(true)
+        timeoutRef.current = setTimeout(() => setCopied(false), 2000)
+      } catch {
+        if (mountedRef.current) toast({ title: "Unable to copy to clipboard" })
+      }
     },
-    [value],
+    [value, toast],
   )
 
   useMountEffect(() => {
+    mountedRef.current = true
     return () => {
+      mountedRef.current = false
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   })

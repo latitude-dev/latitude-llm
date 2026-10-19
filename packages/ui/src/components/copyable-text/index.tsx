@@ -45,20 +45,29 @@ export function CopyableText({
 }) {
   const { toast } = useToast()
   const [copied, setCopied] = useState(false)
+  const mountedRef = useRef(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useMountEffect(() => {
+    mountedRef.current = true
     return () => {
+      mountedRef.current = false
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   })
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(value)
-    setCopied(true)
-    toast({ title: toastMessage })
+  const handleCopy = useCallback(async () => {
+    setCopied(false)
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    timeoutRef.current = setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(value)
+      if (!mountedRef.current) return
+      setCopied(true)
+      toast({ title: toastMessage })
+      timeoutRef.current = setTimeout(() => setCopied(false), 2000)
+    } catch {
+      if (mountedRef.current) toast({ title: "Unable to copy to clipboard" })
+    }
   }, [value, toast, toastMessage])
 
   const config = SIZE_CONFIG[size]
