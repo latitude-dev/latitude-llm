@@ -78,7 +78,7 @@ catalog:
   jose: 6.2.3
   js-tiktoken: 1.0.21
   mustache: 4.2.0
-  pdfjs-dist: 6.2.108
+  pdfjs-dist: 6.4.299
   pg: 8.23.0
   quickjs-emscripten: 0.32.0
   react: 19.2.5
