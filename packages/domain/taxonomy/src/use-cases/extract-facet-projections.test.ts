@@ -222,4 +222,18 @@ describe("extractFacetProjectionsUseCase", () => {
     expect(spy.generateCalls).toBe(0)
     expect(repo.rows.size).toBe(0)
   })
+
+  it("never sends a lone surrogate to the model when the char cap slices through an emoji", async () => {
+    const spy = emptySpy()
+    const emoji = "\u{1F600}" // surrogate pair: \uD83D \uDE00
+    // The emoji's high surrogate lands exactly on FACET_EXTRACTION_INPUT_CHAR_CAP - 1, so the
+    // raw slice(0, cap) keeps only the high surrogate and drops its low-surrogate partner.
+    const transcript = `${"a".repeat(FACET_EXTRACTION_INPUT_CHAR_CAP - 1)}${emoji}${"b".repeat(50)}`
+    const { effect } = run({ facet: facet(), samples: [sample({ transcript })], now }, { ai: makeAi(spy) })
+
+    await Effect.runPromise(effect)
+
+    expect(spy.prompts).toHaveLength(1)
+    expect(spy.prompts[0]).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/)
+  })
 })

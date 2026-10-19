@@ -29,7 +29,7 @@ export interface SuspiciousSnippet {
  */
 const loneSurrogatePattern = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
 
-function replaceLoneSurrogates(text: string): string {
+export function replaceLoneSurrogates(text: string): string {
   return text.replace(loneSurrogatePattern, "�")
 }
 

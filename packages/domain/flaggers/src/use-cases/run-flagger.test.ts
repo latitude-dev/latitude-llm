@@ -39,6 +39,7 @@ import {
   classifyConversationForFlaggerUseCase,
   classifyTraceForFlaggerUseCase,
   normalizeSystemPromptForCacheKey,
+  renderFallbackAgentContextForTesting,
 } from "./run-flagger.ts"
 
 const INPUT = {
@@ -2845,5 +2846,33 @@ describe("Safety verdict classification", () => {
     expect(calls.generate[0].prompt).toContain("PII-SHAPED USER MESSAGE EXCERPTS")
     expect(calls.generate[0].prompt).toContain("ada@example.com")
     expect(calls.generate[0].prompt).toContain("bob.smith@acme.com")
+  })
+})
+
+const LONE_SURROGATE_PATTERN = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+
+describe("renderFallbackAgentContext", () => {
+  // FALLBACK_SYSTEM_PROMPT_CHARS is 600; both the "beginning" head slice and the "ending"
+  // tail slice can land mid-codepoint on an arbitrary customer system prompt.
+  const FALLBACK_SYSTEM_PROMPT_CHARS = 600
+
+  it("never leaves a lone surrogate when the head slice lands mid-codepoint", () => {
+    const emoji = "\u{1F600}" // surrogate pair: \uD83D \uDE00
+    // The emoji's high surrogate lands exactly at index 599, the last index kept by slice(0, 600).
+    const systemPrompt = `${"a".repeat(FALLBACK_SYSTEM_PROMPT_CHARS - 1)}${emoji}${"b".repeat(2000)}`
+
+    const rendered = renderFallbackAgentContextForTesting(systemPrompt)
+
+    expect(rendered).not.toMatch(LONE_SURROGATE_PATTERN)
+  })
+
+  it("never leaves a lone surrogate when the tail slice lands mid-codepoint", () => {
+    const emoji = "\u{1F600}"
+    // The emoji's low surrogate lands exactly at the first index kept by slice(-600).
+    const systemPrompt = `${"a".repeat(2000)}${emoji}${"b".repeat(FALLBACK_SYSTEM_PROMPT_CHARS - 1)}`
+
+    const rendered = renderFallbackAgentContextForTesting(systemPrompt)
+
+    expect(rendered).not.toMatch(LONE_SURROGATE_PATTERN)
   })
 })
