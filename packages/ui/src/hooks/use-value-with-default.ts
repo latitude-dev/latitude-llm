@@ -42,7 +42,7 @@ type Primitive = string | number | boolean | null | undefined
  * @returns Tuple of [currentValue, setValueFn]
  */
 export function useValueWithDefault<T extends Primitive>(defaultValue: T): [T, (value: T) => void] {
-  const [userOverride, setUserOverride] = useState<T | null>(null)
+  const [userOverride, setUserOverride] = useState<{ value: T } | null>(null)
   const [prevDefault, setPrevDefault] = useState(defaultValue)
 
   if (prevDefault !== defaultValue) {
@@ -50,10 +50,10 @@ export function useValueWithDefault<T extends Primitive>(defaultValue: T): [T, (
     setUserOverride(null)
   }
 
-  const value = userOverride ?? defaultValue
+  const value = userOverride ? userOverride.value : defaultValue
 
   const setValue = useCallback((newValue: T) => {
-    setUserOverride(newValue)
+    setUserOverride({ value: newValue })
   }, [])
 
   return [value, setValue]
