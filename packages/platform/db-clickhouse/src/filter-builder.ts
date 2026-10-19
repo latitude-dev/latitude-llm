@@ -47,6 +47,34 @@ const assertIntegerFilterValue = (field: string, value: FilterCondition["value"]
   }
 }
 
+const FIXED_STRING_CH_TYPE = /^FixedString\((\d+)\)$/
+
+const fixedStringByteLength = (chType: string): number | undefined => {
+  const match = FIXED_STRING_CH_TYPE.exec(chType)
+  return match ? Number(match[1]) : undefined
+}
+
+const utf8ByteLength = (value: string): number => new TextEncoder().encode(value).length
+
+/** Ops whose SQL negates the match, so a value that can never match should make the clause always true. */
+const NEGATED_FIXED_STRING_OPS: ReadonlySet<string> = new Set(["neq", "notContains"])
+
+/**
+ * FixedString(N) columns store up to N bytes, right-padded with '\0' when shorter — ClickHouse only
+ * rejects a value outright ("Too large value for FixedString(N)") when it *exceeds* N bytes, so
+ * binding an over-long id as a query param would 500 instead of returning zero rows. `in`/`notIn`
+ * values are filtered to fit (ClickHouse binds an empty array fine); other ops degrade to a static
+ * clause before an over-long value ever reaches ClickHouse — mirroring how `sessionMembershipClause`
+ * (registries/helpers.ts) drops the mismatched-length trace arm.
+ */
+const sanitizeFixedStringArrayValue = (
+  value: FilterCondition["value"],
+  byteLength: number,
+): FilterCondition["value"] => {
+  const values = Array.isArray(value) ? value : [value]
+  return values.filter((item): item is string => typeof item === "string" && utf8ByteLength(item) <= byteLength)
+}
+
 // ---------------------------------------------------------------------------
 // Operator -> SQL mapping
 // ---------------------------------------------------------------------------
@@ -129,17 +157,11 @@ export function buildClickHouseWhere(
 
     for (const cond of conditions) {
       const p = `${prefix}_${paramIdx++}`
-      let value: FilterCondition["value"] = mapping.mapValue ? mapping.mapValue(cond.value) : cond.value
-      if (isIntegerChType(mapping.chType)) {
-        assertIntegerFilterValue(field, value)
+      const resolved = resolveScalarCondition(field, mapping, cond, p)
+      clauses.push(resolved.clause)
+      if (resolved.param) {
+        params[p] = resolved.value
       }
-      const ilikeWrap =
-        (cond.op === "contains" || cond.op === "notContains") && !(mapping.isArray && mapping.arrayContains)
-      if (ilikeWrap && typeof value === "string") {
-        value = `%${value}%`
-      }
-      params[p] = value
-      clauses.push(buildClause(mapping, p, cond))
     }
   }
 
@@ -159,6 +181,43 @@ export const runFilterBuild = <A>(build: () => A): Effect.Effect<A, ValidationEr
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+type ResolvedCondition =
+  | { readonly clause: string; readonly param: true; readonly value: FilterCondition["value"] }
+  | { readonly clause: string; readonly param: false }
+
+/** Resolves one filter condition on a scalar field mapping to a SQL clause and its param value, if any. */
+function resolveScalarCondition(
+  field: string,
+  mapping: ScalarFieldMapping,
+  cond: FilterCondition,
+  paramName: string,
+): ResolvedCondition {
+  let value: FilterCondition["value"] = mapping.mapValue ? mapping.mapValue(cond.value) : cond.value
+  if (isIntegerChType(mapping.chType)) {
+    assertIntegerFilterValue(field, value)
+  }
+  const ilikeWrap = (cond.op === "contains" || cond.op === "notContains") && !(mapping.isArray && mapping.arrayContains)
+
+  // ILIKE binds its pattern as `:String` regardless of column type, so only the non-ILIKE paths
+  // (which bind `:FixedString(N)` / `:Array(FixedString(N))`) risk the ClickHouse parse error.
+  const fixedStringLength = ilikeWrap ? undefined : fixedStringByteLength(mapping.chType)
+  if (fixedStringLength !== undefined) {
+    if (cond.op === "in" || cond.op === "notIn") {
+      value = sanitizeFixedStringArrayValue(value, fixedStringLength)
+    } else {
+      const scalar = Array.isArray(value) ? value[0] : value
+      if (typeof scalar !== "string" || utf8ByteLength(scalar) > fixedStringLength) {
+        return { clause: NEGATED_FIXED_STRING_OPS.has(cond.op) ? "1 = 1" : "1 = 0", param: false }
+      }
+    }
+  }
+
+  if (ilikeWrap && typeof value === "string") {
+    value = `%${value}%`
+  }
+  return { clause: buildClause(mapping, paramName, cond), param: true, value }
+}
 
 function buildClause(mapping: ScalarFieldMapping, paramName: string, cond: FilterCondition): string {
   const { column, chType, isArray, arrayContains } = mapping
