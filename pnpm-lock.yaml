@@ -109,8 +109,8 @@ catalogs:
       specifier: 4.2.0
       version: 4.2.0
     pdfjs-dist:
-      specifier: 6.2.108
-      version: 6.2.108
+      specifier: 6.4.299
+      version: 6.4.299
     pg:
       specifier: 8.23.0
       version: 8.23.0
@@ -3626,7 +3626,7 @@ importers:
         version: 1.9.0(react@19.2.5)
       pdfjs-dist:
         specifier: 'catalog:'
-        version: 6.2.108
+        version: 6.4.299
       react-day-picker:
         specifier: 8.10.1
         version: 8.10.1(date-fns@3.6.0)(react@19.2.5)
@@ -12962,8 +12962,8 @@ packages:
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
 
-  pdfjs-dist@6.2.108:
-    resolution: {integrity: sha512-YxFb+SQcodN2rnX9Tn3dHYlqfb7NjlzzfONPpJd+AKoKtUjEdevTfbC07d5TcczzOK6261auRkP/M8OBHs9vFQ==}
+  pdfjs-dist@6.4.299:
+    resolution: {integrity: sha512-AVl138zALtfaAPvADulE0PZThbYzCBS79nL4pOSL/6Sm/4AH5A21BD9VHt97OlCuzJuCpmeZtAtkinisF4Vb1g==}
     engines: {node: '>=22.13.0 || >=24'}
 
   peberminta@0.9.0:
@@ -25713,7 +25713,7 @@ snapshots:
 
   pathe@2.0.3: {}
 
-  pdfjs-dist@6.2.108: {}
+  pdfjs-dist@6.4.299: {}
 
   peberminta@0.9.0: {}
 
