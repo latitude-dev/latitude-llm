@@ -136,8 +136,7 @@ interface ApiKeyGrant {
 
 const resolveGrant = (tokenHash: string) =>
   Effect.gen(function* () {
-    // Only NotFoundError means "no such key". A RepositoryError (Postgres unreachable) stays an
-    // error: answering it as an invalid key would reject, and negatively cache, valid keys.
+    // Catching RepositoryError here too would reject, and negatively cache, valid keys during a DB outage.
     const apiKeyRepository = yield* ApiKeyRepository
     const apiKey = yield* apiKeyRepository.findByTokenHash(tokenHash).pipe(
       Effect.map(Option.some),

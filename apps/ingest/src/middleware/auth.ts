@@ -26,7 +26,6 @@ export const authMiddleware: MiddlewareHandler<IngestEnv> = async (c, next) => {
     }).pipe(withTracing),
   )
 
-  // The key could not be checked (Postgres or Redis unreachable), which says nothing about the key.
   // OTLP exporters drop a batch on 401 but retry it on 503.
   if (Exit.isFailure(exit)) {
     logger.error("API key validation unavailable", exit.cause)
