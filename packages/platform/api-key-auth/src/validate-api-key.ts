@@ -1,6 +1,6 @@
 import { type ApiKey, ApiKeyCacheInvalidator, ApiKeyRepository, isActive } from "@domain/api-keys"
 import { isSandbox, type Organization, OrganizationRepository } from "@domain/organizations"
-import { OrganizationId } from "@domain/shared"
+import { OrganizationId, type RepositoryError } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresClient } from "@platform/db-postgres"
 import { ApiKeyRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -136,13 +136,19 @@ interface ApiKeyGrant {
 
 const resolveGrant = (tokenHash: string) =>
   Effect.gen(function* () {
+    // Only NotFoundError means "no such key". A RepositoryError (Postgres unreachable) stays an
+    // error: answering it as an invalid key would reject, and negatively cache, valid keys.
     const apiKeyRepository = yield* ApiKeyRepository
-    const apiKey = yield* Effect.option(apiKeyRepository.findByTokenHash(tokenHash))
+    const apiKey = yield* apiKeyRepository.findByTokenHash(tokenHash).pipe(
+      Effect.map(Option.some),
+      Effect.catchTag("NotFoundError", () => Effect.succeedNone),
+    )
     if (Option.isNone(apiKey) || !isActive(apiKey.value)) return Option.none<ApiKeyGrant>()
 
     const organizationRepository = yield* OrganizationRepository
-    const organization = yield* Effect.option(
-      organizationRepository.findById(OrganizationId(apiKey.value.organizationId)),
+    const organization = yield* organizationRepository.findById(OrganizationId(apiKey.value.organizationId)).pipe(
+      Effect.map(Option.some),
+      Effect.catchTag("NotFoundError", () => Effect.succeedNone),
     )
     if (Option.isNone(organization)) return Option.none<ApiKeyGrant>()
 
@@ -159,12 +165,13 @@ export interface ValidateApiKeyDeps {
 /**
  * Validate bearer token: hash, Redis cache, optional DB lookup, minimum timing.
  * Unknown, revoked, and orphaned keys (organization gone) all take the same negative path.
+ * A database failure is not a negative answer: it fails with `RepositoryError` and caches nothing.
  * Shared by `apps/api` and `apps/ingest` so auth behavior cannot drift.
  */
 export const validateApiKey = (
   token: string,
   deps: ValidateApiKeyDeps,
-): Effect.Effect<ApiKeyAuthResult | null, never> => {
+): Effect.Effect<ApiKeyAuthResult | null, RepositoryError> => {
   const { redis, adminClient, onKeyValidated } = deps
 
   return Effect.gen(function* () {
@@ -199,5 +206,8 @@ export const validateApiKey = (
     onKeyValidated?.(apiKey.id)
     yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
     return result
-  }).pipe(withPostgres(Layer.mergeAll(ApiKeyRepositoryLive, OrganizationRepositoryLive), adminClient), Effect.orDie)
+  }).pipe(
+    withPostgres(Layer.mergeAll(ApiKeyRepositoryLive, OrganizationRepositoryLive), adminClient),
+    Effect.catchTag("CryptoError", Effect.die),
+  )
 }

@@ -1,7 +1,7 @@
 import { revokeApiKeyUseCase } from "@domain/api-keys"
 import { ApiKeyId, OrganizationId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
-import { ApiKeyRepositoryLive, eq, withPostgres } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, closePostgres, createPostgresClient, eq, withPostgres } from "@platform/db-postgres"
 import { organizations } from "@platform/db-postgres/schema/better-auth"
 import {
   closeInMemoryPostgres,
@@ -10,7 +10,7 @@ import {
   createOrganizationFixture,
   type InMemoryPostgres,
 } from "@platform/testkit"
-import { Effect } from "effect"
+import { Cause, Effect, Exit, Option } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { ApiKeyCacheInvalidatorLive, validateApiKey } from "./validate-api-key.ts"
 
@@ -31,6 +31,10 @@ const createFakeRedis = (): RedisClient => {
     del: async (key: string) => (store.delete(key) ? 1 : 0),
   } as unknown as RedisClient
 }
+
+/** A Postgres client whose every query fails to connect, like during a database outage. */
+const createUnreachablePostgres = () =>
+  createPostgresClient({ databaseUrl: "postgres://latitude:latitude@127.0.0.1:1/latitude", connectionTimeoutMs: 1000 })
 
 describe("validateApiKey", () => {
   it("exports the shared validator used by api and ingest middleware", () => {
@@ -210,6 +214,58 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateApiKey (integration, Node 25+)",
     )
 
     expect(result).toEqual({
+      organizationId: apiKey.organizationId,
+      keyId: apiKey.id,
+      isSandbox: false,
+      projectId: null,
+    })
+  })
+
+  it("fails with RepositoryError, not an invalid-key answer, when Postgres is unreachable", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const apiKey = await Effect.runPromise(
+      createApiKeyFixture(database.postgresDb, {
+        organizationId: organization.id,
+        encryptionKey: TEST_ENCRYPTION_KEY,
+      }),
+    )
+    const redis = createFakeRedis()
+    const unreachable = createUnreachablePostgres()
+
+    try {
+      const exit = await Effect.runPromiseExit(validateApiKey(apiKey.token, { redis, adminClient: unreachable }))
+
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        const error = Cause.findErrorOption(exit.cause)
+        expect(Option.map(error, (e) => e._tag)).toEqual(Option.some("RepositoryError"))
+      }
+    } finally {
+      await closePostgres(unreachable.pool)
+    }
+  })
+
+  it("accepts a valid key as soon as Postgres is back (the outage is not cached as invalid)", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const apiKey = await Effect.runPromise(
+      createApiKeyFixture(database.postgresDb, {
+        organizationId: organization.id,
+        encryptionKey: TEST_ENCRYPTION_KEY,
+      }),
+    )
+    const redis = createFakeRedis()
+    const unreachable = createUnreachablePostgres()
+
+    try {
+      await Effect.runPromiseExit(validateApiKey(apiKey.token, { redis, adminClient: unreachable }))
+    } finally {
+      await closePostgres(unreachable.pool)
+    }
+
+    const afterRecovery = await Effect.runPromise(
+      validateApiKey(apiKey.token, { redis, adminClient: database.adminPostgresClient }),
+    )
+    expect(afterRecovery).toEqual({
       organizationId: apiKey.organizationId,
       keyId: apiKey.id,
       isSandbox: false,
