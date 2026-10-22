@@ -23,19 +23,30 @@ export function CopyButton({
   const [copied, setCopied] = useState(false)
   const mountedRef = useRef(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const requestIdRef = useRef(0)
 
   const handleCopy = useCallback(
     async (e: MouseEvent) => {
       e.stopPropagation()
+      const requestId = ++requestIdRef.current
       setCopied(false)
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
       try {
         await navigator.clipboard.writeText(value)
-        if (!mountedRef.current) return
+        if (!mountedRef.current || requestId !== requestIdRef.current) return
         setCopied(true)
-        timeoutRef.current = setTimeout(() => setCopied(false), 2000)
+        timeoutRef.current = setTimeout(() => {
+          if (requestId !== requestIdRef.current) return
+          timeoutRef.current = null
+          setCopied(false)
+        }, 2000)
       } catch {
-        if (mountedRef.current) toast({ title: "Unable to copy to clipboard" })
+        if (mountedRef.current && requestId === requestIdRef.current) {
+          toast({ title: "Unable to copy to clipboard" })
+        }
       }
     },
     [value, toast],
@@ -45,7 +56,7 @@ export function CopyButton({
     mountedRef.current = true
     return () => {
       mountedRef.current = false
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
     }
   })
 

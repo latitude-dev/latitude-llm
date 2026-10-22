@@ -23,6 +23,29 @@ function deferredClipboardWrite() {
   return { promise, resolve, reject, writeText }
 }
 
+function deferredClipboardWrites() {
+  const writes: Array<{
+    promise: Promise<void>
+    resolve: () => void
+    reject: (reason?: unknown) => void
+  }> = []
+  const writeText = vi.fn((_text: string) => {
+    let resolve!: () => void
+    let reject!: (reason?: unknown) => void
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res
+      reject = rej
+    })
+    writes.push({ promise, resolve, reject })
+    return promise
+  })
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  })
+  return { writes, writeText }
+}
+
 function ToastProbe() {
   const { toasts } = useToast()
   return (
@@ -301,5 +324,73 @@ describe("clipboard controls", () => {
 
     expect(selection.toString()).toBe(SELECTED_TEXT)
     expect(selection.getRangeAt(0).startContainer).toBe(other)
+  })
+
+  it("ignores stale feedback from overlapping CopyButton writes", async () => {
+    vi.useFakeTimers()
+    try {
+      const clipboard = deferredClipboardWrites()
+      const view = renderWithToastProbe(<CopyButton value="trace-123" />)
+
+      fireEvent.click(screen.getByRole("button"))
+      fireEvent.click(screen.getByRole("button"))
+      expect(clipboard.writeText).toHaveBeenCalledTimes(2)
+
+      await act(async () => {
+        clipboard.writes[0].resolve()
+        await clipboard.writes[0].promise
+      })
+      expect(view.container.querySelector(".lucide-check")).toBeNull()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1500)
+      })
+      await act(async () => {
+        clipboard.writes[1].resolve()
+        await clipboard.writes[1].promise
+      })
+      expect(view.container.querySelector(".lucide-check")).not.toBeNull()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500)
+      })
+      expect(view.container.querySelector(".lucide-check")).not.toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("ignores stale feedback from overlapping CopyableText writes", async () => {
+    vi.useFakeTimers()
+    try {
+      const clipboard = deferredClipboardWrites()
+      const view = renderWithToastProbe(<CopyableText value="project-456" />)
+
+      fireEvent.click(screen.getByRole("button"))
+      fireEvent.click(screen.getByRole("button"))
+      expect(clipboard.writeText).toHaveBeenCalledTimes(2)
+
+      await act(async () => {
+        clipboard.writes[0].resolve()
+        await clipboard.writes[0].promise
+      })
+      expect(view.container.querySelector(".lucide-check")).toBeNull()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1500)
+      })
+      await act(async () => {
+        clipboard.writes[1].resolve()
+        await clipboard.writes[1].promise
+      })
+      expect(view.container.querySelector(".lucide-check")).not.toBeNull()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500)
+      })
+      expect(view.container.querySelector(".lucide-check")).not.toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

@@ -50,6 +50,8 @@ function finishSelectionCopy({
   readonly mounted: boolean
 }) {
   if (!mounted) return false
+  if (!clearDetection(copied)) return true
+
   const selection = window.getSelection()
   const currentRange = selection?.rangeCount ? selection.getRangeAt(0) : null
   if (
@@ -59,7 +61,6 @@ function finishSelectionCopy({
   ) {
     selection?.removeAllRanges()
   }
-  clearDetection(copied)
   return true
 }
 
