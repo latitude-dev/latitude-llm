@@ -116,56 +116,41 @@ export const runSessionEndJob =
       // Session settled → match signals against the session's latest trace (per-trace scoring is
       // unchanged; the script still loads full session context). Older traces are intentionally not
       // re-evaluated — one evaluation per session, off its latest trace.
-      yield* publisher
-        .publish(
-          "signals",
-          "match",
-          {
-            organizationId: payload.organizationId,
-            projectId: payload.projectId,
-            traceId: latestTraceId,
-            isSandbox: false,
-            reason: "ingest",
-          },
-          {
-            dedupeKey: `org:${payload.organizationId}:signals-match:${payload.projectId}:${latestTraceId}`,
-          },
-        )
-        .pipe(
-          Effect.catch((error) =>
-            Effect.logError("Failed to enqueue signals match", { ...buildRunLogContext(payload), error }),
-          ),
-        )
+      // Let publish failures fail the job so BullMQ retries; dedupe keys make re-enqueue safe.
+      yield* publisher.publish(
+        "signals",
+        "match",
+        {
+          organizationId: payload.organizationId,
+          projectId: payload.projectId,
+          traceId: latestTraceId,
+          isSandbox: false,
+          reason: "ingest",
+        },
+        {
+          dedupeKey: `org:${payload.organizationId}:signals-match:${payload.projectId}:${latestTraceId}`,
+        },
+      )
 
       // Session analysis reloads the whole session, so the triggering trace is only a pointer — the
       // enqueued one is fine here, no need for the resolved latest.
       const analyzeSessionWorkflowId = `org:${payload.organizationId}:conversation-intelligence:analyzeSession:${payload.projectId}:${payload.sessionId}`
-      yield* workflowStarter
-        .signalWithStart(
-          "analyzeSessionWorkflow",
-          {
-            organizationId: payload.organizationId,
-            projectId: payload.projectId,
-            sessionId: payload.sessionId,
-            triggeringTraceId: payload.latestTraceId,
-            triggeringStartTime: payload.latestTraceStartTime,
-            reason: "trace_completed",
-          },
-          {
-            workflowId: analyzeSessionWorkflowId,
-            signal: "traceCompleted",
-            signalArgs: [{}],
-          },
-        )
-        .pipe(
-          Effect.catch((error) =>
-            Effect.logError("Failed to start conversation intelligence AnalyzeSessionWorkflow", {
-              ...buildRunLogContext(payload),
-              workflowId: analyzeSessionWorkflowId,
-              error,
-            }),
-          ),
-        )
+      yield* workflowStarter.signalWithStart(
+        "analyzeSessionWorkflow",
+        {
+          organizationId: payload.organizationId,
+          projectId: payload.projectId,
+          sessionId: payload.sessionId,
+          triggeringTraceId: payload.latestTraceId,
+          triggeringStartTime: payload.latestTraceStartTime,
+          reason: "trace_completed",
+        },
+        {
+          workflowId: analyzeSessionWorkflowId,
+          signal: "traceCompleted",
+          signalArgs: [{}],
+        },
+      )
 
       return {
         action: "completed",
