@@ -190,7 +190,7 @@
     "@biomejs/biome": "catalog:",
     "@google-cloud/vertexai": "1.12.0",
     "@langchain/core": "1.1.49",
-    "@langchain/openai": "1.4.7",
+    "@langchain/openai": "1.6.2",
     "@llamaindex/openai": "0.4.23",
     "@llamaindex/workflow": "1.1.25",
     "@openai/agents": "0.11.6",
