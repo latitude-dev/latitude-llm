@@ -43,7 +43,7 @@ minimumReleaseAgeExclude:
 enablePrePostScripts: false
 
 catalog:
-  "@biomejs/biome": 2.5.14
+  "@biomejs/biome": 2.5.15
   "@clickhouse/client": 1.21.0
   "@hono/node-server": 1.19.15
   "@opentelemetry/api": 1.9.1
@@ -78,7 +78,7 @@ catalog:
   jose: 6.2.3
   js-tiktoken: 1.0.21
   mustache: 4.2.0
-  pdfjs-dist: 6.2.108
+  pdfjs-dist: 6.4.299
   pg: 8.23.0
   quickjs-emscripten: 0.32.0
   react: 19.2.5
