@@ -2,6 +2,9 @@ import type { Implementation as McpInfo } from "@modelcontextprotocol/sdk/types"
 
 export const API_VERSION = "v1"
 
+/** REST routes and /v1/mcp share this body cap; 32 MiB mirrors ingest's LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES default. */
+export const API_MAX_REQUEST_BODY_BYTES = 32 * 1024 * 1024
+
 export const API_INFO = {
   title: "Latitude",
   version: API_VERSION,

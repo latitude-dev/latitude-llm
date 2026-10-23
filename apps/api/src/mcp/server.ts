@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import { collectToolDescriptors, splitFlatInput } from "@repo/operations"
 import type { Context } from "hono"
-import { API_VERSION, MCP_INFO } from "../constants.ts"
+import { API_MAX_REQUEST_BODY_BYTES, API_VERSION, MCP_INFO } from "../constants.ts"
 import type { AppEnv, ProtectedEnv } from "../types.ts"
 
 /**
@@ -121,7 +121,9 @@ export const registerMcpRoute = ({
     // Stateless transport — `sessionIdGenerator` is omitted entirely, not set
     // to `undefined`, because the SDK's typed options reject `undefined` even
     // though the runtime supports it.
-    const transport = new WebStandardStreamableHTTPServerTransport({})
+    const transport = new WebStandardStreamableHTTPServerTransport({
+      maxRequestBodySize: API_MAX_REQUEST_BODY_BYTES,
+    })
     await mcpServer.connect(transport)
     return transport.handleRequest(c.req.raw)
   })
