@@ -1,5 +1,5 @@
 import type { RefObject } from "react"
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import type { GenAIMessage } from "rosetta-ai"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { findIndices } from "./source-offset-resolver.ts"
@@ -24,11 +24,15 @@ export interface DetectedSelection {
 export function useSelectionDetector(
   containerRef: RefObject<HTMLElement | null>,
   _messages: readonly (GenAIMessage | null)[],
-): { detected: DetectedSelection | null; clearDetection: () => void } {
+): { detected: DetectedSelection | null; clearDetection: (expected?: DetectedSelection) => boolean } {
   const [detected, setDetected] = useState<DetectedSelection | null>(null)
+  const detectedRef = useRef<DetectedSelection | null>(null)
 
-  const clearDetection = useCallback(() => {
+  const clearDetection = useCallback((expected?: DetectedSelection) => {
+    if (expected && detectedRef.current !== expected) return false
+    detectedRef.current = null
     setDetected(null)
+    return true
   }, [])
 
   useMountEffect(() => {
@@ -53,6 +57,7 @@ export function useSelectionDetector(
       if (el && containerRef.current?.contains(el)) {
         cancelPending()
         isSelecting = true
+        detectedRef.current = null
         setDetected(null)
       }
     }
@@ -97,7 +102,7 @@ export function useSelectionDetector(
       const clonedRange = range.cloneRange()
       const rect = range.getBoundingClientRect()
 
-      setDetected({
+      const nextDetection: DetectedSelection = {
         range: clonedRange,
         selectedText,
         startMessageIndex: resolvedStartInfo.messageIndex,
@@ -106,7 +111,9 @@ export function useSelectionDetector(
         endPartIndex: resolvedEndInfo.partIndex,
         isSinglePart,
         position: { x: rect.left, y: rect.bottom },
-      })
+      }
+      detectedRef.current = nextDetection
+      setDetected(nextDetection)
     }
 
     const handleMouseUp = () => {

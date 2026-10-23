@@ -1,5 +1,6 @@
 import { ClipboardCopyIcon } from "lucide-react"
 import { type ReactNode, use, useRef } from "react"
+import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { Button } from "../button/button.tsx"
 import { Icon } from "../icons/icons.tsx"
 import { Popover, PopoverAnchor, PopoverContent } from "../popover/primitives.tsx"
@@ -48,6 +49,15 @@ export function SelectionActionPopover() {
   const ctx = use(TextSelectionContext)
   const { toast } = useToast()
   const contentRef = useRef<HTMLDivElement>(null)
+  const mountedRef = useRef(false)
+
+  useMountEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  })
+
   if (!ctx) return null
 
   const { detected, resolveAndAnnotate, resolveAndCopy, clearSelection } = ctx
@@ -63,9 +73,15 @@ export function SelectionActionPopover() {
     resolveAndAnnotate(clickPosition, passed)
   }
 
-  const handleCopy = () => {
-    resolveAndCopy()
-    toast({ title: "Copied to clipboard" })
+  const handleCopy = async () => {
+    try {
+      if (await resolveAndCopy()) {
+        if (!mountedRef.current) return
+        toast({ title: "Copied to clipboard" })
+      }
+    } catch {
+      if (mountedRef.current) toast({ title: "Unable to copy to clipboard" })
+    }
   }
 
   return (
