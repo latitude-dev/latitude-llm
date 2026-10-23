@@ -7,6 +7,7 @@ import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testki
 import { encrypt, hash } from "@repo/utils"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
+import { API_MAX_REQUEST_BODY_BYTES } from "../constants.ts"
 import {
   type ApiTestContext,
   createOAuthAuthHeaders,
@@ -166,6 +167,43 @@ describe("/v1/mcp", () => {
     const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
     const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
     expect(toolNames).toEqual(expect.arrayContaining(["createApiKey", "listApiKeys", "revokeApiKey"]))
+  })
+
+  it<ApiTestContext>("tools/list accepts a request body larger than the SDK's 4 MiB default", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const body = {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/list",
+      params: { _meta: { padding: "x".repeat(5 * 1024 * 1024) } },
+    }
+    const serializedBodyLength = JSON.stringify(body).length
+    expect(serializedBodyLength).toBeGreaterThan(4 * 1024 * 1024)
+    expect(serializedBodyLength).toBeLessThan(API_MAX_REQUEST_BODY_BYTES)
+
+    const res = await sendMcpRequest(app, tenant.oauthAccessToken, body)
+    expect(res.status).toBe(200)
+    const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
+    const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
+    expect(toolNames).toEqual(expect.arrayContaining(["createApiKey", "listApiKeys", "revokeApiKey"]))
+  })
+
+  it<ApiTestContext>("rejects a request body exceeding the shared API cap with 413", async ({ app, database }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const res = await sendMcpRequest(app, tenant.oauthAccessToken, {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/list",
+      params: { _meta: { padding: "x".repeat(API_MAX_REQUEST_BODY_BYTES + 1) } },
+    })
+    expect(res.status).toBe(413)
+    expect(await res.json()).toEqual({
+      name: "Error",
+      message: `Payload Too Large: request body must not exceed ${API_MAX_REQUEST_BODY_BYTES} bytes`,
+    })
   })
 
   it<ApiTestContext>("tools/list keeps defaulted inputs optional", async ({ app, database }) => {

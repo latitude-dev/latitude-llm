@@ -1,6 +1,8 @@
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { mountOperationModules, operationModules } from "@repo/operations"
-import { API_VERSION } from "../constants.ts"
+import { bodyLimit } from "hono/body-limit"
+import { HTTPException } from "hono/http-exception"
+import { API_MAX_REQUEST_BODY_BYTES, API_VERSION } from "../constants.ts"
 import { registerMcpRoute } from "../mcp/server.ts"
 import { createApiKeyProjectScopeMiddleware } from "../middleware/api-key-project-scope.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
@@ -41,6 +43,17 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   registerGithubRoute({ app: v1 })
   registerPartnerRoutes({ app: v1, adminDatabase: options.adminDatabase })
 
+  routes.use(
+    "*",
+    bodyLimit({
+      maxSize: API_MAX_REQUEST_BODY_BYTES,
+      onError: () => {
+        throw new HTTPException(413, {
+          message: `Payload Too Large: request body must not exceed ${API_MAX_REQUEST_BODY_BYTES} bytes`,
+        })
+      },
+    }),
+  )
   routes.use("*", validationErrorMiddleware)
   routes.use(
     "*",
