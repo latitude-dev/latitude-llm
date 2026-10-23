@@ -38,7 +38,7 @@ dependencies = [
     "opentelemetry-instrumentation-transformers==0.62.1",
     "opentelemetry-instrumentation-vertexai==0.62.3",
     "opentelemetry-instrumentation-watsonx==0.61.0",
-    "pydantic==2.13.5",
+    "pydantic==2.14.1",
     "typing-extensions==4.16.0",
 ]
 
