@@ -168,9 +168,7 @@ async def handle_gepa_optimize(server: RpcServer, params: GepaOptimizeParams) ->
         GepaStopReason.COMPLETED,
     )
 
-    # GEPAResult.best_candidate is typed `str | dict[str, str]`: it only
-    # unwraps to a plain str when `seed_candidate` was a str. We always seed
-    # with a System dict, so anything else is a GEPA contract violation.
+    # GEPA returns a plain str only for str seeds; we always seed with a System dict.
     optimized = result.best_candidate
     if not isinstance(optimized, dict):
         raise TypeError(f"GEPA returned a {type(optimized).__name__} candidate for a dict seed")
