@@ -1,6 +1,6 @@
 import json
 import traceback
-from typing import Any
+from typing import Any, cast
 
 from op_gepa_engine.util import Field, Model
 
@@ -53,12 +53,14 @@ def _first_remote_message(value: Any, depth: int = 0) -> str | None:
     if depth >= 4 or not isinstance(value, dict):
         return None
 
+    # Remote error payloads are decoded JSON objects, so keys are strings.
+    payload = cast(dict[str, Any], value)
     for key in ("message", "httpMessage", "_tag", "name", "type"):
-        candidate = value.get(key)
+        candidate = payload.get(key)
         if isinstance(candidate, str) and candidate.strip():
             return candidate.strip()
 
-    return _first_remote_message(value.get("cause"), depth + 1)
+    return _first_remote_message(payload.get("cause"), depth + 1)
 
 
 class RpcRemoteError(RuntimeError):
@@ -66,7 +68,8 @@ class RpcRemoteError(RuntimeError):
     data: Any
 
     def __init__(self, *, code: int, message: str, data: Any) -> None:
-        resolved_message = message.strip() if isinstance(message, str) and message.strip() else _first_remote_message(data)
+        stripped = message.strip() if isinstance(message, str) else ""
+        resolved_message = stripped or _first_remote_message(data)
         super().__init__(resolved_message or "Remote RPC failed")
         self.code = code
         self.data = data
@@ -80,7 +83,7 @@ def create_remote_error_exception(error: JsonRpcError) -> RpcRemoteError:
     )
 
 
-def _exception_message(error: Exception) -> str:
+def _exception_message(error: BaseException) -> str:
     message = str(error).strip()
     if message:
         return message
