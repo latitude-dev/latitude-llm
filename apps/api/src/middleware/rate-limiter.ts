@@ -1,4 +1,4 @@
-import type { Context, Next } from "hono"
+import type { Context, MiddlewareHandler, Next } from "hono"
 
 /**
  * Redis-backed rate limiter.
@@ -74,8 +74,8 @@ const enforceRedisRateLimit = async (c: Context, next: Next, config: RateLimitCo
   await next()
 }
 
-const createRedisRateLimiter = (config: RateLimitConfig) => {
-  return async (c: Context, next: Next) => {
+const createRedisRateLimiter = (config: RateLimitConfig): MiddlewareHandler => {
+  return async (c, next) => {
     const key = `${config.keyPrefix}:${config.keyGenerator(c)}`
 
     try {
