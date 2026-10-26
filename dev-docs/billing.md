@@ -46,8 +46,9 @@ One credit is worth `2` mills at the Pro overage rate (`$20` per `10,000` credit
   and rounded **up** to an integer with a 1-credit floor:
   `credits = max(1, ceil(costUsd * 1000 * 1.3 / 2))` (`creditsForLlmGenerationCost`).
   Cost is estimated from the provider-reported token usage priced through the
-  `@domain/models` registry (the same catalog that prices customer spans), covering
-  input/output/reasoning/cache token rates. Examples: a typical MiniMax M2.5 judge
+  `@domain/models` registry (the same catalog that prices customer spans; see
+  [`models.md`](./models.md)), covering input/output/reasoning/cache token rates.
+  Examples: a typical MiniMax M2.5 judge
   call (~`$0.005`) bills 4 credits; a 100k-token-session judge call (~`$0.04`) bills
   26; a Sonnet-tier GEPA proposal (~`$0.30`) bills 195.
   **Fallback**: when the registry has no pricing for the configured model or the
