@@ -709,7 +709,7 @@ ENGINE = ReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)
 PRIMARY KEY (organization_id, project_id, trace_id, message_index)
 ORDER BY (organization_id, project_id, trace_id, message_index)
-SETTINGS deduplicate_merge_projection_mode = 'rebuild', index_granularity = 8192;
+SETTINGS deduplicate_merge_projection_mode = 'rebuild', index_granularity = 8192, lightweight_mutation_projection_mode = 'rebuild';
 
 CREATE TABLE trace_search_documents
 (
