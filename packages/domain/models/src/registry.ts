@@ -202,10 +202,6 @@ export function getModelsForProvider(provider: string): Model[] {
   return [...modelsForResolvedProvider(resolveProviderName(provider))]
 }
 
-/**
- * The catalog grouped by lower-cased provider, built once. Every lookup used to rescan and lower-case
- * the whole catalog to pick out one provider's models, which was most of a lookup's cost.
- */
 function modelsForResolvedProvider(name: string): readonly Model[] {
   if (!cachedModelsByProvider) {
     const byProvider = new Map<string, Model[]>()
