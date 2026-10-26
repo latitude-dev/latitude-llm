@@ -13,6 +13,13 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    # Better Auth 1.7 needs a planned migration (MCP OAuth plugin removal,
+    # account.issuer backfill, SAML config semantics); stay on 1.6.x until then.
+    ignore:
+      - dependency-name: better-auth
+        versions: [">=1.7.0"]
+      - dependency-name: "@better-auth/*"
+        versions: [">=1.7.0"]
 
   - package-ecosystem: pip
     directories:
