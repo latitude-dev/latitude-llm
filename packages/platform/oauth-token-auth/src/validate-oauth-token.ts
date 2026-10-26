@@ -1,4 +1,5 @@
 import { OAuthTokenCacheInvalidator } from "@domain/oauth-keys"
+import { type RepositoryError, toRepositoryError } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 // `eq` is re-exported by `@platform/db-postgres` to keep all consumers on one
 // drizzle-orm version (peer-dep collisions cause private-property typecheck
@@ -169,26 +170,30 @@ interface DbRow {
   readonly organizationId: string | null
 }
 
-const lookupByToken = (client: PostgresClient, token: string): Promise<DbRow | undefined> =>
-  client.db
-    .select({
-      tokenRowId: oauthAccessTokens.id,
-      userId: oauthAccessTokens.userId,
-      clientId: oauthAccessTokens.clientId,
-      scopes: oauthAccessTokens.scopes,
-      accessTokenExpiresAt: oauthAccessTokens.accessTokenExpiresAt,
-      applicationDisabled: oauthApplications.disabled,
-      organizationId: oauthApplications.organizationId,
-    })
-    .from(oauthAccessTokens)
-    .innerJoin(oauthApplications, eq(oauthApplications.clientId, oauthAccessTokens.clientId))
-    .innerJoin(
-      members,
-      and(eq(members.organizationId, oauthApplications.organizationId), eq(members.userId, oauthAccessTokens.userId)),
-    )
-    .where(eq(oauthAccessTokens.accessToken, token))
-    .limit(1)
-    .then((rows) => rows[0])
+const lookupByToken = (client: PostgresClient, token: string): Effect.Effect<DbRow | undefined, RepositoryError> =>
+  Effect.tryPromise({
+    try: () =>
+      client.db
+        .select({
+          tokenRowId: oauthAccessTokens.id,
+          userId: oauthAccessTokens.userId,
+          clientId: oauthAccessTokens.clientId,
+          scopes: oauthAccessTokens.scopes,
+          accessTokenExpiresAt: oauthAccessTokens.accessTokenExpiresAt,
+          applicationDisabled: oauthApplications.disabled,
+          organizationId: oauthApplications.organizationId,
+        })
+        .from(oauthAccessTokens)
+        .innerJoin(oauthApplications, eq(oauthApplications.clientId, oauthAccessTokens.clientId))
+        .innerJoin(
+          members,
+          and(eq(members.organizationId, oauthApplications.organizationId), eq(members.userId, oauthAccessTokens.userId)),
+        )
+        .where(eq(oauthAccessTokens.accessToken, token))
+        .limit(1)
+        .then((rows) => rows[0]),
+    catch: (cause) => toRepositoryError(cause, "lookupOAuthAccessToken"),
+  })
 
 interface CachedGrant {
   readonly userId: string
@@ -196,20 +201,24 @@ interface CachedGrant {
   readonly oauthClientId: string
 }
 
-const hasLiveGrant = (client: PostgresClient, grant: CachedGrant): Promise<boolean> =>
-  client.db
-    .select({ applicationDisabled: oauthApplications.disabled })
-    .from(members)
-    .innerJoin(
-      oauthApplications,
-      and(
-        eq(oauthApplications.clientId, grant.oauthClientId),
-        eq(oauthApplications.organizationId, grant.organizationId),
-      ),
-    )
-    .where(and(eq(members.organizationId, grant.organizationId), eq(members.userId, grant.userId)))
-    .limit(1)
-    .then((rows) => rows.length > 0 && rows[0]?.applicationDisabled !== true)
+const hasLiveGrant = (client: PostgresClient, grant: CachedGrant) =>
+  Effect.tryPromise({
+    try: () =>
+      client.db
+        .select({ applicationDisabled: oauthApplications.disabled })
+        .from(members)
+        .innerJoin(
+          oauthApplications,
+          and(
+            eq(oauthApplications.clientId, grant.oauthClientId),
+            eq(oauthApplications.organizationId, grant.organizationId),
+          ),
+        )
+        .where(and(eq(members.organizationId, grant.organizationId), eq(members.userId, grant.userId)))
+        .limit(1)
+        .then((rows) => rows.length > 0 && rows[0]?.applicationDisabled !== true),
+    catch: (cause) => toRepositoryError(cause, "verifyOAuthGrant"),
+  })
 
 /**
  * Parse a BA-stored `scopes` text field (space-separated per RFC 6749 §3.3)
@@ -275,7 +284,7 @@ export interface ValidateOAuthAccessTokenDeps {
 export const validateOAuthAccessToken = (
   token: string,
   deps: ValidateOAuthAccessTokenDeps,
-): Effect.Effect<OAuthTokenAuthResult | null, never> => {
+): Effect.Effect<OAuthTokenAuthResult | null, RepositoryError> => {
   const { redis, adminClient, onTokenValidated } = deps
 
   return Effect.gen(function* () {
@@ -295,11 +304,7 @@ export const validateOAuthAccessToken = (
         // Fall through to the DB path so we don't return stale-expired.
       } else {
         if (cached !== null) {
-          // catch → error channel; Effect.orDie makes DB errors defects, not a silent false fallback.
-          const isLive = yield* Effect.tryPromise({
-            try: () => hasLiveGrant(adminClient, cached),
-            catch: () => false,
-          }).pipe(Effect.orDie)
+          const isLive = yield* hasLiveGrant(adminClient, cached)
           if (!isLive) {
             yield* invalidateCache(redis, tokenHash)
             yield* cache(redis, tokenHash, null, INVALID_TOKEN_TTL_SECONDS)
@@ -312,10 +317,7 @@ export const validateOAuthAccessToken = (
       }
     }
 
-    const row = yield* Effect.tryPromise({
-      try: () => lookupByToken(adminClient, token),
-      catch: () => undefined,
-    }).pipe(Effect.orDie)
+    const row = yield* lookupByToken(adminClient, token)
 
     if (
       !row ||
@@ -343,5 +345,5 @@ export const validateOAuthAccessToken = (
     onTokenValidated?.(row.tokenRowId)
     yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
     return result
-  }).pipe(Effect.orDie)
+  }).pipe(Effect.catchTag("CryptoError", Effect.die))
 }
