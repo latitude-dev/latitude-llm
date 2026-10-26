@@ -63,7 +63,7 @@ dev = [
     # Install it separately for examples (`uv add 'litellm>=1.88'`).
     # Pinned <2.9.0: openinference-instrumentation-google-genai imports the
     # google.genai._interactions module, which google-genai removed in 2.9.0.
-    "google-genai==2.8.0",
+    "google-genai==2.31.0",
 ]
 
 [tool.uv]
