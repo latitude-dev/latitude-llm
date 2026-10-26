@@ -14,6 +14,7 @@ import { parseModelsDevData } from "./entities/model.ts"
 import { resolveProviderName } from "./provider-aliases.ts"
 
 let cachedModels: Model[] | null = null
+let cachedModelsByProvider: Map<string, readonly Model[]> | null = null
 
 /**
  * Bedrock regional inference profiles prepend a geography prefix
@@ -35,7 +36,7 @@ function stripBedrockRegionPrefix(modelId: string): string {
  * `anthropic.claude-opus-4-8`). Match on the `<vendor>.<modelId>` suffix,
  * preferring the non-regional base entry whose pricing is canonical.
  */
-function findBedrockModelByBareId(models: Model[], modelId: string): Model | undefined {
+function findBedrockModelByBareId(models: readonly Model[], modelId: string): Model | undefined {
   const suffix = `.${modelId.toLowerCase()}`
   let fallback: Model | undefined
   for (const m of models) {
@@ -56,7 +57,7 @@ function findBedrockModelByBareId(models: Model[], modelId: string): Model | und
  * A single match is the whole condition. Two vendors shipping the same bare name are two different
  * models at two different rates, and picking one would invent a number; those stay unpriced.
  */
-function findModelByBareId(models: Model[], modelId: string): Model | undefined {
+function findModelByBareId(models: readonly Model[], modelId: string): Model | undefined {
   if (modelId.includes("/")) return undefined
 
   const suffix = `/${modelId.toLowerCase()}`
@@ -96,7 +97,7 @@ function normalizeVersionPunctuation(id: string): string {
  * The punctuation match requires a single candidate: collapsing a dot must never pick between two
  * genuinely different entries.
  */
-function findModelExact(models: Model[], modelId: string): Model | undefined {
+function findModelExact(models: readonly Model[], modelId: string): Model | undefined {
   const needle = modelId.toLowerCase()
 
   const exact = models.find((m) => m.id.toLowerCase() === needle)
@@ -146,7 +147,7 @@ function splitsNumber(needle: string, prefixLength: number): boolean {
  * version the catalog does not list, and a shorter prefix is only further from it. `claude-fable-5-1.5`
  * must not fall back to `claude-fable-5` once `claude-fable-5-1` has declined.
  */
-function findModelByPrefix(models: Model[], modelId: string): Model | undefined {
+function findModelByPrefix(models: readonly Model[], modelId: string): Model | undefined {
   const needle = modelId.toLowerCase()
 
   let best: Model | undefined
@@ -198,8 +199,25 @@ export function getModelPricing(model: Model): ModelPricing | null {
  * (e.g. `amazon_bedrock` -> `bedrock`) are resolved automatically.
  */
 export function getModelsForProvider(provider: string): Model[] {
-  const name = resolveProviderName(provider)
-  return getAllModels().filter((m) => m.provider.toLowerCase() === name)
+  return [...modelsForResolvedProvider(resolveProviderName(provider))]
+}
+
+/**
+ * The catalog grouped by lower-cased provider, built once. Every lookup used to rescan and lower-case
+ * the whole catalog to pick out one provider's models, which was most of a lookup's cost.
+ */
+function modelsForResolvedProvider(name: string): readonly Model[] {
+  if (!cachedModelsByProvider) {
+    const byProvider = new Map<string, Model[]>()
+    for (const m of getAllModels()) {
+      const key = m.provider.toLowerCase()
+      const list = byProvider.get(key)
+      if (list) list.push(m)
+      else byProvider.set(key, [m])
+    }
+    cachedModelsByProvider = byProvider
+  }
+  return cachedModelsByProvider.get(name) ?? []
 }
 
 /**
@@ -235,7 +253,7 @@ function findModelByVendorPrefix({
   if (reportedProviderIsKnown && vendor !== reportedProvider) return undefined
 
   const bareId = modelId.slice(separator + 1).toLowerCase()
-  return getModelsForProvider(vendor).find((m) => m.id.toLowerCase() === bareId)
+  return modelsForResolvedProvider(vendor).find((m) => m.id.toLowerCase() === bareId)
 }
 
 /**
@@ -251,8 +269,8 @@ function findModelByVendorPrefix({
  * the prefix (`eu.`, `us.`, `apac.`) for models that don't.
  */
 export function getModelForProvider(provider: string, modelId: string): Model | undefined {
-  const models = getModelsForProvider(provider)
   const resolvedProvider = resolveProviderName(provider)
+  const models = modelsForResolvedProvider(resolvedProvider)
 
   if (resolvedProvider === "amazon-bedrock") {
     const stripped = stripBedrockRegionPrefix(modelId)
