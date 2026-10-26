@@ -28,7 +28,7 @@ latitude-prime-intellect-export = "latitude_telemetry_prime_intellect.__main__:m
 
 [dependency-groups]
 dev = [
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "ruff==0.14.14",
 ]
 
