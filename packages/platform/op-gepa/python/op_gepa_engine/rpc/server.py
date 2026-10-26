@@ -6,13 +6,13 @@ from typing import Any, Awaitable, Callable
 from pydantic import ValidationError
 
 from op_gepa_engine.rpc.protocol import (
-    create_error_response,
-    create_remote_error_exception,
     JsonRpcEmptyResponse,
     JsonRpcError,
     JsonRpcRequest,
     JsonRpcResponse,
     RpcErrorCode,
+    create_error_response,
+    create_remote_error_exception,
     parse_message,
     serialize_message,
 )
