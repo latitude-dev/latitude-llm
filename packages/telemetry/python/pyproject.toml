@@ -16,7 +16,7 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http==1.44.0",
     "opentelemetry-semantic-conventions-ai==0.5.1",
     "openinference-semantic-conventions==0.1.33",
-    "opentelemetry-instrumentation-alephalpha==0.61.0",
+    "opentelemetry-instrumentation-alephalpha==0.62.4",
     "opentelemetry-instrumentation-anthropic==0.62.4",
     "opentelemetry-instrumentation-bedrock==0.62.4",
     "opentelemetry-instrumentation-cohere==0.62.3",
