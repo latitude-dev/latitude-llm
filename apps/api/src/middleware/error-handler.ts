@@ -33,7 +33,8 @@ export const honoErrorHandler: ErrorHandler = (err, c) => {
   if (isHttpError(err)) {
     const { status, body } = toHttpResponse(err)
     if (status === 401) setBearerChallenge(c)
-    return c.json(body, status as 400 | 401 | 403 | 404 | 409 | 500)
+    if (status === 503) c.header("Retry-After", "1")
+    return c.json(body, status as 400 | 401 | 403 | 404 | 409 | 500 | 503)
   }
 
   // Hono's own 4xx exceptions — most commonly thrown by the zod-openapi
