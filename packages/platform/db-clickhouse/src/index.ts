@@ -46,6 +46,7 @@ export { TaxonomyClusterIntelligenceRepositoryLive } from "./repositories/taxono
 export { TaxonomyObservationRepositoryLive } from "./repositories/taxonomy-observation-repository.ts"
 export { TaxonomyViewAssignmentRepositoryLive } from "./repositories/taxonomy-view-assignment-repository.ts"
 export { ToolAnalyticsRepositoryLive } from "./repositories/tool-analytics-repository.ts"
+export { TracePurgeRepositoryLive } from "./repositories/trace-purge-repository.ts"
 export { TraceRepositoryLive } from "./repositories/trace-repository.ts"
 export { TraceSearchRepositoryLive } from "./repositories/trace-search-repository.ts"
 export { UserAnalyticsRepositoryLive } from "./repositories/user-analytics-repository.ts"

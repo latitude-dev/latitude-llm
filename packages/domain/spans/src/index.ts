@@ -359,6 +359,8 @@ export type {
   ToolUsageMetrics,
 } from "./ports/tool-analytics-repository.ts"
 export { ToolAnalyticsRepository } from "./ports/tool-analytics-repository.ts"
+export type { PurgedRowCounts, TracePurgeRepositoryShape, TracePurgeScope } from "./ports/trace-purge-repository.ts"
+export { TracePurgeRepository } from "./ports/trace-purge-repository.ts"
 export type {
   NumericRollup,
   TokenAnalyticsAggregate,
