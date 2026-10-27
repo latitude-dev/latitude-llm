@@ -156,7 +156,7 @@ wheels = [
 
 [[package]]
 name = "latitude-sdk"
-version = "9.15.0"
+version = "9.16.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

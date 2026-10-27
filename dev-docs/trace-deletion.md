@@ -14,6 +14,12 @@ A deletion is a **trace deletion request** (`trace_deletion_requests`, `@domain/
 
 **Execution.** Creating a request writes `TraceDeletionRequestCreated` through the outbox. The domain-events router publishes `trace-deletions:run`, whose worker only starts the `trace-deletion:${requestId}` Temporal workflow (`deleteTracesWorkflow`). The workflow drains the selector rather than holding a list of ids: each batch prepares the first page (500 traces) of what still matches and purges it, and the next batch lists again. It finishes when a page comes back empty, and continues-as-new every 40 batches with its running totals so history stays bounded. A batch that lists a trace the previous batch purged means the deletes did not take, so the workflow fails instead of looping. Any failure marks the request `failed` with what was purged so far. Finishing writes `TraceDeletionRequestFinished`; a replay of a finished request does nothing.
 
+## Surfaces
+
+- **Public API** (`@repo/operations`, `traceDeletionsModule` at `/v1/projects/:projectSlug/trace-deletions`). `createTraceDeletion` is `destructive` on the `ultra` rate tier and returns `202` with the pending request. `previewTraceDeletion` is the dry run. `listTraceDeletions` and `getTraceDeletion` read the receipts. The selector is the shared `TracesRef` (`{ by: "ids" }` or `{ by: "filters" }`). API-key requests record `{ type: "api_key", id: <key id> }` and OAuth requests record `{ type: "user" }`. The response reports one `deletedRecordCount` rather than the per-store breakdown, so table names never reach the public contract. The same operations surface as the `traceDeletions` SDK group, the `latitude trace-deletions` CLI commands and MCP tools.
+- **Backoffice** (`apps/web/src/domains/admin/trace-deletions.functions.ts`, the project page's "Delete traces" action and "Trace deletions" section). Staff fill tag, user, session, metadata or trace-id fields, which become the equivalent trace-list filters. They preview the count and confirm with the typed phrase `delete traces`. The organization comes from the project row and never from the client. The request is written through the ordinary org-scoped client as `{ type: "staff", id: <admin user id> }`, and staff see the per-store breakdown of each receipt.
+- **Customer docs**: `docs/security/trace-deletion.mdx`.
+
 ## Purge order
 
 Each batch is three activities, ordered so that a retry after a part-way failure always finishes the job and never changes the receipt:

@@ -24,6 +24,7 @@ Full command reference for `latitude`.
 - [`latitude signals`](#latitude-signals)
 - [`latitude spans`](#latitude-spans)
 - [`latitude tools`](#latitude-tools)
+- [`latitude trace-deletions`](#latitude-trace-deletions)
 - [`latitude traces`](#latitude-traces)
 - [`latitude usage`](#latitude-usage)
 - [`latitude users`](#latitude-users)
@@ -1473,6 +1474,55 @@ Returns the most common top-level input keys and their most common values for th
 | `--top-keys` | `integer` | No | Maximum number of keys to return. |
 | `--top-values-per-key` | `integer` | No | Maximum number of values to return per key. |
 | `--errors-only` | `true | false` | No | When `true`, scope every aggregate to failed calls only. |
+
+---
+
+### `latitude trace-deletions`
+
+#### `latitude trace-deletions create`
+
+Permanently deletes the traces selected by `traces`, together with everything derived from them: their spans, scores and annotations, search indexes, and the analyses of the sessions they belong to. The deletion runs in the background; poll it with `getTraceDeletion` until `status` is `completed`. Deletion cannot be undone. Use `previewTraceDeletion` first to see how many traces a selector matches.
+
+`POST /v1/projects/{projectSlug}/trace-deletions`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+#### `latitude trace-deletions get`
+
+Returns one trace deletion, including its status and how much it has deleted so far.
+
+`GET /v1/projects/{projectSlug}/trace-deletions/{deletionId}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
+| `--deletion-id` | `string` | Yes | Trace deletion id, as returned by `createTraceDeletion`. |
+
+#### `latitude trace-deletions list`
+
+Returns the project's trace deletions, newest first. Each one records what was selected, who requested it, and how much was deleted, so it can serve as evidence of erasure.
+
+`GET /v1/projects/{projectSlug}/trace-deletions`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
+| `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
+| `--limit` | `integer` | No | Page size. Defaults to 20; max 100. |
+
+#### `latitude trace-deletions preview`
+
+Counts the traces a deletion with this selector would delete, without deleting anything. Accepts the same `traces` selector as `createTraceDeletion`.
+
+`POST /v1/projects/{projectSlug}/trace-deletions/preview`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable. |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 ---
 

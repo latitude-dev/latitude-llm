@@ -31,6 +31,7 @@ if typing.TYPE_CHECKING:
     from .signals.client import AsyncSignalsClient, SignalsClient
     from .spans.client import AsyncSpansClient, SpansClient
     from .tools.client import AsyncToolsClient, ToolsClient
+    from .trace_deletions.client import AsyncTraceDeletionsClient, TraceDeletionsClient
     from .traces.client import AsyncTracesClient, TracesClient
     from .usage.client import AsyncUsageClient, UsageClient
     from .users.client import AsyncUsersClient, UsersClient
@@ -143,6 +144,7 @@ class LatitudeClient:
         self._imports: typing.Optional[ImportsClient] = None
         self._usage: typing.Optional[UsageClient] = None
         self._agent_score: typing.Optional[AgentScoreClient] = None
+        self._trace_deletions: typing.Optional[TraceDeletionsClient] = None
 
     @property
     def account(self):
@@ -328,6 +330,14 @@ class LatitudeClient:
             self._agent_score = AgentScoreClient(client_wrapper=self._client_wrapper)
         return self._agent_score
 
+    @property
+    def trace_deletions(self):
+        if self._trace_deletions is None:
+            from .trace_deletions.client import TraceDeletionsClient  # noqa: E402
+
+            self._trace_deletions = TraceDeletionsClient(client_wrapper=self._client_wrapper)
+        return self._trace_deletions
+
 
 def _make_default_async_client(
     timeout: typing.Optional[float],
@@ -457,6 +467,7 @@ class AsyncLatitudeClient:
         self._imports: typing.Optional[AsyncImportsClient] = None
         self._usage: typing.Optional[AsyncUsageClient] = None
         self._agent_score: typing.Optional[AsyncAgentScoreClient] = None
+        self._trace_deletions: typing.Optional[AsyncTraceDeletionsClient] = None
 
     @property
     def account(self):
@@ -641,6 +652,14 @@ class AsyncLatitudeClient:
 
             self._agent_score = AsyncAgentScoreClient(client_wrapper=self._client_wrapper)
         return self._agent_score
+
+    @property
+    def trace_deletions(self):
+        if self._trace_deletions is None:
+            from .trace_deletions.client import AsyncTraceDeletionsClient  # noqa: E402
+
+            self._trace_deletions = AsyncTraceDeletionsClient(client_wrapper=self._client_wrapper)
+        return self._trace_deletions
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: LatitudeEnvironment) -> str:

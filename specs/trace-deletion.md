@@ -15,14 +15,14 @@ Customers with strict DPAs must erase a specific end-client's traces (for exampl
 - [x] **P1-3** (LAT-907): `TracePurgeRepository` port and ClickHouse adapter (effective session ids, trace-keyed purge, session purge and drift-free rebuild), plus the migration allowing lightweight deletes on `trace_message_occurrences`.
 - [x] **P1-4** (LAT-908): Postgres purge of `scores` and `annotation_queue_items`; `TracesPurged` removes deleted scores from signal centroids.
 - [x] **P1-5** (LAT-909): `trace-deletion:${requestId}` Temporal workflow (drain loop with a creation-time cutoff, batch purge, session rebuild, receipt, `TraceDeletionRequestFinished`).
-- [ ] **P1-6** (LAT-910): backoffice screen to dry-run, start and inspect deletions.
+- [x] **P1-6** (LAT-910): backoffice screen to dry-run, start and inspect deletions.
 
 **Exit gate**: staff can delete an organization's traces by tag in staging, and the receipt's counts match the rows that disappeared from every store in the inventory.
 
 ### Phase 2 - Public API
 
-- [ ] **P2-1** (LAT-911): `defineOperation` create (with `dryRun`), get and list, propagated to the SDKs, CLI and MCP.
-- [ ] **P2-2** (LAT-912): public docs page; drop the "no delete path" wording from `dev-docs/spans.md`.
+- [x] **P2-1** (LAT-911): `defineOperation` create, preview (dry run), get and list, propagated to the SDKs, CLI and MCP.
+- [x] **P2-2** (LAT-912): public docs page `docs/security/trace-deletion.mdx`, linked from GDPR.
 
 **Exit gate**: a customer can run and verify a deletion end to end from the TypeScript SDK.
 

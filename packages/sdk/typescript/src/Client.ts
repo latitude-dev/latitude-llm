@@ -20,6 +20,7 @@ import { SessionsClient } from "./api/resources/sessions/client/Client.js";
 import { SignalsClient } from "./api/resources/signals/client/Client.js";
 import { SpansClient } from "./api/resources/spans/client/Client.js";
 import { ToolsClient } from "./api/resources/tools/client/Client.js";
+import { TraceDeletionsClient } from "./api/resources/traceDeletions/client/Client.js";
 import { TracesClient } from "./api/resources/traces/client/Client.js";
 import { UsageClient } from "./api/resources/usage/client/Client.js";
 import { UsersClient } from "./api/resources/users/client/Client.js";
@@ -58,6 +59,7 @@ export class LatitudeClient {
     protected _imports: ImportsClient | undefined;
     protected _usage: UsageClient | undefined;
     protected _agentScore: AgentScoreClient | undefined;
+    protected _traceDeletions: TraceDeletionsClient | undefined;
 
     constructor(options: LatitudeClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
@@ -153,6 +155,10 @@ export class LatitudeClient {
 
     public get agentScore(): AgentScoreClient {
         return (this._agentScore ??= new AgentScoreClient(this._options));
+    }
+
+    public get traceDeletions(): TraceDeletionsClient {
+        return (this._traceDeletions ??= new TraceDeletionsClient(this._options));
     }
 
     /**

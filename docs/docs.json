@@ -315,6 +315,7 @@
         "pages": [
           "security/data-protection",
           "security/pii-redaction",
+          "security/trace-deletion",
           {
             "group": "Compliance",
             "pages": [

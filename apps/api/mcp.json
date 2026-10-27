@@ -45284,6 +45284,875 @@
         "readOnlyHint": true,
         "destructiveHint": false
       }
+    },
+    {
+      "name": "createTraceDeletion",
+      "title": "Delete traces (async)",
+      "description": "Permanently deletes the traces selected by `traces`, together with everything derived from them: their spans, scores and annotations, search indexes, and the analyses of the sessions they belong to. The deletion runs in the background; poll it with `getTraceDeletion` until `status` is `completed`. Deletion cannot be undone. Use `previewTraceDeletion` first to see how many traces a selector matches.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "traces": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "const": "ids",
+                    "description": "Match an explicit list of traces by their identifiers. Pair with `ids`."
+                  },
+                  "ids": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 32,
+                      "maxLength": 32,
+                      "description": "32-character trace identifier."
+                    },
+                    "description": "Non-empty list of trace identifiers."
+                  }
+                },
+                "required": [
+                  "by",
+                  "ids"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "const": "filters",
+                    "description": "Match every trace produced by a filter set. Pair with `filters`; result count is not bounded."
+                  },
+                  "filters": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "by",
+                  "filters"
+                ]
+              }
+            ],
+            "description": "Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "traces"
+        ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Trace deletion identifier. Use it to poll the deletion with `getTraceDeletion`."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "description": "`pending` until work starts, `running` while traces are being deleted, then `completed` or `failed`. Deletion is irreversible: traces deleted before a failure stay deleted."
+          },
+          "filters": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "in",
+                      "notIn",
+                      "contains",
+                      "notContains",
+                      "gtePercentile"
+                    ],
+                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "description": "The trace filter the deletion selects with, including any explicit trace ids as a `traceId` condition. Only traces that started before `createdAt` are deleted."
+          },
+          "requestedBy": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "api_key",
+                  "staff"
+                ],
+                "description": "`user` for a person, `api_key` for an API key, `staff` for Latitude support."
+              },
+              "id": {
+                "type": "string",
+                "description": "Identifier of the user or API key that requested the deletion."
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false,
+            "description": "Who requested the deletion."
+          },
+          "matchedTraceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Traces deleted so far. Final once `status` is `completed` or `failed`."
+          },
+          "deletedRecordCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Records deleted so far across the traces, their spans, and everything derived from them (scores, annotations, search indexes, session analyses)."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the deletion failed. `null` unless `status` is `failed`."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 time the deletion was requested."
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 time work started, or `null` while pending."
+          },
+          "completedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 time the deletion completed or failed, or `null` while it is still in progress."
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "filters",
+          "requestedBy",
+          "matchedTraceCount",
+          "deletedRecordCount",
+          "error",
+          "createdAt",
+          "startedAt",
+          "completedAt"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      }
+    },
+    {
+      "name": "previewTraceDeletion",
+      "title": "Preview trace deletion",
+      "description": "Counts the traces a deletion with this selector would delete, without deleting anything. Accepts the same `traces` selector as `createTraceDeletion`.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "traces": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "const": "ids",
+                    "description": "Match an explicit list of traces by their identifiers. Pair with `ids`."
+                  },
+                  "ids": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 32,
+                      "maxLength": 32,
+                      "description": "32-character trace identifier."
+                    },
+                    "description": "Non-empty list of trace identifiers."
+                  }
+                },
+                "required": [
+                  "by",
+                  "ids"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "const": "filters",
+                    "description": "Match every trace produced by a filter set. Pair with `filters`; result count is not bounded."
+                  },
+                  "filters": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "by",
+                  "filters"
+                ]
+              }
+            ],
+            "description": "Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "traces"
+        ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "matchedTraceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "How many traces a deletion with this selector would delete if it were requested now."
+          }
+        },
+        "required": [
+          "matchedTraceCount"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "listTraceDeletions",
+      "title": "List trace deletions",
+      "description": "Returns the project's trace deletions, newest first. Each one records what was selected, who requested it, and how much was deleted, so it can serve as evidence of erasure.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "cursor": {
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "description": "Page size. Defaults to 20; max 100.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Trace deletion identifier. Use it to poll the deletion with `getTraceDeletion`."
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "completed",
+                    "failed"
+                  ],
+                  "description": "`pending` until work starts, `running` while traces are being deleted, then `completed` or `failed`. Deletion is irreversible: traces deleted before a failure stay deleted."
+                },
+                "filters": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "eq",
+                            "neq",
+                            "gt",
+                            "gte",
+                            "lt",
+                            "lte",
+                            "in",
+                            "notIn",
+                            "contains",
+                            "notContains",
+                            "gtePercentile"
+                          ],
+                          "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "description": "The trace filter the deletion selects with, including any explicit trace ids as a `traceId` condition. Only traces that started before `createdAt` are deleted."
+                },
+                "requestedBy": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "user",
+                        "api_key",
+                        "staff"
+                      ],
+                      "description": "`user` for a person, `api_key` for an API key, `staff` for Latitude support."
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "Identifier of the user or API key that requested the deletion."
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Who requested the deletion."
+                },
+                "matchedTraceCount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Traces deleted so far. Final once `status` is `completed` or `failed`."
+                },
+                "deletedRecordCount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Records deleted so far across the traces, their spans, and everything derived from them (scores, annotations, search indexes, session analyses)."
+                },
+                "error": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Why the deletion failed. `null` unless `status` is `failed`."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO-8601 time the deletion was requested."
+                },
+                "startedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 time work started, or `null` while pending."
+                },
+                "completedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 time the deletion completed or failed, or `null` while it is still in progress."
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "filters",
+                "requestedBy",
+                "matchedTraceCount",
+                "deletedRecordCount",
+                "error",
+                "createdAt",
+                "startedAt",
+                "completedAt"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The project's trace deletions, newest first."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for the next page. `null` when there are no more pages."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "getTraceDeletion",
+      "title": "Get trace deletion",
+      "description": "Returns one trace deletion, including its status and how much it has deleted so far.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "deletionId": {
+            "type": "string",
+            "description": "Trace deletion id, as returned by `createTraceDeletion`."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "deletionId"
+        ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Trace deletion identifier. Use it to poll the deletion with `getTraceDeletion`."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "description": "`pending` until work starts, `running` while traces are being deleted, then `completed` or `failed`. Deletion is irreversible: traces deleted before a failure stay deleted."
+          },
+          "filters": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "in",
+                      "notIn",
+                      "contains",
+                      "notContains",
+                      "gtePercentile"
+                    ],
+                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "description": "The trace filter the deletion selects with, including any explicit trace ids as a `traceId` condition. Only traces that started before `createdAt` are deleted."
+          },
+          "requestedBy": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "api_key",
+                  "staff"
+                ],
+                "description": "`user` for a person, `api_key` for an API key, `staff` for Latitude support."
+              },
+              "id": {
+                "type": "string",
+                "description": "Identifier of the user or API key that requested the deletion."
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false,
+            "description": "Who requested the deletion."
+          },
+          "matchedTraceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Traces deleted so far. Final once `status` is `completed` or `failed`."
+          },
+          "deletedRecordCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Records deleted so far across the traces, their spans, and everything derived from them (scores, annotations, search indexes, session analyses)."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the deletion failed. `null` unless `status` is `failed`."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 time the deletion was requested."
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 time work started, or `null` while pending."
+          },
+          "completedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 time the deletion completed or failed, or `null` while it is still in progress."
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "filters",
+          "requestedBy",
+          "matchedTraceCount",
+          "deletedRecordCount",
+          "error",
+          "createdAt",
+          "startedAt",
+          "completedAt"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
     }
   ]
 }

@@ -19,6 +19,7 @@ import { sessionsModule } from "./sessions.ts"
 import { signalsModule } from "./signals.ts"
 import { spansModule } from "./spans.ts"
 import { toolsModule } from "./tools.ts"
+import { traceDeletionsModule } from "./trace-deletions.ts"
 import { tracesModule } from "./traces.ts"
 import { projectUsageModule, usageModule } from "./usage.ts"
 import { usersModule } from "./users.ts"
@@ -50,4 +51,5 @@ export const operationModules: ReadonlyArray<OperationModule> = [
   usageModule,
   projectUsageModule,
   agentScoreModule,
+  traceDeletionsModule,
 ]

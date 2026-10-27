@@ -9,10 +9,12 @@ import {
   MailIcon,
   MinusIcon,
   SlidersHorizontalIcon,
+  Trash2Icon,
 } from "lucide-react"
 import { adminGetAgentScore } from "../../../domains/admin/agent-score.functions.ts"
 import { adminGetProject } from "../../../domains/admin/projects.functions.ts"
 import { adminGetProjectTaxonomy } from "../../../domains/admin/taxonomy.functions.ts"
+import { adminListTraceDeletions } from "../../../domains/admin/trace-deletions.functions.ts"
 import { ActionRow, ActionsSection } from "../-components/actions-section/section.tsx"
 import {
   DashboardHero,
@@ -29,17 +31,20 @@ import { AgentScoreSeedHistoryButton } from "./-components/agent-score-seed-hist
 import { MetricsSection } from "./-components/metrics-section.tsx"
 import { SessionIntelligenceBackfillButton } from "./-components/session-intelligence-backfill-button.tsx"
 import { TaxonomySection } from "./-components/taxonomy-section.tsx"
+import { TraceDeletionButton } from "./-components/trace-deletion-button.tsx"
+import { TraceDeletionsSection } from "./-components/trace-deletions-section.tsx"
 import { WrappedTriggerButton } from "./-components/wrapped-trigger-button.tsx"
 
 export const Route = createFileRoute("/backoffice/projects/$projectId")({
   loader: async ({ params }) => {
     try {
-      const [project, taxonomy, agentScore] = await Promise.all([
+      const [project, taxonomy, agentScore, traceDeletions] = await Promise.all([
         adminGetProject({ data: { projectId: params.projectId } }),
         adminGetProjectTaxonomy({ data: { projectId: params.projectId } }),
         adminGetAgentScore({ data: { projectId: params.projectId } }),
+        adminListTraceDeletions({ data: { projectId: params.projectId } }),
       ])
-      return { project, taxonomy, agentScore }
+      return { project, taxonomy, agentScore, traceDeletions }
     } catch (error) {
       // Same `_tag`-discriminating error handling as the other detail
       // pages: NotFound (= "project doesn't exist" or "caller isn't an
@@ -57,7 +62,7 @@ export const Route = createFileRoute("/backoffice/projects/$projectId")({
 })
 
 function BackofficeProjectDetailPage() {
-  const { project, taxonomy, agentScore } = Route.useLoaderData()
+  const { project, taxonomy, agentScore, traceDeletions } = Route.useLoaderData()
   const [emoji, nameWithoutEmoji] = extractLeadingEmoji(project.name)
   const displayName = nameWithoutEmoji || project.name
 
@@ -186,7 +191,15 @@ function BackofficeProjectDetailPage() {
           description="Delete this project's existing taxonomy and session-intelligence rows, then start AnalyzeSessionWorkflow for the latest 1,500 sessions. Requires typed confirmation."
           action={<SessionIntelligenceBackfillButton projectId={project.id} projectName={project.name} />}
         />
+        <ActionRow
+          icon={Trash2Icon}
+          title="Delete traces"
+          description="Permanently delete the project's traces that match a tag, user, session, metadata value or explicit ids, with everything derived from them. Previews the match count and requires typed confirmation."
+          action={<TraceDeletionButton projectId={project.id} projectName={project.name} />}
+        />
       </ActionsSection>
+
+      <TraceDeletionsSection deletions={traceDeletions} />
 
       <DashboardSection
         title="Organization"
