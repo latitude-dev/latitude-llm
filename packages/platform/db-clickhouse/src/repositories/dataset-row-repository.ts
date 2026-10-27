@@ -24,9 +24,7 @@ const serializeField = (value: unknown): string => {
   ) {
     return ""
   }
-  // Only quote strings the read side would otherwise coerce: plain text that fails JSON.parse
-  // round-trips through safeParseJson's string fallback and keeps its raw, searchable bytes.
-  // Legacy raw rows holding JSON-parseable text were coerced before this change and still are.
+  // Only JSON-parseable strings need quoting; raw storage round-trips the rest and keeps it searchable.
   if (typeof value === "string" && !parsesAsJson(value)) return value
   if (value === undefined || value === null) return ""
   return JSON.stringify(value) ?? ""
