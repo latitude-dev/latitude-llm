@@ -153,6 +153,13 @@ describe("trace deletion selectors", () => {
     expect(traceDeletionFiltersProblem({ cost: [{ op: "gtePercentile", value: 90 }] })).toMatch(/Percentile/)
     expect(traceDeletionFiltersProblem(byTag)).toBeNull()
   })
+
+  it("rejects fields the trace query would silently ignore", () => {
+    expect(traceDeletionFiltersProblem({ tag: [{ op: "contains", value: "customer:acme" }] })).toMatch(
+      /Unknown trace filter fields: tag/,
+    )
+    expect(traceDeletionFiltersProblem({ ...byTag, "metadata.customer_id": [{ op: "eq", value: "acme" }] })).toBeNull()
+  })
 })
 
 describe("createTraceDeletionRequestUseCase", () => {
@@ -213,12 +220,8 @@ describe("trace deletion batches", () => {
     expect(Exit.isSuccess(exit) && exit.value).toEqual({
       traceIds: [TRACE_A, TRACE_B],
       sessionIds: [SessionId("session-1"), SessionId(TRACE_A), SessionId(TRACE_B)],
-      counts: {
-        "postgres.scores": 1,
-        "clickhouse.spans": 4,
-        "clickhouse.traces": 2,
-        "clickhouse.sessions": 1,
-      },
+      traceRowCounts: { "postgres.scores": 1, "clickhouse.spans": 4, "clickhouse.traces": 2 },
+      sessionRowCounts: { "clickhouse.sessions": 1 },
     })
     expect(calls).toEqual([
       "clickhouse.listSessions",

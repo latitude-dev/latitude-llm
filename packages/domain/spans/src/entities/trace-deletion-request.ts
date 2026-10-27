@@ -9,6 +9,7 @@ import {
   type TraceDeletionRequestId,
   type TraceId,
   traceDeletionRequestIdSchema,
+  unknownTraceFilterFields,
 } from "@domain/shared"
 import { z } from "zod"
 
@@ -133,6 +134,9 @@ export const buildTraceDeletionFilters = (input: {
 export const traceDeletionFiltersProblem = (filters: FilterSet): string | null => {
   const parsed = filterSetSchema.safeParse(filters)
   if (!parsed.success) return parsed.error.issues[0]?.message ?? "Invalid filters"
+
+  const unknownFields = unknownTraceFilterFields(filters)
+  if (unknownFields.length > 0) return `Unknown trace filter fields: ${unknownFields.join(", ")}`
 
   const conditions = Object.values(filters).flat()
   if (conditions.length === 0) return "A trace deletion needs at least one filter or trace id"

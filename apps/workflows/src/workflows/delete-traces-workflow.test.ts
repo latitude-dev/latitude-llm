@@ -37,7 +37,8 @@ const batch = (traceCount: number) => {
   return {
     traceIds,
     sessionIds: traceCount > 0 ? ["session-1"] : [],
-    counts: traceCount > 0 ? { "clickhouse.spans": traceCount * 3, "postgres.scores": 1 } : {},
+    traceRowCounts: traceCount > 0 ? { "clickhouse.spans": traceCount * 3, "postgres.scores": 1 } : {},
+    sessionRowCounts: traceCount > 0 ? { "clickhouse.sessions": 1 } : {},
   }
 }
 
@@ -68,7 +69,7 @@ describe("deleteTracesWorkflow", () => {
     expect(mockActivities.finishTraceDeletionActivity).toHaveBeenCalledWith({
       ...scope,
       matchedTraceCount: 520,
-      deletedRowCounts: { "clickhouse.spans": 1560, "postgres.scores": 2 },
+      deletedRowCounts: { "clickhouse.spans": 1560, "postgres.scores": 2, "clickhouse.sessions": 2 },
     })
     expect(continued).toEqual([])
   })
@@ -124,5 +125,19 @@ describe("deleteTracesWorkflow", () => {
     expect(mockActivities.finishTraceDeletionActivity).toHaveBeenCalledWith(
       expect.objectContaining({ matchedTraceCount: 500, error: "ClickHouse is down" }),
     )
+  })
+
+  it("credits a purged batch even when its session purge fails", async () => {
+    mockActivities.prepareTraceDeletionBatchActivity.mockResolvedValueOnce(batch(3))
+    mockActivities.purgeTraceDeletionSessionsActivity.mockRejectedValueOnce(new Error("sessions failed"))
+
+    await expect(deleteTracesWorkflow(scope)).rejects.toThrow("sessions failed")
+
+    expect(mockActivities.finishTraceDeletionActivity).toHaveBeenCalledWith({
+      ...scope,
+      matchedTraceCount: 3,
+      deletedRowCounts: { "clickhouse.spans": 9, "postgres.scores": 1 },
+      error: "sessions failed",
+    })
   })
 })

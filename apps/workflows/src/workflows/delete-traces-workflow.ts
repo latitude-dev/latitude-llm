@@ -69,9 +69,10 @@ export const deleteTracesWorkflow = async (input: DeleteTracesWorkflowInput): Pr
       }
 
       await purgeTraceDeletionBatchActivity({ ...scope, traceIds: prepared.traceIds, sessionIds: prepared.sessionIds })
-      await purgeTraceDeletionSessionsActivity({ ...scope, sessionIds: prepared.sessionIds })
       matchedTraceCount += prepared.traceIds.length
-      addCounts(deletedRowCounts, prepared.counts)
+      addCounts(deletedRowCounts, prepared.traceRowCounts)
+      await purgeTraceDeletionSessionsActivity({ ...scope, sessionIds: prepared.sessionIds })
+      addCounts(deletedRowCounts, prepared.sessionRowCounts)
       previousBatch = new Set(prepared.traceIds)
     }
   } catch (error) {

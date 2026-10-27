@@ -91,7 +91,8 @@ export const prepareTraceDeletionBatchActivity = (
         Effect.map((batch) => ({
           traceIds: batch.traceIds as readonly string[],
           sessionIds: batch.sessionIds as readonly string[],
-          counts: batch.counts,
+          traceRowCounts: batch.traceRowCounts,
+          sessionRowCounts: batch.sessionRowCounts,
         })),
       ),
     ),

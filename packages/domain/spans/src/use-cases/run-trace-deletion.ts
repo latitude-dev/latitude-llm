@@ -71,7 +71,12 @@ export const prepareTraceDeletionBatchUseCase = Effect.fn("spans.prepareTraceDel
   })
   const traceIds: TraceId[] = page.items.map((trace) => trace.traceId)
   if (traceIds.length === 0) {
-    return { traceIds, sessionIds: [] as readonly SessionId[], counts: {} as PurgedRowCounts }
+    return {
+      traceIds,
+      sessionIds: [] as readonly SessionId[],
+      traceRowCounts: {} as PurgedRowCounts,
+      sessionRowCounts: {} as PurgedRowCounts,
+    }
   }
 
   const sessionIds = yield* purge.listSessionIdsByTraceIds({ ...scope, traceIds })
@@ -82,11 +87,8 @@ export const prepareTraceDeletionBatchUseCase = Effect.fn("spans.prepareTraceDel
   return {
     traceIds,
     sessionIds,
-    counts: mergeRowCounts(
-      prefixCounts("postgres", postgres),
-      prefixCounts("clickhouse", traceRows),
-      prefixCounts("clickhouse", sessionRows),
-    ),
+    traceRowCounts: mergeRowCounts(prefixCounts("postgres", postgres), prefixCounts("clickhouse", traceRows)),
+    sessionRowCounts: prefixCounts("clickhouse", sessionRows),
   }
 })
 
