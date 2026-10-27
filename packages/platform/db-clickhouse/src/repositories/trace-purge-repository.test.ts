@@ -4,7 +4,7 @@ import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import { withClickHouse } from "../with-clickhouse.ts"
-import { TracePurgeRepositoryLive } from "./trace-purge-repository.ts"
+import { scopeSessionsMvToRebuild, TracePurgeRepositoryLive } from "./trace-purge-repository.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const otherOrganizationId = OrganizationId("x".repeat(24))
@@ -154,17 +154,25 @@ describe("TracePurgeRepository", () => {
     ])
   })
 
-  it("resolves effective session ids, falling back to the trace id for sessionless traces", async () => {
+  it("resolves every session key of the traces, including the trace ids that key sessionless spans", async () => {
     const sessionIds = await run((repo) =>
       repo.listSessionIdsByTraceIds({ ...scope, traceIds: [PURGED_IN_SESSION, PURGED_SESSIONLESS] }),
     )
 
-    expect([...sessionIds].sort()).toEqual([PURGED_SESSIONLESS, SHARED_SESSION].sort())
+    expect([...sessionIds].sort()).toEqual([PURGED_IN_SESSION, PURGED_SESSIONLESS, SHARED_SESSION].sort())
   })
 
-  it("purges only the selected traces of the organization and reports per-table counts", async () => {
+  it("still resolves a trace's session from the trace rollup once its spans are gone", async () => {
+    await ch.client.command({ query: `DELETE FROM spans WHERE ${traceScoped(PURGED_IN_SESSION)}` })
+
+    const sessionIds = await run((repo) => repo.listSessionIdsByTraceIds({ ...scope, traceIds: [PURGED_IN_SESSION] }))
+
+    expect(sessionIds).toContain(SHARED_SESSION)
+  })
+
+  it("counts the rows of the selected traces without deleting them", async () => {
     const counts = await run((repo) =>
-      repo.purgeTraces({ ...scope, traceIds: [PURGED_IN_SESSION, PURGED_SESSIONLESS] }),
+      repo.countTraceRows({ ...scope, traceIds: [PURGED_IN_SESSION, PURGED_SESSIONLESS] }),
     )
 
     expect(counts).toMatchObject({
@@ -174,8 +182,16 @@ describe("TracePurgeRepository", () => {
       trace_message_occurrences: 1,
       scores: 1,
     })
-    expect(await count("spans", traceScoped(PURGED_IN_SESSION))).toBe(0)
-    expect(await count("traces", traceScoped(PURGED_SESSIONLESS))).toBe(0)
+    expect(await count("spans", traceScoped(PURGED_IN_SESSION))).toBe(2)
+  })
+
+  it("purges only the selected traces of the organization, and a repeat purge is a no-op", async () => {
+    const traceIds = [PURGED_IN_SESSION, PURGED_SESSIONLESS]
+    await run((repo) => repo.purgeTraces({ ...scope, traceIds }))
+    await run((repo) => repo.purgeTraces({ ...scope, traceIds }))
+
+    const remaining = await run((repo) => repo.countTraceRows({ ...scope, traceIds }))
+    expect(Object.values(remaining).every((rows) => rows === 0)).toBe(true)
     expect(await count("spans", traceScoped(KEPT_IN_SESSION))).toBe(1)
     expect(await count("trace_search_documents", traceScoped(KEPT_ELSEWHERE))).toBe(1)
     expect(await count("scores", traceScoped(KEPT_IN_SESSION))).toBe(1)
@@ -183,15 +199,15 @@ describe("TracePurgeRepository", () => {
   })
 
   it("drops session-scoped data and rebuilds sessions from their surviving spans", async () => {
-    const sessionIds = await run((repo) =>
-      repo.listSessionIdsByTraceIds({ ...scope, traceIds: [PURGED_IN_SESSION, PURGED_SESSIONLESS] }),
-    )
-    await run((repo) => repo.purgeTraces({ ...scope, traceIds: [PURGED_IN_SESSION, PURGED_SESSIONLESS] }))
+    const traceIds = [PURGED_IN_SESSION, PURGED_SESSIONLESS]
+    const sessionIds = await run((repo) => repo.listSessionIdsByTraceIds({ ...scope, traceIds }))
+    await run((repo) => repo.purgeTraces({ ...scope, traceIds }))
 
+    const counted = await run((repo) => repo.countSessionRows({ ...scope, sessionIds }))
     const result = await run((repo) => repo.purgeSessions({ ...scope, sessionIds }))
 
+    expect(counted).toMatchObject({ session_analyses: 1, scores: 1 })
     expect(result.rebuiltSessions).toBe(1)
-    expect(result.deleted).toMatchObject({ session_analyses: 1, scores: 1 })
     expect(await readSession(SHARED_SESSION)).toEqual({ traces: 1, spans: 1, tokens: 7 })
     expect(await readSession(PURGED_SESSIONLESS)).toBeNull()
     expect(await readSession(UNTOUCHED_SESSION)).toEqual({ traces: 1, spans: 1, tokens: 5 })
@@ -201,12 +217,49 @@ describe("TracePurgeRepository", () => {
     expect(await count("scores", traceScoped(KEPT_IN_SESSION))).toBe(1)
   })
 
+  it("keeps a surviving sessionless trace that shares its rollup key with a purged session", async () => {
+    const sharedKey = TraceId("5".repeat(32))
+    const purgedInKeyedSession = TraceId("6".repeat(32))
+    await insert("spans", [
+      span({ traceId: purgedInKeyedSession, spanId: "f1", sessionId: sharedKey, minute: 20, tokensInput: 11 }),
+      span({ traceId: sharedKey, spanId: "g1", minute: 21, tokensInput: 13 }),
+    ])
+
+    const sessionIds = await run((repo) =>
+      repo.listSessionIdsByTraceIds({ ...scope, traceIds: [purgedInKeyedSession] }),
+    )
+    await run((repo) => repo.purgeTraces({ ...scope, traceIds: [purgedInKeyedSession] }))
+    const result = await run((repo) => repo.purgeSessions({ ...scope, sessionIds }))
+
+    expect(sessionIds).toContain(sharedKey)
+    expect(result.rebuiltSessions).toBe(1)
+    expect(await readSession(sharedKey)).toEqual({ traces: 1, spans: 1, tokens: 13 })
+  })
+
   it("is a no-op when nothing matches", async () => {
-    const counts = await run((repo) => repo.purgeTraces({ ...scope, traceIds: [TraceId("9".repeat(32))] }))
+    await run((repo) => repo.purgeTraces({ ...scope, traceIds: [TraceId("9".repeat(32))] }))
     const sessions = await run((repo) => repo.purgeSessions({ ...scope, sessionIds: [SessionId("missing")] }))
 
-    expect(Object.values(counts).every((rows) => rows === 0)).toBe(true)
     expect(sessions.rebuiltSessions).toBe(0)
     expect(await count("spans", "1")).toBe(6)
+  })
+})
+
+describe("scopeSessionsMvToRebuild", () => {
+  const select = "SELECT s.organization_id, count() AS span_count FROM default.spans AS s GROUP BY s.organization_id"
+
+  it("scopes the view's aggregation to the requested sessions before its GROUP BY", () => {
+    const statement = scopeSessionsMvToRebuild(select, ["organization_id", "span_count"])
+
+    expect(statement).toMatch(/^INSERT INTO sessions \(`organization_id`, `span_count`\) SELECT /)
+    expect(statement).toMatch(
+      /FROM default\.spans AS s WHERE s\.organization_id = \{organizationId:String\}[\s\S]*coalesce\(nullIf\(s\.session_id, ''\), toString\(s\.trace_id\)\) IN \{sessionIds:Array\(String\)\}\s+GROUP BY s\.organization_id$/,
+    )
+  })
+
+  it("refuses a view whose shape it cannot scope", () => {
+    expect(() => scopeSessionsMvToRebuild("SELECT 1 FROM spans GROUP BY 1", ["a"])).toThrow(/sessions_mv/)
+    expect(() => scopeSessionsMvToRebuild(`${select} UNION ALL ${select}`, ["a"])).toThrow(/sessions_mv/)
+    expect(() => scopeSessionsMvToRebuild(select, [])).toThrow(/sessions_mv/)
   })
 })
