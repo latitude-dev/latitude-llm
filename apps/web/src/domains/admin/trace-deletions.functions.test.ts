@@ -31,6 +31,15 @@ describe("adminCreateTraceDeletionInputSchema", () => {
     ).toBe(false)
     expect(adminTraceDeletionSelectorSchema.safeParse({ projectId: "p", metadataKey: "a/b" }).success).toBe(false)
   })
+
+  it("rejects a half-filled metadata pair instead of dropping it", () => {
+    expect(
+      adminTraceDeletionSelectorSchema.safeParse({ projectId: "p", tag: "x", metadataKey: "customer_id" }).success,
+    ).toBe(false)
+    expect(
+      adminTraceDeletionSelectorSchema.safeParse({ projectId: "p", tag: "x", metadataValue: "acme" }).success,
+    ).toBe(false)
+  })
 })
 
 describe("toTraceDeletionFilters", () => {
@@ -52,7 +61,7 @@ describe("toTraceDeletionFilters", () => {
     })
   })
 
-  it("ignores blank fields and a metadata key without a value", () => {
-    expect(toTraceDeletionFilters({ projectId: "p", tag: "", metadataKey: "customer_id" })).toEqual({})
+  it("ignores blank fields", () => {
+    expect(toTraceDeletionFilters({ projectId: "p", tag: "", userId: "" })).toEqual({})
   })
 })

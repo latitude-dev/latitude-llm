@@ -29,24 +29,29 @@ const optionalText = z.string().trim().max(1000).optional()
 /**
  * Exported for input-schema tests.
  */
-export const adminTraceDeletionSelectorSchema = z.object({
-  projectId: z.string().min(1).max(256),
-  tag: optionalText,
-  userId: optionalText,
-  sessionId: optionalText,
-  metadataKey: z
-    .string()
-    .trim()
-    .max(200)
-    .regex(/^[a-zA-Z0-9_.-]*$/)
-    .optional(),
-  metadataValue: optionalText,
-  traceIds: z.array(z.string().trim().length(32)).max(TRACE_DELETION_MAX_TRACE_IDS).optional(),
-})
+export const adminTraceDeletionSelectorSchema = z
+  .object({
+    projectId: z.string().min(1).max(256),
+    tag: optionalText,
+    userId: optionalText,
+    sessionId: optionalText,
+    metadataKey: z
+      .string()
+      .trim()
+      .max(200)
+      .regex(/^[a-zA-Z0-9_.-]*$/)
+      .optional(),
+    metadataValue: optionalText,
+    traceIds: z.array(z.string().trim().length(32)).max(TRACE_DELETION_MAX_TRACE_IDS).optional(),
+  })
+  .refine((selector) => Boolean(selector.metadataKey) === Boolean(selector.metadataValue), {
+    message: "Fill both the metadata key and value, or neither",
+    path: ["metadataValue"],
+  })
 
-export const adminCreateTraceDeletionInputSchema = adminTraceDeletionSelectorSchema.extend({
-  confirmation: z.literal(TRACE_DELETION_CONFIRMATION),
-})
+export const adminCreateTraceDeletionInputSchema = adminTraceDeletionSelectorSchema.and(
+  z.object({ confirmation: z.literal(TRACE_DELETION_CONFIRMATION) }),
+)
 
 type AdminTraceDeletionSelector = z.infer<typeof adminTraceDeletionSelectorSchema>
 
