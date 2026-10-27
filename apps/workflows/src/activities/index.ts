@@ -111,3 +111,11 @@ export {
   type NameTaxonomyClusterActivityInput,
   nameTaxonomyClusterActivity,
 } from "./taxonomy-naming-activities.ts"
+export {
+  finishTraceDeletionActivity,
+  prepareTraceDeletionBatchActivity,
+  purgeTraceDeletionBatchActivity,
+  purgeTraceDeletionSessionsActivity,
+  startTraceDeletionActivity,
+  type TraceDeletionSnapshot,
+} from "./trace-deletion-activities.ts"

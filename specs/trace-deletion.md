@@ -11,10 +11,10 @@ Customers with strict DPAs must erase a specific end-client's traces (for exampl
 ### Phase 1 - Deletion engine (staff-operated)
 
 - [x] **P1-1** (LAT-905): design doc and data inventory.
-- [ ] **P1-2** (LAT-906): `TraceDeletionRequest` entity, Postgres table (RLS, no FKs), repository, create/get/list use cases, `TraceDeletionRequested` event.
+- [x] **P1-2** (LAT-906): `TraceDeletionRequest` entity, Postgres table (RLS, no FKs), repository, create and dry-run use cases, `TraceDeletionRequestCreated` event.
 - [x] **P1-3** (LAT-907): `TracePurgeRepository` port and ClickHouse adapter (effective session ids, trace-keyed purge, session purge and drift-free rebuild), plus the migration allowing lightweight deletes on `trace_message_occurrences`.
-- [ ] **P1-4** (LAT-908): Postgres purge of `scores` and `annotation_queue_items`.
-- [ ] **P1-5** (LAT-909): `trace-deletion:${requestId}` Temporal workflow (snapshot ids, batch purge, rebuild, receipt, `TraceDeletionCompleted`).
+- [x] **P1-4** (LAT-908): Postgres purge of `scores` and `annotation_queue_items`; `TracesPurged` removes deleted scores from signal centroids.
+- [x] **P1-5** (LAT-909): `trace-deletion:${requestId}` Temporal workflow (drain loop with a creation-time cutoff, batch purge, session rebuild, receipt, `TraceDeletionRequestFinished`).
 - [ ] **P1-6** (LAT-910): backoffice screen to dry-run, start and inspect deletions.
 
 **Exit gate**: staff can delete an organization's traces by tag in staging, and the receipt's counts match the rows that disappeared from every store in the inventory.

@@ -19,3 +19,12 @@ export class RedactionError extends Data.TaggedError("RedactionError")<{
     return this.reason
   }
 }
+
+export class InvalidTraceDeletionSelectorError extends Data.TaggedError("InvalidTraceDeletionSelectorError")<{
+  readonly reason: string
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.reason
+  }
+}

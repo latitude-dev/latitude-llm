@@ -100,6 +100,7 @@ import { createSignalsMatchWorker } from "./workers/signals-match.ts"
 import { createSignalsPreviewWorker } from "./workers/signals-preview.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createTaxonomyWorker } from "./workers/taxonomy.ts"
+import { createTraceDeletionsWorker } from "./workers/trace-deletions.ts"
 import { createTraceEndWorker } from "./workers/trace-end.ts"
 import { createTraceSearchWorker } from "./workers/trace-search.ts"
 import { createWrappedWorker } from "./workers/wrapped.ts"
@@ -236,6 +237,7 @@ const bootstrap = async () => {
     createApiKeysWorker(ctx)
     createBillingWorker({ consumer: ctx.consumer, postgresClient: ctx.postgresClient })
     createBillingOverageWorker({ consumer: ctx.consumer, workflowStarter: ctx.workflowStarter })
+    createTraceDeletionsWorker({ consumer: ctx.consumer, workflowStarter: ctx.workflowStarter })
     createSpanIngestionWorker({
       consumer: ctx.consumer,
       eventsPublisher: ctx.eventsPublisher,

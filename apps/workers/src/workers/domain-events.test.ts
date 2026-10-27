@@ -1011,4 +1011,60 @@ describe("domain-events dispatcher", () => {
     expect(pending?.options?.latestThrottleMs).toBe(BILLING_OVERAGE_SYNC_THROTTLE_MS)
     expect((pending?.payload as { snapshotOverageCredits: number })?.snapshotOverageCredits).toBe(5_000)
   })
+
+  it("routes TraceDeletionRequestCreated to trace-deletions:run", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("TraceDeletionRequestCreated", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceDeletionRequestId: "req-1",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toEqual([
+      expect.objectContaining({
+        queue: "trace-deletions",
+        task: "run",
+        payload: { organizationId: "org-1", projectId: "proj-1", traceDeletionRequestId: "req-1" },
+        options: expect.objectContaining({ dedupeKey: "trace-deletions:run:req-1" }),
+      }),
+    ])
+  })
+
+  it("removes only published, signal-linked scores of purged traces from their signals", async () => {
+    const { consumer, published } = setupDispatcher()
+    const deletedScore = (scoreId: string, signalId: string | null, draftedAt: string | null) => ({
+      scoreId,
+      signalId,
+      draftedAt,
+      feedback: "bad answer",
+      source: "annotation",
+      createdAt: "2026-10-01T00:00:00.000Z",
+    })
+
+    const envelope = makeEnvelope("TracesPurged", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceDeletionRequestId: "req-1",
+      traceIds: ["trace-1"],
+      deletedScores: [
+        deletedScore("linked", "signal-1", null),
+        deletedScore("draft", "signal-1", "2026-10-01T00:00:00.000Z"),
+        deletedScore("unlinked", null, null),
+      ],
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toEqual([
+      expect.objectContaining({
+        queue: "issues",
+        task: "removeScore",
+        payload: expect.objectContaining({ organizationId: "org-1", projectId: "proj-1", scoreId: "linked" }),
+        options: expect.objectContaining({ dedupeKey: "issues:remove-score:linked" }),
+      }),
+    ])
+  })
 })

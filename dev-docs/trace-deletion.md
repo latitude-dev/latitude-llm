@@ -6,21 +6,31 @@ Sibling docs: [`spans.md`](./spans.md) (telemetry storage and rollups), [`filter
 
 ## Deletion requests
 
-A deletion is a **trace deletion request**: a Postgres row scoped to one organization and project that is also the customer's receipt. It records the selector, who asked (user or API key), status (`pending → running → completed | failed`), the number of matched traces, rows removed per store, and timestamps. The purge never deletes its own request row.
+A deletion is a **trace deletion request** (`trace_deletion_requests`, `@domain/spans`): a Postgres row scoped to one organization and project that is also the customer's receipt. It records the selector, who asked (`{ type: "user" | "api_key" | "staff", id }`), status (`pending → running → completed | failed`), the number of matched traces, rows removed per store (keyed `clickhouse.<table>` / `postgres.<table>`), the failure reason, and timestamps. The purge never deletes its own request row.
 
-**Selector.** `{ filters?: FilterSet, traceIds?: TraceId[] }`, at least one non-empty. `filters` is the same `FilterSet` the trace list uses (`tags`, `userId`, `sessionId`, `metadata.*`, …), so "delete what I am looking at" is exact. Trace ids are resolved by paging `TraceRepository.listByProjectId` (the trace list's own read path, as `addTracesToDataset` does) and **snapshotted when the request starts**: a filter never sweeps traces ingested after the request began.
+**Selector.** One `FilterSet`, the same language the trace list uses (`tags`, `userId`, `sessionId`, `metadata.*`, …), so "delete what I am looking at" is exact. Explicit trace ids are sugar for a `traceId in [...]` condition, which is why one request can name at most 100 of them (the `in` list cap); larger erasures select by tag, user or metadata. A selector must contain at least one condition, and `gtePercentile` is rejected because a threshold relative to the data is not a stable thing to erase. The dry run (`countTraceDeletionMatchesUseCase`) counts through `TraceRepository.countByProjectId` with the same resolution.
 
-**Execution.** Creating a request emits `TraceDeletionRequested`; its consumer only starts the `trace-deletion:${requestId}` Temporal workflow, which processes the snapshot in batches. Every step is idempotent, because deleting already-deleted rows matches nothing, so retries and replays are safe.
+**Cutoff.** Every read of a request's selector adds `startTime <= createdAt`, so a filter never sweeps traces that started after the request was made, however long the purge takes.
+
+**Execution.** Creating a request writes `TraceDeletionRequestCreated` through the outbox. The domain-events router publishes `trace-deletions:run`, whose worker only starts the `trace-deletion:${requestId}` Temporal workflow (`deleteTracesWorkflow`). The workflow drains the selector rather than holding a list of ids: each batch prepares the first page (500 traces) of what still matches and purges it, and the next batch lists again. It finishes when a page comes back empty, and continues-as-new every 40 batches with its running totals so history stays bounded. A batch that lists a trace the previous batch purged means the deletes did not take, so the workflow fails instead of looping. Any failure marks the request `failed` with what was purged so far. Finishing writes `TraceDeletionRequestFinished`; a replay of a finished request does nothing.
 
 ## Purge order
 
-`TracePurgeRepository` (`@domain/spans`, ClickHouse adapter in `@platform/db-clickhouse`) runs three ordered steps per batch:
+Each batch is three activities, ordered so that a retry after a part-way failure always finishes the job and never changes the receipt:
 
-1. **`listSessionIdsByTraceIds`**, while the spans still exist. A trace's *effective session id* is its span `session_id`, or the trace id when it has none. That is the key `sessions_mv` groups by (`coalesce(nullIf(session_id, ''), toString(trace_id))`), and the key session-scoped derived tables use.
-2. **`purgeTraces`** deletes every trace-keyed row.
-3. **`purgeSessions`** deletes the session rollups and all session-scoped derived data of the affected sessions, then rebuilds the rollup of every session that still has spans.
+1. **`prepareTraceDeletionBatchUseCase`** only reads:
+   - It lists the page and resolves its session keys with `TracePurgeRepository.listSessionIdsByTraceIds`. These are the span and trace `session_id`s plus the trace ids themselves, because `sessions_mv` keys sessionless spans by trace id (`coalesce(nullIf(session_id, ''), toString(trace_id))`). It reads `traces` as well as `spans`, so it still resolves after a retry whose spans are already gone.
+   - It counts the rows every store holds for the batch.
+
+   Its result is recorded once in workflow history. That is what makes the receipt stable: counting inside the deletes would undercount any rows a failed attempt had already removed.
+2. **`purgeTraceDeletionBatchUseCase`** deletes:
+   - Postgres first, in one transaction with the `TracesPurged` outbox event.
+   - Then every trace-keyed ClickHouse table, with `traces` last. `traces` is what the listing reads, so until the batch has fully succeeded its traces keep listing.
+3. **`purgeTraceDeletionSessionsUseCase`** takes the session keys prepared in step 1, because by now the traces no longer list. It deletes the session rollups and all session-scoped derived data, then rebuilds the rollup of every session that still has spans. Spans are matched by the same effective key `sessions_mv` groups on, so a surviving sessionless trace that shares a rollup key with a purged session is rebuilt too.
 
 Session-scoped derived data (analyses, semantic moments, taxonomy observations, flagger decisions, session-level scores) summarizes the whole session, including the deleted traces, so it is dropped entirely rather than edited. The normal conversation-intelligence pipeline recomputes it for whatever survives. A sessionless trace's effective session contains only that trace, so it never needs a rebuild.
+
+**Signals.** `TracesPurged` carries the deleted scores. For each published score linked to a signal, the router publishes `issues:removeScore`, the same path annotation deletion uses, so the signal's centroid no longer carries the deleted feedback.
 
 **Rebuild without drift.** `sessions` is an `AggregatingMergeTree` fed by `sessions_mv`. The rebuild reads the live view definition (`system.tables.as_select` plus the view's column order), scopes it with a `WHERE` on organization, project and `session_id` before its `GROUP BY`, and runs `INSERT INTO sessions (…) SELECT …`. It therefore re-aggregates exactly as ingest does, whatever the view becomes. If the view ever loses its single `FROM spans AS s GROUP BY` shape, the rebuild throws rather than producing wrong totals. `traces` needs no rebuild, because a purged trace loses all of its spans.
 
@@ -47,4 +57,4 @@ Session-scoped derived data (analyses, semantic moments, taxonomy observations, 
 
 ## ClickHouse mechanics
 
-Deletes are parameterized lightweight `DELETE FROM … WHERE organization_id = … AND project_id = … AND <key> IN {…:Array(String)}`. Rows are masked from every read as soon as the statement returns, and physically removed when their parts next merge. `trace_message_occurrences` carries a projection, so it sets `lightweight_mutation_projection_mode = 'rebuild'` (without it, lightweight deletes on that table throw). Each target is counted before it is deleted, which gives the per-store numbers on the receipt.
+Deletes are parameterized lightweight `DELETE FROM … WHERE organization_id = … AND project_id = … AND <key> IN {…:Array(String)}`. Rows are masked from every read as soon as the statement returns, and physically removed when their parts next merge. `trace_message_occurrences` carries a projection, so it sets `lightweight_mutation_projection_mode = 'rebuild'` (without it, lightweight deletes on that table throw). Counting and deleting are separate repository methods (`countTraceRows` / `purgeTraces`, `countSessionRows` / `purgeSessions`, `count` / `purge` on the Postgres side); every delete is idempotent.

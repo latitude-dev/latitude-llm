@@ -44,6 +44,34 @@ export interface EventPayloads {
       readonly overageAllowed: boolean
     }
   }
+  TraceDeletionRequestCreated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly traceDeletionRequestId: string
+  }
+  /** One batch of a trace deletion: the traces are gone from every store, and so are these scores. */
+  TracesPurged: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly traceDeletionRequestId: string
+    readonly traceIds: readonly string[]
+    readonly deletedScores: readonly {
+      readonly scoreId: string
+      readonly signalId: string | null
+      readonly draftedAt: string | null
+      readonly feedback: string
+      readonly source: string
+      readonly createdAt: string
+    }[]
+  }
+  TraceDeletionRequestFinished: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly traceDeletionRequestId: string
+    readonly status: "completed" | "failed"
+    readonly requestedBy: { readonly type: "user" | "api_key" | "staff"; readonly id: string }
+    readonly matchedTraceCount: number
+  }
   ScoreCreated: {
     readonly organizationId: string
     readonly projectId: string

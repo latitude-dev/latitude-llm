@@ -1037,6 +1037,15 @@ const _registry = {
       readonly projectId: string
     }
   }>(),
+
+  "trace-deletions": payloads<{
+    /** Fired by the domain-events router on `TraceDeletionRequestCreated`; starts the purge workflow. */
+    run: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceDeletionRequestId: string
+    }
+  }>(),
 }
 
 export type TopicRegistry = typeof _registry
