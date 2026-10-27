@@ -22,6 +22,7 @@ import {
   ShieldAlertIcon,
   SlidersHorizontalIcon,
   TagsIcon,
+  Trash2Icon,
   UserRound,
   Users,
   UsersRoundIcon,
@@ -195,6 +196,12 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         label: "Privacy",
         icon: EyeOffIcon,
         path: (slug) => `/projects/${slug}/settings/privacy`,
+      },
+      {
+        key: "data-deletion",
+        label: "Data deletion",
+        icon: Trash2Icon,
+        path: (slug) => `/projects/${slug}/settings/data-deletion`,
       },
       {
         key: "integrations",

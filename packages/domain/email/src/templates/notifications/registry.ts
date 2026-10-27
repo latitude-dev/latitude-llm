@@ -9,6 +9,7 @@ import { signalAssignedRenderer } from "./signal-assigned/index.tsx"
 import { signalDiscoveredRenderer } from "./signal-discovered/index.tsx"
 import { signalRegressedRenderer } from "./signal-regressed/index.tsx"
 import { signalReprioritizedRenderer } from "./signal-reprioritized/index.tsx"
+import { traceDeletionFinishedRenderer } from "./trace-deletion-finished/index.tsx"
 import type { NotificationEmailRendererRegistry } from "./types.ts"
 import { wrappedReportRenderer } from "./wrapped-report/index.tsx"
 
@@ -30,4 +31,5 @@ export const NOTIFICATION_EMAIL_RENDERERS: NotificationEmailRendererRegistry = {
   "signal.reprioritized": signalReprioritizedRenderer,
   "destination.quarantined": destinationQuarantinedRenderer,
   "billing.limit-reached": billingLimitReachedRenderer,
+  "trace-deletion.finished": traceDeletionFinishedRenderer,
 }

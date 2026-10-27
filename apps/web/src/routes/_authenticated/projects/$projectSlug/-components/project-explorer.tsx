@@ -15,6 +15,7 @@ import {
   ShieldAlertIcon,
   SlidersHorizontalIcon,
   TextIcon,
+  Trash2Icon,
   XIcon,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -27,6 +28,7 @@ import {
   createDatasetFromTracesFunction,
 } from "../../../../../domains/datasets/datasets.functions.ts"
 import { useFeatureFlags } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
+import { useIsOrganizationOwner, useMembersCollection } from "../../../../../domains/members/members.collection.ts"
 import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { useSavedSearchBySlug } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
@@ -41,11 +43,13 @@ import {
   getSelectedCount,
   type SelectionState,
 } from "../../../../../lib/hooks/useSelectableRows.ts"
+import { useAuthenticatedUser } from "../../../-route-data.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { TargetMonitorsMenu } from "../monitors/-components/target-monitors-menu.tsx"
 import { AddToDatasetModal } from "./add-to-dataset-modal.tsx"
 import { TraceAggregationsPanel } from "./aggregations/aggregations-panel.tsx"
 import { ColumnsSelector } from "./columns-selector.tsx"
+import { DeleteTracesModal } from "./delete-traces-modal.tsx"
 import { ExportConfirmationModal } from "./export-confirmation-modal.tsx"
 import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./project-traces-table.tsx"
 import { SaveSearchModal } from "./save-search-modal.tsx"
@@ -292,6 +296,11 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const user = useAuthenticatedUser()
+  const { data: memberData } = useMembersCollection()
+  const isOwner = useIsOrganizationOwner(user.id)
+  const canDeleteTraces = isOwner || (memberData ?? []).find((member) => member.userId === user.id)?.role === "admin"
 
   const {
     totalCount: totalTraceCount,
@@ -666,6 +675,12 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
               <Icon icon={DatabaseIcon} size="sm" />
               Add to Dataset ({selectedCount})
             </Button>
+            {!isSessions && canDeleteTraces ? (
+              <Button variant="outline" size="sm" onClick={() => setDeleteModalOpen(true)}>
+                <Icon icon={Trash2Icon} size="sm" />
+                Delete ({selectedCount.toLocaleString()})
+              </Button>
+            ) : null}
           </div>
         )}
 
@@ -784,6 +799,19 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             }
             onSuccess={clearSelections}
           />
+          {deleteModalOpen ? (
+            <DeleteTracesModal
+              projectId={currentProject.id}
+              selection={bulkSelection}
+              filters={effectiveFilters}
+              hasSearchQuery={hasSearchQuery}
+              onClose={() => setDeleteModalOpen(false)}
+              onDeleted={() => {
+                setDeleteModalOpen(false)
+                clearSelections()
+              }}
+            />
+          ) : null}
         </>
       )}
 

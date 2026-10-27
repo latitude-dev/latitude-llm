@@ -28,8 +28,8 @@ Customers with strict DPAs must erase a specific end-client's traces (for exampl
 
 ### Phase 3 - Product UI
 
-- [ ] **P3-1** (LAT-913): bulk delete from the trace list, with dry-run count and typed confirmation.
-- [ ] **P3-2** (LAT-914): deletion history and downloadable receipt in project settings; completion notification.
+- [x] **P3-1** (LAT-913): bulk delete from the trace list, with dry-run count and typed confirmation.
+- [x] **P3-2** (LAT-914): deletion history and downloadable receipt in project settings; completion notification.
 
 **Exit gate**: an org admin can delete and audit deletions without the API.
 

@@ -10,6 +10,7 @@ import { SignalAssignedNotification } from "./renderers/signal-assigned-notifica
 import { SignalDiscoveredNotification } from "./renderers/signal-discovered-notification.tsx"
 import { SignalRegressedNotification } from "./renderers/signal-regressed-notification.tsx"
 import { SignalReprioritizedNotification } from "./renderers/signal-reprioritized-notification.tsx"
+import { TraceDeletionFinishedNotification } from "./renderers/trace-deletion-finished-notification.tsx"
 import { WrappedReportNotification } from "./renderers/wrapped-report-notification.tsx"
 
 const RENDERERS: Record<NotificationKind, ComponentType<{ readonly notification: NotificationRecord }>> = {
@@ -25,6 +26,7 @@ const RENDERERS: Record<NotificationKind, ComponentType<{ readonly notification:
   "signal.reprioritized": SignalReprioritizedNotification,
   "destination.quarantined": DestinationQuarantinedNotification,
   "billing.limit-reached": BillingLimitReachedNotification,
+  "trace-deletion.finished": TraceDeletionFinishedNotification,
 }
 
 export function NotificationItem({ notification }: { readonly notification: NotificationRecord }) {
