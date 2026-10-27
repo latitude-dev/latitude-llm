@@ -3,7 +3,13 @@ import { base64urlEncode } from "@repo/utils"
 import { type Job, UnrecoverableError } from "bullmq"
 import { Context, Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
-import { buildBullMqJobOptions, resolveFinalFailureHook, toWorkerThrowable } from "./adapter.ts"
+import {
+  buildBullMqJobOptions,
+  COMPLETED_JOB_RETENTION,
+  FAILED_JOB_RETENTION,
+  resolveFinalFailureHook,
+  toWorkerThrowable,
+} from "./adapter.ts"
 
 const LABEL = "publish(monitors, checkSavedSearchMonitors)"
 
@@ -100,6 +106,19 @@ describe("buildBullMqJobOptions", () => {
     expect(() => buildBullMqJobOptions(LABEL, { throttleMs: 1 })).toThrow(/require a dedupeKey/)
     expect(() => buildBullMqJobOptions(LABEL, { latestThrottleMs: 1 })).toThrow(/require a dedupeKey/)
     expect(() => buildBullMqJobOptions(LABEL, { leadingThrottleMs: 1 })).toThrow(/require a dedupeKey/)
+  })
+})
+
+describe("job retention", () => {
+  const DAY_SECONDS = 24 * 3600
+
+  it("keeps completed jobs for at most a day", () => {
+    expect(COMPLETED_JOB_RETENTION).toEqual({ count: 1000, age: DAY_SECONDS })
+  })
+
+  it("keeps failed jobs for at most a week, well inside the 30-day trace-deletion window", () => {
+    expect(FAILED_JOB_RETENTION).toEqual({ count: 1000, age: 7 * DAY_SECONDS })
+    expect(FAILED_JOB_RETENTION.age).toBeLessThan(30 * DAY_SECONDS)
   })
 })
 
