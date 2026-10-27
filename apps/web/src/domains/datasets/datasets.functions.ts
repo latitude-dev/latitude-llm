@@ -11,6 +11,7 @@ import {
   deleteDataset,
   deleteRows,
   getRowDetail,
+  insertRowFieldValueSchema,
   insertRows,
   listDatasets,
   listRows,
@@ -551,11 +552,11 @@ export const insertDatasetRow = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       datasetId: z.string(),
-      input: z.string(),
-      output: z.string(),
-      expectedOutput: z.string(),
-      metadata: z.string(),
-      custom: z.record(z.string(), z.string()).optional(),
+      input: insertRowFieldValueSchema,
+      output: insertRowFieldValueSchema,
+      expectedOutput: insertRowFieldValueSchema,
+      metadata: insertRowFieldValueSchema,
+      custom: z.record(z.string(), insertRowFieldValueSchema).optional(),
     }),
   )
   .handler(
@@ -607,11 +608,11 @@ export const updateDatasetRow = createServerFn({ method: "POST" })
     z.object({
       datasetId: z.string(),
       rowId: z.string(),
-      input: z.string(),
-      output: z.string(),
-      expectedOutput: z.string(),
-      metadata: z.string(),
-      custom: z.record(z.string(), z.string()).optional(),
+      input: insertRowFieldValueSchema,
+      output: insertRowFieldValueSchema,
+      expectedOutput: insertRowFieldValueSchema,
+      metadata: insertRowFieldValueSchema,
+      custom: z.record(z.string(), insertRowFieldValueSchema).optional(),
     }),
   )
   .handler(async ({ data, context }) => {

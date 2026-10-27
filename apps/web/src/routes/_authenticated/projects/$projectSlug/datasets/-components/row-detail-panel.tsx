@@ -1,4 +1,4 @@
-import { type DatasetColumn, effectiveColumns } from "@domain/datasets"
+import { type DatasetColumn, effectiveColumns, type RowFieldValue } from "@domain/datasets"
 import { DetailSection, Icon, RichTextEditor, Text } from "@repo/ui"
 import { ArrowDownRightIcon, ArrowUpRightIcon, PencilIcon, SparklesIcon, TextIcon } from "lucide-react"
 import { useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react"
@@ -7,11 +7,11 @@ import type { DatasetRowRecord } from "../../../../../../domains/datasets/datase
 export type RowDetailPanelSaveRef = { save: () => void }
 
 export interface RowDetailSaveData {
-  input: string
-  output: string
-  expectedOutput: string
-  metadata: string
-  custom: Record<string, string>
+  input: RowFieldValue
+  output: RowFieldValue
+  expectedOutput: RowFieldValue
+  metadata: RowFieldValue
+  custom: Record<string, RowFieldValue>
 }
 
 function formatField(value: unknown): string {
@@ -22,6 +22,32 @@ function formatField(value: unknown): string {
     return JSON.stringify(value, null, 2)
   } catch {
     return String(value)
+  }
+}
+
+// The editor works in text; fields the user did not touch must keep their original typed value,
+// otherwise a save would silently retype every structured cell as a string.
+const unchanged = (text: string, value: unknown): RowFieldValue =>
+  (text === formatField(value) ? value : text) as RowFieldValue
+
+export function buildRowDetailSaveData(args: {
+  readonly row: Pick<DatasetRowRecord, "input" | "output" | "expectedOutput" | "metadata" | "custom">
+  readonly texts: Readonly<Record<"input" | "output" | "expectedOutput" | "metadata", string>>
+  readonly customText: Readonly<Record<string, string>>
+  readonly customColumns: ReadonlyArray<DatasetColumn>
+}): RowDetailSaveData {
+  const { row, texts, customText, customColumns } = args
+  return {
+    input: unchanged(texts.input, row.input),
+    output: unchanged(texts.output, row.output),
+    expectedOutput: unchanged(texts.expectedOutput, row.expectedOutput),
+    metadata: unchanged(texts.metadata, row.metadata),
+    custom: Object.fromEntries(
+      customColumns.map((c) => [
+        c.identifier,
+        unchanged(customText[c.identifier] ?? "", row.custom[c.identifier] ?? ""),
+      ]),
+    ),
   }
 }
 
@@ -73,15 +99,15 @@ export function RowDetailPanel({
   }, [])
 
   const handleSave = useCallback(() => {
-    const custom = Object.fromEntries(customColumns.map((c) => [c.identifier, customText[c.identifier] ?? ""]))
-    onSave?.({
-      input: inputText,
-      output: outputText,
-      expectedOutput: expectedOutputText,
-      metadata: metadataText,
-      custom,
-    })
-  }, [inputText, outputText, expectedOutputText, metadataText, customText, customColumns, onSave])
+    onSave?.(
+      buildRowDetailSaveData({
+        row,
+        texts: { input: inputText, output: outputText, expectedOutput: expectedOutputText, metadata: metadataText },
+        customText,
+        customColumns,
+      }),
+    )
+  }, [inputText, outputText, expectedOutputText, metadataText, customText, customColumns, row, onSave])
 
   useImperativeHandle(saveRef, () => ({ save: handleSave }), [handleSave])
 
