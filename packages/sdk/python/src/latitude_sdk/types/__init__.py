@@ -482,6 +482,14 @@ if typing.TYPE_CHECKING:
     from .create_monitor_body_threshold_target_type import CreateMonitorBodyThresholdTargetType
     from .create_score_body import CreateScoreBody
     from .create_signal_response import CreateSignalResponse
+    from .create_trace_deletion_body import CreateTraceDeletionBody
+    from .create_trace_deletion_body_traces import (
+        CreateTraceDeletionBodyTraces,
+        CreateTraceDeletionBodyTraces_Filters,
+        CreateTraceDeletionBodyTraces_Ids,
+    )
+    from .create_trace_deletion_body_traces_filters import CreateTraceDeletionBodyTracesFilters
+    from .create_trace_deletion_body_traces_ids import CreateTraceDeletionBodyTracesIds
     from .current_agent_score import CurrentAgentScore
     from .current_agent_score_snapshot import CurrentAgentScoreSnapshot
     from .custom_score_response import CustomScoreResponse
@@ -607,6 +615,7 @@ if typing.TYPE_CHECKING:
     from .langsmith_import_credentials_region import LangsmithImportCredentialsRegion
     from .list_imports_response import ListImportsResponse
     from .list_incidents_response import ListIncidentsResponse
+    from .list_trace_deletions_response import ListTraceDeletionsResponse
     from .member import Member, Member_Active, Member_Invited
     from .member_list import MemberList
     from .memory_record_change_diff import MemoryRecordChangeDiff
@@ -736,6 +745,7 @@ if typing.TYPE_CHECKING:
     from .paginated_tool_calls import PaginatedToolCalls
     from .paginated_trace_annotations import PaginatedTraceAnnotations
     from .paginated_traces import PaginatedTraces
+    from .preview_trace_deletion_response import PreviewTraceDeletionResponse
     from .project import Project
     from .project_settings import ProjectSettings
     from .project_settings_patch import ProjectSettingsPatch
@@ -1117,6 +1127,10 @@ if typing.TYPE_CHECKING:
     from .trace_analytics_time_to_first_token import TraceAnalyticsTimeToFirstToken
     from .trace_analytics_tokens import TraceAnalyticsTokens
     from .trace_analytics_traces import TraceAnalyticsTraces
+    from .trace_deletion import TraceDeletion
+    from .trace_deletion_requested_by import TraceDeletionRequestedBy
+    from .trace_deletion_requested_by_type import TraceDeletionRequestedByType
+    from .trace_deletion_status import TraceDeletionStatus
     from .trace_detail import TraceDetail
     from .trace_filter_set import TraceFilterSet
     from .trace_ref import TraceRef, TraceRef_Filters, TraceRef_Id
@@ -1584,6 +1598,12 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateMonitorBody_Threshold": ".create_monitor_body",
     "CreateScoreBody": ".create_score_body",
     "CreateSignalResponse": ".create_signal_response",
+    "CreateTraceDeletionBody": ".create_trace_deletion_body",
+    "CreateTraceDeletionBodyTraces": ".create_trace_deletion_body_traces",
+    "CreateTraceDeletionBodyTracesFilters": ".create_trace_deletion_body_traces_filters",
+    "CreateTraceDeletionBodyTracesIds": ".create_trace_deletion_body_traces_ids",
+    "CreateTraceDeletionBodyTraces_Filters": ".create_trace_deletion_body_traces",
+    "CreateTraceDeletionBodyTraces_Ids": ".create_trace_deletion_body_traces",
     "CurrentAgentScore": ".current_agent_score",
     "CurrentAgentScoreSnapshot": ".current_agent_score_snapshot",
     "CustomScoreResponse": ".custom_score_response",
@@ -1709,6 +1729,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "LangsmithImportCredentialsRegion": ".langsmith_import_credentials_region",
     "ListImportsResponse": ".list_imports_response",
     "ListIncidentsResponse": ".list_incidents_response",
+    "ListTraceDeletionsResponse": ".list_trace_deletions_response",
     "Member": ".member",
     "MemberList": ".member_list",
     "Member_Active": ".member",
@@ -1834,6 +1855,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "PaginatedToolCalls": ".paginated_tool_calls",
     "PaginatedTraceAnnotations": ".paginated_trace_annotations",
     "PaginatedTraces": ".paginated_traces",
+    "PreviewTraceDeletionResponse": ".preview_trace_deletion_response",
     "Project": ".project",
     "ProjectSettings": ".project_settings",
     "ProjectSettingsPatch": ".project_settings_patch",
@@ -2119,6 +2141,10 @@ _dynamic_imports: typing.Dict[str, str] = {
     "TraceAnalyticsTimeToFirstToken": ".trace_analytics_time_to_first_token",
     "TraceAnalyticsTokens": ".trace_analytics_tokens",
     "TraceAnalyticsTraces": ".trace_analytics_traces",
+    "TraceDeletion": ".trace_deletion",
+    "TraceDeletionRequestedBy": ".trace_deletion_requested_by",
+    "TraceDeletionRequestedByType": ".trace_deletion_requested_by_type",
+    "TraceDeletionStatus": ".trace_deletion_status",
     "TraceDetail": ".trace_detail",
     "TraceFilterSet": ".trace_filter_set",
     "TraceRef": ".trace_ref",
@@ -2614,6 +2640,12 @@ __all__ = [
     "CreateMonitorBody_Threshold",
     "CreateScoreBody",
     "CreateSignalResponse",
+    "CreateTraceDeletionBody",
+    "CreateTraceDeletionBodyTraces",
+    "CreateTraceDeletionBodyTracesFilters",
+    "CreateTraceDeletionBodyTracesIds",
+    "CreateTraceDeletionBodyTraces_Filters",
+    "CreateTraceDeletionBodyTraces_Ids",
     "CurrentAgentScore",
     "CurrentAgentScoreSnapshot",
     "CustomScoreResponse",
@@ -2739,6 +2771,7 @@ __all__ = [
     "LangsmithImportCredentialsRegion",
     "ListImportsResponse",
     "ListIncidentsResponse",
+    "ListTraceDeletionsResponse",
     "Member",
     "MemberList",
     "Member_Active",
@@ -2864,6 +2897,7 @@ __all__ = [
     "PaginatedToolCalls",
     "PaginatedTraceAnnotations",
     "PaginatedTraces",
+    "PreviewTraceDeletionResponse",
     "Project",
     "ProjectSettings",
     "ProjectSettingsPatch",
@@ -3149,6 +3183,10 @@ __all__ = [
     "TraceAnalyticsTimeToFirstToken",
     "TraceAnalyticsTokens",
     "TraceAnalyticsTraces",
+    "TraceDeletion",
+    "TraceDeletionRequestedBy",
+    "TraceDeletionRequestedByType",
+    "TraceDeletionStatus",
     "TraceDetail",
     "TraceFilterSet",
     "TraceRef",

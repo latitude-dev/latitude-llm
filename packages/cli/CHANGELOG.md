@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.17.0] - 2026-10-27
+
+### Added
+
+- `latitude trace-deletions create`, `preview`, `list` and `get`: permanently delete a project's traces, selected by explicit trace ids (up to 100) or a trace filter, together with everything derived from them. `preview` counts the matching traces without deleting anything.
+
 ## [7.16.0] - 2026-09-23
 
 ### Added

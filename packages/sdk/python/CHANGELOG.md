@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.16.0] - 2026-10-27
+
+### Added
+
+- `trace_deletions.create`, `preview`, `list` and `get`: permanently delete a project's traces, selected by explicit trace ids (up to 100) or a trace filter such as a tag, `user_id` or metadata value, together with everything derived from them. Deletion runs in the background; poll `get` until `status` is `completed`. `preview` counts the matching traces without deleting anything.
+
 ## [9.15.0] - 2026-09-22
 
 ### Changed

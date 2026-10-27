@@ -16686,6 +16686,156 @@
           "date",
           "snapshot"
         ]
+      },
+      "TraceDeletion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Trace deletion identifier. Use it to poll the deletion with `getTraceDeletion`."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "description": "`pending` until work starts, `running` while traces are being deleted, then `completed` or `failed`. Deletion is irreversible: traces deleted before a failure stay deleted."
+          },
+          "filters": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FilterSet"
+              },
+              {
+                "description": "The trace filter the deletion selects with, including any explicit trace ids as a `traceId` condition. Only traces that started before `createdAt` are deleted."
+              }
+            ]
+          },
+          "requestedBy": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "api_key",
+                  "staff"
+                ],
+                "description": "`user` for a person, `api_key` for an API key, `staff` for Latitude support."
+              },
+              "id": {
+                "type": "string",
+                "description": "Identifier of the user or API key that requested the deletion."
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "description": "Who requested the deletion."
+          },
+          "matchedTraceCount": {
+            "type": "integer",
+            "description": "Traces deleted so far. Final once `status` is `completed` or `failed`."
+          },
+          "deletedRecordCount": {
+            "type": "integer",
+            "description": "Records deleted so far across the traces, their spans, and everything derived from them (scores, annotations, search indexes, session analyses)."
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the deletion failed. `null` unless `status` is `failed`."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 time the deletion was requested."
+          },
+          "startedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 time work started, or `null` while pending."
+          },
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 time the deletion completed or failed, or `null` while it is still in progress."
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "filters",
+          "requestedBy",
+          "matchedTraceCount",
+          "deletedRecordCount",
+          "error",
+          "createdAt",
+          "startedAt",
+          "completedAt"
+        ]
+      },
+      "CreateTraceDeletionBody": {
+        "type": "object",
+        "properties": {
+          "traces": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TracesRef"
+              },
+              {
+                "description": "Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted."
+              }
+            ]
+          }
+        },
+        "required": [
+          "traces"
+        ]
+      },
+      "PreviewTraceDeletionResponse": {
+        "type": "object",
+        "properties": {
+          "matchedTraceCount": {
+            "type": "integer",
+            "description": "How many traces a deletion with this selector would delete if it were requested now."
+          }
+        },
+        "required": [
+          "matchedTraceCount"
+        ]
+      },
+      "ListTraceDeletionsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TraceDeletion"
+            },
+            "description": "The project's trace deletions, newest first."
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque cursor for the next page. `null` when there are no more pages."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
       }
     },
     "parameters": {}
@@ -29144,6 +29294,353 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CurrentAgentScore"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
+      }
+    },
+    "/v1/projects/{projectSlug}/trace-deletions": {
+      "post": {
+        "tags": [
+          "Trace deletions"
+        ],
+        "x-fern-sdk-group-name": "traceDeletions",
+        "x-fern-sdk-method-name": "create",
+        "summary": "Delete traces (async)",
+        "description": "Permanently deletes the traces selected by `traces`, together with everything derived from them: their spans, scores and annotations, search indexes, and the analyses of the sessions they belong to. The deletion runs in the background; poll it with `getTraceDeletion` until `status` is `completed`. Deletion cannot be undone. Use `previewTraceDeletion` first to see how many traces a selector matches.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "createTraceDeletion",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTraceDeletionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Trace deletion requested",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceDeletion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
+      },
+      "get": {
+        "tags": [
+          "Trace deletions"
+        ],
+        "x-fern-sdk-group-name": "traceDeletions",
+        "x-fern-sdk-method-name": "list",
+        "summary": "List trace deletions",
+        "description": "Returns the project's trace deletions, newest first. Each one records what was selected, who requested it, and how much was deleted, so it can serve as evidence of erasure.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listTraceDeletions",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page."
+            },
+            "required": false,
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "Page size. Defaults to 20; max 100."
+            },
+            "required": false,
+            "description": "Page size. Defaults to 20; max 100.",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of trace deletions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListTraceDeletionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
+      }
+    },
+    "/v1/projects/{projectSlug}/trace-deletions/preview": {
+      "post": {
+        "tags": [
+          "Trace deletions"
+        ],
+        "x-fern-sdk-group-name": "traceDeletions",
+        "x-fern-sdk-method-name": "preview",
+        "summary": "Preview trace deletion",
+        "description": "Counts the traces a deletion with this selector would delete, without deleting anything. Accepts the same `traces` selector as `createTraceDeletion`.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "previewTraceDeletion",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTraceDeletionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Number of matching traces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewTraceDeletionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-fern-global-parameter": [
+          "projectSlug"
+        ]
+      }
+    },
+    "/v1/projects/{projectSlug}/trace-deletions/{deletionId}": {
+      "get": {
+        "tags": [
+          "Trace deletions"
+        ],
+        "x-fern-sdk-group-name": "traceDeletions",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get trace deletion",
+        "description": "Returns one trace deletion, including its status and how much it has deleted so far.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getTraceDeletion",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier). The CLI can also read this from the `LATITUDE_PROJECT_SLUG` environment variable.",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Trace deletion id, as returned by `createTraceDeletion`."
+            },
+            "required": true,
+            "description": "Trace deletion id, as returned by `createTraceDeletion`.",
+            "name": "deletionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trace deletion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceDeletion"
                 }
               }
             }

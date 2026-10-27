@@ -60,6 +60,7 @@ export {
 } from "./entities/span-endpoint.ts"
 export type { Trace, TraceConversationChunk, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
+export { TRACE_DELETION_MAX_TRACE_IDS } from "./entities/trace-deletion-request.ts"
 export { SpanDecodingError } from "./errors.ts"
 export {
   assistantMessageHasOutputContent,

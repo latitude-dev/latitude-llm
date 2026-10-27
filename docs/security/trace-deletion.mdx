@@ -1,0 +1,104 @@
+---
+title: Deleting traces
+description: Permanently delete traces and everything derived from them, for example to erase an end customer's data when they off-board.
+---
+
+# Deleting traces
+
+Trace deletion permanently removes a set of traces from a project, together with everything Latitude derived from them. Use it when you need to erase specific data while keeping the rest of your telemetry, for example to honour a data processing agreement that requires deleting an end customer's data within 30 days of off-boarding.
+
+Deletion is independent of your plan's retention period. Traces are deleted when you ask, not when retention expires.
+
+<Warning>
+  Deletion cannot be undone. Preview a selection before deleting it.
+</Warning>
+
+## Make your data deletable
+
+You select traces to delete the same way you filter them in the trace list. Plan for deletion when you instrument your application, so every trace that belongs to one of your customers can be found later:
+
+- **Tag** traces with a stable customer key, such as `customer:acme`.
+- Or set **metadata**, such as `customer_id`, and select on `metadata.customer_id`.
+- Or keep one **project per customer** when their data should never mix.
+
+`userId` and `sessionId` also work as selectors when they identify the data you need to erase.
+
+## What gets deleted
+
+For every selected trace, Latitude deletes:
+
+- the trace and all of its spans, including prompts, completions and tool calls
+- scores and annotations on the trace, and their contribution to signals
+- the trace's search index entries
+- the analyses of the sessions the trace belongs to (conversation insights, topics and flagger results). They are recomputed from whatever remains of the session
+
+Deleted traces disappear from Latitude immediately; removal from underlying storage completes in the background.
+
+What is **not** deleted:
+
+- **Dataset rows you copied from traces.** A dataset row is your own copy and stays in the dataset; delete the row from the dataset if it must go too.
+- **Billing usage records.** They count usage per trace and contain no trace content.
+- **Aggregate counters**, such as the number of signal occurrences per hour. They contain no trace content.
+
+Only traces that **started before you request the deletion** are deleted. A deletion never removes traces your application sends afterwards, even if they match the same filter.
+
+## Delete traces
+
+Each deletion is a background job. Request it, then poll it until its `status` is `completed`. The finished deletion records what was selected, who requested it, and how many traces and records were deleted; keep it as evidence of erasure.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { LatitudeClient } from "@latitude-data/sdk"
+
+const client = new LatitudeClient({ apiKey: process.env.LATITUDE_API_KEY! })
+const traces = { by: "filters", filters: { tags: [{ op: "contains", value: "customer:acme" }] } } as const
+
+const { matchedTraceCount } = await client.traceDeletions.preview("my-project", { traces })
+console.log(`About to delete ${matchedTraceCount} traces`)
+
+let deletion = await client.traceDeletions.create("my-project", { traces })
+while (deletion.status === "pending" || deletion.status === "running") {
+  await new Promise((resolve) => setTimeout(resolve, 10_000))
+  deletion = await client.traceDeletions.get("my-project", deletion.id)
+}
+console.log(deletion.status, deletion.matchedTraceCount, deletion.deletedRecordCount)
+```
+
+```python Python
+import os
+import time
+
+from latitude_sdk import LatitudeClient
+
+client = LatitudeClient(api_key=os.environ["LATITUDE_API_KEY"])
+traces = {"by": "filters", "filters": {"tags": [{"op": "contains", "value": "customer:acme"}]}}
+
+preview = client.trace_deletions.preview("my-project", traces=traces)
+print(f"About to delete {preview.matched_trace_count} traces")
+
+deletion = client.trace_deletions.create("my-project", traces=traces)
+while deletion.status in ("pending", "running"):
+    time.sleep(10)
+    deletion = client.trace_deletions.get("my-project", deletion.id)
+print(deletion.status, deletion.matched_trace_count, deletion.deleted_record_count)
+```
+
+```bash CLI
+latitude trace-deletions preview --project-slug my-project \
+  --json '{"traces":{"by":"filters","filters":{"tags":[{"op":"contains","value":"customer:acme"}]}}}'
+latitude trace-deletions create --project-slug my-project \
+  --json '{"traces":{"by":"filters","filters":{"tags":[{"op":"contains","value":"customer:acme"}]}}}'
+latitude trace-deletions get --project-slug my-project --deletion-id <id>
+```
+
+</CodeGroup>
+
+To delete specific traces instead, pass up to 100 ids: `{ "by": "ids", "ids": ["<trace id>", ...] }`. Larger selections should use a filter.
+
+A filter must contain at least one condition, and percentile conditions (`gtePercentile`) are not accepted, because they select relative to the data rather than a stable set of traces.
+
+## Related
+
+- [PII redaction](./pii-redaction) keeps sensitive values out of Latitude in the first place.
+- [GDPR](./compliance/gdpr) covers Latitude's data protection approach.

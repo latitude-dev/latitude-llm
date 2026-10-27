@@ -46,6 +46,8 @@ export * as spans from "./spans/index.js";
 export * from "./tools/client/requests/index.js";
 export * as tools from "./tools/index.js";
 export * from "./tools/types/index.js";
+export * from "./traceDeletions/client/requests/index.js";
+export * as traceDeletions from "./traceDeletions/index.js";
 export * from "./traces/client/requests/index.js";
 export * as traces from "./traces/index.js";
 export * as usage from "./usage/index.js";
