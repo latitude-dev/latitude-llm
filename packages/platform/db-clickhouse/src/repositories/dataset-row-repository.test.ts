@@ -257,6 +257,51 @@ describe("DatasetRowClickHouseRepository", () => {
       expect(row.metadata).toBe("")
     })
 
+    it("round-trips JSON-scalar-looking strings without type coercion", async () => {
+      const rowId = DatasetRowId("json-looking-str-1")
+
+      await runCh(
+        repo.insertBatch({
+          datasetId: DATASET_ID,
+          version: 1,
+          rows: [{ id: rowId, input: "123", output: "true", expectedOutput: "null", metadata: "42.5" }],
+        }),
+      )
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+
+      expect(row.input).toBe("123")
+      expect(row.output).toBe("true")
+      expect(row.expectedOutput).toBe("null")
+      expect(row.metadata).toBe("42.5")
+    })
+
+    it("reads legacy rows that stored plain strings unquoted", async () => {
+      const rowId = DatasetRowId("legacy-plain-str-1")
+
+      await ch.client.insert({
+        table: "dataset_rows",
+        values: [
+          {
+            organization_id: ORG_ID,
+            dataset_id: DATASET_ID,
+            row_id: rowId,
+            xact_id: 1,
+            input: "HOLA",
+            output: "",
+            expected_output: "",
+            metadata: "",
+            custom: "",
+          },
+        ],
+        format: "JSONEachRow",
+      })
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+
+      expect(row.input).toBe("HOLA")
+    })
+
     it("stores empty objects as empty strings", async () => {
       const rowId = DatasetRowId("empty-obj-1")
 

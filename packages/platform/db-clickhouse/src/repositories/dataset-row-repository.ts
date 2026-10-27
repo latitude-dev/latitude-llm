@@ -2,7 +2,7 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import type { DatasetRow, RowFieldValue } from "@domain/datasets"
 import { DatasetRowRepository, RowNotFoundError } from "@domain/datasets"
 import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId, TraceId } from "@domain/shared"
-import { parseCHDate, safeParseJson, safeStringifyJson } from "@repo/utils"
+import { parseCHDate, safeParseJson } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
 const serializeField = (value: unknown): string => {
@@ -15,7 +15,9 @@ const serializeField = (value: unknown): string => {
   ) {
     return ""
   }
-  return safeStringifyJson(value)
+  // Canonical JSON (strings quoted) so "123"/"true"/"null" round-trip as strings; safeParseJson's string fallback still reads legacy rows stored unquoted.
+  if (value === undefined || value === null) return ""
+  return JSON.stringify(value) ?? ""
 }
 
 // Custom column values are stored as a single JSON object keyed by column identifier. An empty map
