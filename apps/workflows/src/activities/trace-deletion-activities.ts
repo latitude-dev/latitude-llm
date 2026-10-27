@@ -16,7 +16,12 @@ import {
   startTraceDeletionUseCase,
   TRACE_DELETION_BATCH_SIZE,
 } from "@domain/spans"
-import { TracePurgeRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  TracePurgeRepositoryLive,
+  TraceRepositoryLive,
+  TraceTombstoneRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import {
   OutboxEventWriterLive,
   TraceDeletionRequestRepositoryLive,
@@ -44,7 +49,7 @@ const postgresLayer = Layer.mergeAll(
   TraceReferencePurgeRepositoryLive,
   OutboxEventWriterLive,
 )
-const clickhouseLayer = Layer.mergeAll(TraceRepositoryLive, TracePurgeRepositoryLive)
+const clickhouseLayer = Layer.mergeAll(TraceRepositoryLive, TracePurgeRepositoryLive, TraceTombstoneRepositoryLive)
 
 type TraceDeletionServices =
   | Layer.Success<typeof postgresLayer>

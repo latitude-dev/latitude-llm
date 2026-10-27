@@ -23,6 +23,7 @@ import { TraceDeletionRequestRepository } from "../ports/trace-deletion-request-
 import { TracePurgeRepository } from "../ports/trace-purge-repository.ts"
 import { TraceReferencePurgeRepository } from "../ports/trace-reference-purge-repository.ts"
 import { type TraceListOptions, TraceRepository } from "../ports/trace-repository.ts"
+import { TraceTombstoneRepository } from "../ports/trace-tombstone-repository.ts"
 import { createFakeTraceRepository } from "../testing/fake-trace-repository.ts"
 import { createTraceDeletionRequestUseCase } from "./create-trace-deletion-request.ts"
 import {
@@ -120,6 +121,13 @@ const setup = (input: { readonly listed?: readonly TraceId[] } = {}) => {
           }
         }),
     }),
+    Layer.succeed(TraceTombstoneRepository, {
+      record: () =>
+        Effect.sync(() => {
+          calls.push("clickhouse.recordTombstones")
+        }),
+      listTombstoned: () => Effect.succeed(new Set<string>()),
+    }),
   )
 
   const run = <A, E>(
@@ -133,6 +141,7 @@ const setup = (input: { readonly listed?: readonly TraceId[] } = {}) => {
       | TraceDeletionRequestRepository
       | TracePurgeRepository
       | TraceReferencePurgeRepository
+      | TraceTombstoneRepository
     >,
   ) => Effect.runPromiseExit(effect.pipe(Effect.provide(layer)))
 
@@ -245,7 +254,7 @@ describe("trace deletion batches", () => {
     expect(calls).toEqual([])
   })
 
-  it("purges Postgres with its event before ClickHouse", async () => {
+  it("tombstones the batch, then purges Postgres with its event before ClickHouse", async () => {
     const { run, written, calls } = setup()
 
     const exit = await run(
@@ -258,7 +267,7 @@ describe("trace deletion batches", () => {
     )
 
     expect(Exit.isSuccess(exit)).toBe(true)
-    expect(calls).toEqual(["postgres.purge", "clickhouse.purgeTraces"])
+    expect(calls).toEqual(["clickhouse.recordTombstones", "postgres.purge", "clickhouse.purgeTraces"])
     expect(written).toEqual([
       expect.objectContaining({
         eventName: "TracesPurged",

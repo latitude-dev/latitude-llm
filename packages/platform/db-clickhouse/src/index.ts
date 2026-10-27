@@ -49,6 +49,7 @@ export { ToolAnalyticsRepositoryLive } from "./repositories/tool-analytics-repos
 export { TracePurgeRepositoryLive } from "./repositories/trace-purge-repository.ts"
 export { TraceRepositoryLive } from "./repositories/trace-repository.ts"
 export { TraceSearchRepositoryLive } from "./repositories/trace-search-repository.ts"
+export { TraceTombstoneRepositoryLive } from "./repositories/trace-tombstone-repository.ts"
 export { UserAnalyticsRepositoryLive } from "./repositories/user-analytics-repository.ts"
 export { VariantMetricsReaderLive } from "./repositories/variant-metrics-repository.ts"
 export { buildScoreRollupSubquery, splitScoreFilters } from "./score-filter-subquery.ts"

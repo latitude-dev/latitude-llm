@@ -30,15 +30,17 @@ For every selected trace, Latitude deletes:
 - the trace and all of its spans, including prompts, completions and tool calls
 - scores and annotations on the trace, and their contribution to signals
 - the trace's search index entries
+- message embeddings and agent memory content that only the deleted traces used
 - the analyses of the sessions the trace belongs to (conversation insights, topics and flagger results). They are recomputed from whatever remains of the session
 
-Deleted traces disappear from Latitude immediately; removal from underlying storage completes in the background.
+Deleted traces disappear from Latitude immediately; removal from underlying storage completes in the background. Spans your application still sends for a deleted trace are discarded for 30 days afterwards, so a late span cannot bring the trace back.
 
 What is **not** deleted:
 
 - **Dataset rows you copied from traces.** A dataset row is your own copy and stays in the dataset; delete the row from the dataset if it must go too.
 - **Billing usage records.** They count usage per trace and contain no trace content.
 - **Aggregate counters**, such as the number of signal occurrences per hour. They contain no trace content.
+- **Exports you downloaded.** Export files are your own copies; their download links expire on their own.
 
 Only traces that **started before you request the deletion** are deleted. A deletion never removes traces your application sends afterwards, even if they match the same filter.
 

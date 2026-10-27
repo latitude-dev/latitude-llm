@@ -41,7 +41,7 @@ Session-scoped derived data (analyses, semantic moments, taxonomy observations, 
 
 **Rebuild without drift.** `sessions` is an `AggregatingMergeTree` fed by `sessions_mv`. The rebuild reads the live view definition (`system.tables.as_select` plus the view's column order), scopes it with a `WHERE` on organization, project and `session_id` before its `GROUP BY`, and runs `INSERT INTO sessions (…) SELECT …`. It therefore re-aggregates exactly as ingest does, whatever the view becomes. If the view ever loses its single `FROM spans AS s GROUP BY` shape, the rebuild throws rather than producing wrong totals. `traces` needs no rebuild, because a purged trace loses all of its spans.
 
-**Race.** Spans for an affected session that land between its rollup delete and its rebuild are counted twice in that session's rollup. Deletions target off-boarded end-clients that are no longer sending, so this is accepted. Late spans for a *purged* trace id are dropped at ingest by a short-lived tombstone (`org:${organizationId}:trace-tombstone:*`) so they cannot recreate it.
+**Race.** Spans for an affected session that land between its rollup delete and its rebuild are counted twice in that session's rollup. Deletions target off-boarded end-clients that are no longer sending, so this is accepted. Late spans for a *purged* trace id cannot recreate it. `purgeTraceDeletionBatchUseCase` first writes the batch to the ClickHouse `trace_tombstones` table (org, project, trace id, `deleted_at`, 30-day TTL), and `processIngestedSpansUseCase` drops every span whose project and trace id it finds there, before the insert and before `TracesIngested`. Tombstones are written before anything is deleted, so spans that land mid-purge are dropped too.
 
 ## Store inventory
 
@@ -57,11 +57,14 @@ Session-scoped derived data (analyses, semantic moments, taxonomy observations, 
 | `flagger_screening_decisions`, `flagger_jev_shadow_observations`, `flagger_jev_preclassifier_observations` | session id | deleted |
 | `annotation_queue_items` (Postgres) | trace id | deleted |
 | `dataset_rows` | `source_trace_id` provenance | tombstoned when the request includes dataset rows; rows created before provenance existed cannot be matched |
-| `message_embeddings`, `memory_blobs` | content hash, no trace identity | swept once no surviving occurrence references the hash |
+| `message_embeddings` | project and content hash, no trace identity | deleted when only the purged traces' `trace_message_occurrences` reference the hash |
+| `memory_blobs` | organization and content hash, no trace identity | deleted when only the purged traces' `memory_events` / `memory_current` rows reference the hash, in any project. Blob content is inline (`content_file_key` is unused), so no object is left behind |
+| `trace_tombstones` | trace id | kept for 30 days: ids only, no content |
 | `scores_hourly_buckets` | signal and hour | kept: content-free counters |
 | `billing_usage_events.trace_id` (Postgres) | trace id | kept: billing ledger, no content |
-| object storage `tmp-ingest/` | ingest payload | not touched: expires after 1 day |
+| object storage `tmp-ingest/` | ingest payload | not touched: deleted once ingested, and expires after 1 day. On the versioned production bucket its noncurrent versions also expire after 1 day |
+| object storage `projects/*/exports/`, `dataset-exports/` | export files the customer requested | kept: the customer's own downloads, expired by the bucket lifecycle |
 
 ## ClickHouse mechanics
 
-Deletes are parameterized lightweight `DELETE FROM … WHERE organization_id = … AND project_id = … AND <key> IN {…:Array(String)}`. Rows are masked from every read as soon as the statement returns, and physically removed when their parts next merge. `trace_message_occurrences` carries a projection, so it sets `lightweight_mutation_projection_mode = 'rebuild'` (without it, lightweight deletes on that table throw). Counting and deleting are separate repository methods (`countTraceRows` / `purgeTraces`, `countSessionRows` / `purgeSessions`, `count` / `purge` on the Postgres side); every delete is idempotent.
+Deletes are parameterized lightweight `DELETE FROM … WHERE organization_id = … AND project_id = … AND <key> IN {…:Array(String)}`. Rows are masked from every read as soon as the statement returns, and physically removed when their parts next merge. `trace_message_occurrences` carries a projection, so it sets `lightweight_mutation_projection_mode = 'rebuild'` (without it, lightweight deletes on that table throw). Orphaned content-addressed rows are found with a `SELECT` over the purged traces' references and deleted by a literal hash list, before the trace rows, because mutations with subqueries over other tables are not deterministic on replicated tables. Counting and deleting are separate repository methods (`countTraceRows` / `purgeTraces`, `countSessionRows` / `purgeSessions`, `count` / `purge` on the Postgres side); every delete is idempotent.

@@ -752,6 +752,19 @@ PRIMARY KEY (organization_id, project_id, trace_id, chunk_index)
 ORDER BY (organization_id, project_id, trace_id, chunk_index)
 SETTINGS index_granularity = 8192;
 
+CREATE TABLE trace_tombstones
+(
+    organization_id LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
+    project_id      LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
+    trace_id        FixedString(32)                 CODEC(ZSTD(1)),
+    deleted_at      DateTime64(3, 'UTC')            CODEC(Delta(8), ZSTD(1))
+)
+ENGINE = ReplacingMergeTree(deleted_at)
+PARTITION BY toYYYYMM(deleted_at)
+ORDER BY (organization_id, project_id, trace_id)
+SETTINGS index_granularity = 8192;
+
+
 CREATE TABLE traces
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),

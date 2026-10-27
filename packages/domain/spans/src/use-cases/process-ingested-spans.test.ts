@@ -5,10 +5,17 @@ import { createFakeStorageDisk } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { SpanRepository } from "../ports/span-repository.ts"
+import { TraceTombstoneRepository } from "../ports/trace-tombstone-repository.ts"
 import { createFakeSpanRepository } from "../testing/fake-span-repository.ts"
 import { processIngestedSpansUseCase } from "./process-ingested-spans.ts"
 
 const ORGANIZATION_ID = OrganizationId("org_realtime_sandbox_test_aaa")
+
+const tombstonesFor = (keys: readonly string[]) => ({
+  record: () => Effect.void,
+  listTombstoned: () => Effect.succeed(new Set(keys) as ReadonlySet<string>),
+})
+const noTombstones = tombstonesFor([])
 
 const validRequest = {
   resourceSpans: [
@@ -65,6 +72,7 @@ const run = (isSandbox: boolean) => {
     Effect.provide(
       Layer.mergeAll(
         Layer.succeed(SpanRepository, spanRepo),
+        Layer.succeed(TraceTombstoneRepository, noTombstones),
         Layer.succeed(StorageDisk, createFakeStorageDisk().disk),
         Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
       ),
@@ -73,6 +81,42 @@ const run = (isSandbox: boolean) => {
 
   return { effect, eventsPublisher }
 }
+
+describe("processIngestedSpansUseCase tombstones", () => {
+  it("drops spans of deleted traces instead of recreating them", async () => {
+    const eventsPublisher = createFakeEventsPublisher()
+    const { repository: spanRepo, inserted } = createFakeSpanRepository()
+
+    await Effect.runPromise(
+      processIngestedSpansUseCase({ eventsPublisher })({
+        organizationId: ORGANIZATION_ID,
+        apiKeyId: "key-1",
+        contentType: "application/json",
+        ingestedAt: new Date("2026-03-18T10:00:00.000Z"),
+        isSandbox: false,
+        inlinePayload,
+        fileKey: null,
+        defaultProjectId: "proj_realtime_sandbox_test",
+        projectIdBySlug: {},
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(SpanRepository, spanRepo),
+            Layer.succeed(
+              TraceTombstoneRepository,
+              tombstonesFor(["proj_realtime_sandbox_test:0af7651916cd43dd8448eb211c80319c"]),
+            ),
+            Layer.succeed(StorageDisk, createFakeStorageDisk().disk),
+            Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
+          ),
+        ),
+      ),
+    )
+
+    expect(inserted).toEqual([])
+    expect(eventsPublisher.published).toEqual([])
+  })
+})
 
 describe("processIngestedSpansUseCase sandbox bit", () => {
   it("stamps the sandbox bit on the TracesIngested event for sandbox orgs", async () => {
@@ -168,6 +212,7 @@ const runRedaction = (opts: {
     Effect.provide(
       Layer.mergeAll(
         Layer.succeed(SpanRepository, spanRepo),
+        Layer.succeed(TraceTombstoneRepository, noTombstones),
         Layer.succeed(StorageDisk, storage.disk),
         Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
       ),
@@ -371,6 +416,7 @@ describe("processIngestedSpansUseCase redaction", () => {
       Effect.provide(
         Layer.mergeAll(
           Layer.succeed(SpanRepository, spanRepo),
+          Layer.succeed(TraceTombstoneRepository, noTombstones),
           Layer.succeed(StorageDisk, storage.disk),
           Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
         ),
@@ -415,6 +461,7 @@ describe("processIngestedSpansUseCase buffered payload recovery", () => {
       Effect.provide(
         Layer.mergeAll(
           Layer.succeed(SpanRepository, spanRepo),
+          Layer.succeed(TraceTombstoneRepository, noTombstones),
           Layer.succeed(StorageDisk, storage.disk),
           Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
         ),
@@ -463,6 +510,7 @@ describe("processIngestedSpansUseCase buffered payload recovery", () => {
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(SpanRepository, spanRepo),
+            Layer.succeed(TraceTombstoneRepository, noTombstones),
             Layer.succeed(StorageDisk, storage.disk),
             Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
           ),

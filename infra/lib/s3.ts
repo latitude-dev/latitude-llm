@@ -60,6 +60,12 @@ export function createS3(name: string, config: EnvironmentConfig): S3Output {
           expiration: {
             days: 1,
           },
+          // Ingest deletes each payload once processed; on a versioned bucket that leaves a noncurrent copy behind.
+          noncurrentVersionExpiration: config.s3.versioning
+            ? {
+                noncurrentDays: 1,
+              }
+            : undefined,
         },
       ],
     },
