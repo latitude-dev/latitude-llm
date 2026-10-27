@@ -55,7 +55,7 @@ export const startTraceDeletionUseCase = Effect.fn("spans.startTraceDeletion")(f
  * the batch however many times the purges that follow are retried.
  */
 export const prepareTraceDeletionBatchUseCase = Effect.fn("spans.prepareTraceDeletionBatch")(function* (input: {
-  readonly request: Pick<TraceDeletionRequest, "id" | "projectId" | "filters" | "createdAt">
+  readonly request: Pick<TraceDeletionRequest, "id" | "projectId" | "filters" | "createdAt" | "includeDatasetRows">
   readonly batchSize: number
 }) {
   const { request } = input
@@ -82,7 +82,7 @@ export const prepareTraceDeletionBatchUseCase = Effect.fn("spans.prepareTraceDel
 
   const sessionIds = yield* purge.listSessionIdsByTraceIds({ ...scope, traceIds })
   const postgres = yield* references.count({ projectId: request.projectId, traceIds, sessionIds })
-  const traceRows = yield* purge.countTraceRows({ ...scope, traceIds })
+  const traceRows = yield* purge.countTraceRows({ ...scope, traceIds, includeDatasetRows: request.includeDatasetRows })
   const sessionRows = yield* purge.countSessionRows({ ...scope, sessionIds })
 
   return {
@@ -103,6 +103,7 @@ export const purgeTraceDeletionBatchUseCase = Effect.fn("spans.purgeTraceDeletio
   readonly projectId: ProjectId
   readonly traceIds: readonly TraceId[]
   readonly sessionIds: readonly SessionId[]
+  readonly includeDatasetRows?: boolean
 }) {
   yield* Effect.annotateCurrentSpan("traceDeletionRequest.id", input.requestId)
   const sqlClient = yield* SqlClient
@@ -134,7 +135,12 @@ export const purgeTraceDeletionBatchUseCase = Effect.fn("spans.purgeTraceDeletio
     }),
   )
 
-  yield* purge.purgeTraces({ organizationId, projectId: input.projectId, traceIds: input.traceIds })
+  yield* purge.purgeTraces({
+    organizationId,
+    projectId: input.projectId,
+    traceIds: input.traceIds,
+    includeDatasetRows: input.includeDatasetRows === true,
+  })
 })
 
 /** Runs after the batch's traces are gone, from the session keys the batch was prepared with. */

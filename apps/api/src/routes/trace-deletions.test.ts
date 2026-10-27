@@ -61,6 +61,7 @@ describe("Trace deletions routes", () => {
     expect(created).toMatchObject({
       status: "pending",
       filters: byTag.filters,
+      includeDatasetRows: false,
       requestedBy: { type: "api_key" },
       matchedTraceCount: 0,
       deletedRecordCount: 0,
@@ -83,7 +84,10 @@ describe("Trace deletions routes", () => {
     expect(((await getRes.json()) as TraceDeletionResponse).id).toBe(created.id)
   })
 
-  it<ApiTestContext>("folds explicit trace ids into the stored filter", async ({ app, database }) => {
+  it<ApiTestContext>("folds explicit trace ids into the stored filter and records the dataset opt-in", async ({
+    app,
+    database,
+  }) => {
     const tenant = await createTenantSetup(database)
     const slug = await createProject(database, tenant.organizationId, "eeeeeeeeeeeeeeeeeeeeeeee")
     const headers = { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "content-type": "application/json" }
@@ -92,14 +96,14 @@ describe("Trace deletions routes", () => {
       new Request(`http://localhost/v1/projects/${slug}/trace-deletions`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ traces: { by: "ids", ids: ["a".repeat(32)] } }),
+        body: JSON.stringify({ traces: { by: "ids", ids: ["a".repeat(32)] }, includeDatasetRows: true }),
       }),
     )
 
     expect(res.status).toBe(202)
-    expect(((await res.json()) as TraceDeletionResponse).filters).toEqual({
-      traceId: [{ op: "in", value: ["a".repeat(32)] }],
-    })
+    const body = (await res.json()) as TraceDeletionResponse & { includeDatasetRows: boolean }
+    expect(body.filters).toEqual({ traceId: [{ op: "in", value: ["a".repeat(32)] }] })
+    expect(body.includeDatasetRows).toBe(true)
   })
 
   it<ApiTestContext>("rejects an empty filter, an unknown field and too many trace ids", async ({ app, database }) => {

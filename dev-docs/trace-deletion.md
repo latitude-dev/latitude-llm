@@ -56,7 +56,7 @@ Session-scoped derived data (analyses, semantic moments, taxonomy observations, 
 | `taxonomy_observations`, `taxonomy_facet_projections`, `taxonomy_view_assignments` | session id | deleted |
 | `flagger_screening_decisions`, `flagger_jev_shadow_observations`, `flagger_jev_preclassifier_observations` | session id | deleted |
 | `annotation_queue_items` (Postgres) | trace id | deleted |
-| `dataset_rows` | `source_trace_id` provenance | tombstoned when the request includes dataset rows; rows created before provenance existed cannot be matched |
+| `dataset_rows` | `metadata.traceId`, which `addTracesToDataset` writes | every version of a matching row is deleted when the request sets `includeDatasetRows`; kept otherwise. The match is organization-wide, because a dataset in another project can hold the copy |
 | `message_embeddings` | project and content hash, no trace identity | deleted when only the purged traces' `trace_message_occurrences` reference the hash |
 | `memory_blobs` | organization and content hash, no trace identity | deleted when only the purged traces' `memory_events` / `memory_current` rows reference the hash, in any project. Blob content is inline (`content_file_key` is unused), so no object is left behind |
 | `trace_tombstones` | trace id | kept for 30 days: ids only, no content |

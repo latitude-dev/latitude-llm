@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.18.0] - 2026-10-27
+
+### Added
+
+- `latitude trace-deletions create` accepts `includeDatasetRows` in its JSON body: also delete dataset rows copied from the deleted traces.
+
 ## [7.17.0] - 2026-10-27
 
 ### Added

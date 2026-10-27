@@ -9,6 +9,11 @@ export interface TracePurgeScope {
   readonly projectId: ProjectId
 }
 
+export interface TracePurgeTracesInput extends TracePurgeScope {
+  readonly traceIds: readonly TraceId[]
+  readonly includeDatasetRows?: boolean
+}
+
 /**
  * Hard-deletes telemetry and everything derived from it. Counting is separate from
  * deleting so a receipt counted once stays right when a part-way purge is retried.
@@ -25,13 +30,14 @@ export interface TracePurgeRepositoryShape {
     input: TracePurgeScope & { readonly traceIds: readonly TraceId[] },
   ): Effect.Effect<readonly SessionId[], RepositoryError>
 
-  /** Rows each trace-keyed table holds for the traces (spans, trace rollups, search, trace-level scores, memory). */
-  countTraceRows(
-    input: TracePurgeScope & { readonly traceIds: readonly TraceId[] },
-  ): Effect.Effect<PurgedRowCounts, RepositoryError>
+  /**
+   * Rows each trace-keyed table holds for the traces (spans, trace rollups, search, trace-level scores, memory),
+   * plus the dataset rows copied from them when `includeDatasetRows` is set.
+   */
+  countTraceRows(input: TracePurgeTracesInput): Effect.Effect<PurgedRowCounts, RepositoryError>
 
   /** Deletes every trace-keyed row; `traces` goes last so a part-way failure stays listable. */
-  purgeTraces(input: TracePurgeScope & { readonly traceIds: readonly TraceId[] }): Effect.Effect<void, RepositoryError>
+  purgeTraces(input: TracePurgeTracesInput): Effect.Effect<void, RepositoryError>
 
   /** Rows the session rollups and session-scoped derived tables hold for the session keys. */
   countSessionRows(

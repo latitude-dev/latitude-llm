@@ -47,6 +47,7 @@ export function TraceDeletionsSection({ deletions }: TraceDeletionsSectionProps)
                 <Text.H6 color="foregroundMuted">
                   {formatCount(deletion.matchedTraceCount)} traces · {formatCount(deletedRows)} records · requested by{" "}
                   {deletion.requestedBy.type} {relativeTime(deletion.createdAt)}
+                  {deletion.includeDatasetRows ? " · including dataset rows" : ""}
                   {deletion.error ? ` · ${deletion.error}` : ""}
                 </Text.H6>
                 {deletedRows > 0 ? (

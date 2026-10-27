@@ -50,7 +50,7 @@ export const adminTraceDeletionSelectorSchema = z
   })
 
 export const adminCreateTraceDeletionInputSchema = adminTraceDeletionSelectorSchema.and(
-  z.object({ confirmation: z.literal(TRACE_DELETION_CONFIRMATION) }),
+  z.object({ includeDatasetRows: z.boolean().optional(), confirmation: z.literal(TRACE_DELETION_CONFIRMATION) }),
 )
 
 type AdminTraceDeletionSelector = z.infer<typeof adminTraceDeletionSelectorSchema>
@@ -71,6 +71,7 @@ export interface AdminTraceDeletionDto {
   readonly id: string
   readonly status: TraceDeletionRequest["status"]
   readonly filters: FilterSet
+  readonly includeDatasetRows: boolean
   readonly requestedBy: TraceDeletionRequest["requestedBy"]
   readonly matchedTraceCount: number
   readonly deletedRowCounts: Readonly<Record<string, number>>
@@ -83,6 +84,7 @@ const toDto = (request: TraceDeletionRequest): AdminTraceDeletionDto => ({
   id: request.id,
   status: request.status,
   filters: request.filters,
+  includeDatasetRows: request.includeDatasetRows,
   requestedBy: request.requestedBy,
   matchedTraceCount: request.matchedTraceCount,
   deletedRowCounts: request.deletedRowCounts,
@@ -139,6 +141,7 @@ export const adminCreateTraceDeletion = createServerFn({ method: "POST" })
       createTraceDeletionRequestUseCase({
         ...toSelectorInput(data),
         projectId: target.projectId,
+        includeDatasetRows: data.includeDatasetRows === true,
         requestedBy: { type: "staff", id: context.adminUserId },
       }).pipe(
         withPostgres(

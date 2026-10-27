@@ -78,6 +78,7 @@ class TraceDeletionsClient:
         project_slug: str,
         *,
         traces: CreateTraceDeletionBodyTraces,
+        include_dataset_rows: typing.Optional[bool] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> TraceDeletion:
         """
@@ -90,6 +91,9 @@ class TraceDeletionsClient:
 
         traces : CreateTraceDeletionBodyTraces
             Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted.
+
+        include_dataset_rows : typing.Optional[bool]
+            Also delete dataset rows that were copied from the deleted traces, in every dataset of the organization, including their earlier versions. Defaults to `false`, which keeps dataset rows. Ignored by `previewTraceDeletion`.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -113,7 +117,9 @@ class TraceDeletionsClient:
             ),
         )
         """
-        _response = self._raw_client.create(project_slug, traces=traces, request_options=request_options)
+        _response = self._raw_client.create(
+            project_slug, traces=traces, include_dataset_rows=include_dataset_rows, request_options=request_options
+        )
         return _response.data
 
     def preview(
@@ -121,6 +127,7 @@ class TraceDeletionsClient:
         project_slug: str,
         *,
         traces: CreateTraceDeletionBodyTraces,
+        include_dataset_rows: typing.Optional[bool] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PreviewTraceDeletionResponse:
         """
@@ -133,6 +140,9 @@ class TraceDeletionsClient:
 
         traces : CreateTraceDeletionBodyTraces
             Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted.
+
+        include_dataset_rows : typing.Optional[bool]
+            Also delete dataset rows that were copied from the deleted traces, in every dataset of the organization, including their earlier versions. Defaults to `false`, which keeps dataset rows. Ignored by `previewTraceDeletion`.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -156,7 +166,9 @@ class TraceDeletionsClient:
             ),
         )
         """
-        _response = self._raw_client.preview(project_slug, traces=traces, request_options=request_options)
+        _response = self._raw_client.preview(
+            project_slug, traces=traces, include_dataset_rows=include_dataset_rows, request_options=request_options
+        )
         return _response.data
 
     def get(
@@ -271,6 +283,7 @@ class AsyncTraceDeletionsClient:
         project_slug: str,
         *,
         traces: CreateTraceDeletionBodyTraces,
+        include_dataset_rows: typing.Optional[bool] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> TraceDeletion:
         """
@@ -283,6 +296,9 @@ class AsyncTraceDeletionsClient:
 
         traces : CreateTraceDeletionBodyTraces
             Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted.
+
+        include_dataset_rows : typing.Optional[bool]
+            Also delete dataset rows that were copied from the deleted traces, in every dataset of the organization, including their earlier versions. Defaults to `false`, which keeps dataset rows. Ignored by `previewTraceDeletion`.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -314,7 +330,9 @@ class AsyncTraceDeletionsClient:
 
         asyncio.run(main())
         """
-        _response = await self._raw_client.create(project_slug, traces=traces, request_options=request_options)
+        _response = await self._raw_client.create(
+            project_slug, traces=traces, include_dataset_rows=include_dataset_rows, request_options=request_options
+        )
         return _response.data
 
     async def preview(
@@ -322,6 +340,7 @@ class AsyncTraceDeletionsClient:
         project_slug: str,
         *,
         traces: CreateTraceDeletionBodyTraces,
+        include_dataset_rows: typing.Optional[bool] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PreviewTraceDeletionResponse:
         """
@@ -334,6 +353,9 @@ class AsyncTraceDeletionsClient:
 
         traces : CreateTraceDeletionBodyTraces
             Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted.
+
+        include_dataset_rows : typing.Optional[bool]
+            Also delete dataset rows that were copied from the deleted traces, in every dataset of the organization, including their earlier versions. Defaults to `false`, which keeps dataset rows. Ignored by `previewTraceDeletion`.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -365,7 +387,9 @@ class AsyncTraceDeletionsClient:
 
         asyncio.run(main())
         """
-        _response = await self._raw_client.preview(project_slug, traces=traces, request_options=request_options)
+        _response = await self._raw_client.preview(
+            project_slug, traces=traces, include_dataset_rows=include_dataset_rows, request_options=request_options
+        )
         return _response.data
 
     async def get(

@@ -13,6 +13,7 @@ export const TraceDeletionSchema = z
     filters: FilterSetSchema.describe(
       "The trace filter the deletion selects with, including any explicit trace ids as a `traceId` condition. Only traces that started before `createdAt` are deleted.",
     ),
+    includeDatasetRows: z.boolean().describe("Whether dataset rows copied from the deleted traces are deleted too."),
     requestedBy: z
       .object({
         type: z
@@ -45,6 +46,7 @@ export const toTraceDeletionResponse = (request: TraceDeletionRequest): z.infer<
   id: request.id,
   status: request.status,
   filters: request.filters as z.infer<typeof FilterSetSchema>,
+  includeDatasetRows: request.includeDatasetRows,
   requestedBy: request.requestedBy,
   matchedTraceCount: request.matchedTraceCount,
   deletedRecordCount: Object.values(request.deletedRowCounts).reduce((total, rows) => total + rows, 0),

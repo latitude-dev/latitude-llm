@@ -125,6 +125,7 @@ class RawTraceDeletionsClient:
         project_slug: str,
         *,
         traces: CreateTraceDeletionBodyTraces,
+        include_dataset_rows: typing.Optional[bool] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[TraceDeletion]:
         """
@@ -137,6 +138,9 @@ class RawTraceDeletionsClient:
 
         traces : CreateTraceDeletionBodyTraces
             Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted.
+
+        include_dataset_rows : typing.Optional[bool]
+            Also delete dataset rows that were copied from the deleted traces, in every dataset of the organization, including their earlier versions. Defaults to `false`, which keeps dataset rows. Ignored by `previewTraceDeletion`.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -153,6 +157,7 @@ class RawTraceDeletionsClient:
                 "traces": convert_and_respect_annotation_metadata(
                     object_=traces, annotation=CreateTraceDeletionBodyTraces, direction="write"
                 ),
+                "includeDatasetRows": include_dataset_rows,
             },
             headers={
                 "content-type": "application/json",
@@ -217,6 +222,7 @@ class RawTraceDeletionsClient:
         project_slug: str,
         *,
         traces: CreateTraceDeletionBodyTraces,
+        include_dataset_rows: typing.Optional[bool] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[PreviewTraceDeletionResponse]:
         """
@@ -229,6 +235,9 @@ class RawTraceDeletionsClient:
 
         traces : CreateTraceDeletionBodyTraces
             Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted.
+
+        include_dataset_rows : typing.Optional[bool]
+            Also delete dataset rows that were copied from the deleted traces, in every dataset of the organization, including their earlier versions. Defaults to `false`, which keeps dataset rows. Ignored by `previewTraceDeletion`.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -245,6 +254,7 @@ class RawTraceDeletionsClient:
                 "traces": convert_and_respect_annotation_metadata(
                     object_=traces, annotation=CreateTraceDeletionBodyTraces, direction="write"
                 ),
+                "includeDatasetRows": include_dataset_rows,
             },
             headers={
                 "content-type": "application/json",
@@ -484,6 +494,7 @@ class AsyncRawTraceDeletionsClient:
         project_slug: str,
         *,
         traces: CreateTraceDeletionBodyTraces,
+        include_dataset_rows: typing.Optional[bool] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[TraceDeletion]:
         """
@@ -496,6 +507,9 @@ class AsyncRawTraceDeletionsClient:
 
         traces : CreateTraceDeletionBodyTraces
             Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted.
+
+        include_dataset_rows : typing.Optional[bool]
+            Also delete dataset rows that were copied from the deleted traces, in every dataset of the organization, including their earlier versions. Defaults to `false`, which keeps dataset rows. Ignored by `previewTraceDeletion`.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -512,6 +526,7 @@ class AsyncRawTraceDeletionsClient:
                 "traces": convert_and_respect_annotation_metadata(
                     object_=traces, annotation=CreateTraceDeletionBodyTraces, direction="write"
                 ),
+                "includeDatasetRows": include_dataset_rows,
             },
             headers={
                 "content-type": "application/json",
@@ -576,6 +591,7 @@ class AsyncRawTraceDeletionsClient:
         project_slug: str,
         *,
         traces: CreateTraceDeletionBodyTraces,
+        include_dataset_rows: typing.Optional[bool] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[PreviewTraceDeletionResponse]:
         """
@@ -588,6 +604,9 @@ class AsyncRawTraceDeletionsClient:
 
         traces : CreateTraceDeletionBodyTraces
             Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted.
+
+        include_dataset_rows : typing.Optional[bool]
+            Also delete dataset rows that were copied from the deleted traces, in every dataset of the organization, including their earlier versions. Defaults to `false`, which keeps dataset rows. Ignored by `previewTraceDeletion`.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -604,6 +623,7 @@ class AsyncRawTraceDeletionsClient:
                 "traces": convert_and_respect_annotation_metadata(
                     object_=traces, annotation=CreateTraceDeletionBodyTraces, direction="write"
                 ),
+                "includeDatasetRows": include_dataset_rows,
             },
             headers={
                 "content-type": "application/json",

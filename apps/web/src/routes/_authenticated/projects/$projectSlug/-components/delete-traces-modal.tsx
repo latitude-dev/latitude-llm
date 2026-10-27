@@ -1,5 +1,5 @@
 import type { FilterSet } from "@domain/shared"
-import { Alert, Button, CloseTrigger, Input, Modal, Text, useToast } from "@repo/ui"
+import { Alert, Button, CloseTrigger, Input, Modal, Switch, Text, useToast } from "@repo/ui"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import {
@@ -30,6 +30,7 @@ export function DeleteTracesModal({
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [confirmText, setConfirmText] = useState("")
+  const [includeDatasetRows, setIncludeDatasetRows] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const input = { projectId, selection, filters, hasSearchQuery }
 
@@ -45,7 +46,7 @@ export function DeleteTracesModal({
   const confirm = async () => {
     setIsDeleting(true)
     try {
-      await createTraceDeletion({ data: { ...input, confirmation: TRACE_DELETION_CONFIRMATION } })
+      await createTraceDeletion({ data: { ...input, includeDatasetRows, confirmation: TRACE_DELETION_CONFIRMATION } })
       void queryClient.invalidateQueries({ queryKey: ["trace-deletions", projectId] })
       toast({
         title: "Deleting traces",
@@ -84,6 +85,24 @@ export function DeleteTracesModal({
                 <span className="font-medium">{matchedTraceCount.toLocaleString()}</span> {traces} will be deleted.
               </Text.H5>
             )}
+            {matchedTraceCount ? (
+              <label
+                htmlFor="delete-traces-dataset-rows"
+                className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border p-3"
+              >
+                <div className="flex flex-col gap-0.5">
+                  <Text.H5M>Also delete dataset rows copied from these traces</Text.H5M>
+                  <Text.H6 color="foregroundMuted">
+                    Removes them from every dataset of the organization, including earlier versions
+                  </Text.H6>
+                </div>
+                <Switch
+                  id="delete-traces-dataset-rows"
+                  checked={includeDatasetRows}
+                  onCheckedChange={setIncludeDatasetRows}
+                />
+              </label>
+            ) : null}
             {matchedTraceCount ? (
               <Input
                 type="text"

@@ -34,6 +34,7 @@ export const createTraceDeletionRequestUseCase = Effect.fn("spans.createTraceDel
   input: TraceDeletionSelectorInput & {
     readonly projectId: ProjectId
     readonly requestedBy: TraceDeletionRequester
+    readonly includeDatasetRows?: boolean
   },
 ) {
   yield* Effect.annotateCurrentSpan("project.id", input.projectId)
@@ -43,6 +44,7 @@ export const createTraceDeletionRequestUseCase = Effect.fn("spans.createTraceDel
     organizationId: sqlClient.organizationId,
     projectId: input.projectId,
     filters,
+    includeDatasetRows: input.includeDatasetRows ?? false,
     requestedBy: input.requestedBy,
   })
 

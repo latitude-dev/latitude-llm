@@ -32,6 +32,8 @@ export const traceDeletionRequestSchema = z.object({
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
   filters: filterSetSchema,
+  /** Also deletes dataset rows that were copied from the deleted traces. */
+  includeDatasetRows: z.boolean(),
   status: traceDeletionStatusSchema,
   requestedBy: traceDeletionRequesterSchema,
   matchedTraceCount: z.number().int().nonnegative(),
@@ -50,6 +52,7 @@ export const createTraceDeletionRequest = (params: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly filters: FilterSet
+  readonly includeDatasetRows?: boolean
   readonly requestedBy: TraceDeletionRequester
 }): TraceDeletionRequest => {
   const now = new Date()
@@ -58,6 +61,7 @@ export const createTraceDeletionRequest = (params: {
     organizationId: params.organizationId,
     projectId: params.projectId,
     filters: params.filters,
+    includeDatasetRows: params.includeDatasetRows ?? false,
     status: "pending",
     requestedBy: params.requestedBy,
     matchedTraceCount: 0,

@@ -68,7 +68,12 @@ export const deleteTracesWorkflow = async (input: DeleteTracesWorkflowInput): Pr
         throw ApplicationFailure.nonRetryable("Matched traces could not be deleted", "TraceDeletionStalled")
       }
 
-      await purgeTraceDeletionBatchActivity({ ...scope, traceIds: prepared.traceIds, sessionIds: prepared.sessionIds })
+      await purgeTraceDeletionBatchActivity({
+        ...scope,
+        traceIds: prepared.traceIds,
+        sessionIds: prepared.sessionIds,
+        includeDatasetRows: snapshot.includeDatasetRows === true,
+      })
       matchedTraceCount += prepared.traceIds.length
       addCounts(deletedRowCounts, prepared.traceRowCounts)
       await purgeTraceDeletionSessionsActivity({ ...scope, sessionIds: prepared.sessionIds })

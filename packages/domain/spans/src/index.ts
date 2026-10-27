@@ -387,7 +387,12 @@ export type {
   TraceDeletionRequestRepositoryShape,
 } from "./ports/trace-deletion-request-repository.ts"
 export { TraceDeletionRequestRepository } from "./ports/trace-deletion-request-repository.ts"
-export type { PurgedRowCounts, TracePurgeRepositoryShape, TracePurgeScope } from "./ports/trace-purge-repository.ts"
+export type {
+  PurgedRowCounts,
+  TracePurgeRepositoryShape,
+  TracePurgeScope,
+  TracePurgeTracesInput,
+} from "./ports/trace-purge-repository.ts"
 export { TracePurgeRepository } from "./ports/trace-purge-repository.ts"
 export type { PurgedScore, TraceReferencePurgeRepositoryShape } from "./ports/trace-reference-purge-repository.ts"
 export { TraceReferencePurgeRepository } from "./ports/trace-reference-purge-repository.ts"

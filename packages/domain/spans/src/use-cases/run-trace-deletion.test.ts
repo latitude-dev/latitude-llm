@@ -219,6 +219,7 @@ describe("trace deletion batches", () => {
     projectId,
     filters: byTag,
     createdAt: new Date("2026-10-27T00:00:00.000Z"),
+    includeDatasetRows: false,
   }
 
   it("prepares a batch within the request's cutoff without deleting anything", async () => {

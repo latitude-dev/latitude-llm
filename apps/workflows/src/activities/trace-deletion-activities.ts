@@ -42,6 +42,7 @@ export interface TraceDeletionSnapshot {
   readonly finished: boolean
   readonly filters: FilterSet
   readonly createdAt: string
+  readonly includeDatasetRows?: boolean
 }
 
 const postgresLayer = Layer.mergeAll(
@@ -73,6 +74,7 @@ export const startTraceDeletionActivity = (input: TraceDeletionScope): Promise<T
           finished: request.status === "completed" || request.status === "failed",
           filters: request.filters,
           createdAt: request.createdAt.toISOString(),
+          includeDatasetRows: request.includeDatasetRows,
         })),
       ),
     ),
@@ -90,6 +92,7 @@ export const prepareTraceDeletionBatchActivity = (
           projectId: ProjectId(input.projectId),
           filters: input.snapshot.filters,
           createdAt: new Date(input.snapshot.createdAt),
+          includeDatasetRows: input.snapshot.includeDatasetRows === true,
         },
         batchSize: TRACE_DELETION_BATCH_SIZE,
       }).pipe(
@@ -104,7 +107,11 @@ export const prepareTraceDeletionBatchActivity = (
   )
 
 export const purgeTraceDeletionBatchActivity = (
-  input: TraceDeletionScope & { readonly traceIds: readonly string[]; readonly sessionIds: readonly string[] },
+  input: TraceDeletionScope & {
+    readonly traceIds: readonly string[]
+    readonly sessionIds: readonly string[]
+    readonly includeDatasetRows?: boolean
+  },
 ) =>
   Effect.runPromise(
     provide(
@@ -114,6 +121,7 @@ export const purgeTraceDeletionBatchActivity = (
         projectId: ProjectId(input.projectId),
         traceIds: input.traceIds.map(TraceId),
         sessionIds: input.sessionIds.map(SessionId),
+        includeDatasetRows: input.includeDatasetRows === true,
       }),
     ),
   )
