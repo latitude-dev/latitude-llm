@@ -28,6 +28,9 @@ import { type BullMqWorkerIncident, failedJobContextFromJob } from "./worker-inc
 
 const tracer = trace.getTracer("bullmq")
 
+export const COMPLETED_JOB_RETENTION = { count: 1000, age: 24 * 3600 }
+export const FAILED_JOB_RETENTION = { count: 1000, age: 7 * 24 * 3600 }
+
 const toError = (value: unknown): Error => (value instanceof Error ? value : new Error(String(value)))
 
 /**
@@ -287,8 +290,8 @@ export const createBullMqQueuePublisher = (
                 name: String(task),
                 data: { payload } satisfies BullMqJobData,
                 opts: {
-                  removeOnComplete: { count: 1000 },
-                  removeOnFail: { count: 1000 },
+                  removeOnComplete: COMPLETED_JOB_RETENTION,
+                  removeOnFail: FAILED_JOB_RETENTION,
                 },
               },
             )
@@ -394,8 +397,8 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                 connection: createBullMqRedisConnection(config.redis),
                 prefix: BULLMQ_PREFIX,
                 concurrency: concurrencyOverrides.get(queue) ?? DEFAULT_CONCURRENCY,
-                removeOnComplete: { count: 1000 },
-                removeOnFail: { count: 1000 },
+                removeOnComplete: COMPLETED_JOB_RETENTION,
+                removeOnFail: FAILED_JOB_RETENTION,
                 autorun: false,
               },
             )

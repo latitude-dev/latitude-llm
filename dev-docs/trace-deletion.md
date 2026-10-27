@@ -62,6 +62,7 @@ Session-scoped derived data (analyses, semantic moments, taxonomy observations, 
 | `trace_tombstones` | trace id | kept for 30 days: ids only, no content |
 | `scores_hourly_buckets` | signal and hour | kept: content-free counters |
 | `billing_usage_events.trace_id` (Postgres) | trace id | kept: billing ledger, no content |
+| BullMQ job data (Redis, `latitude:{bull}:*`) | job id; `span-ingestion` jobs can carry the raw OTLP payload inline | not touched: finished jobs are removed by the workers, completed ones after 1 day and failed ones after 7 days (and beyond the newest 1,000 of each per queue). Set in `@platform/queue-bullmq` (`COMPLETED_JOB_RETENTION`, `FAILED_JOB_RETENTION`) |
 | object storage `tmp-ingest/` | ingest payload | not touched: deleted once ingested, and expires after 1 day. On the versioned production bucket its noncurrent versions also expire after 1 day |
 | object storage `projects/*/exports/`, `dataset-exports/` | export files the customer requested | kept: the customer's own downloads, expired by the bucket lifecycle |
 
