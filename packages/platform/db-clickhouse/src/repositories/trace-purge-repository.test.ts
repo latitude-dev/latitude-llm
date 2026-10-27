@@ -198,6 +198,79 @@ describe("TracePurgeRepository", () => {
     expect(await count("spans", traceScoped(PURGED_IN_SESSION, otherOrganizationId))).toBe(1)
   })
 
+  it("sweeps content only the purged traces referenced, and keeps content a surviving trace still uses", async () => {
+    const occurrence = (traceId: string, contentHash: string, messageIndex: number) => ({
+      organization_id: organizationId,
+      project_id: projectId,
+      trace_id: traceId,
+      message_index: messageIndex,
+      content_hash: contentHash,
+      session_id: "",
+      start_time: at(0),
+      role: "user",
+      is_output: 0,
+    })
+    await insert("trace_message_occurrences", [
+      occurrence(PURGED_SESSIONLESS, "only-purged", 0),
+      occurrence(PURGED_SESSIONLESS, "shared", 1),
+      occurrence(KEPT_ELSEWHERE, "shared", 0),
+    ])
+    await insert(
+      "message_embeddings",
+      ["only-purged", "shared"].map((contentHash) => ({
+        organization_id: organizationId,
+        project_id: projectId,
+        content_hash: contentHash,
+        embedding: [0.1],
+        embedding_model: "m",
+      })),
+    )
+    const memoryEvent = (traceId: string, contentHash: string) => ({
+      organization_id: organizationId,
+      project_id: projectId,
+      store_id: "store",
+      record_id: contentHash,
+      operation: "write",
+      change_kind: "created",
+      content_hash: contentHash,
+      span_id: "f".repeat(16),
+      trace_id: traceId,
+      start_time: at(0),
+      end_time: at(1),
+    })
+    await insert("memory_events", [
+      memoryEvent(PURGED_SESSIONLESS, "memory-only-purged"),
+      memoryEvent(PURGED_SESSIONLESS, "memory-shared"),
+      memoryEvent(KEPT_ELSEWHERE, "memory-shared"),
+    ])
+    await insert(
+      "memory_blobs",
+      ["memory-only-purged", "memory-shared"].map((contentHash) => ({
+        organization_id: organizationId,
+        content_hash: contentHash,
+        content: "remembered",
+      })),
+    )
+
+    const counts = await run((repo) => repo.countTraceRows({ ...scope, traceIds: [PURGED_SESSIONLESS] }))
+    expect(counts).toMatchObject({ message_embeddings: 1, memory_blobs: 1 })
+
+    await run((repo) => repo.purgeTraces({ ...scope, traceIds: [PURGED_SESSIONLESS] }))
+
+    expect(
+      await count("message_embeddings", `organization_id = '${organizationId}' AND content_hash = 'only-purged'`),
+    ).toBe(0)
+    expect(await count("message_embeddings", `organization_id = '${organizationId}' AND content_hash = 'shared'`)).toBe(
+      1,
+    )
+    expect(
+      await count("memory_blobs", `organization_id = '${organizationId}' AND content_hash = 'memory-only-purged'`),
+    ).toBe(0)
+    expect(
+      await count("memory_blobs", `organization_id = '${organizationId}' AND content_hash = 'memory-shared'`),
+    ).toBe(1)
+  })
+
   it("drops session-scoped data and rebuilds sessions from their surviving spans", async () => {
     const traceIds = [PURGED_IN_SESSION, PURGED_SESSIONLESS]
     const sessionIds = await run((repo) => repo.listSessionIdsByTraceIds({ ...scope, traceIds }))

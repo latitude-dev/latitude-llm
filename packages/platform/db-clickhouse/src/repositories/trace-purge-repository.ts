@@ -103,6 +103,60 @@ const countTargets = async (
   return counts
 }
 
+// Content-addressed rows carry no trace id. They are orphaned when only the purged traces reference
+// their hash: message embeddings within the project, memory blobs anywhere in the organization.
+const ORPHANED_MESSAGE_HASHES = `SELECT content_hash
+  FROM trace_message_occurrences
+  WHERE ${SCOPE}
+    AND content_hash IN (
+      SELECT content_hash FROM trace_message_occurrences WHERE ${SCOPE} AND trace_id IN {traceIds:Array(String)}
+    )
+  GROUP BY content_hash
+  HAVING countIf(trace_id NOT IN {traceIds:Array(String)}) = 0`
+
+const MEMORY_REFERENCES = (where: string) =>
+  ["memory_events", "memory_current"]
+    .map((table) => `SELECT content_hash, project_id, trace_id FROM ${table} WHERE ${where}`)
+    .join(" UNION ALL ")
+
+const ORPHANED_MEMORY_HASHES = `SELECT content_hash
+  FROM (${MEMORY_REFERENCES(`organization_id = {organizationId:String} AND content_hash IN (
+    SELECT content_hash FROM (${MEMORY_REFERENCES(`${SCOPE} AND trace_id IN {traceIds:Array(String)} AND content_hash != ''`)})
+  )`)})
+  GROUP BY content_hash
+  HAVING countIf(NOT (project_id = {projectId:String} AND trace_id IN {traceIds:Array(String)})) = 0`
+
+const listHashes = async (client: ClickHouseClient, query: string, params: Record<string, unknown>) => {
+  const result = await client.query({ query, query_params: params, format: "JSONEachRow" })
+  return (await result.json<{ content_hash: string }>()).map((row) => row.content_hash)
+}
+
+const orphanTargets = async (
+  client: ClickHouseClient,
+  params: Record<string, unknown>,
+): Promise<{ readonly targets: readonly PurgeTarget[]; readonly params: Record<string, unknown> }> => {
+  const [messageHashes, memoryHashes] = await Promise.all([
+    listHashes(client, ORPHANED_MESSAGE_HASHES, params),
+    listHashes(client, ORPHANED_MEMORY_HASHES, params),
+  ])
+  return {
+    targets: [
+      ...(messageHashes.length > 0
+        ? [{ table: "message_embeddings", where: `${SCOPE} AND content_hash IN {messageHashes:Array(String)}` }]
+        : []),
+      ...(memoryHashes.length > 0
+        ? [
+            {
+              table: "memory_blobs",
+              where: "organization_id = {organizationId:String} AND content_hash IN {memoryHashes:Array(String)}",
+            },
+          ]
+        : []),
+    ],
+    params: { ...params, messageHashes, memoryHashes },
+  }
+}
+
 const deleteTargets = async (
   client: ClickHouseClient,
   targets: readonly PurgeTarget[],
@@ -175,7 +229,10 @@ export const TracePurgeRepositoryLive = Layer.effect(
       if (params.traceIds.length === 0) return Effect.succeed({})
 
       return chSqlClient
-        .query((client) => countTargets(client, TRACE_TARGETS, params))
+        .query(async (client) => {
+          const orphans = await orphanTargets(client, params)
+          return countTargets(client, [...orphans.targets, ...TRACE_TARGETS], orphans.params)
+        })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "TracePurgeRepository.countTraceRows")))
     }
 
@@ -184,7 +241,11 @@ export const TracePurgeRepositoryLive = Layer.effect(
       if (params.traceIds.length === 0) return Effect.void
 
       return chSqlClient
-        .query((client) => deleteTargets(client, TRACE_TARGETS, params))
+        .query(async (client) => {
+          // Orphans are found through the purged traces' occurrences, so they must go before those.
+          const orphans = await orphanTargets(client, params)
+          await deleteTargets(client, [...orphans.targets, ...TRACE_TARGETS], orphans.params)
+        })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "TracePurgeRepository.purgeTraces")))
     }
 

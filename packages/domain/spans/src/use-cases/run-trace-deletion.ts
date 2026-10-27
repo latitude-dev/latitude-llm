@@ -20,6 +20,7 @@ import { TraceDeletionRequestRepository } from "../ports/trace-deletion-request-
 import { type PurgedRowCounts, TracePurgeRepository } from "../ports/trace-purge-repository.ts"
 import { TraceReferencePurgeRepository } from "../ports/trace-reference-purge-repository.ts"
 import { TraceRepository } from "../ports/trace-repository.ts"
+import { TraceTombstoneRepository } from "../ports/trace-tombstone-repository.ts"
 
 export const TRACE_DELETION_BATCH_SIZE = 500
 
@@ -93,8 +94,9 @@ export const prepareTraceDeletionBatchUseCase = Effect.fn("spans.prepareTraceDel
 })
 
 /**
- * Purges a prepared batch's traces. Postgres goes first and ClickHouse `traces` last,
- * so a batch that fails part-way is still listed, and still purgeable, on retry.
+ * Purges a prepared batch's traces. Tombstones go first, so spans arriving mid-purge are already
+ * dropped at ingest. Postgres follows and ClickHouse `traces` goes last, so a batch that fails
+ * part-way is still listed, and still purgeable, on retry.
  */
 export const purgeTraceDeletionBatchUseCase = Effect.fn("spans.purgeTraceDeletionBatch")(function* (input: {
   readonly requestId: TraceDeletionRequestId
@@ -105,8 +107,10 @@ export const purgeTraceDeletionBatchUseCase = Effect.fn("spans.purgeTraceDeletio
   yield* Effect.annotateCurrentSpan("traceDeletionRequest.id", input.requestId)
   const sqlClient = yield* SqlClient
   const purge = yield* TracePurgeRepository
+  const tombstones = yield* TraceTombstoneRepository
   const { organizationId } = sqlClient
 
+  yield* tombstones.record({ organizationId, projectId: input.projectId, traceIds: input.traceIds })
   yield* sqlClient.transaction(
     Effect.gen(function* () {
       const references = yield* TraceReferencePurgeRepository

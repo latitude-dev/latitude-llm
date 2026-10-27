@@ -423,6 +423,8 @@ export type {
   TraceSemanticHighlightMatch,
 } from "./ports/trace-search-repository.ts"
 export { TraceSearchRepository } from "./ports/trace-search-repository.ts"
+export type { TombstoneCandidate, TraceTombstoneRepositoryShape } from "./ports/trace-tombstone-repository.ts"
+export { TraceTombstoneRepository, tombstoneKey } from "./ports/trace-tombstone-repository.ts"
 export type {
   ProjectUserSummary,
   UserActivityBucket,

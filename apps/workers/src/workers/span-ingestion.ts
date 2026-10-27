@@ -10,7 +10,7 @@ import {
 import { processIngestedSpansUseCase } from "@domain/spans"
 import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
-import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { SpanRepositoryLive, TraceTombstoneRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
 import {
   BillingOverrideRepositoryLive,
@@ -136,7 +136,11 @@ export const createSpanIngestionWorker = ({
           ),
           Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
           withPostgres(postgresLayers, postgresClient, OrganizationId(organizationId)),
-          withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId)),
+          withClickHouse(
+            Layer.mergeAll(SpanRepositoryLive, TraceTombstoneRepositoryLive),
+            chClient,
+            OrganizationId(organizationId),
+          ),
           withTracing,
           Effect.provide(StorageDiskLive(disk)),
           Effect.provide(RedisCacheStoreLive(rdClient)),

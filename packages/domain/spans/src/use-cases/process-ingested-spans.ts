@@ -19,6 +19,7 @@ import { decodeOtlpProtobuf } from "../otlp/proto.ts"
 import { type InvalidCostAttributeCount, transformOtlpToSpans, type UnpricedSpanGroup } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
 import { SpanRepository } from "../ports/span-repository.ts"
+import { TraceTombstoneRepository, tombstoneKey } from "../ports/trace-tombstone-repository.ts"
 import { redactSpans, type SpanRedactionSummary } from "../redaction/redact-spans.ts"
 import { totalRedactionCount } from "../redaction/redact-text.ts"
 
@@ -269,6 +270,21 @@ function reportUnpricedSpans(
   })
 }
 
+/** Spans that arrive after their trace was deleted must not recreate it. */
+const dropTombstonedSpans = <S extends Pick<SpanDetail, "projectId" | "traceId">>(
+  organizationId: OrganizationId,
+  spans: readonly S[],
+) =>
+  Effect.gen(function* () {
+    if (spans.length === 0) return spans
+    const tombstones = yield* TraceTombstoneRepository
+    const tombstoned = yield* tombstones.listTombstoned({ organizationId, candidates: spans })
+    if (tombstoned.size === 0) return spans
+    const kept = spans.filter((span) => !tombstoned.has(tombstoneKey(span)))
+    yield* Effect.annotateCurrentSpan("spans.droppedTombstoned", spans.length - kept.length)
+    return kept
+  })
+
 export const processIngestedSpansUseCase =
   <TPublishError>({ eventsPublisher, onUnpricedSpans }: ProcessIngestedSpansDeps<TPublishError>) =>
   (
@@ -276,7 +292,7 @@ export const processIngestedSpansUseCase =
   ): Effect.Effect<
     void,
     SpanDecodingError | StorageError | RepositoryError | RedactionError | TPublishError,
-    ChSqlClient | SpanRepository | StorageDisk
+    ChSqlClient | SpanRepository | StorageDisk | TraceTombstoneRepository
   > =>
     Effect.gen(function* () {
       yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
@@ -298,13 +314,14 @@ export const processIngestedSpansUseCase =
       yield* annotateRedaction(redaction.summary)
 
       const spans = redaction.spans
-      const persistedSpans =
+      const retainedSpans =
         input.retentionDays === undefined
           ? spans
           : spans.map((span) => ({
               ...span,
               retentionDays: input.retentionDays,
             }))
+      const persistedSpans = yield* dropTombstonedSpans(input.organizationId, retainedSpans)
 
       // Nothing survived the transform, so there is nothing to insert — but the payload
       // that produced it still holds unredacted content and must not be left behind.
