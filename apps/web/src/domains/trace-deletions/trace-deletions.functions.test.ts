@@ -41,6 +41,15 @@ describe("trace deletion input", () => {
     ).toBe(true)
   })
 
+  it("caps picked and unselected rows at what a trace id filter can hold", () => {
+    const ids = (count: number) => Array.from({ length: count }, (_, i) => String(i).padStart(32, "0"))
+    const parse = (selection: object) => traceDeletionSelectorSchema.safeParse({ projectId: "p", selection })
+    expect(parse({ mode: "selected", rowIds: ids(100) }).success).toBe(true)
+    expect(parse({ mode: "selected", rowIds: ids(101) }).success).toBe(false)
+    expect(parse({ mode: "allExcept", rowIds: ids(100) }).success).toBe(true)
+    expect(parse({ mode: "allExcept", rowIds: ids(101) }).success).toBe(false)
+  })
+
   it("requires the exact confirmation phrase", () => {
     const input = { projectId: "p", selection: { mode: "selected" as const, rowIds: [TRACE_A] } }
     expect(

@@ -26,10 +26,27 @@ import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
 export const TRACE_DELETION_CONFIRMATION = "delete traces"
 
+// Both lists become a `traceId` filter condition, whose array values the filter contract caps.
+const MAX_SELECTION_ROW_IDS = 100
+
 const traceDeletionSelectionSchema = z.discriminatedUnion("mode", [
-  z.object({ mode: z.literal("selected"), rowIds: z.array(z.string().length(32)).min(1) }),
+  z.object({
+    mode: z.literal("selected"),
+    rowIds: z
+      .array(z.string().length(32))
+      .min(1)
+      .max(
+        MAX_SELECTION_ROW_IDS,
+        `Select at most ${MAX_SELECTION_ROW_IDS} traces, or select all and narrow with filters`,
+      ),
+  }),
   z.object({ mode: z.literal("all") }),
-  z.object({ mode: z.literal("allExcept"), rowIds: z.array(z.string().length(32)) }),
+  z.object({
+    mode: z.literal("allExcept"),
+    rowIds: z
+      .array(z.string().length(32))
+      .max(MAX_SELECTION_ROW_IDS, `Unselect at most ${MAX_SELECTION_ROW_IDS} traces, or narrow the list with filters`),
+  }),
 ])
 
 /** Exported for input-schema tests. */
