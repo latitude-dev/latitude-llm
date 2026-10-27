@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."trace_deletion_requests" ADD COLUMN "include_dataset_rows" boolean DEFAULT false NOT NULL;

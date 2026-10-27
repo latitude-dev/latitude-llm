@@ -37,7 +37,7 @@ Deleted traces disappear from Latitude immediately; removal from underlying stor
 
 What is **not** deleted:
 
-- **Dataset rows you copied from traces.** A dataset row is your own copy and stays in the dataset; delete the row from the dataset if it must go too.
+- **Dataset rows you copied from traces**, unless you ask for them. A dataset row is your own copy, so it stays by default. Turn on **Also delete dataset rows copied from these traces**, or pass `includeDatasetRows: true` through the API, to delete every copy, including its earlier versions, from every dataset of the organization. Rows you created by hand or imported from a file are never matched.
 - **Billing usage records.** They count usage per trace and contain no trace content.
 - **Aggregate counters**, such as the number of signal occurrences per hour. They contain no trace content.
 - **Exports you downloaded.** Export files are your own copies; their download links expire on their own.

@@ -131,16 +131,38 @@ const listHashes = async (client: ClickHouseClient, query: string, params: Recor
   return (await result.json<{ content_hash: string }>()).map((row) => row.content_hash)
 }
 
-const orphanTargets = async (
+// Dataset rows keep the trace they were copied from in `metadata.traceId`. Every version of a
+// matching row goes, so the copy can't be recovered from the dataset's history.
+const COPIED_DATASET_ROW_IDS = `SELECT DISTINCT row_id
+  FROM dataset_rows
+  WHERE organization_id = {organizationId:String}
+    AND JSONExtractString(metadata, 'traceId') IN {traceIds:Array(String)}`
+
+const listDatasetRowIds = async (client: ClickHouseClient, params: Record<string, unknown>) => {
+  const result = await client.query({ query: COPIED_DATASET_ROW_IDS, query_params: params, format: "JSONEachRow" })
+  return (await result.json<{ row_id: string }>()).map((row) => row.row_id)
+}
+
+const derivedTargets = async (
   client: ClickHouseClient,
   params: Record<string, unknown>,
+  includeDatasetRows: boolean,
 ): Promise<{ readonly targets: readonly PurgeTarget[]; readonly params: Record<string, unknown> }> => {
-  const [messageHashes, memoryHashes] = await Promise.all([
+  const [messageHashes, memoryHashes, datasetRowIds] = await Promise.all([
     listHashes(client, ORPHANED_MESSAGE_HASHES, params),
     listHashes(client, ORPHANED_MEMORY_HASHES, params),
+    includeDatasetRows ? listDatasetRowIds(client, params) : Promise.resolve([]),
   ])
   return {
     targets: [
+      ...(datasetRowIds.length > 0
+        ? [
+            {
+              table: "dataset_rows",
+              where: "organization_id = {organizationId:String} AND row_id IN {datasetRowIds:Array(String)}",
+            },
+          ]
+        : []),
       ...(messageHashes.length > 0
         ? [{ table: "message_embeddings", where: `${SCOPE} AND content_hash IN {messageHashes:Array(String)}` }]
         : []),
@@ -153,7 +175,7 @@ const orphanTargets = async (
           ]
         : []),
     ],
-    params: { ...params, messageHashes, memoryHashes },
+    params: { ...params, messageHashes, memoryHashes, datasetRowIds },
   }
 }
 
@@ -230,8 +252,8 @@ export const TracePurgeRepositoryLive = Layer.effect(
 
       return chSqlClient
         .query(async (client) => {
-          const orphans = await orphanTargets(client, params)
-          return countTargets(client, [...orphans.targets, ...TRACE_TARGETS], orphans.params)
+          const derived = await derivedTargets(client, params, input.includeDatasetRows === true)
+          return countTargets(client, [...derived.targets, ...TRACE_TARGETS], derived.params)
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "TracePurgeRepository.countTraceRows")))
     }
@@ -243,8 +265,8 @@ export const TracePurgeRepositoryLive = Layer.effect(
       return chSqlClient
         .query(async (client) => {
           // Orphans are found through the purged traces' occurrences, so they must go before those.
-          const orphans = await orphanTargets(client, params)
-          await deleteTargets(client, [...orphans.targets, ...TRACE_TARGETS], orphans.params)
+          const derived = await derivedTargets(client, params, input.includeDatasetRows === true)
+          await deleteTargets(client, [...derived.targets, ...TRACE_TARGETS], derived.params)
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "TracePurgeRepository.purgeTraces")))
     }

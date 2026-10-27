@@ -1,6 +1,6 @@
 import type { FilterSet } from "@domain/shared"
 import type { TraceDeletionRequester, TraceDeletionStatus } from "@domain/spans"
-import { index, integer, jsonb, text, varchar } from "drizzle-orm/pg-core"
+import { boolean, index, integer, jsonb, text, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const traceDeletionRequests = latitudeSchema.table(
@@ -10,6 +10,7 @@ export const traceDeletionRequests = latitudeSchema.table(
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
     filters: jsonb("filters").notNull().$type<FilterSet>(),
+    includeDatasetRows: boolean("include_dataset_rows").notNull().default(false),
     status: varchar("status", { length: 16 }).notNull().$type<TraceDeletionStatus>(),
     requestedBy: jsonb("requested_by").notNull().$type<TraceDeletionRequester>(),
     matchedTraceCount: integer("matched_trace_count").notNull().default(0),

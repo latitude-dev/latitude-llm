@@ -64,6 +64,7 @@ describe("deleteTracesWorkflow", () => {
       ...scope,
       traceIds: first.traceIds,
       sessionIds: first.sessionIds,
+      includeDatasetRows: false,
     })
     expect(mockActivities.purgeTraceDeletionSessionsActivity).toHaveBeenCalledTimes(2)
     expect(mockActivities.finishTraceDeletionActivity).toHaveBeenCalledWith({

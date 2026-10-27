@@ -9,6 +9,8 @@ export interface TraceDeletion {
     status: TraceDeletion.Status;
     /** The trace filter the deletion selects with, including any explicit trace ids as a `traceId` condition. Only traces that started before `createdAt` are deleted. */
     filters: Record<string, Latitude.FilterCondition[]>;
+    /** Whether dataset rows copied from the deleted traces are deleted too. */
+    includeDatasetRows: boolean;
     /** Who requested the deletion. */
     requestedBy: TraceDeletion.RequestedBy;
     /** Traces deleted so far. Final once `status` is `completed` or `failed`. */

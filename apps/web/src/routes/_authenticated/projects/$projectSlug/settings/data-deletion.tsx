@@ -92,6 +92,7 @@ function DataDeletionSettingsPage() {
                   {formatCount(deletion.matchedTraceCount)} traces · {formatCount(deletion.deletedRecordCount)} records
                   · requested by {REQUESTER_LABEL[deletion.requestedBy.type]} {relativeTime(deletion.createdAt)}
                   {deletion.completedAt ? ` · finished ${relativeTime(deletion.completedAt)}` : ""}
+                  {deletion.includeDatasetRows ? " · including dataset rows" : ""}
                 </Text.H6>
                 {deletion.error ? <Text.H6 color="destructive">{deletion.error}</Text.H6> : null}
                 <div className="flex items-center justify-between gap-2">

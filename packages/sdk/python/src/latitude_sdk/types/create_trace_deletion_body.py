@@ -3,7 +3,9 @@
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
+from ..core.serialization import FieldMetadata
 from .create_trace_deletion_body_traces import CreateTraceDeletionBodyTraces
 
 
@@ -11,6 +13,19 @@ class CreateTraceDeletionBody(UniversalBaseModel):
     traces: CreateTraceDeletionBodyTraces = pydantic.Field()
     """
     Which traces to delete: up to 100 explicit trace ids, or a trace filter set (for example every trace tagged `customer:acme`, or every trace of one `userId`). A filter must contain at least one condition, and percentile conditions are not accepted. Only traces that started before the deletion is requested are deleted.
+    """
+
+    include_dataset_rows: typing_extensions.Annotated[
+        typing.Optional[bool],
+        FieldMetadata(alias="includeDatasetRows"),
+        pydantic.Field(
+            alias="includeDatasetRows",
+            default=None,
+            description="Also delete dataset rows that were copied from the deleted traces, in every dataset of the organization, including their earlier versions. Defaults to `false`, which keeps dataset rows. Ignored by `previewTraceDeletion`.",
+        ),
+    ]
+    """
+    Also delete dataset rows that were copied from the deleted traces, in every dataset of the organization, including their earlier versions. Defaults to `false`, which keeps dataset rows. Ignored by `previewTraceDeletion`.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

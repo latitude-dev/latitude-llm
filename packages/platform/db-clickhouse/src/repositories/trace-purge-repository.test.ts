@@ -271,6 +271,34 @@ describe("TracePurgeRepository", () => {
     ).toBe(1)
   })
 
+  it("deletes every version of the dataset rows copied from the traces only when asked to", async () => {
+    const datasetRow = (rowId: string, traceId: string, xactId: number) => ({
+      organization_id: organizationId,
+      dataset_id: "dataset-1",
+      row_id: rowId,
+      xact_id: xactId,
+      input: "copied prompt",
+      metadata: JSON.stringify({ traceId }),
+    })
+    await insert("dataset_rows", [
+      datasetRow("row-copied", PURGED_SESSIONLESS, 1),
+      datasetRow("row-copied", PURGED_SESSIONLESS, 2),
+      datasetRow("row-kept", KEPT_ELSEWHERE, 1),
+    ])
+    const traceIds = [PURGED_SESSIONLESS]
+
+    expect(await run((repo) => repo.countTraceRows({ ...scope, traceIds }))).not.toHaveProperty("dataset_rows")
+    await run((repo) => repo.purgeTraces({ ...scope, traceIds }))
+    expect(await count("dataset_rows", `organization_id = '${organizationId}' AND row_id = 'row-copied'`)).toBe(2)
+
+    expect(await run((repo) => repo.countTraceRows({ ...scope, traceIds, includeDatasetRows: true }))).toMatchObject({
+      dataset_rows: 2,
+    })
+    await run((repo) => repo.purgeTraces({ ...scope, traceIds, includeDatasetRows: true }))
+    expect(await count("dataset_rows", `organization_id = '${organizationId}' AND row_id = 'row-copied'`)).toBe(0)
+    expect(await count("dataset_rows", `organization_id = '${organizationId}' AND row_id = 'row-kept'`)).toBe(1)
+  })
+
   it("drops session-scoped data and rebuilds sessions from their surviving spans", async () => {
     const traceIds = [PURGED_IN_SESSION, PURGED_SESSIONLESS]
     const sessionIds = await run((repo) => repo.listSessionIdsByTraceIds({ ...scope, traceIds }))

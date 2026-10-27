@@ -35,7 +35,7 @@ Customers with strict DPAs must erase a specific end-client's traces (for exampl
 
 ### Phase 4 - Compliance hardening
 
-- [ ] **P4-1** (LAT-915): `dataset_rows` provenance and opt-in cascade.
+- [x] **P4-1** (LAT-915): `dataset_rows` provenance and opt-in cascade.
 - [x] **P4-2** (LAT-916): orphan sweep for `message_embeddings` and `memory_blobs`.
 - [x] **P4-3** (LAT-917): ingest tombstone for late spans of purged traces.
 - [x] **P4-4** (LAT-918): retention grace and object-store version review.

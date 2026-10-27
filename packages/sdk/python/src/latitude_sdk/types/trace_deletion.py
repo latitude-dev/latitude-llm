@@ -27,6 +27,18 @@ class TraceDeletion(UniversalBaseModel):
     The trace filter the deletion selects with, including any explicit trace ids as a `traceId` condition. Only traces that started before `createdAt` are deleted.
     """
 
+    include_dataset_rows: typing_extensions.Annotated[
+        bool,
+        FieldMetadata(alias="includeDatasetRows"),
+        pydantic.Field(
+            alias="includeDatasetRows",
+            description="Whether dataset rows copied from the deleted traces are deleted too.",
+        ),
+    ]
+    """
+    Whether dataset rows copied from the deleted traces are deleted too.
+    """
+
     requested_by: typing_extensions.Annotated[
         TraceDeletionRequestedBy,
         FieldMetadata(alias="requestedBy"),

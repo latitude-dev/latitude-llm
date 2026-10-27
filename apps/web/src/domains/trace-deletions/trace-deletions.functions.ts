@@ -62,7 +62,7 @@ export const traceDeletionSelectorSchema = z
   })
 
 export const createTraceDeletionInputSchema = traceDeletionSelectorSchema.and(
-  z.object({ confirmation: z.literal(TRACE_DELETION_CONFIRMATION) }),
+  z.object({ includeDatasetRows: z.boolean().optional(), confirmation: z.literal(TRACE_DELETION_CONFIRMATION) }),
 )
 
 type TraceDeletionSelection = z.infer<typeof traceDeletionSelectionSchema>
@@ -87,6 +87,7 @@ export interface TraceDeletionRecord {
   readonly id: string
   readonly status: TraceDeletionRequest["status"]
   readonly filters: FilterSet
+  readonly includeDatasetRows: boolean
   readonly requestedBy: TraceDeletionRequest["requestedBy"]
   readonly matchedTraceCount: number
   readonly deletedRecordCount: number
@@ -99,6 +100,7 @@ const toRecord = (request: TraceDeletionRequest): TraceDeletionRecord => ({
   id: request.id,
   status: request.status,
   filters: request.filters,
+  includeDatasetRows: request.includeDatasetRows,
   requestedBy: request.requestedBy,
   matchedTraceCount: request.matchedTraceCount,
   deletedRecordCount: Object.values(request.deletedRowCounts).reduce((total, rows) => total + rows, 0),
@@ -149,6 +151,7 @@ export const createTraceDeletion = createServerFn({ method: "POST" })
         return yield* createTraceDeletionRequestUseCase({
           ...toTraceDeletionSelector(data.selection, data.filters),
           projectId: ProjectId(project.id),
+          includeDatasetRows: data.includeDatasetRows === true,
           requestedBy: { type: "user", id: userId },
         })
       }).pipe(

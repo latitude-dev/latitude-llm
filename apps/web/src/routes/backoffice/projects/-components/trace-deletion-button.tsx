@@ -1,4 +1,4 @@
-import { Alert, Button, CloseTrigger, Input, Modal, Text, useToast } from "@repo/ui"
+import { Alert, Button, CloseTrigger, Input, Modal, Switch, Text, useToast } from "@repo/ui"
 import { useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import {
@@ -22,6 +22,7 @@ export function TraceDeletionButton({ projectId, projectName }: TraceDeletionBut
   const [selector, setSelector] = useState(EMPTY_SELECTOR)
   const [matchedTraceCount, setMatchedTraceCount] = useState<number | null>(null)
   const [confirmText, setConfirmText] = useState("")
+  const [includeDatasetRows, setIncludeDatasetRows] = useState(false)
   const [isBusy, setIsBusy] = useState(false)
 
   const traceIds = selector.traceIds
@@ -44,6 +45,7 @@ export function TraceDeletionButton({ projectId, projectName }: TraceDeletionBut
     setSelector(EMPTY_SELECTOR)
     setMatchedTraceCount(null)
     setConfirmText("")
+    setIncludeDatasetRows(false)
   }
 
   const update = (field: keyof typeof EMPTY_SELECTOR) => (event: { target: { value: string } }) => {
@@ -70,7 +72,9 @@ export function TraceDeletionButton({ projectId, projectName }: TraceDeletionBut
 
   const confirm = () =>
     run(async () => {
-      await adminCreateTraceDeletion({ data: { ...input, confirmation: TRACE_DELETION_CONFIRMATION } })
+      await adminCreateTraceDeletion({
+        data: { ...input, includeDatasetRows, confirmation: TRACE_DELETION_CONFIRMATION },
+      })
       toast({ description: `Deleting ${matchedTraceCount?.toLocaleString() ?? ""} traces from ${projectName}.` })
       close()
       void router.invalidate()
@@ -142,6 +146,22 @@ export function TraceDeletionButton({ projectId, projectName }: TraceDeletionBut
               </div>
               {matchedTraceCount !== null && matchedTraceCount > 0 ? (
                 <>
+                  <label
+                    htmlFor="admin-trace-deletion-dataset-rows"
+                    className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border p-3"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <Text.H5M>Also delete dataset rows copied from these traces</Text.H5M>
+                      <Text.H6 color="foregroundMuted">
+                        Removes them from every dataset of the organization, including earlier versions
+                      </Text.H6>
+                    </div>
+                    <Switch
+                      id="admin-trace-deletion-dataset-rows"
+                      checked={includeDatasetRows}
+                      onCheckedChange={setIncludeDatasetRows}
+                    />
+                  </label>
                   <Text.H5 color="foregroundMuted">
                     Type <span className="font-medium text-foreground">{TRACE_DELETION_CONFIRMATION}</span> to confirm.
                   </Text.H5>
