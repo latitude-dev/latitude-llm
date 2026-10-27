@@ -5,7 +5,12 @@ import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId, TraceId } 
 import { parseCHDate, safeParseJson } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
+const JSON_START_CHARS = '"{[-tfn0123456789'
+
 const parsesAsJson = (value: string): boolean => {
+  const first = value.trimStart()[0]
+  // Plain prose rarely starts with a JSON token, so ordinary text skips the throwing parse.
+  if (first !== undefined && !JSON_START_CHARS.includes(first)) return false
   try {
     JSON.parse(value)
     return true
