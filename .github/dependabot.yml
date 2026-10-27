@@ -29,6 +29,12 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    # packages/telemetry/python pins google-genai <2.9.0:
+    # openinference-instrumentation-google-genai imports
+    # google.genai._interactions, which google-genai removed in 2.9.0.
+    ignore:
+      - dependency-name: google-genai
+        versions: [">=2.9.0"]
 
   - package-ecosystem: github-actions
     directory: /
