@@ -67,6 +67,16 @@ const _registry = {
     readonly scoreId: string
     readonly preEnrichedFeedback?: string
   }>(),
+  deleteTracesWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly traceDeletionRequestId: string
+    /** Totals carried across continue-as-new; absent on the first run. */
+    readonly progress?: {
+      readonly matchedTraceCount: number
+      readonly deletedRowCounts: Readonly<Record<string, number>>
+    }
+  }>(),
   billingOverageWorkflow: input<{
     readonly organizationId: string
     readonly periodStart: string

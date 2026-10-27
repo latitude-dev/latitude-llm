@@ -80,6 +80,9 @@ export type DestinationSyncRunId = Id<"DestinationSyncRunId">
 // Import IDs
 export type ImportJobId = Id<"ImportJobId">
 
+// Trace deletion IDs
+export type TraceDeletionRequestId = Id<"TraceDeletionRequestId">
+
 // Enterprise SSO IDs
 export type SsoProviderId = Id<"SsoProviderId">
 
@@ -123,6 +126,7 @@ export const SlackDeliveryId = (value: string): SlackDeliveryId => value as Slac
 export const DestinationId = (value: string): DestinationId => value as DestinationId
 export const DestinationSyncRunId = (value: string): DestinationSyncRunId => value as DestinationSyncRunId
 export const ImportJobId = (value: string): ImportJobId => value as ImportJobId
+export const TraceDeletionRequestId = (value: string): TraceDeletionRequestId => value as TraceDeletionRequestId
 export const SsoProviderId = (value: string): SsoProviderId => value as SsoProviderId
 export const TraceId = (value: string): TraceId => value as TraceId
 export const SpanId = (value: string): SpanId => value as SpanId
@@ -165,6 +169,7 @@ export const slackDeliveryIdSchema = cuidSchema.transform(SlackDeliveryId)
 export const destinationIdSchema = cuidSchema.transform(DestinationId)
 export const destinationSyncRunIdSchema = cuidSchema.transform(DestinationSyncRunId)
 export const importJobIdSchema = cuidSchema.transform(ImportJobId)
+export const traceDeletionRequestIdSchema = cuidSchema.transform(TraceDeletionRequestId)
 export const ssoProviderIdSchema = cuidSchema.transform(SsoProviderId)
 
 // The telemetry-related IDs have custom length constraints

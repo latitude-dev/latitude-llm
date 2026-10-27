@@ -108,6 +108,8 @@ export { StripeSubscriptionLookupLive } from "./repositories/stripe-subscription
 export { TaxonomyClusterRepositoryLive } from "./repositories/taxonomy-cluster-repository.ts"
 export { TaxonomyLineageRepositoryLive } from "./repositories/taxonomy-lineage-repository.ts"
 export { TaxonomyRunRepositoryLive } from "./repositories/taxonomy-run-repository.ts"
+export { TraceDeletionRequestRepositoryLive } from "./repositories/trace-deletion-request-repository.ts"
+export { TraceReferencePurgeRepositoryLive } from "./repositories/trace-reference-purge-repository.ts"
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
 export { WrappedReportRepositoryLive } from "./repositories/wrapped-report-repository.ts"
 export { invalidateEffectivePlanCache, resolveEffectivePlanCached } from "./resolve-effective-plan-cached.ts"

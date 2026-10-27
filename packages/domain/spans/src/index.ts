@@ -92,7 +92,30 @@ export {
 } from "./entities/span-endpoint.ts"
 export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
-export { RedactionError, SpanDecodingError } from "./errors.ts"
+export {
+  buildTraceDeletionFilters,
+  createTraceDeletionRequest,
+  isTraceDeletionFinished,
+  markTraceDeletionCompleted,
+  markTraceDeletionFailed,
+  markTraceDeletionRunning,
+  TRACE_DELETION_MAX_TRACE_IDS,
+  TRACE_DELETION_REQUESTER_TYPES,
+  TRACE_DELETION_STATUSES,
+  type TraceDeletionRequest,
+  type TraceDeletionRequester,
+  type TraceDeletionStatus,
+  traceDeletionFiltersProblem,
+  traceDeletionRequesterSchema,
+  traceDeletionRequestSchema,
+  traceDeletionStatusSchema,
+  withTraceDeletionCutoff,
+} from "./entities/trace-deletion-request.ts"
+export {
+  InvalidTraceDeletionSelectorError,
+  RedactionError,
+  SpanDecodingError,
+} from "./errors.ts"
 export {
   assistantMessageHasOutputContent,
   hasUsableAssistantCompletion,
@@ -359,8 +382,15 @@ export type {
   ToolUsageMetrics,
 } from "./ports/tool-analytics-repository.ts"
 export { ToolAnalyticsRepository } from "./ports/tool-analytics-repository.ts"
+export type {
+  TraceDeletionRequestPage,
+  TraceDeletionRequestRepositoryShape,
+} from "./ports/trace-deletion-request-repository.ts"
+export { TraceDeletionRequestRepository } from "./ports/trace-deletion-request-repository.ts"
 export type { PurgedRowCounts, TracePurgeRepositoryShape, TracePurgeScope } from "./ports/trace-purge-repository.ts"
 export { TracePurgeRepository } from "./ports/trace-purge-repository.ts"
+export type { PurgedScore, TraceReferencePurgeRepositoryShape } from "./ports/trace-reference-purge-repository.ts"
+export { TraceReferencePurgeRepository } from "./ports/trace-reference-purge-repository.ts"
 export type {
   NumericRollup,
   TokenAnalyticsAggregate,
@@ -467,6 +497,12 @@ export type {
   TraceSearchHighlightsResult,
 } from "./use-cases/compute-trace-search-highlights.ts"
 export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
+export { countTraceDeletionMatchesUseCase } from "./use-cases/count-trace-deletion-matches.ts"
+export {
+  createTraceDeletionRequestUseCase,
+  resolveTraceDeletionFilters,
+  type TraceDeletionSelectorInput,
+} from "./use-cases/create-trace-deletion-request.ts"
 export type {
   GetSessionAnalyticsError,
   GetSessionAnalyticsInput,
@@ -517,6 +553,15 @@ export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-
 export { processIngestedSpansUseCase } from "./use-cases/process-ingested-spans.ts"
 export type { QueryAnalyticsInput } from "./use-cases/query-analytics.ts"
 export { queryAnalyticsUseCase } from "./use-cases/query-analytics.ts"
+export {
+  finishTraceDeletionUseCase,
+  mergeRowCounts,
+  prepareTraceDeletionBatchUseCase,
+  purgeTraceDeletionBatchUseCase,
+  purgeTraceDeletionSessionsUseCase,
+  startTraceDeletionUseCase,
+  TRACE_DELETION_BATCH_SIZE,
+} from "./use-cases/run-trace-deletion.ts"
 export type {
   SelectTraceEndItemsError,
   TraceEndSelectionDecision,

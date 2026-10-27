@@ -10,6 +10,7 @@ export {
 export { publishAnnotationWorkflow } from "./annotation-publication-workflow.ts"
 export { assignScoreToKnownSignalWorkflow } from "./assign-score-to-known-signal-workflow.ts"
 export { type BillingOverageWorkflowInput, billingOverageWorkflow } from "./billing-overage-workflow.ts"
+export { type DeleteTracesWorkflowInput, deleteTracesWorkflow } from "./delete-traces-workflow.ts"
 export {
   type FlaggerClassificationWorkflowInput,
   flaggerClassificationWorkflow,

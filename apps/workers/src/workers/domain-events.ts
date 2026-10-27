@@ -625,6 +625,33 @@ export const createDomainEventsWorker = ({
     EvaluationCreated: () => Effect.void,
     EvaluationAligned: () => Effect.void,
     EvaluationDetectorDegraded: () => Effect.void,
+    TraceDeletionRequestCreated: (event) =>
+      pub.publish(
+        "trace-deletions",
+        "run",
+        {
+          organizationId: event.payload.organizationId,
+          projectId: event.payload.projectId,
+          traceDeletionRequestId: event.payload.traceDeletionRequestId,
+        },
+        { dedupeKey: `trace-deletions:run:${event.payload.traceDeletionRequestId}` },
+      ),
+    TracesPurged: (event) => {
+      const { organizationId, projectId, deletedScores } = event.payload
+      const effects = deletedScores
+        .filter((score) => score.signalId !== null && score.draftedAt === null)
+        .map((score) =>
+          pub.publish(
+            "issues",
+            "removeScore",
+            { organizationId, projectId, ...score },
+            { dedupeKey: `issues:remove-score:${score.scoreId}` },
+          ),
+        )
+      if (effects.length === 0) return Effect.void
+      return Effect.all(effects, { concurrency: "unbounded" }).pipe(Effect.asVoid)
+    },
+    TraceDeletionRequestFinished: () => Effect.void,
     ProjectDeleted: (event) =>
       Effect.all(
         [
