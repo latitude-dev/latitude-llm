@@ -44,6 +44,20 @@ Only traces that **started before you request the deletion** are deleted. A dele
 
 ## Delete traces
 
+### From the trace list
+
+Organization owners and admins can delete traces from the trace list:
+
+1. Filter the list, then select the traces to delete, or select them all.
+2. Choose **Delete** and check the number of traces that will be deleted.
+3. Type `delete traces` to confirm.
+
+You get a notification when the deletion finishes. **Settings → Data deletion** lists every deletion of the project with its receipt id, the number of traces and records deleted, and who requested it.
+
+A deletion of everything a text search matched isn't possible, because the search can't be reproduced as filters. Select the traces individually, or narrow the list with filters instead of a search.
+
+### With the API, SDKs or CLI
+
 Each deletion is a background job. Request it, then poll it until its `status` is `completed`. The finished deletion records what was selected, who requested it, and how many traces and records were deleted; keep it as evidence of erasure.
 
 <CodeGroup>

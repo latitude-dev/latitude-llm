@@ -11,6 +11,7 @@ import type {
   SignalDiscoveredPayload,
   SignalRegressedPayload,
   SignalReprioritizedPayload,
+  TraceDeletionFinishedPayload,
   WrappedReportPayload,
 } from "../entities/notification.ts"
 
@@ -53,6 +54,7 @@ export type BuildIdempotencyKeyInput =
       readonly kind: "billing.limit-reached"
       readonly payload: BillingLimitReachedPayload
     }
+  | { readonly kind: "trace-deletion.finished"; readonly payload: TraceDeletionFinishedPayload }
 
 export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => {
   switch (input.kind) {
@@ -97,5 +99,7 @@ export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => 
       // across orgs for multi-org users, and create-notification BullMQ
       // dedupe keys are built from this string (not the PG unique index).
       return `${input.kind}:org:${input.payload.organizationId}:${input.payload.periodStart}:${input.payload.limitKind}`
+    case "trace-deletion.finished":
+      return `${input.kind}:${input.payload.traceDeletionRequestId}`
   }
 }

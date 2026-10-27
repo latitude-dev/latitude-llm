@@ -77,6 +77,7 @@ import { Route as AuthenticatedProjectsProjectSlugMonitorsSignalsRouteImport } f
 import { Route as AuthenticatedProjectsProjectSlugSettingsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/index'
 import { Route as AuthenticatedProjectsProjectSlugSettingsAccountRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/account'
 import { Route as AuthenticatedProjectsProjectSlugSettingsBillingRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/billing'
+import { Route as AuthenticatedProjectsProjectSlugSettingsDataDeletionRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/data-deletion'
 import { Route as AuthenticatedProjectsProjectSlugSettingsFlaggersRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/flaggers'
 import { Route as AuthenticatedProjectsProjectSlugSettingsGeneralRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/general'
 import { Route as AuthenticatedProjectsProjectSlugSettingsKeysRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/keys'
@@ -489,6 +490,12 @@ const AuthenticatedProjectsProjectSlugSettingsBillingRoute =
     path: '/billing',
     getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugSettingsDataDeletionRoute =
+  AuthenticatedProjectsProjectSlugSettingsDataDeletionRouteImport.update({
+    id: '/data-deletion',
+    path: '/data-deletion',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugSettingsFlaggersRoute =
   AuthenticatedProjectsProjectSlugSettingsFlaggersRouteImport.update({
     id: '/flaggers',
@@ -750,6 +757,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/monitors/signals': typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
   '/projects/$projectSlug/settings/account': typeof AuthenticatedProjectsProjectSlugSettingsAccountRoute
   '/projects/$projectSlug/settings/billing': typeof AuthenticatedProjectsProjectSlugSettingsBillingRoute
+  '/projects/$projectSlug/settings/data-deletion': typeof AuthenticatedProjectsProjectSlugSettingsDataDeletionRoute
   '/projects/$projectSlug/settings/flaggers': typeof AuthenticatedProjectsProjectSlugSettingsFlaggersRoute
   '/projects/$projectSlug/settings/general': typeof AuthenticatedProjectsProjectSlugSettingsGeneralRoute
   '/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
@@ -845,6 +853,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/monitors/signals': typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
   '/projects/$projectSlug/settings/account': typeof AuthenticatedProjectsProjectSlugSettingsAccountRoute
   '/projects/$projectSlug/settings/billing': typeof AuthenticatedProjectsProjectSlugSettingsBillingRoute
+  '/projects/$projectSlug/settings/data-deletion': typeof AuthenticatedProjectsProjectSlugSettingsDataDeletionRoute
   '/projects/$projectSlug/settings/flaggers': typeof AuthenticatedProjectsProjectSlugSettingsFlaggersRoute
   '/projects/$projectSlug/settings/general': typeof AuthenticatedProjectsProjectSlugSettingsGeneralRoute
   '/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
@@ -946,6 +955,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/monitors/signals': typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
   '/_authenticated/projects/$projectSlug/settings/account': typeof AuthenticatedProjectsProjectSlugSettingsAccountRoute
   '/_authenticated/projects/$projectSlug/settings/billing': typeof AuthenticatedProjectsProjectSlugSettingsBillingRoute
+  '/_authenticated/projects/$projectSlug/settings/data-deletion': typeof AuthenticatedProjectsProjectSlugSettingsDataDeletionRoute
   '/_authenticated/projects/$projectSlug/settings/flaggers': typeof AuthenticatedProjectsProjectSlugSettingsFlaggersRoute
   '/_authenticated/projects/$projectSlug/settings/general': typeof AuthenticatedProjectsProjectSlugSettingsGeneralRoute
   '/_authenticated/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
@@ -1047,6 +1057,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/monitors/signals'
     | '/projects/$projectSlug/settings/account'
     | '/projects/$projectSlug/settings/billing'
+    | '/projects/$projectSlug/settings/data-deletion'
     | '/projects/$projectSlug/settings/flaggers'
     | '/projects/$projectSlug/settings/general'
     | '/projects/$projectSlug/settings/keys'
@@ -1142,6 +1153,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/monitors/signals'
     | '/projects/$projectSlug/settings/account'
     | '/projects/$projectSlug/settings/billing'
+    | '/projects/$projectSlug/settings/data-deletion'
     | '/projects/$projectSlug/settings/flaggers'
     | '/projects/$projectSlug/settings/general'
     | '/projects/$projectSlug/settings/keys'
@@ -1242,6 +1254,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/monitors/signals'
     | '/_authenticated/projects/$projectSlug/settings/account'
     | '/_authenticated/projects/$projectSlug/settings/billing'
+    | '/_authenticated/projects/$projectSlug/settings/data-deletion'
     | '/_authenticated/projects/$projectSlug/settings/flaggers'
     | '/_authenticated/projects/$projectSlug/settings/general'
     | '/_authenticated/projects/$projectSlug/settings/keys'
@@ -1792,6 +1805,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsBillingRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
     }
+    '/_authenticated/projects/$projectSlug/settings/data-deletion': {
+      id: '/_authenticated/projects/$projectSlug/settings/data-deletion'
+      path: '/data-deletion'
+      fullPath: '/projects/$projectSlug/settings/data-deletion'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsDataDeletionRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
     '/_authenticated/projects/$projectSlug/settings/flaggers': {
       id: '/_authenticated/projects/$projectSlug/settings/flaggers'
       path: '/flaggers'
@@ -2041,6 +2061,7 @@ const BackofficeRouteRouteWithChildren = BackofficeRouteRoute._addFileChildren(
 interface AuthenticatedProjectsProjectSlugSettingsRouteChildren {
   AuthenticatedProjectsProjectSlugSettingsAccountRoute: typeof AuthenticatedProjectsProjectSlugSettingsAccountRoute
   AuthenticatedProjectsProjectSlugSettingsBillingRoute: typeof AuthenticatedProjectsProjectSlugSettingsBillingRoute
+  AuthenticatedProjectsProjectSlugSettingsDataDeletionRoute: typeof AuthenticatedProjectsProjectSlugSettingsDataDeletionRoute
   AuthenticatedProjectsProjectSlugSettingsFlaggersRoute: typeof AuthenticatedProjectsProjectSlugSettingsFlaggersRoute
   AuthenticatedProjectsProjectSlugSettingsGeneralRoute: typeof AuthenticatedProjectsProjectSlugSettingsGeneralRoute
   AuthenticatedProjectsProjectSlugSettingsKeysRoute: typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
@@ -2066,6 +2087,8 @@ const AuthenticatedProjectsProjectSlugSettingsRouteChildren: AuthenticatedProjec
       AuthenticatedProjectsProjectSlugSettingsAccountRoute,
     AuthenticatedProjectsProjectSlugSettingsBillingRoute:
       AuthenticatedProjectsProjectSlugSettingsBillingRoute,
+    AuthenticatedProjectsProjectSlugSettingsDataDeletionRoute:
+      AuthenticatedProjectsProjectSlugSettingsDataDeletionRoute,
     AuthenticatedProjectsProjectSlugSettingsFlaggersRoute:
       AuthenticatedProjectsProjectSlugSettingsFlaggersRoute,
     AuthenticatedProjectsProjectSlugSettingsGeneralRoute:

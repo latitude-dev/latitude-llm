@@ -88,6 +88,7 @@ export type SlackRenderDepsByKind = {
   readonly "signal.reprioritized": SignalRepository | SqlClient
   readonly "destination.quarantined": never
   readonly "billing.limit-reached": never
+  readonly "trace-deletion.finished": never
 }
 
 export type SlackRenderDepsFor<K extends NotificationKind> = SlackRenderDepsByKind[K]

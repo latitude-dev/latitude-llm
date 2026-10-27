@@ -361,6 +361,17 @@ export const destinationQuarantinedPayloadSchema = z.object({
 export type DestinationQuarantinedPayload = z.infer<typeof destinationQuarantinedPayloadSchema>
 
 /**
+ * A trace deletion the recipient requested finished. Personal: only the requesting user is told,
+ * since they are the one waiting on the erasure receipt.
+ */
+export const traceDeletionFinishedPayloadSchema = z.object({
+  traceDeletionRequestId: cuidSchema,
+  status: z.enum(["completed", "failed"]),
+  matchedTraceCount: z.number().int().nonnegative(),
+})
+export type TraceDeletionFinishedPayload = z.infer<typeof traceDeletionFinishedPayloadSchema>
+
+/**
  * Organization crossed a billing threshold for the current period — free
  * included credits exhausted, Pro entered overage, or a configured Pro spend
  * cap reached. Fans out to owners and admins only (members who cannot change
@@ -445,6 +456,10 @@ export const NOTIFICATION_KIND_META = {
   "billing.limit-reached": {
     routing: { group: "billing", topic: null },
     payload: billingLimitReachedPayloadSchema,
+  },
+  "trace-deletion.finished": {
+    routing: { group: "personal", topic: null },
+    payload: traceDeletionFinishedPayloadSchema,
   },
 } as const satisfies Record<
   string,

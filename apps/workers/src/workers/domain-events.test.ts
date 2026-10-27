@@ -1033,6 +1033,46 @@ describe("domain-events dispatcher", () => {
     ])
   })
 
+  it("notifies the user who requested a finished trace deletion", async () => {
+    const { consumer, published } = setupDispatcher()
+    const finished = (requestedBy: { type: "user" | "api_key" | "staff"; id: string }) =>
+      makeEnvelope("TraceDeletionRequestFinished", {
+        organizationId: "org-1",
+        projectId: "proj-1",
+        traceDeletionRequestId: "req-1",
+        status: "completed",
+        requestedBy,
+        matchedTraceCount: 12,
+      })
+
+    await consumer.dispatchTask(
+      "domain-events",
+      "dispatch",
+      envelopeToDispatchPayload(finished({ type: "user", id: "user-1" })),
+    )
+    await consumer.dispatchTask(
+      "domain-events",
+      "dispatch",
+      envelopeToDispatchPayload(finished({ type: "api_key", id: "key-1" })),
+    )
+
+    expect(published).toEqual([
+      expect.objectContaining({
+        queue: "notifications",
+        task: "create-notification",
+        payload: expect.objectContaining({
+          userId: "user-1",
+          kind: "trace-deletion.finished",
+          projectId: "proj-1",
+          payload: { traceDeletionRequestId: "req-1", status: "completed", matchedTraceCount: 12 },
+        }),
+        options: expect.objectContaining({
+          dedupeKey: "notifications:create:trace-deletion.finished:req-1:user-1",
+        }),
+      }),
+    ])
+  })
+
   it("removes only published, signal-linked scores of purged traces from their signals", async () => {
     const { consumer, published } = setupDispatcher()
     const deletedScore = (scoreId: string, signalId: string | null, draftedAt: string | null) => ({

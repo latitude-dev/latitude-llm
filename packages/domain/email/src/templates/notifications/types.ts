@@ -66,6 +66,7 @@ export type RenderDepsByKind = {
   readonly "signal.reprioritized": SignalRepository | UserRepository | SqlClient
   readonly "destination.quarantined": never
   readonly "billing.limit-reached": never
+  readonly "trace-deletion.finished": never
 }
 
 export type RenderDepsFor<K extends NotificationKind> = RenderDepsByKind[K]

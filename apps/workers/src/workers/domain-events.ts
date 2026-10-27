@@ -1,5 +1,6 @@
 import { BILLING_OVERAGE_SYNC_THROTTLE_MS, buildBillingOverageDedupeKey } from "@domain/billing"
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
+import { buildTraceDeletionFinishedNotification } from "@domain/notifications"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import {
@@ -651,7 +652,13 @@ export const createDomainEventsWorker = ({
       if (effects.length === 0) return Effect.void
       return Effect.all(effects, { concurrency: "unbounded" }).pipe(Effect.asVoid)
     },
-    TraceDeletionRequestFinished: () => Effect.void,
+    TraceDeletionRequestFinished: (event) => {
+      const request = buildTraceDeletionFinishedNotification(event.payload)
+      if (!request) return Effect.void
+      return pub.publish("notifications", "create-notification", request, {
+        dedupeKey: `notifications:create:${request.idempotencyKey}:${request.userId}`,
+      })
+    },
     ProjectDeleted: (event) =>
       Effect.all(
         [

@@ -20,6 +20,7 @@ export type {
   SignalDiscoveredPayload,
   SignalRegressedPayload,
   SignalReprioritizedPayload,
+  TraceDeletionFinishedPayload,
   WrappedReportPayload,
 } from "./entities/notification.ts"
 export {
@@ -46,6 +47,7 @@ export {
   signalDiscoveredPayloadSchema,
   signalRegressedPayloadSchema,
   signalReprioritizedPayloadSchema,
+  traceDeletionFinishedPayloadSchema,
   wrappedReportPayloadSchema,
 } from "./entities/notification.ts"
 export { shouldSendEmail } from "./entities/notification-preferences.ts"
@@ -71,7 +73,11 @@ export type {
   NotificationRepositoryShape,
 } from "./ports/notification-repository.ts"
 export { NotificationRepository } from "./ports/notification-repository.ts"
-
+export type {
+  BuildTraceDeletionFinishedNotificationInput,
+  TraceDeletionFinishedNotificationRequest,
+} from "./use-cases/build-trace-deletion-finished-notification.ts"
+export { buildTraceDeletionFinishedNotification } from "./use-cases/build-trace-deletion-finished-notification.ts"
 // Use cases
 export type {
   CreateNotificationError,

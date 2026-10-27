@@ -9,6 +9,7 @@ import { signalAssignedRenderer } from "./signal-assigned.ts"
 import { signalDiscoveredRenderer } from "./signal-discovered.ts"
 import { signalRegressedRenderer } from "./signal-regressed.ts"
 import { signalReprioritizedRenderer } from "./signal-reprioritized.ts"
+import { traceDeletionFinishedRenderer } from "./trace-deletion-finished.ts"
 import type { SlackNotificationRendererRegistry } from "./types.ts"
 import { wrappedReportRenderer } from "./wrapped-report.ts"
 
@@ -30,4 +31,5 @@ export const NOTIFICATION_SLACK_RENDERERS: SlackNotificationRendererRegistry = {
   "signal.reprioritized": signalReprioritizedRenderer,
   "destination.quarantined": destinationQuarantinedRenderer,
   "billing.limit-reached": billingLimitReachedRenderer,
+  "trace-deletion.finished": traceDeletionFinishedRenderer,
 }
