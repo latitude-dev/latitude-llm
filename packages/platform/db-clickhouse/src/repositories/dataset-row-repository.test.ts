@@ -302,6 +302,60 @@ describe("DatasetRowClickHouseRepository", () => {
       expect(row.input).toBe("HOLA")
     })
 
+    it("still coerces legacy rows whose raw text was already parseable JSON", async () => {
+      const rowId = DatasetRowId("legacy-json-looking-1")
+
+      await ch.client.insert({
+        table: "dataset_rows",
+        values: [
+          {
+            organization_id: ORG_ID,
+            dataset_id: DATASET_ID,
+            row_id: rowId,
+            xact_id: 1,
+            input: "123",
+            output: "",
+            expected_output: "",
+            metadata: "",
+            custom: "",
+          },
+        ],
+        format: "JSONEachRow",
+      })
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+
+      expect(row.input).toBe(123)
+    })
+
+    it("keeps raw bytes for strings with quotes, backslashes, and newlines", async () => {
+      const rowId = DatasetRowId("escaped-chars-1")
+
+      await runCh(
+        repo.insertBatch({
+          datasetId: DATASET_ID,
+          version: 1,
+          rows: [
+            {
+              id: rowId,
+              input: "C:\\tmp",
+              output: 'he said "hi"',
+              expectedOutput: "line1\nline2",
+            },
+          ],
+        }),
+      )
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+
+      expect(row.input).toBe("C:\\tmp")
+      expect(row.output).toBe('he said "hi"')
+      expect(row.expectedOutput).toBe("line1\nline2")
+
+      const { rows } = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: "C:\\tmp" }))
+      expect(rows.some((r) => r.rowId === rowId)).toBe(true)
+    })
+
     it("stores empty objects as empty strings", async () => {
       const rowId = DatasetRowId("empty-obj-1")
 

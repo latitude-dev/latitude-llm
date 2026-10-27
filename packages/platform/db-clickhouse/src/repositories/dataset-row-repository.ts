@@ -5,6 +5,15 @@ import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId, TraceId } 
 import { parseCHDate, safeParseJson } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
+const parsesAsJson = (value: string): boolean => {
+  try {
+    JSON.parse(value)
+    return true
+  } catch {
+    return false
+  }
+}
+
 const serializeField = (value: unknown): string => {
   // Collapse empty plain objects to "", but not empty arrays (must round-trip as []).
   if (
@@ -15,7 +24,10 @@ const serializeField = (value: unknown): string => {
   ) {
     return ""
   }
-  // Canonical JSON (strings quoted) so "123"/"true"/"null" round-trip as strings; safeParseJson's string fallback still reads legacy rows stored unquoted.
+  // Only quote strings the read side would otherwise coerce: plain text that fails JSON.parse
+  // round-trips through safeParseJson's string fallback and keeps its raw, searchable bytes.
+  // Legacy raw rows holding JSON-parseable text were coerced before this change and still are.
+  if (typeof value === "string" && !parsesAsJson(value)) return value
   if (value === undefined || value === null) return ""
   return JSON.stringify(value) ?? ""
 }
