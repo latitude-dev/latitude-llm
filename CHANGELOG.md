@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.125 - 2026-10-28
+
+### Trace deletion
+
+- Added trace deletion by selected IDs or filters through the trace list, public API, SDKs, CLI, MCP, and backoffice, with previews, audit receipts, and completion notifications (ref: #4926, #4927, #4928).
+- Purged trace data and derived records, rebuilt surviving session rollups, and added optional deletion of dataset rows copied from erased traces. Blocked late spans from recreating purged traces for 30 days, swept orphaned content, and expired stale ingest payloads (ref: #4918, #4929, #4930).
+
+### Telemetry and costs
+
+- Fixed Vercel AI SDK token normalization when input includes cache reads but reports cache writes separately (ref: #4863).
+- Prevented model pricing lookups from falling back to a different model version and indexed the catalog by provider to reduce lookup overhead (ref: #4620, #4908).
+
+### Reliability and UI
+
+- Stopped treating database outages as invalid API keys or caching those failures as authentication rejections (ref: #4893).
+- Waited for successful clipboard writes before showing copy confirmation and preserved explicit nullable overrides in UI controls (ref: #4885, #4886).
+- Capped retained BullMQ jobs at 24 hours for completed jobs and seven days for failed jobs, alongside the existing 1,000-job limits (ref: #4931).
+
 ## v0.3.124 - 2026-10-13
 
 ### Sessions
