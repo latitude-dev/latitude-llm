@@ -92,3 +92,27 @@ describe("Cloudflare AI Gateway onboarding integration", () => {
     })
   })
 })
+
+describe("Bedrock and Vertex AI onboarding snippets", () => {
+  const retiredModels = ["anthropic.claude-3-haiku-20240307-v1:0", "gemini-1.5-flash"]
+
+  it.each(["bedrock", "vertexai"] as const)("%s snippets do not use retired model ids", (provider) => {
+    for (const language of ["typescript", "python"] as const) {
+      const snippet = getOnboardingSnippet(provider, language, "my-project", "lat-key")
+      expect(snippet).not.toBeNull()
+      for (const model of retiredModels) {
+        expect(snippet).not.toContain(model)
+      }
+    }
+  })
+
+  it("calls Haiku 5.5 on Bedrock", () => {
+    expect(getOnboardingSnippet("bedrock", "typescript", "my-project", "lat-key")).toContain("anthropic.claude-haiku-5-5")
+    expect(getOnboardingSnippet("bedrock", "python", "my-project", "lat-key")).toContain("anthropic.claude-haiku-5-5")
+  })
+
+  it("calls Gemini 3.8 Flash on Vertex AI", () => {
+    expect(getOnboardingSnippet("vertexai", "typescript", "my-project", "lat-key")).toContain("gemini-3.8-flash")
+    expect(getOnboardingSnippet("vertexai", "python", "my-project", "lat-key")).toContain("gemini-3.8-flash")
+  })
+})
