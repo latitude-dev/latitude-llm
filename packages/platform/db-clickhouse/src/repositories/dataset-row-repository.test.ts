@@ -257,6 +257,147 @@ describe("DatasetRowClickHouseRepository", () => {
       expect(row.metadata).toBe("")
     })
 
+    it("round-trips JSON-scalar-looking strings without type coercion", async () => {
+      const rowId = DatasetRowId("json-looking-str-1")
+
+      await runCh(
+        repo.insertBatch({
+          datasetId: DATASET_ID,
+          version: 1,
+          rows: [{ id: rowId, input: "123", output: "true", expectedOutput: "null", metadata: "42.5" }],
+        }),
+      )
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+
+      expect(row.input).toBe("123")
+      expect(row.output).toBe("true")
+      expect(row.expectedOutput).toBe("null")
+      expect(row.metadata).toBe("42.5")
+    })
+
+    it("reads legacy rows that stored plain strings unquoted", async () => {
+      const rowId = DatasetRowId("legacy-plain-str-1")
+
+      await ch.client.insert({
+        table: "dataset_rows",
+        values: [
+          {
+            organization_id: ORG_ID,
+            dataset_id: DATASET_ID,
+            row_id: rowId,
+            xact_id: 1,
+            input: "HOLA",
+            output: "",
+            expected_output: "",
+            metadata: "",
+            custom: "",
+          },
+        ],
+        format: "JSONEachRow",
+      })
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+
+      expect(row.input).toBe("HOLA")
+    })
+
+    it("still coerces legacy rows whose raw text was already parseable JSON", async () => {
+      const rowId = DatasetRowId("legacy-json-looking-1")
+
+      await ch.client.insert({
+        table: "dataset_rows",
+        values: [
+          {
+            organization_id: ORG_ID,
+            dataset_id: DATASET_ID,
+            row_id: rowId,
+            xact_id: 1,
+            input: "123",
+            output: "",
+            expected_output: "",
+            metadata: "",
+            custom: "",
+          },
+        ],
+        format: "JSONEachRow",
+      })
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+
+      expect(row.input).toBe(123)
+    })
+
+    it("keeps raw bytes for strings with quotes, backslashes, and newlines", async () => {
+      const rowId = DatasetRowId("escaped-chars-1")
+
+      await runCh(
+        repo.insertBatch({
+          datasetId: DATASET_ID,
+          version: 1,
+          rows: [
+            {
+              id: rowId,
+              input: "C:\\tmp",
+              output: 'he said "hi"',
+              expectedOutput: "line1\nline2",
+            },
+          ],
+        }),
+      )
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+
+      expect(row.input).toBe("C:\\tmp")
+      expect(row.output).toBe('he said "hi"')
+      expect(row.expectedOutput).toBe("line1\nline2")
+
+      const { rows } = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: "C:\\tmp" }))
+      expect(rows.some((r) => r.rowId === rowId)).toBe(true)
+    })
+
+    it("finds rows whose string cell value is itself JSON text", async () => {
+      const rowId = DatasetRowId("json-text-search-1")
+
+      await runCh(
+        repo.insertBatch({
+          datasetId: DATASET_ID,
+          version: 1,
+          rows: [{ id: rowId, input: '{"prompt":"hi"}' }],
+        }),
+      )
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+      expect(row.input).toBe('{"prompt":"hi"}')
+
+      const whole = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: '{"prompt":"hi"}' }))
+      expect(whole.rows.some((r) => r.rowId === rowId)).toBe(true)
+
+      const quotedFragment = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: '"prompt":"hi"' }))
+      expect(quotedFragment.rows.some((r) => r.rowId === rowId)).toBe(true)
+
+      const bareFragment = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: "prompt" }))
+      expect(bareFragment.rows.some((r) => r.rowId === rowId)).toBe(true)
+    })
+
+    it("still finds object cells by their stored JSON bytes", async () => {
+      const rowId = DatasetRowId("object-cell-search-1")
+
+      await runCh(
+        repo.insertBatch({
+          datasetId: DATASET_ID,
+          version: 1,
+          rows: [{ id: rowId, input: { answer: 42 } }],
+        }),
+      )
+
+      const byKey = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: "answer" }))
+      expect(byKey.rows.some((r) => r.rowId === rowId)).toBe(true)
+
+      const byValue = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: "42" }))
+      expect(byValue.rows.some((r) => r.rowId === rowId)).toBe(true)
+    })
+
     it("stores empty objects as empty strings", async () => {
       const rowId = DatasetRowId("empty-obj-1")
 
