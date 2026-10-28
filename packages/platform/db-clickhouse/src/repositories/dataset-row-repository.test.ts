@@ -356,6 +356,24 @@ describe("DatasetRowClickHouseRepository", () => {
       expect(rows.some((r) => r.rowId === rowId)).toBe(true)
     })
 
+    it("finds rows whose string cell value is itself JSON text", async () => {
+      const rowId = DatasetRowId("json-text-search-1")
+
+      await runCh(
+        repo.insertBatch({
+          datasetId: DATASET_ID,
+          version: 1,
+          rows: [{ id: rowId, input: '{"prompt":"hi"}' }],
+        }),
+      )
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+      expect(row.input).toBe('{"prompt":"hi"}')
+
+      const { rows } = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: '{"prompt":"hi"}' }))
+      expect(rows.some((r) => r.rowId === rowId)).toBe(true)
+    })
+
     it("stores empty objects as empty strings", async () => {
       const rowId = DatasetRowId("empty-obj-1")
 

@@ -5,18 +5,25 @@ import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId, TraceId } 
 import { parseCHDate, safeParseJson } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
-const JSON_START_CHARS = '"{[-tfn0123456789'
+const NUMBER_TEXT = /^\s*-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?\s*$/
 
+// Word/number-looking prose must be the whole JSON literal, keeping CSV-import cells off the throwing parse.
 const parsesAsJson = (value: string): boolean => {
-  const first = value.trimStart()[0]
-  // Plain prose rarely starts with a JSON token, so ordinary text skips the throwing parse.
-  if (first !== undefined && !JSON_START_CHARS.includes(first)) return false
-  try {
-    JSON.parse(value)
-    return true
-  } catch {
-    return false
+  const trimmed = value.trim()
+  const first = trimmed[0]
+  if (first === undefined) return false
+  if (first === "t" || first === "f" || first === "n") {
+    return trimmed === "true" || trimmed === "false" || trimmed === "null"
   }
+  if (first === '"' || first === "{" || first === "[") {
+    try {
+      JSON.parse(value)
+      return true
+    } catch {
+      return false
+    }
+  }
+  return NUMBER_TEXT.test(value)
 }
 
 const serializeField = (value: unknown): string => {
@@ -75,10 +82,13 @@ const toDomainRow = (row: DatasetRowCH, datasetId: string): DatasetRow => ({
   version: Number(row.latest_xact_id),
 })
 
+// JSON-parseable cell strings are stored quoted, so search both the raw term and its JSON-encoded form.
 const buildSearchClause = (search: string | undefined) =>
   search
-    ? "AND (positionCaseInsensitive(input, {search:String}) > 0 OR positionCaseInsensitive(output, {search:String}) > 0 OR positionCaseInsensitive(expected_output, {search:String}) > 0 OR positionCaseInsensitive(custom, {search:String}) > 0)"
+    ? "AND (multiSearchAnyCaseInsensitive(input, {searchTerms:Array(String)}) > 0 OR multiSearchAnyCaseInsensitive(output, {searchTerms:Array(String)}) > 0 OR multiSearchAnyCaseInsensitive(expected_output, {searchTerms:Array(String)}) > 0 OR multiSearchAnyCaseInsensitive(custom, {searchTerms:Array(String)}) > 0)"
     : ""
+
+const searchTerms = (search: string): string[] => [search, JSON.stringify(search)]
 
 const buildVersionClause = (version: number | undefined) =>
   version !== undefined ? "AND xact_id <= {version:UInt64}" : ""
@@ -267,7 +277,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
                 cursorRowId: args.cursor.rowId,
               }
               if (args.version !== undefined) params.version = args.version
-              if (args.search) params.search = args.search
+              if (args.search) params.searchTerms = searchTerms(args.search)
 
               const dataQuery = buildListDataQueryKeyset(versionClause, searchClause, sortDirection)
               const dataResult = await client
@@ -301,7 +311,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
               offset,
             }
             if (args.version !== undefined) params.version = args.version
-            if (args.search) params.search = args.search
+            if (args.search) params.searchTerms = searchTerms(args.search)
 
             const dataQuery = buildListDataQueryOffset(versionClause, searchClause, sortDirection)
             const countQuery = buildListCountQuery(versionClause, searchClause)
@@ -350,7 +360,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
             }
 
             if (args.version !== undefined) params.version = args.version
-            if (args.search) params.search = args.search
+            if (args.search) params.searchTerms = searchTerms(args.search)
 
             const versionClause = buildVersionClause(args.version)
             const searchClause = buildSearchClause(args.search)
@@ -380,7 +390,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
             }
 
             if (args.version !== undefined) params.version = args.version
-            if (args.search) params.search = args.search
+            if (args.search) params.searchTerms = searchTerms(args.search)
 
             const versionClause = buildVersionClause(args.version)
             const searchClause = buildSearchClause(args.search)

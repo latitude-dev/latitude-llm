@@ -25,8 +25,7 @@ function formatField(value: unknown): string {
   }
 }
 
-// The editor works in text; fields the user did not touch must keep their original typed value,
-// otherwise a save would silently retype every structured cell as a string.
+// Untouched fields keep their typed value, so a save cannot retype structured cells as strings.
 const unchanged = (text: string, value: unknown): RowFieldValue =>
   (text === formatField(value) ? value : text) as RowFieldValue
 
