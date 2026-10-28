@@ -93,7 +93,7 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
 
         await capture("generate-reply", async () => {
           const command = new InvokeModelCommand({
-            modelId: "anthropic.claude-3-haiku-20240307-v1:0",
+            modelId: "anthropic.claude-haiku-5-5",
             contentType: "application/json",
             body: JSON.stringify({
               anthropic_version: "bedrock-2023-05-31",
@@ -126,7 +126,7 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
 
         def generate_reply():
             response = client.invoke_model(
-                modelId="anthropic.claude-3-haiku-20240307-v1:0",
+                modelId="anthropic.claude-haiku-5-5",
                 contentType="application/json",
                 body=json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
@@ -159,7 +159,7 @@ When streaming, consume the stream inside `capture()` so the span covers the ful
 
     await capture("stream-reply", async () => {
       const command = new InvokeModelWithResponseStreamCommand({
-        modelId: "anthropic.claude-3-haiku-20240307-v1:0",
+        modelId: "anthropic.claude-haiku-5-5",
         contentType: "application/json",
         body: JSON.stringify({
           anthropic_version: "bedrock-2023-05-31",
@@ -185,7 +185,7 @@ When streaming, consume the stream inside `capture()` so the span covers the ful
     ```python
     def stream_reply():
         response = client.invoke_model_with_response_stream(
-            modelId="anthropic.claude-3-haiku-20240307-v1:0",
+            modelId="anthropic.claude-haiku-5-5",
             contentType="application/json",
             body=json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",

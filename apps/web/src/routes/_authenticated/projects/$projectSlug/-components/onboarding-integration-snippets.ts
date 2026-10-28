@@ -475,7 +475,7 @@ const client = new BedrockRuntimeClient({ region: "eu-central-1" })
 
 await capture("generate-reply", async () => {
   const command = new InvokeModelCommand({
-    modelId: "anthropic.claude-3-haiku-20240307-v1:0",
+    modelId: "anthropic.claude-haiku-5-5",
     contentType: "application/json",
     body: JSON.stringify({
       anthropic_version: "bedrock-2023-05-31",
@@ -507,7 +507,7 @@ client = boto3.client("bedrock-runtime", region_name="eu-central-1")
 
 def generate_reply():
     response = client.invoke_model(
-        modelId="anthropic.claude-3-haiku-20240307-v1:0",
+        modelId="anthropic.claude-haiku-5-5",
         contentType="application/json",
         body=json.dumps({
             "anthropic_version": "bedrock-2023-05-31",
@@ -649,7 +649,7 @@ const vertexAI = new VertexAI({
   project: process.env.GCP_PROJECT_ID!,
   location: "us-central1",
 })
-const model = vertexAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+const model = vertexAI.getGenerativeModel({ model: "gemini-3.8-flash" })
 
 await capture("generate-reply", async () => {
   const result = await model.generateContent("Hello")
@@ -673,7 +673,7 @@ latitude = Latitude(
 )
 
 vertexai.init(project=os.environ["GCP_PROJECT_ID"], location="us-central1")
-model = GenerativeModel("gemini-1.5-flash")
+model = GenerativeModel("gemini-3.8-flash")
 
 def generate_reply():
     response = model.generate_content("Hello")
