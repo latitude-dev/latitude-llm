@@ -82,13 +82,14 @@ const toDomainRow = (row: DatasetRowCH, datasetId: string): DatasetRow => ({
   version: Number(row.latest_xact_id),
 })
 
-// JSON-parseable cell strings are stored quoted, so search both the raw term and its JSON-encoded form.
+// String-typed JSON cells are stored quoted, so search the unescaped value; every other stored
+// shape (objects, numbers, legacy raw text) keeps matching its raw bytes.
+const searchedColumn = (column: string) => `if(JSONType(${column}) = 'String', JSON_VALUE(${column}, '$'), ${column})`
+
 const buildSearchClause = (search: string | undefined) =>
   search
-    ? "AND (multiSearchAnyCaseInsensitive(input, {searchTerms:Array(String)}) > 0 OR multiSearchAnyCaseInsensitive(output, {searchTerms:Array(String)}) > 0 OR multiSearchAnyCaseInsensitive(expected_output, {searchTerms:Array(String)}) > 0 OR multiSearchAnyCaseInsensitive(custom, {searchTerms:Array(String)}) > 0)"
+    ? `AND (positionCaseInsensitive(${searchedColumn("input")}, {search:String}) > 0 OR positionCaseInsensitive(${searchedColumn("output")}, {search:String}) > 0 OR positionCaseInsensitive(${searchedColumn("expected_output")}, {search:String}) > 0 OR positionCaseInsensitive(${searchedColumn("custom")}, {search:String}) > 0)`
     : ""
-
-const searchTerms = (search: string): string[] => [search, JSON.stringify(search)]
 
 const buildVersionClause = (version: number | undefined) =>
   version !== undefined ? "AND xact_id <= {version:UInt64}" : ""
@@ -277,7 +278,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
                 cursorRowId: args.cursor.rowId,
               }
               if (args.version !== undefined) params.version = args.version
-              if (args.search) params.searchTerms = searchTerms(args.search)
+              if (args.search) params.search = args.search
 
               const dataQuery = buildListDataQueryKeyset(versionClause, searchClause, sortDirection)
               const dataResult = await client
@@ -311,7 +312,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
               offset,
             }
             if (args.version !== undefined) params.version = args.version
-            if (args.search) params.searchTerms = searchTerms(args.search)
+            if (args.search) params.search = args.search
 
             const dataQuery = buildListDataQueryOffset(versionClause, searchClause, sortDirection)
             const countQuery = buildListCountQuery(versionClause, searchClause)
@@ -360,7 +361,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
             }
 
             if (args.version !== undefined) params.version = args.version
-            if (args.search) params.searchTerms = searchTerms(args.search)
+            if (args.search) params.search = args.search
 
             const versionClause = buildVersionClause(args.version)
             const searchClause = buildSearchClause(args.search)
@@ -390,7 +391,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
             }
 
             if (args.version !== undefined) params.version = args.version
-            if (args.search) params.searchTerms = searchTerms(args.search)
+            if (args.search) params.search = args.search
 
             const versionClause = buildVersionClause(args.version)
             const searchClause = buildSearchClause(args.search)

@@ -370,8 +370,32 @@ describe("DatasetRowClickHouseRepository", () => {
       const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
       expect(row.input).toBe('{"prompt":"hi"}')
 
-      const { rows } = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: '{"prompt":"hi"}' }))
-      expect(rows.some((r) => r.rowId === rowId)).toBe(true)
+      const whole = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: '{"prompt":"hi"}' }))
+      expect(whole.rows.some((r) => r.rowId === rowId)).toBe(true)
+
+      const quotedFragment = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: '"prompt":"hi"' }))
+      expect(quotedFragment.rows.some((r) => r.rowId === rowId)).toBe(true)
+
+      const bareFragment = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: "prompt" }))
+      expect(bareFragment.rows.some((r) => r.rowId === rowId)).toBe(true)
+    })
+
+    it("still finds object cells by their stored JSON bytes", async () => {
+      const rowId = DatasetRowId("object-cell-search-1")
+
+      await runCh(
+        repo.insertBatch({
+          datasetId: DATASET_ID,
+          version: 1,
+          rows: [{ id: rowId, input: { answer: 42 } }],
+        }),
+      )
+
+      const byKey = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: "answer" }))
+      expect(byKey.rows.some((r) => r.rowId === rowId)).toBe(true)
+
+      const byValue = await runCh(repo.list({ datasetId: DATASET_ID, limit: 10, search: "42" }))
+      expect(byValue.rows.some((r) => r.rowId === rowId)).toBe(true)
     })
 
     it("stores empty objects as empty strings", async () => {
