@@ -2706,7 +2706,7 @@ describe("Safety verdict classification", () => {
           object: (isAnnotationReview ? review : classification) as T,
           tokens: 20,
           duration: 90_000_000,
-          servedBy,
+          ...(servedBy !== undefined ? { servedBy } : {}),
         })
       },
     })
