@@ -1285,7 +1285,7 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
           object: result.object,
           flaggerTraceId: result.traceId,
           conversation: input.conversation,
-          judge: flaggerModelConfig,
+          judge: result.servedBy ?? flaggerModelConfig,
         }),
       ),
       Effect.catchIf(
