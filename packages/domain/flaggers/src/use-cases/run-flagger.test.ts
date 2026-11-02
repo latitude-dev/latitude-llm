@@ -2697,6 +2697,7 @@ describe("Safety verdict classification", () => {
   const createSafetyAI = (
     classification: unknown,
     review: { readonly annotationMakesSense: boolean } = { annotationMakesSense: true },
+    servedBy?: { readonly provider: string; readonly model: string },
   ) =>
     createFakeAI({
       generate: <T>(input: { readonly system?: string }) => {
@@ -2705,6 +2706,7 @@ describe("Safety verdict classification", () => {
           object: (isAnnotationReview ? review : classification) as T,
           tokens: 20,
           duration: 90_000_000,
+          ...(servedBy !== undefined ? { servedBy } : {}),
         })
       },
     })
@@ -2713,8 +2715,9 @@ describe("Safety verdict classification", () => {
     flaggerSlug: "jailbreaking" | "pii-leakage",
     classification: unknown,
     review?: { readonly annotationMakesSense: boolean },
+    servedBy?: { readonly provider: string; readonly model: string },
   ) => {
-    const { calls, layer: aiLayer } = createSafetyAI(classification, review)
+    const { calls, layer: aiLayer } = createSafetyAI(classification, review, servedBy)
     return Effect.runPromise(
       classifyConversationForFlaggerUseCase({
         organizationId: INPUT.organizationId,
@@ -2764,6 +2767,15 @@ describe("Safety verdict classification", () => {
     expect(result.judgmentVersion).toContain("safety-v1")
     expect(calls.generate).toHaveLength(2) // the annotation still goes through the adversarial review
   })
+
+  it.each([{ provider: "amazon-bedrock", model: "openai.gpt-oss-120b-1:0" }, FLAGGER_DEFAULT_CLASSIFIER_MODEL])(
+    "attributes safety judgments to the serving model $model",
+    async (servedBy) => {
+      const { result } = await classifySafety("jailbreaking", injection(), undefined, servedBy)
+
+      expect(result.judgmentVersion).toBe(`safety-v1:${servedBy.provider}/${servedBy.model}`)
+    },
+  )
 
   it("keeps a refused attempt as an annotated exposure rather than harm", async () => {
     const { result } = await classifySafety("jailbreaking", injection())

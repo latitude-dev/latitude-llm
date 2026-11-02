@@ -85,8 +85,8 @@ export const MAX_SNIPPET_EXCERPT_LENGTH = 300
 
 export const FLAGGER_DEFAULT_CLASSIFIER_MODEL = {
   provider: "amazon-bedrock",
-  model: "anthropic.claude-haiku-4-5-20251001-v1:0",
-  temperature: 0,
+  model: "minimax.minimax-m2.5",
+  temperature: 0.1,
   maxTokens: 512,
 } as const
 
