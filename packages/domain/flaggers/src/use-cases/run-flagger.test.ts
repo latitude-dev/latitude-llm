@@ -2768,14 +2768,14 @@ describe("Safety verdict classification", () => {
     expect(calls.generate).toHaveLength(2) // the annotation still goes through the adversarial review
   })
 
-  it.each([
-    { provider: "amazon-bedrock", model: "openai.gpt-oss-120b-1:0" },
-    FLAGGER_DEFAULT_CLASSIFIER_MODEL,
-  ])("attributes safety judgments to the serving model $model", async (servedBy) => {
-    const { result } = await classifySafety("jailbreaking", injection(), undefined, servedBy)
+  it.each([{ provider: "amazon-bedrock", model: "openai.gpt-oss-120b-1:0" }, FLAGGER_DEFAULT_CLASSIFIER_MODEL])(
+    "attributes safety judgments to the serving model $model",
+    async (servedBy) => {
+      const { result } = await classifySafety("jailbreaking", injection(), undefined, servedBy)
 
-    expect(result.judgmentVersion).toBe(`safety-v1:${servedBy.provider}/${servedBy.model}`)
-  })
+      expect(result.judgmentVersion).toBe(`safety-v1:${servedBy.provider}/${servedBy.model}`)
+    },
+  )
 
   it("keeps a refused attempt as an annotated exposure rather than harm", async () => {
     const { result } = await classifySafety("jailbreaking", injection())
