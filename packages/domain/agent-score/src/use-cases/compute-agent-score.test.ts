@@ -1,3 +1,4 @@
+import { FLAGGER_DEFAULT_CLASSIFIER_MODEL } from "@domain/flaggers"
 import { ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
 import { ChSqlClient, OrganizationId, ProjectId, SessionId, SqlClient, TraceId } from "@domain/shared"
@@ -22,7 +23,7 @@ import { computeAgentScore } from "./compute-agent-score.ts"
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
 const TO = new Date("2026-09-29T00:00:00.000Z")
-const JUDGE = { provider: "amazon-bedrock", model: "anthropic.claude-haiku-4-5-20251001-v1:0" }
+const JUDGE = FLAGGER_DEFAULT_CLASSIFIER_MODEL
 
 const OPEN_ARTIFACT: AgentScoreArtifact = {
   ...LAUNCH_AGENT_SCORE_ARTIFACT,
