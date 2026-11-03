@@ -11,6 +11,7 @@ export function createS3(name: string, config: EnvironmentConfig): S3Output {
   const bucket = new aws.s3.Bucket(
     config.s3.bucketName,
     {
+      forceDestroy: config.name === "staging",
       tags: {
         Name: config.s3.bucketName,
         Environment: config.name,

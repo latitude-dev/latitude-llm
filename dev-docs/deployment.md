@@ -1,6 +1,8 @@
 # Deployment
 
-`development` is the trunk branch. Staging services have a desired task count of zero. Automatic and manual staging deployments run only when the repository variable `STAGING_DEPLOYMENTS_ENABLED` is `true`. Restoring staging also requires an approved manual infrastructure change to restore the task counts.
+`development` is the trunk branch. The staging application environment is retired by default through the staging-only Pulumi `retireApplication` setting. The staging stack retains account-wide CloudTrail, AWS Config, GuardDuty, and their audit storage. It does not create application compute, network, databases, Redis, application secrets, or application storage.
+
+Automatic and manual staging deployments run only when the repository variable `STAGING_DEPLOYMENTS_ENABLED` is `true`. Restoring staging requires `retireApplication=false`, restored task counts, and an approved manual infrastructure deployment before enabling that variable. Retirement deletes staging application data; staging RDS skips a final snapshot and its application bucket permits removal of objects. Production resources retain their deletion protection.
 
 Production deployments are release-tag based. A developer deploys a commit to production by pushing a `vX.Y.Z` tag that points at a commit already reachable from `origin/development`. Use `scripts/release.sh [version]` from the commit to tag and push it. If no version is supplied, the script finds the latest `vX.Y.Z` tag and bumps to the next patch version, for example `v1.4.2` → `v1.4.3`; use `--minor` or `--major` to bump those components instead. If no release tag exists, it starts at `v0.1.0`.
 

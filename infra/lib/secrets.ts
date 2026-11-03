@@ -57,7 +57,7 @@ function createSingleSecret(
 }
 
 /** Values are managed in AWS (or via env at first create); avoid Pulumi replacing versions on drift. */
-const immutableSecretResourceOptions: {
+const baseSecretResourceOptions: {
   secret: pulumi.CustomResourceOptions
   version: pulumi.CustomResourceOptions
 } = {
@@ -71,7 +71,16 @@ const immutableSecretResourceOptions: {
   },
 }
 
+function getSecretResourceOptions(environment: string) {
+  const protect = environment === "production"
+  return {
+    secret: { ...baseSecretResourceOptions.secret, protect },
+    version: { ...baseSecretResourceOptions.version, protect },
+  }
+}
+
 export function createApplicationSecrets(baseName: string, environment: string): SecretsOutput {
+  const immutableSecretResourceOptions = getSecretResourceOptions(environment)
   const secrets: Record<string, SecretRef> = {}
   const secretVersions: Record<string, SecretsmanagerSecretVersion> = {}
 
