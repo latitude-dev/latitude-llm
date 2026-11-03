@@ -1,6 +1,6 @@
 # Deployment
 
-`development` is the trunk branch. The staging application environment is retired by default through the staging-only Pulumi `retireApplication` setting. The staging stack retains account-wide CloudTrail, AWS Config, GuardDuty, and their audit storage. It does not create application compute, network, databases, Redis, application secrets, or application storage.
+`development` is the trunk branch. The staging application environment is retired by default through the staging-only Pulumi `retireApplication` setting. The staging stack retains account-wide CloudTrail, AWS Config, GuardDuty, and their audit storage. It does not create application compute, network, databases, Redis, application secrets, or application storage. Do not destroy the whole staging stack: the retained resources serve the account, including production.
 
 Automatic and manual staging deployments run only when the repository variable `STAGING_DEPLOYMENTS_ENABLED` is `true`. Restoring staging requires `retireApplication=false`, restored task counts, and an approved manual infrastructure deployment before enabling that variable. Retirement deletes staging application data; staging RDS skips a final snapshot and its application bucket permits removal of objects. Production resources retain their deletion protection.
 
