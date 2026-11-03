@@ -333,13 +333,14 @@ function createTaskDefinition(
 ): EcsTaskDefinition {
   const owner = process.env.GHCR_OWNER ?? "latitude-dev"
 
-  // Resource allocation for Datadog Agent sidecar container
-
   const protocol = "https"
   const webUrl = `${protocol}://${config.domains.web}`
   const apiUrl = `${protocol}://${config.domains.api}`
   const ingestUrl = `${protocol}://${config.domains.ingest}`
   const trustedOrigins = `${webUrl},${apiUrl}`
+  const clickhouseCompressionEnv = config.enableClickhouseCompression
+    ? [{ name: "LAT_CLICKHOUSE_COMPRESSION_ENABLED", value: "true" }]
+    : []
 
   const containerDefinitions = pulumi
     .all([
@@ -546,7 +547,11 @@ function createTaskDefinition(
           workers: [nodeOptions, ...temporalEnvVars],
         }
 
-        const environment = [...baseEnvironment, ...(serviceSpecificEnvVars[serviceConfig.name] ?? [])]
+        const environment = [
+          ...baseEnvironment,
+          ...clickhouseCompressionEnv,
+          ...(serviceSpecificEnvVars[serviceConfig.name] ?? []),
+        ]
 
         // Service-specific secrets
         const oauthSecrets = [

@@ -18,7 +18,10 @@ import { createVpcEndpoints } from "./lib/vpc-endpoints.ts"
 const config = new pulumi.Config()
 const stackName = pulumi.getStack()
 const environment = stackName === "production" ? "production" : "staging"
-const envConfig: EnvironmentConfig = environment === "production" ? productionConfig : stagingConfig
+const envConfig: EnvironmentConfig = {
+  ...(environment === "production" ? productionConfig : stagingConfig),
+  enableClickhouseCompression: config.getBoolean("enableClickhouseCompression") ?? false,
+}
 
 const imageTag = config.get("imageTag") ?? "latest"
 const hostedZoneId = config.get("hostedZoneId") ?? defaults.hostedZoneId

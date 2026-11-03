@@ -5,6 +5,7 @@ export interface EnvironmentConfig {
   region: string
   azCount: number
   enableNat: boolean
+  enableClickhouseCompression?: boolean
   vpcCidr: string
 
   domains: {

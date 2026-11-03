@@ -24,6 +24,14 @@ Application CI copies the latest registered task family and updates image and lo
 
 Test resource changes in staging before production. Keep the previous task revision for rollback. A lower task count is a separate availability decision; a smaller task size does not require fewer replicas.
 
+## ClickHouse HTTP compression
+
+Application HTTP compression is opt-in through `LAT_CLICKHOUSE_COMPRESSION_ENABLED`, with a default of `false`. The client compresses request bodies and negotiates gzip responses when enabled. A `ClickhouseConfig.compression` override takes precedence over the environment setting.
+
+Response compression sets the query-scoped `enable_http_compression` setting. Use a ClickHouse identity allowed to change that setting; `readonly=1` identities must leave compression disabled. Compression trades CPU for network volume, so compare transfer volume, errors, CPU and latency during a staging test before production use.
+
+The `enableClickhouseCompression` Pulumi setting emits the application flag only when true. It defaults to false and does not change existing task definitions until enabled. Flag changes require the usual clean preview and manual deployment approval. Application CI keeps its existing task-family behavior.
+
 ## Infrastructure network diagram
 
 The current production network diagram lives in [`./network-diagram.md`](./network-diagram.md), with the rendered SVG at [`./assets/latitude-network-diagram.svg`](./assets/latitude-network-diagram.svg). Use this diagram for security reviews and compliance evidence that asks for the hosted network diagram.
