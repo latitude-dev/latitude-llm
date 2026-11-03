@@ -7,6 +7,7 @@ export interface ClickhouseConfig {
   readonly username?: string
   readonly password?: string
   readonly database?: string
+  readonly compression?: boolean
 }
 
 type CreateClickhouseClientError = MissingEnvValueError | InvalidEnvValueError
@@ -32,6 +33,10 @@ export const createClickhouseClientEffect = (
     username: config.username ? Effect.succeed(config.username) : parseEnv("LAT_CLICKHOUSE_USER", "string"),
     password: config.password ? Effect.succeed(config.password) : parseEnv("LAT_CLICKHOUSE_PASSWORD", "string"),
     database: config.database ? Effect.succeed(config.database) : parseEnv("LAT_CLICKHOUSE_DB", "string"),
+    compression:
+      config.compression !== undefined
+        ? Effect.succeed(config.compression)
+        : parseEnv("LAT_CLICKHOUSE_COMPRESSION_ENABLED", "boolean", false),
   }).pipe(
     Effect.map((resolvedConfig) => {
       const options: ClickHouseClientConfigOptions = {
@@ -42,6 +47,7 @@ export const createClickhouseClientEffect = (
         keep_alive: { enabled: true, idle_socket_ttl: KEEP_ALIVE_IDLE_SOCKET_TTL_MS },
         request_timeout: DEFAULT_REQUEST_TIMEOUT_MS,
         max_open_connections: DEFAULT_MAX_OPEN_CONNECTIONS,
+        compression: { request: resolvedConfig.compression, response: resolvedConfig.compression },
       }
 
       return createClient(options)

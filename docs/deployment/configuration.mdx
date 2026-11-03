@@ -168,6 +168,7 @@ OLAP store for spans and telemetry, in a dedicated database.
 | `LAT_CLICKHOUSE_URL`, `LAT_CLICKHOUSE_USER`, `LAT_CLICKHOUSE_PASSWORD`, `LAT_CLICKHOUSE_DB` | Application connection + dedicated database. |
 | `LAT_CLICKHOUSE_MIGRATION_URL` | Native-protocol host and port (e.g. `clickhouse://clickhouse:9000`) for the migration tool (goose); credentials and database are taken from the other `LAT_CLICKHOUSE_*` variables. |
 | `LAT_CLICKHOUSE_CLUSTER_ENABLED` | Set `true` for a clustered ClickHouse; default `false`. |
+| `LAT_CLICKHOUSE_COMPRESSION_ENABLED` | Optional gzip for application requests and responses; default `false`. Response compression requires permission to set `enable_http_compression` (a `readonly=1` user cannot do this). Helm users can set it through `config.extraEnv`. Measure transfer volume, CPU and latency before wider deployment. |
 | `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`, `CLICKHOUSE_DB` | Bundled-ClickHouse container credentials. Omit if bringing your own ClickHouse. |
 
 ### Redis

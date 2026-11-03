@@ -8,7 +8,8 @@
     "preview": "pulumi preview",
     "up": "pulumi up",
     "destroy": "pulumi destroy",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsgo --noEmit",
+    "test": "node --test lib/task-resources.test.ts"
   },
   "dependencies": {
     "@pulumi/aws": "7.27.0",
