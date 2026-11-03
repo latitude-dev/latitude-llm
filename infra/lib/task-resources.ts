@@ -7,7 +7,19 @@ interface ContainerDefinition {
   memory?: number
 }
 
-interface TaskDefinition {
+const RESPONSE_ONLY_TASK_FIELDS = [
+  "taskDefinitionArn",
+  "revision",
+  "status",
+  "requiresAttributes",
+  "compatibilities",
+  "registeredAt",
+  "registeredBy",
+] as const
+
+type ResponseOnlyTaskField = (typeof RESPONSE_ONLY_TASK_FIELDS)[number]
+
+interface TaskDefinition extends Partial<Record<ResponseOnlyTaskField, unknown>> {
   family: string
   cpu?: string
   memory?: string
@@ -31,7 +43,7 @@ export function applyTaskResources<T extends TaskDefinition>({
   task: T
   environment: string
   serviceName: string
-}): T {
+}): Omit<T, ResponseOnlyTaskField> {
   if (environment !== "staging" && environment !== "production") throw new Error("Unknown deployment environment")
   const config = environment === "production" ? productionConfig : stagingConfig
   const service = config.ecs.services.find((candidate) => candidate.name === serviceName)
@@ -42,7 +54,7 @@ export function applyTaskResources<T extends TaskDefinition>({
     throw new Error("Expected the application container and Datadog sidecar")
   }
 
-  return {
+  const result = {
     ...task,
     ...getFargateResources(service),
     containerDefinitions: task.containerDefinitions.map((container) => ({
@@ -51,4 +63,6 @@ export function applyTaskResources<T extends TaskDefinition>({
       memory: container.name === serviceName ? service.memory : DATADOG_AGENT_MEMORY,
     })),
   }
+  for (const field of RESPONSE_ONLY_TASK_FIELDS) delete result[field]
+  return result
 }

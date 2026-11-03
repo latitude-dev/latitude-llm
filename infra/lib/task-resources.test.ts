@@ -85,11 +85,23 @@ test("invalid or unsupported resources fail instead of producing an undersized t
 })
 
 test("the deployment command reads the AWS task from stdin and emits only task JSON", () => {
+  const task = {
+    ...taskFixture(),
+    taskDefinitionArn: "arn:aws:ecs:eu-central-1:123456789012:task-definition/latitude-production-web:42",
+    revision: 42,
+    status: "ACTIVE",
+    requiresAttributes: [{ name: "ecs.capability.task-iam-role" }],
+    compatibilities: ["EC2", "FARGATE"],
+    registeredAt: "2026-01-01T00:00:00Z",
+    registeredBy: "arn:aws:iam::123456789012:role/deployer",
+  }
+  const before = structuredClone(task)
   const result = spawnSync(process.execPath, ["infra/scripts/ecs-task-resources.ts", "production", "web"], {
     cwd: new URL("../../", import.meta.url),
-    input: JSON.stringify(taskFixture()),
+    input: JSON.stringify(task),
     encoding: "utf8",
   })
+  assert.deepEqual(task, before)
   assert.equal(result.status, 0, result.stderr)
   assert.deepEqual(
     JSON.parse(result.stdout),
