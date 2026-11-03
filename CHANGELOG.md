@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.3.126 - 2026-11-03
+
+### Flaggers
+
+- Switched the default flagger classifier from Claude Haiku 4.5 to MiniMax M2.5 on Bedrock, keeping classification and annotation on the same model as the rest of the flagger pipeline (ref: #4949).
+- Attributed safety judgments to the model that actually served the request instead of the configured one, so the stored judgment version stays accurate when a request is served by a different model (ref: #4949).
+
 ## v0.3.125 - 2026-10-28
 
 ### Trace deletion
