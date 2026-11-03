@@ -41,6 +41,7 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           CURRENT_SHA: ${{ github.sha }}
           INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          STAGING_DEPLOYMENTS_ENABLED: ${{ vars.STAGING_DEPLOYMENTS_ENABLED }}
         run: |
           set -euo pipefail
 
@@ -66,7 +67,9 @@ jobs:
               fi
 
               target_sha="${CURRENT_SHA}"
-              staging_should_deploy=true
+              if [ "${STAGING_DEPLOYMENTS_ENABLED}" = "true" ]; then
+                staging_should_deploy=true
+              fi
             fi
           else
             if [ "${REF_NAME}" != "development" ]; then
@@ -79,7 +82,9 @@ jobs:
               exit 1
             elif [ "${INPUT_ENVIRONMENT}" = "staging" ]; then
               target_sha="${CURRENT_SHA}"
-              staging_should_deploy=true
+              if [ "${STAGING_DEPLOYMENTS_ENABLED}" = "true" ]; then
+                staging_should_deploy=true
+              fi
             else
               echo "Unsupported environment: ${INPUT_ENVIRONMENT}"
               exit 1
@@ -106,6 +111,10 @@ jobs:
             echo "Target SHA: ${target_sha}"
             echo "Latest origin/development: $(git rev-parse origin/development)"
             exit 1
+          fi
+
+          if [ "${staging_should_deploy}" = "false" ] && [ "${production_should_deploy}" = "false" ]; then
+            echo "Staging deployments are disabled. Set STAGING_DEPLOYMENTS_ENABLED=true to enable them."
           fi
 
           {

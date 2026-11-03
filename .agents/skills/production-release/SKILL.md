@@ -19,7 +19,7 @@ focused on the major aspects rather than every commit.
 
 ## Release invariants
 
-- `development` is trunk and deploys to staging by default.
+- `development` is trunk. The staging application is retired by default. Restoring it requires an approved manual Pulumi deployment with `retireApplication=false`, restored task counts, and `STAGING_DEPLOYMENTS_ENABLED=true`.
 - Production is triggered only by pushing a `vX.Y.Z` tag that points at the
   latest `origin/development` commit.
 - Do not promote by merging `development` into `main`.

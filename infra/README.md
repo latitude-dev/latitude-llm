@@ -39,27 +39,27 @@ AWS infrastructure for the Latitude LLM observability platform using Pulumi (Typ
    pulumi stack init production
    ```
 
-5. **Deploy staging:**
+5. **Preview retained staging audit resources:**
 
    ```bash
-   pulumi up --stack staging
+   pulumi preview --stack staging
    ```
 
-6. **Deploy production:**
+   The staging application is retired by default. Follow [the deployment guide](../dev-docs/deployment.md) to restore it.
+
+6. **Preview production infrastructure:**
 
    ```bash
-   pulumi up --stack production
+   pulumi preview --stack production
    ```
+
+   Apply infrastructure changes manually from the operator host only after a clean preview and approval.
 
 ## Architecture
 
-### Staging (Cost-Optimized)
+### Staging
 
-- 2 AZ VPC with fck-nat instance (no NAT gateway)
-- RDS PostgreSQL 16 `db.t4g.micro` (standard, single-AZ)
-- ElastiCache Redis 7 `cache.t3.micro` (cache + BullMQ)
-- ECS Fargate: 1 task per service, no auto-scaling
-- Domains: `staging.latitude.so`, `staging-api.latitude.so`, `staging-ingest.latitude.so`
+The application resources are retired. The stack retains account-wide CloudTrail, AWS Config, GuardDuty, and audit storage. Do not destroy the whole staging stack. Set `retireApplication=false` and restore task counts only as part of an approved manual restart.
 
 ### Production (MVP-Ready)
 
@@ -111,53 +111,9 @@ infra/
 
 ## CI/CD
 
-GitHub Actions workflows:
+[The deployment guide](../dev-docs/deployment.md) defines the release and infrastructure procedures. `development` is trunk. Staging builds and deployments require `STAGING_DEPLOYMENTS_ENABLED=true`; leave the variable off while the staging application is retired. Production uses release tags, with checks, type checks, and tests before deployment. Do not promote through `main`.
 
-- `.github/workflows/deploy.yml` - Build and deploy pipeline
-- `.github/workflows/build-images.yml` - Build and push container images to GHCR
-
-Deployment triggers:
-
-- **Staging**: push to `development` → build → migrate → deploy
-- **Production**: push to `main` → checks pass → build → migrate → deploy
-- **Manual**: workflow_dispatch with environment selector
-
-### Production Deployment Details
-
-To deploy to production:
-
-1. **Promote `development` into `main`**: open a PR from `development` to `main` and merge it after review.
-
-2. **Ensure all checks pass**: The deployment workflow requires the CI jobs to succeed. This includes:
-   - Type checking (`pnpm typecheck`)
-   - Formatting and lint checks (`pnpm check`)
-   - Tests (`pnpm test`)
-
-3. **Merge to `main`**:
-
-   ```bash
-   gh pr create --base main --head development --fill
-   ```
-
-   Merging the PR triggers the production deployment automatically.
-
-4. **Monitor the deployment**: The workflow will:
-   - Run all checks in parallel
-   - Build and push container images to GHCR
-   - Execute database migrations via ECS task
-   - Deploy services to ECS Fargate with zero-downtime rolling updates
-
-5. **Verify deployment**: Check service health via their endpoints:
-   - `https://console.latitude.so/api/health`
-   - `https://api.latitude.so/health`
-   - `https://ingest.latitude.so/health`
-
-Manual deployments must be dispatched from the matching branch:
-
-- Dispatch from `development` when deploying to the `staging` environment
-- Dispatch from `main` when deploying to the `production` environment
-
-The deployment workflow uses GitHub Actions OIDC authentication (no long-lived AWS access keys). Each GitHub Environment must define `AWS_DEPLOY_ROLE_ARN` as an environment variable (not a secret), pointing at the Pulumi output `outputs.githubActionsRoleArn` for the matching stack. Keep any legacy deployment IAM user in place until both staging and production deployments have been verified with the new role, then retire the user manually.
+Application deployment uses GitHub Actions OIDC. The production GitHub Environment defines `AWS_DEPLOY_ROLE_ARN` using the matching Pulumi output. Infrastructure applies are manual host operations.
 
 ## Hex read-only DB access (production)
 
