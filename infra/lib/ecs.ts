@@ -2,6 +2,7 @@ import * as aws from "@pulumi/aws"
 import type { Output } from "@pulumi/pulumi"
 import * as pulumi from "@pulumi/pulumi"
 import type { EnvironmentConfig, ServiceConfig } from "../config.ts"
+import { DATADOG_AGENT_CPU, DATADOG_AGENT_MEMORY, getFargateResources } from "./fargate-resources.ts"
 import type { SecretRef } from "./secrets.ts"
 import type {
   CloudwatchLogGroup,
@@ -333,8 +334,6 @@ function createTaskDefinition(
   const owner = process.env.GHCR_OWNER ?? "latitude-dev"
 
   // Resource allocation for Datadog Agent sidecar container
-  const DATADOG_AGENT_CPU = 256
-  const DATADOG_AGENT_MEMORY = 256
 
   const protocol = "https"
   const webUrl = `${protocol}://${config.domains.web}`
@@ -698,33 +697,12 @@ function createTaskDefinition(
       },
     )
 
-  // Calculate a valid Fargate CPU/memory combination. Fargate accepts memory
-  // only from CPU-specific ranges/increments, so round up rather than passing
-  // arbitrary totals like 2560 MiB after adding the Datadog sidecar.
-  const totalCpu = serviceConfig.cpu + DATADOG_AGENT_CPU
-  const totalMemory = serviceConfig.memory + DATADOG_AGENT_MEMORY
-
-  const fargateOptions = [
-    { cpu: 256, minMemory: 512, maxMemory: 2048, step: 512 },
-    { cpu: 512, minMemory: 1024, maxMemory: 4096, step: 1024 },
-    { cpu: 1024, minMemory: 2048, maxMemory: 8192, step: 1024 },
-    { cpu: 2048, minMemory: 4096, maxMemory: 16384, step: 1024 },
-    { cpu: 4096, minMemory: 8192, maxMemory: 30720, step: 1024 },
-    { cpu: 8192, minMemory: 16384, maxMemory: 61440, step: 4096 },
-    { cpu: 16384, minMemory: 32768, maxMemory: 122880, step: 8192 },
-  ] as const
-
-  const taskOption =
-    fargateOptions.find((option) => option.cpu >= totalCpu && totalMemory <= option.maxMemory) ??
-    fargateOptions[fargateOptions.length - 1]
-  const taskCpu = taskOption.cpu
-  const taskMemoryBase = Math.max(totalMemory, taskOption.minMemory)
-  const taskMemory = Math.ceil(taskMemoryBase / taskOption.step) * taskOption.step
+  const resources = getFargateResources(serviceConfig)
 
   return new aws.ecs.TaskDefinition(`${name}-${serviceConfig.name}-task`, {
     family: `${name}-${serviceConfig.name}`,
-    cpu: taskCpu.toString(),
-    memory: taskMemory.toString(),
+    cpu: resources.cpu,
+    memory: resources.memory,
     networkMode: "awsvpc",
     requiresCompatibilities: ["FARGATE"],
     executionRoleArn: executionRole.arn,

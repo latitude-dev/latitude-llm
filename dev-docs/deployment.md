@@ -10,6 +10,19 @@ Public package publishing is decoupled from production deployment. Package publi
 
 Do not use `main` as a production promotion branch.
 
+Infrastructure previews do not authorize infrastructure deployment.
+
+## ECS resource configuration
+
+`infra/config.ts` defines application CPU and memory reservations. `infra/lib/fargate-resources.ts` adds the Datadog sidecar reservations and selects a valid Fargate task size. Pulumi and the manual task sizing command use the same calculation.
+
+Pulumi deployment is a manual operation from the operator's host. Obtain explicit permission for the exact deployment after a fresh host preview passes with only the intended changes. An unrelated resource or stack-output difference blocks apply.
+
+`infra/scripts/ecs-task-resources.ts` reads an existing AWS task definition from standard input and emits a proposed definition with the reviewed resource settings. It does not call AWS or register a revision. It rejects a mismatched environment, service, task family, or container layout. Images, secrets, roles, and health checks are preserved. Compare the output with the current definition before requesting deployment approval.
+
+Application CI copies the latest registered task family and updates image and logging settings. It does not apply resource settings from source. Keep resource changes behind the manual infrastructure gate. The service ignores Pulumi task-definition changes, so registration alone does not change running tasks. A controlled service deployment is a separate step in the approved plan.
+
+Test resource changes in staging before production. Keep the previous task revision for rollback. A lower task count is a separate availability decision; a smaller task size does not require fewer replicas.
 
 ## Infrastructure network diagram
 

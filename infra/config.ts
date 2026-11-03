@@ -49,7 +49,6 @@ export interface EnvironmentConfig {
     versioning: boolean
     lifecycleDays: number
   }
-
 }
 
 export interface ServiceConfig {
@@ -142,8 +141,8 @@ export const stagingConfig: EnvironmentConfig = {
       },
       {
         name: "workers",
-        cpu: 1024,
-        memory: 2048,
+        cpu: 768,
+        memory: 1792,
         port: 8080,
         healthCheckPath: "/health",
         desiredCount: 1,
@@ -214,8 +213,8 @@ export const productionConfig: EnvironmentConfig = {
     services: [
       {
         name: "web",
-        cpu: 1024,
-        memory: 3072,
+        cpu: 768,
+        memory: 1792,
         port: 8080,
         healthCheckPath: "/api/health",
         desiredCount: 2,
