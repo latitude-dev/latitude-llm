@@ -1,5 +1,5 @@
 import { OrganizationId, SqlClient } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { Data, Effect, Exit } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const { sqlClientLogErrorMock } = vi.hoisted(() => ({
@@ -32,15 +32,24 @@ interface MockClientState {
 
 function createMockPostgresClient(
   state: MockClientState,
-  options?: { simulateDistinctTransactionCompletionError?: boolean },
+  options?: {
+    simulateDistinctTransactionCompletionError?: boolean
+    beforeBegin?: () => Promise<void>
+    beginError?: Error
+    contextError?: Error
+    rollback?: () => Promise<void>
+  },
 ): PostgresClient {
   const client: PostgresClient = {
     pool: {} as PostgresClient["pool"],
     db: {} as PostgresClient["db"],
     transaction: async (fn) => {
+      await options?.beforeBegin?.()
+      if (options?.beginError) throw options.beginError
       const mockTx: MockTx = {
         id: Symbol("tx"),
         execute: async (stmt: unknown) => {
+          if (options?.contextError) throw options.contextError
           state.executedStatements.push(stmt)
           return undefined
         },
@@ -52,6 +61,7 @@ function createMockPostgresClient(
       try {
         return await fn(txAsOperator as Parameters<Parameters<PostgresClient["transaction"]>[0]>[0])
       } catch (e) {
+        await options?.rollback?.()
         if (options?.simulateDistinctTransactionCompletionError) {
           throw new Error("simulated rollback/commit failure after effect error")
         }
@@ -60,6 +70,14 @@ function createMockPostgresClient(
     },
   }
   return client
+}
+
+function createGate() {
+  let resolve!: () => void
+  const promise = new Promise<void>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
 }
 
 function extractSetConfigOrgId(stmt: unknown): string | null {
@@ -356,6 +374,93 @@ describe("SqlClientLive", () => {
       const result = await Effect.runPromise(effect)
       expect(result).toBe(3)
       expect(state.transactionCallCount).toBe(2)
+    })
+  })
+
+  describe("interruption cleanup", () => {
+    it.each(["cancellation", "timeout"] as const)("waits for rollback after %s", async (mode) => {
+      const started = createGate()
+      const rollbackStarted = createGate()
+      const releaseRollback = createGate()
+      let released = false
+      let finished = false
+      const client = createMockPostgresClient(state, {
+        rollback: async () => {
+          rollbackStarted.resolve()
+          await releaseRollback.promise
+          released = true
+        },
+      })
+      const controller = new AbortController()
+      const program = Effect.gen(function* () {
+        const sql = yield* SqlClient
+        return yield* sql.transaction(Effect.sync(() => started.resolve()).pipe(Effect.andThen(Effect.never)))
+      }).pipe(Effect.provide(SqlClientLive(client, OrganizationId("org-interrupt"))))
+      const result = Effect.runPromiseExit(mode === "timeout" ? program.pipe(Effect.timeout("50 millis")) : program, {
+        signal: controller.signal,
+      }).then((exit) => {
+        finished = true
+        return exit
+      })
+      await started.promise
+      if (mode === "cancellation") controller.abort()
+      await rollbackStarted.promise
+      expect(finished).toBe(false)
+      expect(released).toBe(false)
+      releaseRollback.resolve()
+      expect(Exit.isFailure(await result)).toBe(true)
+      expect(released).toBe(true)
+      expect(state.transactionCallCount).toBe(1)
+    })
+
+    it("rolls back when cancellation arrives during acquisition", async () => {
+      const acquiring = createGate()
+      const acquired = createGate()
+      let rolledBack = false
+      let bodyRan = false
+      const client = createMockPostgresClient(state, {
+        beforeBegin: async () => {
+          acquiring.resolve()
+          await acquired.promise
+        },
+        rollback: async () => {
+          rolledBack = true
+        },
+      })
+      const controller = new AbortController()
+      const result = Effect.runPromiseExit(
+        Effect.gen(function* () {
+          const sql = yield* SqlClient
+          yield* sql.transaction(
+            Effect.sync(() => {
+              bodyRan = true
+            }),
+          )
+        }).pipe(Effect.provide(SqlClientLive(client))),
+        { signal: controller.signal },
+      )
+      await acquiring.promise
+      controller.abort()
+      acquired.resolve()
+      expect(Exit.isFailure(await result)).toBe(true)
+      expect(bodyRan).toBe(false)
+      expect(rolledBack).toBe(true)
+    })
+
+    it.each(["beginError", "contextError"] as const)("returns a repository error after %s", async (failure) => {
+      let rolledBack = false
+      const client = createMockPostgresClient(state, {
+        [failure]: new Error("setup failed"),
+        rollback: async () => {
+          rolledBack = true
+        },
+      })
+      const result = await runWithSqlClient(client, OrganizationId("org-setup"), (sql) =>
+        Effect.exit(sql.transaction(Effect.die("body must not run"))),
+      )
+      expect(Exit.isFailure(result)).toBe(true)
+      if (Exit.isFailure(result)) expect(result.cause.reasons[0]).toMatchObject({ error: { _tag: "RepositoryError" } })
+      expect(rolledBack).toBe(failure === "contextError")
     })
   })
 

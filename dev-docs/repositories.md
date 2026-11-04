@@ -80,3 +80,7 @@ The following lists **current** port methods in `packages/domain/*/src/ports/*re
 ---
 
 When you add or rename repository methods, update this audit table in the same change.
+
+## Transaction completion
+
+`SqlClientLive.transaction` protects transaction setup and completion from interruption. The transaction body remains interruptible. Caller cancellation and timeouts cause rollback, and the call waits for the driver to release the connection. Setup failures return a repository error without running the body. Nested calls reuse the active transaction; sibling fibers open independent transactions.

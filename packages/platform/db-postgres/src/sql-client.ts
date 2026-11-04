@@ -44,61 +44,68 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
           Effect.withFiber((fiber) => {
             if (fiber.context.mapUnsafe.has(ActiveSqlTransaction.key)) return effect
 
-            return Effect.gen(function* () {
-              let resolveTxReady!: (tx: Operator) => void
-              let resolveEffectDone!: (result: { ok: true; value: A } | { ok: false; error: unknown }) => void
+            return Effect.uninterruptibleMask((restore) =>
+              Effect.gen(function* () {
+                let resolveTxReady!: (tx: Operator) => void
+                let rejectTxReady!: (error: unknown) => void
+                let resolveEffectDone!: (result: { ok: true; value: A } | { ok: false; error: unknown }) => void
 
-              const txReady = new Promise<Operator>((resolve) => {
-                resolveTxReady = resolve
-              })
-              const effectDone = new Promise<{ ok: true; value: A } | { ok: false; error: unknown }>((resolve) => {
-                resolveEffectDone = resolve
-              })
+                const txReady = new Promise<Operator>((resolve, reject) => {
+                  resolveTxReady = resolve
+                  rejectTxReady = reject
+                })
+                const effectDone = new Promise<{ ok: true; value: A } | { ok: false; error: unknown }>((resolve) => {
+                  resolveEffectDone = resolve
+                })
 
-              const txPromise = client.transaction(async (tx) => {
-                await setTransactionContext(tx as Operator, organizationId)
-                resolveTxReady(tx as Operator)
-                const result = await effectDone
-                if (!result.ok) throw result.error
-                return result.value
-              })
+                const txPromise = Promise.resolve().then(() =>
+                  client.transaction(async (tx) => {
+                    await setTransactionContext(tx as Operator, organizationId)
+                    resolveTxReady(tx as Operator)
+                    const result = await effectDone
+                    if (!result.ok) throw result.error
+                    return result.value
+                  }),
+                )
+                void txPromise.catch(rejectTxReady)
 
-              const tx = yield* Effect.tryPromise({
-                try: () => txReady,
-                catch: (e) => toRepositoryError(e, "transaction"),
-              })
-
-              const exit = yield* Effect.exit(Effect.provideService(effect, ActiveSqlTransaction, { tx }))
-
-              if (Exit.isSuccess(exit)) {
-                resolveEffectDone({ ok: true, value: exit.value })
-                yield* Effect.tryPromise({
-                  try: () => txPromise,
+                const tx = yield* Effect.tryPromise({
+                  try: () => txReady,
                   catch: (e) => toRepositoryError(e, "transaction"),
                 })
-                return exit.value
-              }
 
-              resolveEffectDone({ ok: false, error: exit.cause })
-              // Wait for Drizzle's transaction promise so the connection returns to
-              // the pool. The callback rethrows `exit.cause`, so this promise
-              // usually rejects with that same value — we still propagate the
-              // Effect failure via `exit` below. If the driver reports a distinct
-              // error (e.g. rollback/commit), log it so production is not blind.
-              yield* Effect.tryPromise({
-                try: () =>
-                  txPromise.catch((transactionCompletionError: unknown) => {
-                    if (transactionCompletionError !== exit.cause) {
-                      sqlClientLogger.error(
-                        "[SqlClient] Database error while completing transaction after effect failure",
-                        { effectFailure: Cause.squash(exit.cause), transactionCompletionError },
-                      )
-                    }
-                  }),
-                catch: (e) => toRepositoryError(e, "transaction"),
-              })
-              return yield* exit
-            })
+                const exit = yield* Effect.exit(restore(Effect.provideService(effect, ActiveSqlTransaction, { tx })))
+
+                if (Exit.isSuccess(exit)) {
+                  resolveEffectDone({ ok: true, value: exit.value })
+                  yield* Effect.tryPromise({
+                    try: () => txPromise,
+                    catch: (e) => toRepositoryError(e, "transaction"),
+                  })
+                  return exit.value
+                }
+
+                resolveEffectDone({ ok: false, error: exit.cause })
+                // Wait for Drizzle's transaction promise so the connection returns to
+                // the pool. The callback rethrows `exit.cause`, so this promise
+                // usually rejects with that same value — we still propagate the
+                // Effect failure via `exit` below. If the driver reports a distinct
+                // error (e.g. rollback/commit), log it so production is not blind.
+                yield* Effect.tryPromise({
+                  try: () =>
+                    txPromise.catch((transactionCompletionError: unknown) => {
+                      if (transactionCompletionError !== exit.cause) {
+                        sqlClientLogger.error(
+                          "[SqlClient] Database error while completing transaction after effect failure",
+                          { effectFailure: Cause.squash(exit.cause), transactionCompletionError },
+                        )
+                      }
+                    }),
+                  catch: (e) => toRepositoryError(e, "transaction"),
+                })
+                return yield* exit
+              }),
+            )
           }),
 
         query: <T>(fn: (tx: Operator, organizationId: OrganizationId) => Promise<T>) =>
