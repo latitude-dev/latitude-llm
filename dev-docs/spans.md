@@ -206,9 +206,27 @@ The `traces` materialized view carries forward `max(retention_days)` from its so
 
 Incoming OTLP spans are normalized into the canonical span model by the resolvers under `packages/domain/spans/src/otlp/`. Metadata (operation, provider, model, token usage, cost, identity) resolves from a prioritized list of attribute candidates spanning the conventions each supported source emits (OTEL GenAI semconv, OpenInference, OpenLLMetry/Traceloop, Vercel AI SDK, Claude Code, and others). Message content is parsed by a first-match chain of content parsers keyed on the attributes a source uses.
 
+### Token ledger normalization
+
+`resolveTokens` (`otlp/resolvers/usage/tokens.ts`) maps convention-specific usage attributes into the canonical additive ledger every sink stores: `tokensInput` (non-cached prompt tokens), `tokensOutput` (non-reasoning completion tokens), `tokensCacheRead`, `tokensCacheCreate`, and `tokensReasoning`. Rollups, pricing, and cache-hit analytics all assume that shape.
+
+Exporters disagree on whether the top-level input (and sometimes output) count **includes** sub-categories or must be **added** to them:
+
+- **Inclusive** — the headline count already contains cache reads/creates (input) or reasoning (output); subtract sub-categories to get the plain portion.
+- **Additive** — the headline count excludes sub-categories; the true total is the sum.
+
+Detection runs in priority order:
+
+1. **Impossibility** — inclusive input requires `rawInput >= cache`; otherwise treat input as additive (Claude Code and other Anthropic-shaped emitters that spell additive `input_tokens` under a normalized key land here).
+2. **Total arithmetic** — when `rawTotal` is present, infer which `(inputModel × outputModel)` formula reproduces it (`rawInput + rawOutput`, `rawInput + cache + rawOutput`, with reasoning on the output side when reported).
+3. **Convention keys** — some matched keys always mean inclusive input (`gen_ai.usage.input_tokens`, `ai.usage.promptTokens`, `ai.usage.inputTokens`).
+4. **Provider** — passthrough conventions fall back to provider sets (Anthropic/Bedrock additive input; Vertex additive output).
+
+**Vercel AI SDK overlapping cache.** Some spans report read-inclusive `ai.usage.inputTokens` while also emitting separately billed cache writes (`ai.usage.inputTokenDetails.cacheWriteTokens`) alongside reads. Subtracting read and write from input would zero out real non-cached tokens. When `ai.usage.inputTokenDetails.noCacheTokens` is present and the attribute arithmetic proves read-inclusive input with writes billed on top (`noCache + cacheRead === rawInput`, `cacheRead + cacheCreate > rawInput`, and `rawInput + rawOutput === rawTotal`), only cache **reads** are subtracted from input; cache **creates** stay in their column and remain in session totals and cost. Hermes and OpenClaw document the additive totals they emit so `resolveTokens` can infer correctly; see [`hermes-telemetry.md`](./hermes-telemetry.md) and [`openclaw-telemetry.md`](./openclaw-telemetry.md).
+
 ### Cost resolution
 
-Token usage resolves from the same convention-specific candidate lists. Cost resolves in `resolveUsage` (`otlp/resolvers/usage.ts`) through `resolveSpanCost` (`helpers/estimate-span-cost.ts`), which every sink shares: live ingest, OpenClaw embedded usage, and trace imports.
+Cost resolves in `resolveUsage` (`otlp/resolvers/usage.ts`) through `resolveSpanCost` (`helpers/estimate-span-cost.ts`), which every sink shares: live ingest, OpenClaw embedded usage, and trace imports.
 
 Accepted cost attribute keys are `gen_ai.usage.{input,output,total}_cost`, `gen_ai.usage.cost`, and `llm.cost.{prompt,completion,total}`. Each value must be a finite, non-negative number (double, int, or numeric string); otherwise the attribute is ignored, counted on the ingest transform span, and logged. A stated figure wins over models.dev estimation on the sides it covers; estimation never overwrites a `reportedBy: "user"` figure.
 
