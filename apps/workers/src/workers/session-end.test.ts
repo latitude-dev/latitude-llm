@@ -1,4 +1,5 @@
 import type { WorkflowStarterShape } from "@domain/queue"
+import { QueuePublishError } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
@@ -204,6 +205,20 @@ describe("runSessionEndJob", () => {
 
     const signalsMatchPublish = published.find((p) => p.queue === "signals")
     expect(signalsMatchPublish?.payload).toMatchObject({ traceId: TRACE_OLD })
+  })
+
+  it("fails the job when signals:match cannot be enqueued so the worker can retry", async () => {
+    const { publisher } = createFakeQueuePublisher({
+      publish: () =>
+        Effect.fail(new QueuePublishError({ queue: "signals", cause: new Error("redis unavailable") })),
+    })
+    const { workflowStarter, started } = createFakeWorkflowStarter()
+
+    await expect(
+      Effect.runPromise(runSessionEndJob({ publisher, clickhouseClient: ch.client, workflowStarter })(basePayload)),
+    ).rejects.toMatchObject({ _tag: "QueuePublishError" })
+
+    expect(started).toEqual([])
   })
 })
 
