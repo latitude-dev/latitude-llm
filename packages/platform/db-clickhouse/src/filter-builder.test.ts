@@ -286,6 +286,83 @@ describe("buildClickHouseWhere with arrayContains", () => {
   })
 })
 
+describe("buildClickHouseWhere with FixedString(N) fields", () => {
+  const VALID_TRACE_ID = "a".repeat(32)
+  // ClickHouse right-pads shorter values, so only an *over-long* value ever fails to bind — a
+  // 36-char UUID passed where a 32-hex trace id is expected (the real production incident).
+  const OVERLONG_TRACE_ID = "84dc2b84-4aad-444c-9253-49495fd63a5b"
+
+  const arrayContainsRegistry: ChFieldRegistry = {
+    traceId: { column: "trace_ids", chType: "FixedString(32)", isArray: true, arrayContains: true },
+  }
+
+  const scalarRegistry: ChFieldRegistry = {
+    sourceId: { column: "source_id", chType: "FixedString(24)" },
+  }
+
+  it("degrades an over-long eq value to a static no-match clause instead of binding it", () => {
+    const filters: FilterSet = { traceId: [{ op: "eq", value: OVERLONG_TRACE_ID }] }
+    const { clauses, params } = buildClickHouseWhere(filters, arrayContainsRegistry)
+    expect(clauses[0]).toBe("1 = 0")
+    expect(params).toEqual({})
+  })
+
+  it("degrades an over-long neq value to a static always-match clause", () => {
+    const filters: FilterSet = { traceId: [{ op: "neq", value: OVERLONG_TRACE_ID }] }
+    const { clauses, params } = buildClickHouseWhere(filters, arrayContainsRegistry)
+    expect(clauses[0]).toBe("1 = 1")
+    expect(params).toEqual({})
+  })
+
+  it("degrades an over-long contains value the same way as eq (arrayContains routes contains to has)", () => {
+    const filters: FilterSet = { traceId: [{ op: "contains", value: OVERLONG_TRACE_ID }] }
+    const { clauses } = buildClickHouseWhere(filters, arrayContainsRegistry)
+    expect(clauses[0]).toBe("1 = 0")
+  })
+
+  it("drops over-long elements from an in value array, keeping well-formed ones", () => {
+    const filters: FilterSet = { traceId: [{ op: "in", value: [VALID_TRACE_ID, OVERLONG_TRACE_ID] }] }
+    const { clauses, params } = buildClickHouseWhere(filters, arrayContainsRegistry)
+    expect(clauses[0]).toBe("hasAny(trace_ids, {f_0:Array(FixedString(32))})")
+    expect(params.f_0).toEqual([VALID_TRACE_ID])
+  })
+
+  it("emits a valid (always-false) hasAny call when every in value is over-long", () => {
+    const filters: FilterSet = { traceId: [{ op: "in", value: [OVERLONG_TRACE_ID] }] }
+    const { clauses, params } = buildClickHouseWhere(filters, arrayContainsRegistry)
+    expect(clauses[0]).toBe("hasAny(trace_ids, {f_0:Array(FixedString(32))})")
+    expect(params.f_0).toEqual([])
+  })
+
+  it("makes notIn match everything when every value is over-long (none could ever be excluded)", () => {
+    const filters: FilterSet = { traceId: [{ op: "notIn", value: [OVERLONG_TRACE_ID] }] }
+    const { clauses, params } = buildClickHouseWhere(filters, arrayContainsRegistry)
+    expect(clauses[0]).toBe("NOT hasAny(trace_ids, {f_0:Array(FixedString(32))})")
+    expect(params.f_0).toEqual([])
+  })
+
+  it("degrades an over-long value on a plain (non-arrayContains) scalar FixedString field too", () => {
+    const filters: FilterSet = { sourceId: [{ op: "eq", value: OVERLONG_TRACE_ID }] }
+    const { clauses, params } = buildClickHouseWhere(filters, scalarRegistry)
+    expect(clauses[0]).toBe("1 = 0")
+    expect(params).toEqual({})
+  })
+
+  it("still binds a correctly-sized value on a plain scalar FixedString field", () => {
+    const filters: FilterSet = { sourceId: [{ op: "eq", value: "b".repeat(24) }] }
+    const { clauses, params } = buildClickHouseWhere(filters, scalarRegistry)
+    expect(clauses[0]).toBe("source_id = {f_0:FixedString(24)}")
+    expect(params.f_0).toBe("b".repeat(24))
+  })
+
+  it("still binds a value shorter than N, which ClickHouse right-pads (not a bug)", () => {
+    const filters: FilterSet = { sourceId: [{ op: "eq", value: "short" }] }
+    const { clauses, params } = buildClickHouseWhere(filters, scalarRegistry)
+    expect(clauses[0]).toBe("source_id = {f_0:FixedString(24)}")
+    expect(params.f_0).toBe("short")
+  })
+})
+
 describe("buildClickHouseWhere with synthetic fields", () => {
   const syntheticRegistry: ChFieldRegistry = {
     status: {
