@@ -18,17 +18,21 @@ const startPublishAnnotationWorkflow = (
   workflowStarter: WorkflowStarterShape,
   input: { readonly organizationId: string; readonly projectId: string; readonly scoreId: ScoreId },
 ) =>
-  workflowStarter.start(
-    "publishAnnotationWorkflow",
-    {
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      scoreId: input.scoreId,
-    },
-    {
-      workflowId: `annotations:publish:${input.scoreId}`,
-    },
-  )
+  workflowStarter
+    .start(
+      "publishAnnotationWorkflow",
+      {
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        scoreId: input.scoreId,
+      },
+      {
+        workflowId: `annotations:publish:${input.scoreId}`,
+      },
+    )
+    // `workflowId` is a dedupe key: a retried debounced job racing a job
+    // already in flight hits this, not a real failure.
+    .pipe(Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.void))
 
 export const publishHumanAnnotationUseCase = Effect.fn("annotations.publishHumanAnnotation")(function* (
   input: PublishAnnotationInput,

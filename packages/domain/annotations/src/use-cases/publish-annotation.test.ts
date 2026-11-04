@@ -1,4 +1,4 @@
-import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
+import { WorkflowAlreadyStartedError, WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
 import { NotFoundError, OrganizationId, ScoreId, SqlClient, UserId } from "@domain/shared"
@@ -95,6 +95,34 @@ describe("publishAnnotationUseCase", () => {
         },
       },
     ])
+  })
+
+  it("collapses WorkflowAlreadyStartedError into a no-op instead of failing", async () => {
+    const draft = buildDraftAnnotationScore()
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    scores.set(draft.id, draft)
+    const workflowStarter: WorkflowStarterShape = {
+      start: (workflow, _input, options) =>
+        Effect.fail(new WorkflowAlreadyStartedError({ workflow, workflowId: options.workflowId })),
+      signalWithStart: () => Effect.die("signalWithStart should not be called in publishAnnotationUseCase tests"),
+    }
+
+    const result = await Effect.runPromise(
+      publishHumanAnnotationUseCase({ scoreId: scoreCuid }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(ScoreRepository, scoreRepository),
+            Layer.succeed(WorkflowStarter, workflowStarter),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) })),
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "workflow-started",
+      scoreId: scoreCuid,
+    })
   })
 
   it("is idempotent on already-published annotation", async () => {
