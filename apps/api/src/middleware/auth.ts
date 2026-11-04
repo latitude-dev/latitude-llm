@@ -3,11 +3,25 @@ import { validateApiKey } from "@platform/api-key-auth"
 import type { PostgresClient } from "@platform/db-postgres"
 import { type OAuthTokenAuthResult, validateOAuthAccessToken } from "@platform/oauth-token-auth"
 import { withTracing } from "@repo/observability"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
 import { getAdminPostgresClient } from "../clients.ts"
 import type { AuthContext } from "../types.ts"
 import { createTouchBuffer } from "./touch-buffer.ts"
+
+class AuthenticationUnavailableError extends Data.TaggedError("AuthenticationUnavailableError")<{
+  readonly message: string
+}> {
+  readonly httpStatus = 503
+  get httpMessage() {
+    return this.message
+  }
+}
+
+type ApiKeyAuthAttempt =
+  | { readonly kind: "authenticated"; readonly context: AuthContext }
+  | { readonly kind: "not_api_key" }
+  | { readonly kind: "unavailable" }
 
 const extractBearerToken = (c: Context): string | undefined => {
   const authHeader = c.req.header("Authorization")
@@ -43,20 +57,27 @@ const authenticateWithApiKey = (
   redis: Context["var"]["redis"],
   token: string,
   options: AuthMiddlewareOptions,
-): Effect.Effect<AuthContext | null, never> => {
+): Effect.Effect<ApiKeyAuthAttempt, never> => {
   const adminClient = options.adminClient ?? getAdminPostgresClient()
   const touchBuffer = createTouchBuffer(adminClient, {
     logTouchBuffer: options.logTouchBuffer,
   })
 
-  return Effect.gen(function* () {
-    const result = yield* validateApiKey(token, {
-      redis,
-      adminClient,
-      onKeyValidated: (keyId) => touchBuffer.touch(keyId),
-    })
-    return result ? apiKeyContext(result) : null
-  }).pipe(Effect.orDie)
+  return validateApiKey(token, {
+    redis,
+    adminClient,
+    onKeyValidated: (keyId) => touchBuffer.touch(keyId),
+  }).pipe(
+    Effect.map((result) =>
+      result
+        ? ({ kind: "authenticated", context: apiKeyContext(result) } satisfies ApiKeyAuthAttempt)
+        : ({ kind: "not_api_key" } satisfies ApiKeyAuthAttempt),
+    ),
+    Effect.catchTag(
+      "RepositoryError",
+      () => Effect.succeed({ kind: "unavailable" } satisfies ApiKeyAuthAttempt),
+    ),
+  )
 }
 
 const authenticateWithOAuth = (
@@ -82,7 +103,10 @@ const authenticateWithOAuth = (
  * is one extra Redis + DB round-trip on the OAuth happy path; the user knows
  * their throughput envelope and the simplicity wins.
  */
-const authenticate = (c: Context, options: AuthMiddlewareOptions): Effect.Effect<AuthContext, UnauthorizedError> =>
+const authenticate = (
+  c: Context,
+  options: AuthMiddlewareOptions,
+): Effect.Effect<AuthContext, UnauthorizedError | AuthenticationUnavailableError> =>
   Effect.gen(function* () {
     const bearerToken = extractBearerToken(c)
     if (!bearerToken) {
@@ -91,11 +115,17 @@ const authenticate = (c: Context, options: AuthMiddlewareOptions): Effect.Effect
 
     const redis = c.get("redis")
 
-    const apiKeyCtx = yield* authenticateWithApiKey(redis, bearerToken, options)
-    if (apiKeyCtx) return apiKeyCtx
+    const apiKeyAttempt = yield* authenticateWithApiKey(redis, bearerToken, options)
+    if (apiKeyAttempt.kind === "authenticated") return apiKeyAttempt.context
 
     const oauthCtx = yield* authenticateWithOAuth(redis, bearerToken, options)
     if (oauthCtx) return oauthCtx
+
+    if (apiKeyAttempt.kind === "unavailable") {
+      return yield* new AuthenticationUnavailableError({
+        message: "Authentication is temporarily unavailable. Please retry later.",
+      })
+    }
 
     return yield* new UnauthorizedError({ message: "Invalid credentials" })
   })
@@ -114,3 +144,4 @@ export const createAuthMiddleware = (options: AuthMiddlewareOptions): Middleware
     await next()
   }
 }
+
