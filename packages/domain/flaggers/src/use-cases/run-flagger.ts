@@ -355,28 +355,35 @@ function extractInspectedSystemPrompt(conversation: FlaggerConversation): string
   )
 }
 
-const instructionExtractorOutputSchema = z
-  .object({
-    understood: z.boolean(),
-    agentContext: z.string(),
-    reasonIfNotUnderstood: z.string().optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.understood && !value.agentContext.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["agentContext"],
-        message: "agentContext is required when understood=true",
-      })
-    }
-    if (!value.understood && !value.reasonIfNotUnderstood?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["reasonIfNotUnderstood"],
-        message: "reasonIfNotUnderstood is required when understood=false",
-      })
-    }
-  })
+const instructionExtractorShape = {
+  understood: z.boolean(),
+  agentContext: z.string().optional(),
+  reasonIfNotUnderstood: z.string().optional(),
+}
+
+// Bedrock's minimax/gpt-oss models routinely emit {"understood":true} with no `agentContext`. Passing the
+// strict (superRefine'd) schema straight to the provider makes that a schema-validation failure at the AI
+// SDK level for both the primary and fallback model, burning two generations per occurrence. This structural
+// schema lets those responses through generation; `instructionExtractorOutputSchema` still enforces the
+// invariant during our own re-parse below, so the fallback-context behavior is unchanged.
+const instructionExtractorGenerationSchema = z.object(instructionExtractorShape)
+
+const instructionExtractorOutputSchema = z.object(instructionExtractorShape).superRefine((value, ctx) => {
+  if (value.understood && !value.agentContext?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["agentContext"],
+      message: "agentContext is required when understood=true",
+    })
+  }
+  if (!value.understood && !value.reasonIfNotUnderstood?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["reasonIfNotUnderstood"],
+      message: "reasonIfNotUnderstood is required when understood=false",
+    })
+  }
+})
 
 type InstructionExtractorOutput = z.infer<typeof instructionExtractorOutputSchema>
 
@@ -390,7 +397,7 @@ const maskDisallowedWording = (text: string): string => text.replace(disallowedE
 
 const maskDisallowedExtractionWording = (result: InstructionExtractorOutput): InstructionExtractorOutput => ({
   ...result,
-  agentContext: maskDisallowedWording(result.agentContext),
+  ...(result.agentContext === undefined ? {} : { agentContext: maskDisallowedWording(result.agentContext) }),
   ...(result.reasonIfNotUnderstood === undefined
     ? {}
     : { reasonIfNotUnderstood: maskDisallowedWording(result.reasonIfNotUnderstood) }),
@@ -696,7 +703,7 @@ function runInstructionExtraction(input: {
           ...modelConfig,
           system: INSTRUCTION_EXTRACTOR_SYSTEM_PROMPT,
           prompt: buildInstructionExtractorPrompt(input.systemPrompt),
-          schema: instructionExtractorOutputSchema,
+          schema: instructionExtractorGenerationSchema,
           telemetry: {
             spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerExtractInstructions,
             project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
