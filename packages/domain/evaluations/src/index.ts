@@ -84,6 +84,7 @@ export {
   isArchivedEvaluation,
   isDeletedEvaluation,
   mergeConfusionMatrices,
+  resolveEvaluationScript,
   shouldSampleLiveEvaluation,
   softDeleteEvaluation,
   toLiveEvaluationDebounceMs,
