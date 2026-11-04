@@ -300,6 +300,62 @@ describe("nameClusterUseCase", () => {
     }
   })
 
+  it("does not leave a lone surrogate when truncation splits a surrogate pair", async () => {
+    // "😀" is a surrogate pair; repeating it past the cap forces the truncation cuts to land mid-pair.
+    const oversized = "😀".repeat(TAXONOMY_NAMING_SAMPLE_CHAR_CAP)
+    const prompts: string[] = []
+    const { effect } = runNameCluster({
+      seedObservations: [observation({ projectionMetadata: { summary: oversized } })],
+      ai: {
+        generate: <T>(input: GenerateInput<T>) => {
+          prompts.push(input.prompt)
+          const object = input.prompt.includes("Candidates:")
+            ? { name: "Order Status", description: "Users check on the status of an order they placed." }
+            : { candidates: [{ theme: "order status", examples: [0] }] }
+          return Effect.succeed({ object: object as T, tokens: 10, duration: 1 } satisfies GenerateResult<T>)
+        },
+        embed: () => Effect.die("embed not used"),
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(effect)
+
+    expect(prompts.length).toBeGreaterThan(0)
+    for (const prompt of prompts) {
+      expect(hasLoneSurrogate(prompt)).toBe(false)
+    }
+  })
+
+  it("replaces a lone surrogate already present in a summary shorter than the cap", async () => {
+    // Malformed upstream (e.g. a mis-encoded transcript), not introduced by slicing.
+    const summary = "User asks: before \uD83D middle \uDE00 after"
+    const prompts: string[] = []
+    const { effect } = runNameCluster({
+      seedObservations: [observation({ projectionMetadata: { summary } })],
+      ai: {
+        generate: <T>(input: GenerateInput<T>) => {
+          prompts.push(input.prompt)
+          const object = input.prompt.includes("Candidates:")
+            ? { name: "Order Status", description: "Users check on the status of an order they placed." }
+            : { candidates: [{ theme: "order status", examples: [0] }] }
+          return Effect.succeed({ object: object as T, tokens: 10, duration: 1 } satisfies GenerateResult<T>)
+        },
+        embed: () => Effect.die("embed not used"),
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(effect)
+
+    expect(prompts.length).toBeGreaterThan(0)
+    for (const prompt of prompts) {
+      expect(hasLoneSurrogate(prompt)).toBe(false)
+      expect(prompt).toContain("before")
+      expect(prompt).toContain("after")
+    }
+  })
+
   // Interior + root modes are named from already-named children (no direct
   // members), and their modeContext is also parameterized/hardcoded — cover them
   // too so an edit to the interior `umbrella` string or the root prompt can't
@@ -704,3 +760,7 @@ describe("nameClusterUseCase", () => {
     expect(clusters.clusters.get(clusterId)?.name).toBe("Order Status")
   })
 })
+
+function hasLoneSurrogate(text: string): boolean {
+  return /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(text)
+}
