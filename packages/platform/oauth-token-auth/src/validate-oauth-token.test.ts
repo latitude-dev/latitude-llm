@@ -1,6 +1,6 @@
 import { generateId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
-import { and, eq, type PostgresDb } from "@platform/db-postgres"
+import { and, closePostgres, createPostgresClient, eq, type PostgresDb } from "@platform/db-postgres"
 import { members, oauthAccessTokens, oauthApplications } from "@platform/db-postgres/schema/better-auth"
 import {
   closeInMemoryPostgres,
@@ -10,7 +10,7 @@ import {
   createUserFixture,
   type InMemoryPostgres,
 } from "@platform/testkit"
-import { Effect } from "effect"
+import { Cause, Effect, Exit, Option } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { validateOAuthAccessToken } from "./validate-oauth-token.ts"
 
@@ -21,6 +21,9 @@ import { validateOAuthAccessToken } from "./validate-oauth-token.ts"
  * test still runs everywhere.
  */
 const nodeSupportsUint8Hex = typeof Uint8Array.fromHex === "function"
+
+const createUnreachablePostgres = () =>
+  createPostgresClient({ databaseUrl: "postgres://latitude:latitude@127.0.0.1:1/latitude", connectionTimeoutMs: 1000 })
 
 const createFakeRedis = (): RedisClient => {
   const store = new Map<string, string>()
@@ -301,6 +304,59 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     )
 
     expect(afterDisable).toBeNull()
+  })
+
+  it("fails with RepositoryError, not an invalid-token answer, when Postgres is unreachable", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const setup = await insertOAuthSetup(database.postgresDb, {
+      organizationId: organization.id,
+    })
+    const redis = createFakeRedis()
+    const unreachable = createUnreachablePostgres()
+
+    try {
+      const exit = await Effect.runPromiseExit(
+        validateOAuthAccessToken(setup.accessToken, { redis, adminClient: unreachable }),
+      )
+
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        const error = Cause.findErrorOption(exit.cause)
+        expect(Option.map(error, (e) => e._tag)).toEqual(Option.some("RepositoryError"))
+      }
+    } finally {
+      await closePostgres(unreachable.pool)
+    }
+  })
+
+  it("does not treat a cached token as revoked when the membership re-check cannot reach Postgres", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const setup = await insertOAuthSetup(database.postgresDb, {
+      organizationId: organization.id,
+    })
+    const redis = createFakeRedis()
+    const unreachable = createUnreachablePostgres()
+
+    await Effect.runPromise(
+      validateOAuthAccessToken(setup.accessToken, {
+        redis,
+        adminClient: database.adminPostgresClient,
+      }),
+    )
+
+    try {
+      const exit = await Effect.runPromiseExit(
+        validateOAuthAccessToken(setup.accessToken, { redis, adminClient: unreachable }),
+      )
+
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        const error = Cause.findErrorOption(exit.cause)
+        expect(Option.map(error, (e) => e._tag)).toEqual(Option.some("RepositoryError"))
+      }
+    } finally {
+      await closePostgres(unreachable.pool)
+    }
   })
 
   it("serves a cached result without calling onTokenValidated again", async () => {

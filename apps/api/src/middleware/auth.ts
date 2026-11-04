@@ -1,12 +1,15 @@
-import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
+import { OrganizationId, type RepositoryError, UnauthorizedError, UserId } from "@domain/shared"
 import { validateApiKey } from "@platform/api-key-auth"
+import { parseEnv } from "@platform/env"
 import type { PostgresClient } from "@platform/db-postgres"
 import { type OAuthTokenAuthResult, validateOAuthAccessToken } from "@platform/oauth-token-auth"
 import { withTracing } from "@repo/observability"
-import { Effect } from "effect"
+import { isHttpError, toHttpResponse } from "@repo/utils"
+import { Cause, Effect, Exit, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
 import { getAdminPostgresClient } from "../clients.ts"
 import type { AuthContext } from "../types.ts"
+import { logger } from "../utils/logger.ts"
 import { createTouchBuffer } from "./touch-buffer.ts"
 
 const extractBearerToken = (c: Context): string | undefined => {
@@ -43,7 +46,7 @@ const authenticateWithApiKey = (
   redis: Context["var"]["redis"],
   token: string,
   options: AuthMiddlewareOptions,
-): Effect.Effect<AuthContext | null, never> => {
+) => {
   const adminClient = options.adminClient ?? getAdminPostgresClient()
   const touchBuffer = createTouchBuffer(adminClient, {
     logTouchBuffer: options.logTouchBuffer,
@@ -56,20 +59,20 @@ const authenticateWithApiKey = (
       onKeyValidated: (keyId) => touchBuffer.touch(keyId),
     })
     return result ? apiKeyContext(result) : null
-  }).pipe(Effect.orDie)
+  })
 }
 
 const authenticateWithOAuth = (
   redis: Context["var"]["redis"],
   token: string,
   options: AuthMiddlewareOptions,
-): Effect.Effect<AuthContext | null, never> => {
+) => {
   const adminClient = options.adminClient ?? getAdminPostgresClient()
 
   return Effect.gen(function* () {
     const result = yield* validateOAuthAccessToken(token, { redis, adminClient })
     return result ? oauthContext(result) : null
-  }).pipe(Effect.orDie)
+  })
 }
 
 /**
@@ -82,7 +85,10 @@ const authenticateWithOAuth = (
  * is one extra Redis + DB round-trip on the OAuth happy path; the user knows
  * their throughput envelope and the simplicity wins.
  */
-const authenticate = (c: Context, options: AuthMiddlewareOptions): Effect.Effect<AuthContext, UnauthorizedError> =>
+const authenticate = (
+  c: Context,
+  options: AuthMiddlewareOptions,
+): Effect.Effect<AuthContext, UnauthorizedError | RepositoryError> =>
   Effect.gen(function* () {
     const bearerToken = extractBearerToken(c)
     if (!bearerToken) {
@@ -107,10 +113,30 @@ const authenticate = (c: Context, options: AuthMiddlewareOptions): Effect.Effect
  * and the OAuth access-token store, in that order. Public routes should be
  * excluded from this middleware.
  */
+const setBearerChallenge = (c: Context) => {
+  const apiUrl = Effect.runSync(parseEnv("LAT_API_URL", "string", "http://localhost:3001"))
+  c.header("WWW-Authenticate", `Bearer resource_metadata="${apiUrl}/.well-known/oauth-protected-resource"`)
+}
+
 export const createAuthMiddleware = (options: AuthMiddlewareOptions): MiddlewareHandler => {
   return async (c: Context, next: Next) => {
-    const authContext = await Effect.runPromise(authenticate(c, options).pipe(withTracing))
-    c.set("auth", authContext)
+    const exit = await Effect.runPromiseExit(authenticate(c, options).pipe(withTracing))
+
+    if (Exit.isFailure(exit)) {
+      const authError = Cause.findErrorOption(exit.cause)
+      if (Option.isSome(authError) && isHttpError(authError.value) && authError.value.httpStatus === 401) {
+        const { status, body } = toHttpResponse(authError.value)
+        setBearerChallenge(c)
+        return c.json(body, status as 401)
+      }
+
+      logger.error("Authentication unavailable", exit.cause)
+      return c.json({ error: "Authentication is temporarily unavailable. Please retry later." }, 503, {
+        "Retry-After": "1",
+      })
+    }
+
+    c.set("auth", exit.value)
     await next()
   }
 }
