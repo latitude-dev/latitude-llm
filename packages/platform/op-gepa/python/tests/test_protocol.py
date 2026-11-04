@@ -26,6 +26,7 @@ def test_exception_message_falls_back_to_class_name_for_cancelled_error() -> Non
 
 
 def test_create_exception_error_never_emits_empty_message() -> None:
-    rpc_error = create_exception_error(RpcRemoteError(code=RpcErrorCode.INTERNAL_ERROR, message="", data={"type": "CancelledError"}))
+    remote_error = RpcRemoteError(code=RpcErrorCode.INTERNAL_ERROR, message="", data={"type": "CancelledError"})
+    rpc_error = create_exception_error(remote_error)
 
     assert rpc_error.message == "CancelledError"

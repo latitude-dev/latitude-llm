@@ -1,0 +1,68 @@
+name: Python op-gepa CI
+
+on:
+  pull_request:
+    branches:
+      - development
+    paths:
+      - packages/platform/op-gepa/python/**
+      - .github/workflows/python-op-gepa-ci.yml
+  push:
+    branches:
+      - development
+    paths:
+      - packages/platform/op-gepa/python/**
+      - .github/workflows/python-op-gepa-ci.yml
+  workflow_call:
+
+concurrency:
+  group: python-op-gepa-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: op-gepa Lint and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Python
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version-file: packages/platform/op-gepa/python/.python-version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          cd packages/platform/op-gepa/python
+          uv venv
+          uv sync --locked --all-groups
+
+      - name: Run Ruff linter
+        run: |
+          cd packages/platform/op-gepa/python
+          uv run --locked ruff check .
+
+      - name: Run Ruff format check
+        run: |
+          cd packages/platform/op-gepa/python
+          uv run --locked ruff format --check .
+
+      - name: Run Pyright type check
+        run: |
+          cd packages/platform/op-gepa/python
+          uv run --locked pyright
+
+      - name: Run tests
+        run: |
+          cd packages/platform/op-gepa/python
+          uv run --locked pytest tests/

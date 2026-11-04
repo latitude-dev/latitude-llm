@@ -62,6 +62,7 @@ indent-style = "space"
 
 [tool.pytest.ini_options]
 addopts = "-p no:warnings -n auto"
+pythonpath = ["."]
 xfail_strict = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
