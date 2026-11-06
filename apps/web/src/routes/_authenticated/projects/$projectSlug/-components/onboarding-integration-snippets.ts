@@ -415,7 +415,7 @@ const client = new Anthropic()
 
 await capture("generate-reply", async () => {
   const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-haiku-5-5",
     max_tokens: 1024,
     messages: [{ role: "user", content: "Hello" }],
   })
@@ -442,7 +442,7 @@ client = Anthropic()
 
 def generate_reply():
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-haiku-5-5",
         max_tokens=1024,
         messages=[{"role": "user", "content": "Hello"}],
     )
@@ -475,7 +475,7 @@ const client = new BedrockRuntimeClient({ region: "eu-central-1" })
 
 await capture("generate-reply", async () => {
   const command = new InvokeModelCommand({
-    modelId: "anthropic.claude-3-haiku-20240307-v1:0",
+    modelId: "anthropic.claude-haiku-5-5",
     contentType: "application/json",
     body: JSON.stringify({
       anthropic_version: "bedrock-2023-05-31",
@@ -507,7 +507,7 @@ client = boto3.client("bedrock-runtime", region_name="eu-central-1")
 
 def generate_reply():
     response = client.invoke_model(
-        modelId="anthropic.claude-3-haiku-20240307-v1:0",
+        modelId="anthropic.claude-haiku-5-5",
         contentType="application/json",
         body=json.dumps({
             "anthropic_version": "bedrock-2023-05-31",
@@ -649,7 +649,7 @@ const vertexAI = new VertexAI({
   project: process.env.GCP_PROJECT_ID!,
   location: "us-central1",
 })
-const model = vertexAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+const model = vertexAI.getGenerativeModel({ model: "gemini-3.8-flash" })
 
 await capture("generate-reply", async () => {
   const result = await model.generateContent("Hello")
@@ -673,7 +673,7 @@ latitude = Latitude(
 )
 
 vertexai.init(project=os.environ["GCP_PROJECT_ID"], location="us-central1")
-model = GenerativeModel("gemini-1.5-flash")
+model = GenerativeModel("gemini-3.8-flash")
 
 def generate_reply():
     response = model.generate_content("Hello")
@@ -1206,7 +1206,7 @@ latitude = Latitude(
 def main():
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-3.8-flash",
         contents="Hello",
     )
     return response.text
