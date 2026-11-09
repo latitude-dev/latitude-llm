@@ -90,7 +90,7 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
           project: process.env.GCP_PROJECT_ID!,
           location: "us-central1",
         })
-        const model = vertexAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+        const model = vertexAI.getGenerativeModel({ model: "gemini-3.8-flash" })
 
         await capture("generate-reply", async () => {
           const result = await model.generateContent("Hello")
@@ -114,7 +114,7 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
         )
 
         vertexai.init(project="your-gcp-project", location="us-central1")
-        model = GenerativeModel("gemini-1.5-flash")
+        model = GenerativeModel("gemini-3.8-flash")
 
         def generate_reply():
             response = model.generate_content("Hello")
