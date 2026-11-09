@@ -186,7 +186,7 @@
     "@ai-sdk/openai7": "npm:@ai-sdk/openai@4.0.0-beta.74",
     "@ai-sdk/otel": "1.0.127",
     "@anthropic-ai/sdk": "0.104.1",
-    "@aws-sdk/client-bedrock-runtime": "3.1069.0",
+    "@aws-sdk/client-bedrock-runtime": "3.1161.0",
     "@biomejs/biome": "catalog:",
     "@google-cloud/vertexai": "1.12.0",
     "@langchain/core": "1.1.49",
