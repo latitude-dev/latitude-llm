@@ -40,6 +40,7 @@ import {
   EXPLICIT_PROFANITY_PATTERN_SOURCE,
   isRecord,
   iterMessageParts,
+  replaceLoneSurrogates,
   SLUR_PATTERN_SOURCE,
   truncateExcerpt,
 } from "../flagger-strategies/shared.ts"
@@ -342,8 +343,8 @@ function extractTextFromParts(parts: readonly unknown[]): string[] {
 }
 
 function truncateTail(text: string, maxChars: number): string {
-  if (text.length <= maxChars) return text
-  return `${text.slice(0, maxChars).trimEnd()}...`
+  if (text.length <= maxChars) return replaceLoneSurrogates(text)
+  return `${replaceLoneSurrogates(text.slice(0, maxChars).trimEnd())}...`
 }
 
 function extractInspectedSystemPrompt(conversation: FlaggerConversation): string {
@@ -487,8 +488,8 @@ function renderFallbackAgentContext(systemPrompt: string): string {
   const beginning = truncateTail(systemPrompt, FALLBACK_SYSTEM_PROMPT_CHARS)
   const ending =
     systemPrompt.length <= FALLBACK_SYSTEM_PROMPT_CHARS
-      ? systemPrompt
-      : systemPrompt.slice(-FALLBACK_SYSTEM_PROMPT_CHARS).trimStart()
+      ? replaceLoneSurrogates(systemPrompt)
+      : replaceLoneSurrogates(systemPrompt.slice(-FALLBACK_SYSTEM_PROMPT_CHARS).trimStart())
 
   return [
     "EVALUATED AGENT CONTEXT:",
@@ -506,6 +507,8 @@ function renderFallbackAgentContext(systemPrompt: string): string {
     "</evaluated_agent_system_prompt_excerpt>",
   ].join("\n")
 }
+
+export const renderFallbackAgentContextForTesting = renderFallbackAgentContext
 
 function renderExtractionResult(result: InstructionExtractorOutput): InspectedAgentContext {
   const agentContext = result.agentContext?.trim()

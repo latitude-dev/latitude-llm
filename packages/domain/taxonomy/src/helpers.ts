@@ -215,3 +215,14 @@ export const clamp = (value: number, min: number, max: number): number => {
   if (value > max) return max
   return value
 }
+
+const LONE_SURROGATE_PATTERN = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
+
+/**
+ * Replaces UTF-16 surrogates left without their pair — as produced by
+ * char-index slicing that lands mid-codepoint (e.g. cutting an emoji in
+ * half) — with U+FFFD. Downstream LLM APIs reject a lone surrogate as
+ * invalid JSON, so any slice of untrusted text must go through this before
+ * it reaches a prompt.
+ */
+export const stripLoneSurrogates = (text: string): string => text.replace(LONE_SURROGATE_PATTERN, "�")
