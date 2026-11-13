@@ -15,6 +15,7 @@ import {
   type ProjectId,
   type RepositoryError,
 } from "@domain/shared"
+import { stripLoneSurrogates } from "@repo/utils"
 import { Effect, Option } from "effect"
 import { z } from "zod"
 import {
@@ -127,7 +128,7 @@ const withNamingTimeout = <A, E, R>(effect: Effect.Effect<A, E, R>, durationMs =
 const defangTags = (text: string): string => text.replaceAll("<", "‹").replaceAll(">", "›")
 
 const truncateSample = (sample: string, maxChars: number): string =>
-  sample.length <= maxChars ? sample : `${sample.slice(0, maxChars)}…`
+  stripLoneSurrogates(sample.length <= maxChars ? sample : `${sample.slice(0, maxChars)}…`)
 
 /**
  * Samples per child come from this per-call budget, never from the sibling count:
@@ -305,11 +306,13 @@ const readableObservationSummary = (value: unknown): string | null => {
 const NAMING_SAMPLE_TRUNCATION_MARKER = "\n[...truncated...]\n"
 
 const middleTruncate = (value: string, maxLength: number): string => {
-  if (value.length <= maxLength) return value
-  if (maxLength <= NAMING_SAMPLE_TRUNCATION_MARKER.length) return value.slice(0, maxLength)
+  if (value.length <= maxLength) return stripLoneSurrogates(value)
+  if (maxLength <= NAMING_SAMPLE_TRUNCATION_MARKER.length) return stripLoneSurrogates(value.slice(0, maxLength))
   const head = Math.floor((maxLength - NAMING_SAMPLE_TRUNCATION_MARKER.length) / 2)
   const tail = maxLength - NAMING_SAMPLE_TRUNCATION_MARKER.length - head
-  return `${value.slice(0, head)}${NAMING_SAMPLE_TRUNCATION_MARKER}${value.slice(value.length - tail)}`
+  return stripLoneSurrogates(
+    `${value.slice(0, head)}${NAMING_SAMPLE_TRUNCATION_MARKER}${value.slice(value.length - tail)}`,
+  )
 }
 
 const serializedNamingSamplesLength = (bodies: readonly string[]): number => {
