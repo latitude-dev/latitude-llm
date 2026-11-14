@@ -2,7 +2,7 @@ import { BadRequestError, EvaluationId, ProjectId, SignalId } from "@domain/shar
 import { Effect } from "effect"
 import type { LoadedEvaluationAlignmentState } from "../../alignment/types.ts"
 import { emptyEvaluationAlignment } from "../../entities/evaluation.ts"
-import { isDeletedEvaluation } from "../../helpers.ts"
+import { isDeletedEvaluation, resolveEvaluationScript } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 
@@ -41,6 +41,7 @@ export const loadAlignmentStateUseCase = Effect.fn("evaluations.loadAlignmentSta
   }
 
   const issue = yield* signalRepository.findById(SignalId(input.signalId))
+  const resolvedScript = resolveEvaluationScript(evaluation)
 
   // An unaligned judge (alignment accrues as annotations land) has no matrix yet: present an empty
   // one keyed on the live script hash so the refresh path rebuilds from scratch.
@@ -54,7 +55,7 @@ export const loadAlignmentStateUseCase = Effect.fn("evaluations.loadAlignmentSta
     description: evaluation.description,
     alignedAt: (evaluation.alignedAt ?? evaluation.updatedAt).toISOString(),
     draft: {
-      script: evaluation.script,
+      script: resolvedScript,
       evaluationHash,
       trigger: evaluation.trigger,
     },
