@@ -98,6 +98,18 @@ const aboveThreshold = (probability: number | null, threshold: number) =>
 const isSampledOutDrop = (decision: SessionFlaggerDecision) =>
   decision.action === "dropped" && decision.reason === "sampled-out"
 
+const hasEligibleStrategy = (input: RunJevPreclassifierInput) =>
+  Object.values(JEV_PRECLASSIFIER_STRATEGIES).some((strategy) => {
+    const decision = input.decisions.find((candidate) => candidate.slug === strategy.slug)
+    if (!decision) return false
+    if (isSampledOutDrop(decision)) return input.flaggerBySlug.get(strategy.slug)?.enabled === true
+    if (decision.action !== "classify") return false
+    const probability =
+      decision.selection?.inclusionProbability ??
+      (decision.reason === "sampled" ? (input.flaggerBySlug.get(strategy.slug)?.sampling ?? 0) / 100 : 1)
+    return probability < 1
+  })
+
 const withPropensityCorrection = (
   baseline: SessionFlaggerDecision,
   probability: number | null,
@@ -318,7 +330,7 @@ const meterJevPreclassifierCall = (results: Readonly<Record<string, JevShadowPro
 export const runJevPreclassifierUseCase = Effect.fn("flaggers.runJevPreclassifier")(function* (
   input: RunJevPreclassifierInput,
 ) {
-  if ((input.enabled ?? JEV_PRECLASSIFIER_ENABLED) !== true) {
+  if ((input.enabled ?? JEV_PRECLASSIFIER_ENABLED) !== true || !hasEligibleStrategy(input)) {
     return { decisions: input.decisions, classifications: input.classifications } satisfies RunJevPreclassifierResult
   }
 
