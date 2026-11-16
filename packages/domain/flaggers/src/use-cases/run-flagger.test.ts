@@ -685,6 +685,51 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate[1].prompt).toContain("academic notes assistant")
   })
 
+  it("does not reject a model response missing agentContext during generation, only on local re-validation", async () => {
+    const longSystemPrompt = `
+<identity>
+You are an academic notes assistant that turns course material into high-retention study notes for university students.
+</identity>
+${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.trim()
+    const systemInstructions = [{ type: "text", content: longSystemPrompt }] satisfies TraceDetail["systemInstructions"]
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.succeed({ object: { understood: true } as T, tokens: 20, duration: 90_000_000 })
+        }
+
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Generate notes from the attached PDF." }] },
+            { role: "assistant", parts: [{ type: "text", content: "# Course notes\n\n## 1. Core topic" }] },
+          ],
+          [],
+          systemInstructions,
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    const extractionCall = calls.generate.find((call) => call.system.includes("You extract agent context"))
+    if (!extractionCall) throw new Error("expected an instruction-extraction generate call")
+
+    // The Vercel AI SDK validates the raw provider response against this schema before our own code ever
+    // sees it. `{"understood":true}` with no `agentContext` is exactly what Bedrock's minimax/gpt-oss models
+    // send in production (see ET-243/ET-572): the generation-time schema must accept it, or the SDK fails
+    // the primary model's structured-output validation and burns a second (fallback) model call for nothing.
+    const generationValidation = extractionCall.schema.safeParse({ understood: true })
+    expect(generationValidation.success).toBe(true)
+  })
+
   it("skips long inspected system prompts when the extractor cannot understand the agent", async () => {
     const systemInstructions = [
       { type: "text", content: `Disconnected examples only. ${"example ".repeat(800)}` },
