@@ -1,3 +1,4 @@
+import { AIMeteringScope } from "@domain/billing"
 import { ChSqlClient, OrganizationId } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -54,8 +55,13 @@ const run = (
   } = {},
 ) => {
   const providerCalls: string[][] = []
+  const meteringCalls: unknown[] = []
   const observations: JevPreclassifierObservation[] = []
   const layer = Layer.mergeAll(
+    Layer.succeed(AIMeteringScope, {
+      organizationId: OrganizationId(organizationId),
+      record: (input) => Effect.sync(() => void meteringCalls.push(input)),
+    }),
     Layer.succeed(JevShadowDecisionProvider, {
       decide: () => Effect.die("single-question path must not run"),
       decideMany: ({ questions }) =>
@@ -102,6 +108,7 @@ const run = (
     result,
     providerCalls,
     observations,
+    meteringCalls,
   }))
 }
 
@@ -111,6 +118,78 @@ describe("runJevPreclassifierUseCase", () => {
 
     expect(result.decisions).toBe(baselineDecisions)
     expect(result.classifications).toEqual([{ flaggerId: "nsfw-id", flaggerSlug: "nsfw", reason: "hinted" }])
+    expect(providerCalls).toEqual([])
+    expect(observations).toEqual([])
+  })
+
+  it("skips empty and ineligible sessions without provider, audit, or rate-limit calls", async () => {
+    const rateLimitCalls: string[] = []
+    const ineligibleDecisions: RunJevPreclassifierInput["decisions"] = [
+      { slug: "frustration", action: "dropped", reason: "sampled-out", hintKinds: [] },
+      { slug: "refusal", action: "dropped", reason: "sampled-out", hintKinds: [] },
+      {
+        slug: "nsfw",
+        action: "classify",
+        reason: "hinted",
+        hintKinds: [],
+        selection: { reason: "hinted", inclusionProbability: 1 },
+      },
+      { slug: "pii-leakage", action: "suppressed", suppressedBy: "test" },
+      { slug: "jailbreaking", action: "matched-issue" },
+      { slug: "laziness", action: "failed" },
+      { slug: "incompletion", action: "dropped", reason: "missing-context" },
+      { slug: "forgetting", action: "dropped", reason: "disabled" },
+      { slug: "bluffing", action: "dropped", reason: "missing-flagger" },
+      { slug: "task-failure", action: "dropped", reason: "rate-limited", hintKinds: [] },
+      { slug: "unsupported-strategy", action: "dropped", reason: "sampled-out", hintKinds: [] },
+    ]
+    const input = makeInput({
+      decisions: ineligibleDecisions,
+      flaggerBySlug: new Map([
+        ["frustration", { flaggerId: "frustration-id", slug: "frustration", enabled: false, sampling: 0 }],
+        [
+          "unsupported-strategy",
+          { flaggerId: "unsupported-id", slug: "unsupported-strategy", enabled: true, sampling: 0 },
+        ],
+      ]),
+      checkRateLimit: ({ flaggerSlug }) =>
+        Effect.sync(() => {
+          rateLimitCalls.push(flaggerSlug)
+          return true
+        }),
+    })
+    const { result, providerCalls, observations, meteringCalls } = await run(input, {
+      save: () => Effect.die("audit persistence must not run"),
+    })
+
+    expect(meteringCalls).toEqual([])
+    expect(result.decisions).toBe(ineligibleDecisions)
+    expect(result.classifications).toBe(input.classifications)
+    expect(providerCalls).toEqual([])
+    expect(observations).toEqual([])
+    expect(rateLimitCalls).toEqual([])
+
+    const emptyInput = makeInput({ decisions: [], classifications: [] })
+    const emptyResult = await run(emptyInput)
+    expect(emptyResult.result.decisions).toBe(emptyInput.decisions)
+    expect(emptyResult.result.classifications).toBe(emptyInput.classifications)
+    expect(emptyResult.providerCalls).toEqual([])
+    expect(emptyResult.observations).toEqual([])
+  })
+
+  it("skips sampled-out strategies with missing flaggers", async () => {
+    const decisions: RunJevPreclassifierInput["decisions"] = [
+      { slug: "frustration", action: "dropped", reason: "sampled-out", hintKinds: [] },
+      { slug: "refusal", action: "dropped", reason: "sampled-out", hintKinds: [] },
+    ]
+    const { result, providerCalls, observations } = await run(
+      makeInput({
+        decisions,
+        flaggerBySlug: new Map(),
+        classifications: [],
+      }),
+    )
+    expect(result.decisions).toBe(decisions)
     expect(providerCalls).toEqual([])
     expect(observations).toEqual([])
   })
@@ -266,6 +345,99 @@ describe("runJevPreclassifierUseCase", () => {
       decision: "gated-in",
       classifyAdded: false,
       selectionReason: "ordinary-sample",
+    })
+  })
+
+  it("corrects selected decisions with inclusion probability below one and without selection", async () => {
+    const decisions: RunJevPreclassifierInput["decisions"] = [
+      {
+        slug: "frustration",
+        action: "classify",
+        reason: "sampled",
+        hintKinds: [],
+        selection: { reason: "ordinary-sample", inclusionProbability: 0.1 },
+      },
+      { slug: "refusal", action: "classify", reason: "sampled", hintKinds: [] },
+    ]
+    const { result } = await run(
+      makeInput({
+        decisions,
+        classifications: [
+          { flaggerId: "frustration-id", flaggerSlug: "frustration", reason: "sampled" },
+          { flaggerId: "refusal-id", flaggerSlug: "refusal", reason: "sampled" },
+        ],
+      }),
+      { probabilities: { "flagger.frustration": 0.9, "flagger.refusal": 0.9 } },
+    )
+
+    expect(result.classifications).toHaveLength(2)
+    expect(result.decisions[0]?.action === "classify" && result.decisions[0].selection).toEqual({
+      reason: "ordinary-sample",
+      inclusionProbability: 1,
+    })
+    expect(result.decisions[1]?.action === "classify" && result.decisions[1].selection).toEqual({
+      reason: "ordinary-sample",
+      inclusionProbability: 1,
+    })
+  })
+
+  it("runs propensity correction when missing selection evidence is the only eligible decision", async () => {
+    const classifications: RunJevPreclassifierInput["classifications"] = [
+      { flaggerId: "refusal-id", flaggerSlug: "refusal", reason: "sampled" },
+    ]
+    const { result, providerCalls } = await run(
+      makeInput({
+        decisions: [{ slug: "refusal", action: "classify", reason: "sampled", hintKinds: [] }],
+        classifications,
+        flaggerBySlug: new Map(),
+      }),
+      { probabilities: { "flagger.refusal": 0.9 } },
+    )
+
+    expect(providerCalls).toHaveLength(1)
+    expect(result.classifications).toEqual(classifications)
+    expect(result.decisions[0]).toMatchObject({
+      selection: { reason: "ordinary-sample", inclusionProbability: 1 },
+    })
+  })
+
+  it("skips hinted-only classifications without selection evidence", async () => {
+    const input = makeInput({
+      decisions: [{ slug: "nsfw", action: "classify", reason: "hinted", hintKinds: ["pattern:nsfw"] }],
+      checkRateLimit: () => Effect.die("rate limiting must not run"),
+    })
+    const { result, providerCalls, observations, meteringCalls } = await run(input, {
+      save: () => Effect.die("audit persistence must not run"),
+    })
+
+    expect(result.decisions).toBe(input.decisions)
+    expect(result.classifications).toBe(input.classifications)
+    expect(providerCalls).toEqual([])
+    expect(observations).toEqual([])
+    expect(meteringCalls).toEqual([])
+  })
+
+  it("corrects hinted classifications with explicit probability below one", async () => {
+    const { result, providerCalls } = await run(
+      makeInput({
+        decisions: [
+          {
+            slug: "nsfw",
+            action: "classify",
+            reason: "hinted",
+            hintKinds: ["pattern:nsfw"],
+            selection: { reason: "hinted", inclusionProbability: 0.5 },
+          },
+        ],
+        classifications: [{ flaggerId: "nsfw-id", flaggerSlug: "nsfw", reason: "hinted" }],
+      }),
+      { probabilities: { "flagger.nsfw": 0.9 } },
+    )
+
+    expect(providerCalls).toHaveLength(1)
+    expect(result.classifications).toEqual([{ flaggerId: "nsfw-id", flaggerSlug: "nsfw", reason: "hinted" }])
+    expect(result.decisions[0]).toMatchObject({
+      selection: { reason: "hinted", inclusionProbability: 1 },
     })
   })
 
