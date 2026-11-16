@@ -48,14 +48,16 @@ export const fitPromptToJudgeContextWindow = (
   const contextLimitTokens = resolveJudgeContextLimitTokens(provider, model)
   const budgetTokens = Math.max(contextLimitTokens - maxOutputTokens - CONTEXT_SAFETY_MARGIN_TOKENS, 0)
 
-  const tokens = tokenizer().encode(prompt)
+  // `prompt` embeds arbitrary session/model content — a literal substring like "<|endoftext|>"
+  // must count as ordinary text, not throw as a disallowed special token.
+  const tokens = tokenizer().encode(prompt, [], [])
   if (tokens.length <= budgetTokens) {
     return prompt
   }
 
   // Cap the notice itself to the budget too — an operator-configured maxOutputTokens close to the
   // context limit can leave less room than the notice needs, and the result must still fit.
-  const noticeTokens = tokenizer().encode(PROMPT_TRUNCATION_NOTICE).slice(0, budgetTokens)
+  const noticeTokens = tokenizer().encode(PROMPT_TRUNCATION_NOTICE, [], []).slice(0, budgetTokens)
   const keepTokens = Math.max(budgetTokens - noticeTokens.length, 0)
   const headTokens = Math.ceil(keepTokens / 2)
   const tailTokens = keepTokens - headTokens
