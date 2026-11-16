@@ -3,6 +3,8 @@ import { EvaluationId, NotFoundError, OrganizationId, ProjectId, SignalId, SqlCl
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
+import { compileSettingsToScript } from "../../codegen/compile-settings-to-script.ts"
+import { EVALUATION_CONVERSATION_PLACEHOLDER, wrapPromptAsEvaluationScript } from "../../codegen/judge-script-template.ts"
 import type { Evaluation } from "../../entities/evaluation.ts"
 import { defaultEvaluationTrigger, emptyEvaluationAlignment } from "../../entities/evaluation.ts"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../../ports/evaluation-repository.ts"
@@ -101,6 +103,34 @@ describe("loadAlignmentStateOrInactiveUseCase", () => {
     if (result.status === "active") {
       expect(result.incrementalEligible).toBe(true)
       expect(result.currentScriptHash).toBe(hash)
+    }
+  })
+
+  it("recompiles from settings for alignment, so a stale stored script cannot stay incremental-eligible", async () => {
+    const settings = { kind: "judge", criteria: "Check for secret leakage in the conversation." } as const
+    const legacyPlaceholder = ["${", "conversation}"].join("")
+    const staleScript = wrapPromptAsEvaluationScript(
+      ["Check for secret leakage in the conversation.", legacyPlaceholder].join("\n"),
+    )
+    const staleHash = await hashOptimizationCandidateText(staleScript)
+    const resolvedScript = compileSettingsToScript(settings)
+    const result = await run(
+      makeRepositoryReturning(
+        makeEvaluation({
+          script: staleScript,
+          settings,
+          alignment: emptyEvaluationAlignment(staleHash),
+        }),
+      ),
+    )
+
+    expect(result.status).toBe("active")
+    if (result.status === "active") {
+      expect(result.state.draft.script).toBe(resolvedScript)
+      expect(result.state.draft.script).toContain(EVALUATION_CONVERSATION_PLACEHOLDER)
+      expect(result.incrementalEligible).toBe(false)
+      expect(result.currentScriptHash).toBe(await hashOptimizationCandidateText(resolvedScript))
+      expect(result.currentScriptHash).not.toBe(staleHash)
     }
   })
 
