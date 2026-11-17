@@ -21,9 +21,9 @@ You'll need **Node.js 25** and **Python 3.13** (`mise install`), **pnpm 10** (`c
 
 ```bash
 pnpm install                           # also configures the git hooks
-cd packages/platform/op-gepa/python \  # installs python dependencies 
- && uv venv \
- && uv sync --all-extras --all-groups
+( cd packages/platform/op-gepa/python \
+  && uv venv \
+  && uv sync --all-extras --all-groups ) # installs python dependencies
 cp .env.example .env.development       # local defaults
 cp .env.example .env.test              # then set NODE_ENV=test in it
 mkdir -p storage                       # set LAT_STORAGE_FS_ROOT to its absolute path in both env files
