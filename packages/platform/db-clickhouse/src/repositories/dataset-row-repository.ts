@@ -2,8 +2,29 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import type { DatasetRow, RowFieldValue } from "@domain/datasets"
 import { DatasetRowRepository, RowNotFoundError } from "@domain/datasets"
 import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId, TraceId } from "@domain/shared"
-import { parseCHDate, safeParseJson, safeStringifyJson } from "@repo/utils"
+import { parseCHDate, safeParseJson } from "@repo/utils"
 import { Effect, Layer } from "effect"
+
+const NUMBER_TEXT = /^\s*-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?\s*$/
+
+// Word/number-looking prose must be the whole JSON literal, keeping CSV-import cells off the throwing parse.
+const parsesAsJson = (value: string): boolean => {
+  const trimmed = value.trim()
+  const first = trimmed[0]
+  if (first === undefined) return false
+  if (first === "t" || first === "f" || first === "n") {
+    return trimmed === "true" || trimmed === "false" || trimmed === "null"
+  }
+  if (first === '"' || first === "{" || first === "[") {
+    try {
+      JSON.parse(value)
+      return true
+    } catch {
+      return false
+    }
+  }
+  return NUMBER_TEXT.test(value)
+}
 
 const serializeField = (value: unknown): string => {
   // Collapse empty plain objects to "", but not empty arrays (must round-trip as []).
@@ -15,7 +36,10 @@ const serializeField = (value: unknown): string => {
   ) {
     return ""
   }
-  return safeStringifyJson(value)
+  // Only JSON-parseable strings need quoting; raw storage round-trips the rest and keeps it searchable.
+  if (typeof value === "string" && !parsesAsJson(value)) return value
+  if (value === undefined || value === null) return ""
+  return JSON.stringify(value) ?? ""
 }
 
 // Custom column values are stored as a single JSON object keyed by column identifier. An empty map
@@ -58,9 +82,13 @@ const toDomainRow = (row: DatasetRowCH, datasetId: string): DatasetRow => ({
   version: Number(row.latest_xact_id),
 })
 
+// String-typed JSON cells are stored quoted, so search the unescaped value; every other stored
+// shape (objects, numbers, legacy raw text) keeps matching its raw bytes.
+const searchedColumn = (column: string) => `if(JSONType(${column}) = 'String', JSON_VALUE(${column}, '$'), ${column})`
+
 const buildSearchClause = (search: string | undefined) =>
   search
-    ? "AND (positionCaseInsensitive(input, {search:String}) > 0 OR positionCaseInsensitive(output, {search:String}) > 0 OR positionCaseInsensitive(expected_output, {search:String}) > 0 OR positionCaseInsensitive(custom, {search:String}) > 0)"
+    ? `AND (positionCaseInsensitive(${searchedColumn("input")}, {search:String}) > 0 OR positionCaseInsensitive(${searchedColumn("output")}, {search:String}) > 0 OR positionCaseInsensitive(${searchedColumn("expected_output")}, {search:String}) > 0 OR positionCaseInsensitive(${searchedColumn("custom")}, {search:String}) > 0)`
     : ""
 
 const buildVersionClause = (version: number | undefined) =>
