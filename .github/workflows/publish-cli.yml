@@ -87,13 +87,13 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install cargo-edit
-        uses: taiki-e/install-action@v2.87.29
+        uses: taiki-e/install-action@v2.87.32
         with:
           tool: cargo-edit
 
       - name: Install cross
         if: matrix.cross
-        uses: taiki-e/install-action@v2.87.29
+        uses: taiki-e/install-action@v2.87.32
         with:
           tool: cross
 
