@@ -69,7 +69,7 @@ catalog:
   diff: 8.0.4
   dotenv: 17.3.1
   drizzle-kit: 1.0.0-beta.15-859cf75
-  drizzle-orm: 1.0.0-rc.4-273829f
+  drizzle-orm: 1.0.0-rc.5
   fast-json-stable-stringify: 2.1.0
   "@effect/opentelemetry": 4.0.0-beta.57
   effect: 4.0.0-beta.57
