@@ -338,6 +338,7 @@ const ISSUES_SORT_FIELDS = ["lastSeen", "occurrences", "state"] as const
 const ListSignalsQuerySchema = PaginatedQueryParamsSchema.extend({
   query: z
     .string()
+    .trim()
     .min(1)
     .max(500)
     .optional()
