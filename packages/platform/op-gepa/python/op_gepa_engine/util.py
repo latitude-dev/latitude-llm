@@ -1,5 +1,5 @@
 import os
-from enum import Enum
+from enum import StrEnum as _StdStrEnum
 from typing import Any, Callable, List
 
 import pydantic
@@ -42,7 +42,7 @@ def returns_like[**P, R](func: Callable[..., R]) -> Callable[[Callable[P, Any]],
     return returns_identity  # type: ignore
 
 
-class StrEnum(str, Enum):
+class StrEnum(_StdStrEnum):
     def __str__(self) -> str:
         return str(self.value)
 

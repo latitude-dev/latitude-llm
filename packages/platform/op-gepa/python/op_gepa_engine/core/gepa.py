@@ -20,7 +20,7 @@ from op_gepa_engine.rpc.server import RpcServer
 from op_gepa_engine.util import Model, StrEnum
 
 type Component = str
-type Script = str # <script hash>
+type Script = str  # <script hash>
 type System = dict[Component, Script]
 
 
@@ -168,8 +168,13 @@ async def handle_gepa_optimize(server: RpcServer, params: GepaOptimizeParams) ->
         GepaStopReason.COMPLETED,
     )
 
+    # GEPA returns a plain str only for str seeds; we always seed with a System dict.
+    optimized = result.best_candidate
+    if not isinstance(optimized, dict):
+        raise TypeError(f"GEPA returned a {type(optimized).__name__} candidate for a dict seed")
+
     return GepaOptimizeResult(
-        optimized=result.best_candidate,
+        optimized=optimized,
         stopReason=stop_reason,
         totalIterations=iteration_counter.iterations,
         # Subtract the seed candidate; remaining entries in the pool are
