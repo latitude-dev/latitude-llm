@@ -61,6 +61,20 @@ Examples (only \`enrichedFeedback\` — you still supply reasoning in your outpu
 - Raw: "good answer" → "Satisfactory and correct response to the request"
 `.trim()
 
+const ENRICHMENT_CONVERSATION_MAX_CHARS = 120_000
+
+function truncateMiddle(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text
+
+  const omitted = text.length - maxChars
+  const marker = `\n[... ${omitted} chars omitted from the middle of the conversation ...]\n`
+  const available = Math.max(0, maxChars - marker.length)
+  const headLength = Math.ceil(available / 2)
+  const tailLength = available - headLength
+
+  return `${text.slice(0, headLength).trimEnd()}${marker}${text.slice(text.length - tailLength).trimStart()}`
+}
+
 const buildEnrichmentPrompt = (
   metadata: AnnotationScoreMetadata,
   options: {
@@ -168,7 +182,10 @@ export const enrichAnnotationForPublicationUseCase = Effect.fn("annotations.enri
       }
 
       if (detail.allMessages.length > 0) {
-        fullConversationText = formatGenAIMessagesForEnrichmentPrompt(detail.allMessages)
+        fullConversationText = truncateMiddle(
+          formatGenAIMessagesForEnrichmentPrompt(detail.allMessages),
+          ENRICHMENT_CONVERSATION_MAX_CHARS,
+        )
         if (metadata.messageIndex !== undefined) {
           highlightedExcerpt = resolveAnnotationAnchorText(detail.allMessages, metadata)
         }
