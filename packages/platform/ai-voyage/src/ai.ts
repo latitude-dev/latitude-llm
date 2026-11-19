@@ -9,7 +9,7 @@ import {
 } from "@domain/ai"
 import { runWithAiTelemetry } from "@platform/ai-latitude"
 import { parseEnv } from "@platform/env"
-import { Effect } from "effect"
+import { Effect, Schedule } from "effect"
 import type { VoyageAIClient } from "voyageai"
 
 const require = createRequire(import.meta.url)
@@ -27,6 +27,25 @@ const requireVoyageAi = () => {
     }
   }
 }
+
+/**
+ * The Voyage SDK's own abort-signal timeout misclassifies under Node's native
+ * fetch: `getTimeoutSignal` aborts with the plain string `"timeout"` as the
+ * reason, so the rejection isn't `instanceof Error` and fails the SDK's own
+ * `error.name === "AbortError"` check — it falls through to a generic
+ * `VoyageAIError` whose message is exactly `"timeout"` instead of the
+ * purpose-built `VoyageAITimeoutError`. Matching on both keeps this retry
+ * correct if the SDK ever classifies it properly.
+ */
+const isRetryableVoyageTimeout = (error: AIError): boolean => {
+  const cause = error.cause
+  if (!(cause instanceof Error)) return false
+  return cause.name === "VoyageAITimeoutError" || (cause.name === "VoyageAIError" && cause.message === "timeout")
+}
+
+// One retry is enough to absorb an occasional slow response without doubling
+// worst-case latency too far past the SDK's default 60s per-call timeout.
+const VOYAGE_TIMEOUT_RETRY_SCHEDULE = Schedule.addDelay(Schedule.recurs(1), () => Effect.succeed("250 millis"))
 
 const createVoyageClient = (): Effect.Effect<VoyageAIClient, AIError> =>
   parseEnv("LAT_VOYAGE_API_KEY", "string").pipe(
@@ -89,7 +108,7 @@ export const embedWithVoyage = (input: EmbedInput): Effect.Effect<EmbedResult, A
           message: `Embedding failed (${input.model}): ${cause instanceof Error ? cause.message : String(cause)}`,
           cause,
         }),
-    })
+    }).pipe(Effect.retry({ while: isRetryableVoyageTimeout, schedule: VOYAGE_TIMEOUT_RETRY_SCHEDULE }))
   })
 
 export const rerankWithVoyage = (input: RerankInput): Effect.Effect<readonly RerankResult[], AIError> =>
@@ -130,5 +149,5 @@ export const rerankWithVoyage = (input: RerankInput): Effect.Effect<readonly Rer
           message: `Rerank failed (${input.model}): ${cause instanceof Error ? cause.message : String(cause)}`,
           cause,
         }),
-    })
+    }).pipe(Effect.retry({ while: isRetryableVoyageTimeout, schedule: VOYAGE_TIMEOUT_RETRY_SCHEDULE }))
   })
