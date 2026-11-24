@@ -16,6 +16,7 @@ import {
   type FlaggerClassificationReason,
   type FlaggerScreeningSelection,
   recordFlaggerScreeningOutcomeUseCase,
+  type ScreenSessionFlaggersDeps,
   type ScreenSessionFlaggersResult,
   type SessionHint,
   saveFlaggerAnnotationUseCase,
@@ -31,6 +32,7 @@ import {
   checkRedisRateLimit,
   RedisBillingSpendReservationLive,
   RedisCacheStoreLive,
+  type RedisClient,
   reserveRedisBudget,
 } from "@platform/cache-redis"
 import {
@@ -122,6 +124,40 @@ const checkRateLimit: CheckFlaggerLlmRateLimit = ({ organizationId, flaggerSlug,
   }).pipe(Effect.map((result) => result.allowed))
 }
 
+export const createFlaggerBudgetReservations = ({
+  redis,
+  now = () => new Date(),
+}: {
+  readonly redis: RedisClient
+  readonly now?: () => Date
+}): Pick<Required<ScreenSessionFlaggersDeps>, "reserveQualityBudget" | "reserveProjectBudget"> => ({
+  reserveQualityBudget: (reservation) =>
+    reserveRedisBudget(redis, {
+      key: `org:${reservation.organizationId}:project:${reservation.projectId}:flagger-quality:${reservation.group}:${now().toISOString().slice(0, 10)}`,
+      reservationId: reservation.reservationId,
+      units: 1,
+      limit: FLAGGER_QUALITY_DAILY_SESSION_LIMIT,
+      ttlSeconds: FLAGGER_PROJECT_BUDGET_TTL_SECONDS,
+    }),
+  reserveProjectBudget: (reservation) =>
+    Effect.gen(function* () {
+      const configured = yield* parseEnvOptional("LAT_FLAGGER_PROJECT_DAILY_CLASSIFICATION_LIMIT", "number")
+      const limit = configured ?? FLAGGER_PROJECT_DAILY_CLASSIFICATION_LIMIT
+      if (!Number.isSafeInteger(limit) || limit < 0) {
+        yield* Effect.logWarning("Invalid project classification budget; skipping automatic classification")
+        return false
+      }
+      const day = now().toISOString().slice(0, 10)
+      return yield* reserveRedisBudget(redis, {
+        key: `org:${reservation.organizationId}:project:${reservation.projectId}:flagger-budget:${day}`,
+        reservationId: reservation.reservationId,
+        units: reservation.classifications,
+        limit,
+        ttlSeconds: FLAGGER_PROJECT_BUDGET_TTL_SECONDS,
+      })
+    }).pipe(Effect.catch(() => Effect.succeed(false))),
+})
+
 const summarizeDecisions = (decisions: ScreenSessionFlaggersResult["decisions"]) => {
   const counts: Record<string, number> = { matched: 0, classify: 0, dropped: 0, suppressed: 0, failed: 0 }
   for (const decision of decisions) {
@@ -150,31 +186,7 @@ export const screenSessionFlaggers = async (
     { ...input, attempt: currentActivityAttempt() },
     {
       checkRateLimit,
-      reserveQualityBudget: (reservation) =>
-        reserveRedisBudget(getRedisClient(), {
-          key: `org:${reservation.organizationId}:project:${reservation.projectId}:flagger-quality:${reservation.group}:${new Date().toISOString().slice(0, 10)}`,
-          reservationId: reservation.reservationId,
-          units: 1,
-          limit: FLAGGER_QUALITY_DAILY_SESSION_LIMIT,
-          ttlSeconds: FLAGGER_PROJECT_BUDGET_TTL_SECONDS,
-        }),
-      reserveProjectBudget: (reservation) =>
-        Effect.gen(function* () {
-          const configured = yield* parseEnvOptional("LAT_FLAGGER_PROJECT_DAILY_CLASSIFICATION_LIMIT", "number")
-          const limit = configured ?? FLAGGER_PROJECT_DAILY_CLASSIFICATION_LIMIT
-          if (!Number.isSafeInteger(limit) || limit < 0) {
-            yield* Effect.logWarning("Invalid project classification budget; skipping automatic classification")
-            return false
-          }
-          const day = new Date().toISOString().slice(0, 10)
-          return yield* reserveRedisBudget(getRedisClient(), {
-            key: `org:${reservation.organizationId}:project:${reservation.projectId}:flagger-budget:${day}`,
-            reservationId: reservation.reservationId,
-            units: reservation.classifications,
-            limit,
-            ttlSeconds: FLAGGER_PROJECT_BUDGET_TTL_SECONDS,
-          })
-        }).pipe(Effect.catch(() => Effect.succeed(false))),
+      ...createFlaggerBudgetReservations({ redis: getRedisClient() }),
       ...(jevPreclassifierEnabled ? { jevPreclassifier: { enabled: true, ...activityIdentity } } : {}),
     },
   )

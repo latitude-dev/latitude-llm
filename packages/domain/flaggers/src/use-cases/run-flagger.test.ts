@@ -1456,7 +1456,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate).toHaveLength(0)
   })
 
-  it.each([null, 429, 503])(
+  it.each([null, 429, 503, "cycle"] as const)(
     "propagates temporary provider errors through a fallback wrapper: %s",
     async (statusCode) => {
       const { repository } = createFakeTraceRepository({
@@ -1475,19 +1475,12 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
           ),
       })
 
+      const providerError = Object.assign(new Error("Temporary provider failure"), { statusCode })
+      const wrapper = new Error("Both model attempts failed", { cause: providerError })
+      if (statusCode === "cycle") providerError.cause = wrapper
       const { layer: aiLayer } = createFakeAI({
         generate: () =>
-          Effect.fail(
-            new AIError({
-              message: "Model unavailable",
-              cause:
-                statusCode === null
-                  ? null
-                  : new Error("Both model attempts failed", {
-                      cause: Object.assign(new Error("Temporary provider failure"), { statusCode }),
-                    }),
-            }),
-          ),
+          Effect.fail(new AIError({ message: "Model unavailable", cause: statusCode === null ? null : wrapper })),
       })
 
       const exit = await Effect.runPromise(
