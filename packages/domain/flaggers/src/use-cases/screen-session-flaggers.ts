@@ -344,6 +344,7 @@ const dropLimitedClassifications = (
             reason: "rate-limited",
             hinted: decision.reason === "hinted",
             hintKinds: decision.hintKinds,
+            ...(decision.selection ? { selection: decision.selection } : {}),
           }
         : decision,
   ),

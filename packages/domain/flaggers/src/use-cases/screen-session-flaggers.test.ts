@@ -361,6 +361,33 @@ describe("screenSessionFlaggersUseCase", () => {
     expect(result.classifications).toHaveLength(allowed ? 1 : 0)
   })
 
+  it("preserves certainty for a Jev selection rejected by the classification budget", async () => {
+    let reservations = 0
+    const { result, screeningDecisions } = await runScreening({
+      session: makeSessionDetail([user("Hello."), assistant("Hello.")]),
+      flaggers: [makeFlagger("frustration", 0)],
+      deps: {
+        ...fakeDeps.deps,
+        reserveProjectBudget: () => Effect.sync(() => ++reservations === 1),
+      },
+      jevPreclassifier: {
+        enabled: true,
+        workflowId: "workflow",
+        workflowRunId: "run",
+        activityId: "activity",
+        activityAttempt: 1,
+      },
+      jevProbabilities: { "flagger.frustration": 0.8 },
+    })
+    expect(reservations).toBe(2)
+    expect(result.classifications).toEqual([])
+    expect(screeningDecisions.find((decision) => decision.flaggerSlug === "frustration")).toMatchObject({
+      selected: false,
+      reason: "rate-limited",
+      inclusionProbability: 1,
+    })
+  })
+
   it("gates only above-threshold LLM dimensions and keeps partial failures isolated", async () => {
     const session = makeSessionDetail([user("Hello."), assistant("Hello.")])
     const { result, jevObservations } = await runScreening({
@@ -1327,6 +1354,30 @@ describe("Safety suite selection", () => {
     expect(decisionFor(result.decisions, "pii-leakage")).toMatchObject({ action: "dropped", reason: "rate-limited" })
     expect(result.classifications).toEqual([])
   })
+
+  it.each(["quality", "project"] as const)(
+    "preserves shared selection probability after a %s budget rejection",
+    async (budget) => {
+      const deps = makeDeps()
+      const { result, screeningDecisions } = await runScreening({
+        session: INJECTION_SESSION,
+        flaggers: suiteFlaggers(0, 0),
+        deps: {
+          ...deps.deps,
+          reserveQualityBudget: () => Effect.succeed(budget !== "quality"),
+          reserveProjectBudget: () => Effect.succeed(budget !== "project"),
+        },
+      })
+      expect(result.classifications).toEqual([])
+      for (const slug of ["jailbreaking", "pii-leakage"]) {
+        expect(selectionFor(screeningDecisions, slug)).toMatchObject({
+          selected: false,
+          reason: "rate-limited",
+          inclusionProbability: 1,
+        })
+      }
+    },
+  )
 
   it("carries the unhinted member along at certainty when its partner is hinted", async () => {
     const deps = makeDeps()
