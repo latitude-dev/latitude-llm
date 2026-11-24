@@ -72,7 +72,7 @@ export interface ScreenSessionFlaggersDeps {
     readonly organizationId: string
     readonly projectId: string
     readonly reservationId: string
-    readonly classifications: number
+    readonly units: number
   }) => Effect.Effect<boolean>
   readonly jevPreclassifier?: {
     readonly enabled: boolean
@@ -268,7 +268,8 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
   const baselineDecisions = [...phase1Decisions, ...phase2Decisions]
   const preclassifier = deps.jevPreclassifier
   const preclassified =
-    preclassifier?.enabled === true
+    preclassifier?.enabled === true &&
+    (yield* reservePreclassifierBudget({ input, reserve: deps.reserveProjectBudget }))
       ? yield* runJevPreclassifierUseCase({
           enabled: true,
           ...input,
@@ -382,6 +383,27 @@ const applyClassificationQualityLimit = (args: {
     return dropLimitedClassifications(args.preclassified, blocked)
   })
 
+const reservePreclassifierBudget = (args: {
+  readonly input: ScreenSessionFlaggersInput
+  readonly reserve: ScreenSessionFlaggersDeps["reserveProjectBudget"]
+}) =>
+  Effect.gen(function* () {
+    if (!args.reserve) return true
+    const reservationId = yield* hash({
+      namespace: "flagger-preclassifier-budget-v1",
+      sessionId: args.input.sessionId,
+      analysisHash: args.input.analysisHash,
+    })
+    const allowed = yield* args.reserve({
+      organizationId: args.input.organizationId,
+      projectId: args.input.projectId,
+      reservationId,
+      units: 1,
+    })
+    if (!allowed) yield* Effect.annotateCurrentSpan("flaggers.preclassifierBudgetExhausted", true)
+    return allowed
+  })
+
 const applyProjectClassificationBudget = (args: {
   readonly input: ScreenSessionFlaggersInput
   readonly preclassified: ClassificationScreening
@@ -399,7 +421,7 @@ const applyProjectClassificationBudget = (args: {
       organizationId: args.input.organizationId,
       projectId: args.input.projectId,
       reservationId,
-      classifications: args.preclassified.classifications.length,
+      units: args.preclassified.classifications.length,
     })
     if (allowed) return args.preclassified
     yield* Effect.annotateCurrentSpan("flaggers.projectBudgetExhausted", true)

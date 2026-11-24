@@ -151,11 +151,17 @@ export const createFlaggerBudgetReservations = ({
       return yield* reserveRedisBudget(redis, {
         key: `org:${reservation.organizationId}:project:${reservation.projectId}:flagger-budget:${day}`,
         reservationId: reservation.reservationId,
-        units: reservation.classifications,
+        units: reservation.units,
         limit,
         ttlSeconds: FLAGGER_PROJECT_BUDGET_TTL_SECONDS,
       })
-    }).pipe(Effect.catch(() => Effect.succeed(false))),
+    }).pipe(
+      Effect.catch(() =>
+        Effect.logWarning("Invalid project classification budget; skipping automatic classification").pipe(
+          Effect.as(false),
+        ),
+      ),
+    ),
 })
 
 const summarizeDecisions = (decisions: ScreenSessionFlaggersResult["decisions"]) => {

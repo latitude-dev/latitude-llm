@@ -152,6 +152,7 @@ const runScreening = async (options: RunOptions) => {
     createFakeFlaggerScreeningDecisionRepository()
   const outboxEvents: unknown[] = []
   const jevObservations: JevPreclassifierObservation[] = []
+  let jevCalls = 0
 
   const layer = Layer.mergeAll(
     Layer.succeed(SessionRepository, sessionRepo),
@@ -164,8 +165,9 @@ const runScreening = async (options: RunOptions) => {
     Layer.succeed(FlaggerScreeningDecisionRepository, screeningDecisionRepo),
     Layer.succeed(JevShadowDecisionProvider, {
       decide: () => Effect.die("Jev single-question path must not run"),
-      decideMany: ({ questions }) =>
-        options.jevProviderFails
+      decideMany: ({ questions }) => {
+        jevCalls++
+        return options.jevProviderFails
           ? Effect.die("provider failed")
           : Effect.succeed(
               Object.fromEntries(
@@ -197,7 +199,8 @@ const runScreening = async (options: RunOptions) => {
                   ]
                 }),
               ),
-            ),
+            )
+      },
     }),
     Layer.succeed(JevPreclassifierObservationRepository, {
       saveMany: (observations) =>
@@ -229,7 +232,7 @@ const runScreening = async (options: RunOptions) => {
     ).pipe(Effect.provide(layer)),
   )
 
-  return { result, scores, screeningDecisions, outboxEvents, jevObservations }
+  return { result, scores, screeningDecisions, outboxEvents, jevObservations, jevCalls }
 }
 
 const decisionFor = (decisions: readonly SessionFlaggerDecision[], slug: string) =>
@@ -281,7 +284,7 @@ describe("screenSessionFlaggersUseCase", () => {
   )
 
   it.each([true, false])("reserves a hinted batch and keeps coverage honest when denied: %s", async (allowed) => {
-    const reservations: Array<{ classifications: number; reservationId: string }> = []
+    const reservations: Array<{ units: number; reservationId: string }> = []
     const { result, screeningDecisions } = await runScreening({
       session: makeSessionDetail([user("I already told you the deadline."), assistant("Sorry.")]),
       flaggers: [makeFlagger("frustration", 0)],
@@ -300,7 +303,7 @@ describe("screenSessionFlaggersUseCase", () => {
       {
         organizationId: ORG_ID,
         projectId: PROJECT_ID,
-        classifications: 1,
+        units: 1,
         reservationId: expect.stringMatching(/^[a-f0-9]{64}$/),
       },
     ])
@@ -317,8 +320,8 @@ describe("screenSessionFlaggersUseCase", () => {
       flaggers: [makeFlagger("jailbreaking", 100), makeFlagger("pii-leakage", 100), makeFlagger("empty-response", 100)],
       deps: {
         ...fakeDeps.deps,
-        reserveProjectBudget: ({ classifications }) => {
-          expect(classifications).toBe(2)
+        reserveProjectBudget: ({ units }) => {
+          expect(units).toBe(2)
           return Effect.succeed(false)
         },
       },
@@ -329,6 +332,33 @@ describe("screenSessionFlaggersUseCase", () => {
       expect(decisionFor(result.decisions, slug)).toMatchObject({ action: "dropped", reason: "rate-limited" })
     }
     expect(decisionFor(result.decisions, "empty-response")).toMatchObject({ action: "dropped", reason: "unmatched" })
+  })
+
+  it.each([true, false])("reserves the project allowance before paid Jev work: %s", async (allowed) => {
+    const reservations: number[] = []
+    const { jevCalls, result } = await runScreening({
+      session: makeSessionDetail([user("Hello."), assistant("Hello.")]),
+      flaggers: [makeFlagger("frustration", 0)],
+      deps: {
+        ...fakeDeps.deps,
+        reserveProjectBudget: ({ units }) =>
+          Effect.sync(() => {
+            reservations.push(units)
+            return allowed
+          }),
+      },
+      jevPreclassifier: {
+        enabled: true,
+        workflowId: "workflow",
+        workflowRunId: "run",
+        activityId: "activity",
+        activityAttempt: 1,
+      },
+      jevProbabilities: { "flagger.frustration": 0.8 },
+    })
+    expect(jevCalls).toBe(allowed ? 1 : 0)
+    expect(reservations).toEqual(allowed ? [1, 1] : [1])
+    expect(result.classifications).toHaveLength(allowed ? 1 : 0)
   })
 
   it("gates only above-threshold LLM dimensions and keeps partial failures isolated", async () => {

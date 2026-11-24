@@ -1,5 +1,5 @@
 import type { RedisClient } from "@platform/cache-redis"
-import { Effect } from "effect"
+import { Effect, Logger } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
 import {
   createFlaggerBudgetReservations,
@@ -78,7 +78,7 @@ const reservation = {
   organizationId: "org-a",
   projectId: "project-a",
   reservationId: "session-analysis",
-  classifications: 2,
+  units: 2,
 }
 
 const makeBudgetReservations = (result = 1) => {
@@ -121,7 +121,15 @@ describe("flagger budget activity wiring", () => {
   it.each(["not-a-number", "-1", "1.5"])("rejects invalid configuration without reserving: %s", async (limit) => {
     process.env.LAT_FLAGGER_PROJECT_DAILY_CLASSIFICATION_LIMIT = limit
     const { calls, budgets } = makeBudgetReservations()
-    expect(await Effect.runPromise(budgets.reserveProjectBudget(reservation))).toBe(false)
+    const messages: string[] = []
+    expect(
+      await Effect.runPromise(
+        budgets
+          .reserveProjectBudget(reservation)
+          .pipe(Effect.provide(Logger.layer([Logger.make(({ message }) => messages.push(String(message)))]))),
+      ),
+    ).toBe(false)
+    expect(messages).toEqual(["Invalid project classification budget; skipping automatic classification"])
     expect(calls).toEqual([])
   })
 
