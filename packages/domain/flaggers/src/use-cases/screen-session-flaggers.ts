@@ -10,7 +10,11 @@ import {
 } from "@domain/shared"
 import { type CryptoError, hash } from "@repo/utils"
 import { Cause, Effect } from "effect"
-import { FLAGGER_SCREENING_ARTIFACT_VERSION, FLAGGER_SCREENING_RETENTION_DAYS } from "../constants.ts"
+import {
+  FLAGGER_QUALITY_LIMITED_SLUGS,
+  FLAGGER_SCREENING_ARTIFACT_VERSION,
+  FLAGGER_SCREENING_RETENTION_DAYS,
+} from "../constants.ts"
 import { computeFlaggerAnchorContentHash, type FlaggerSessionContext } from "../conversation.ts"
 import { flaggerSlugSchema } from "../entities/flagger.ts"
 import type {
@@ -58,6 +62,18 @@ export type CheckFlaggerLlmRateLimit = (args: {
 
 export interface ScreenSessionFlaggersDeps {
   readonly checkRateLimit: CheckFlaggerLlmRateLimit
+  readonly reserveQualityBudget?: (input: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly reservationId: string
+    readonly group: string
+  }) => Effect.Effect<boolean>
+  readonly reserveProjectBudget?: (input: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly reservationId: string
+    readonly classifications: number
+  }) => Effect.Effect<boolean>
   readonly jevPreclassifier?: {
     readonly enabled: boolean
     readonly workflowId: string
@@ -274,7 +290,17 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
           ),
         )
       : { decisions: baselineDecisions, classifications }
-  const decisions = preclassified.decisions
+  const qualityLimited = yield* applyClassificationQualityLimit({
+    input,
+    preclassified,
+    reserve: deps.reserveQualityBudget,
+  })
+  const budgeted = yield* applyProjectClassificationBudget({
+    input,
+    preclassified: qualityLimited,
+    reserve: deps.reserveProjectBudget,
+  })
+  const decisions = budgeted.decisions
   const screeningDecisions = yield* Effect.forEach(decisions, (decision) =>
     buildInitialScreeningDecision({
       input,
@@ -285,7 +311,7 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
   const screeningDecisionRepository = yield* FlaggerScreeningDecisionRepository
   yield* screeningDecisionRepository.saveMany(screeningDecisions)
 
-  const classificationRequests = preclassified.classifications.map((classification) => ({
+  const classificationRequests = budgeted.classifications.map((classification) => ({
     ...classification,
     screeningSelection: toSelection(findScreeningDecision(screeningDecisions, classification.flaggerSlug)),
   }))
@@ -297,6 +323,91 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
     latestTraceId,
   } satisfies ScreenSessionFlaggersResult
 })
+
+interface ClassificationScreening {
+  readonly decisions: readonly SessionFlaggerDecision[]
+  readonly classifications: readonly PendingFlaggerClassificationRequest[]
+}
+
+const dropLimitedClassifications = (
+  input: ClassificationScreening,
+  blocked: ReadonlySet<string>,
+): ClassificationScreening => ({
+  classifications: input.classifications.filter((item) => !blocked.has(item.flaggerSlug)),
+  decisions: input.decisions.map(
+    (decision): SessionFlaggerDecision =>
+      decision.action === "classify" && blocked.has(decision.slug)
+        ? {
+            slug: decision.slug,
+            action: "dropped",
+            reason: "rate-limited",
+            hinted: decision.reason === "hinted",
+            hintKinds: decision.hintKinds,
+          }
+        : decision,
+  ),
+})
+
+const applyClassificationQualityLimit = (args: {
+  readonly input: ScreenSessionFlaggersInput
+  readonly preclassified: ClassificationScreening
+  readonly reserve: ScreenSessionFlaggersDeps["reserveQualityBudget"]
+}) =>
+  Effect.gen(function* () {
+    if (!args.reserve) return args.preclassified
+    const groups = new Map<string, string[]>()
+    for (const classification of args.preclassified.classifications) {
+      const slug = classification.flaggerSlug
+      if (!FLAGGER_QUALITY_LIMITED_SLUGS.some((limited) => limited === slug)) continue
+      const group = isSafetySuiteSlug(slug) ? SAFETY_SUITE_KEY : slug
+      groups.set(group, [...(groups.get(group) ?? []), slug])
+    }
+    const blocked = new Set<string>()
+    for (const [group, slugs] of groups) {
+      const reservationId = yield* hash({
+        namespace: "flagger-quality-budget-v1",
+        sessionId: args.input.sessionId,
+        analysisHash: args.input.analysisHash,
+        group,
+      })
+      const allowed = yield* args.reserve({
+        organizationId: args.input.organizationId,
+        projectId: args.input.projectId,
+        reservationId,
+        group,
+      })
+      if (!allowed) for (const slug of slugs) blocked.add(slug)
+    }
+    yield* Effect.annotateCurrentSpan("flaggers.qualityLimitedCount", blocked.size)
+    return dropLimitedClassifications(args.preclassified, blocked)
+  })
+
+const applyProjectClassificationBudget = (args: {
+  readonly input: ScreenSessionFlaggersInput
+  readonly preclassified: ClassificationScreening
+  readonly reserve: ScreenSessionFlaggersDeps["reserveProjectBudget"]
+}) =>
+  Effect.gen(function* () {
+    if (!args.reserve || args.preclassified.classifications.length === 0) return args.preclassified
+    const reservationId = yield* hash({
+      namespace: "flagger-project-budget-v1",
+      sessionId: args.input.sessionId,
+      analysisHash: args.input.analysisHash,
+      slugs: args.preclassified.classifications.map((item) => item.flaggerSlug).sort(),
+    })
+    const allowed = yield* args.reserve({
+      organizationId: args.input.organizationId,
+      projectId: args.input.projectId,
+      reservationId,
+      classifications: args.preclassified.classifications.length,
+    })
+    if (allowed) return args.preclassified
+    yield* Effect.annotateCurrentSpan("flaggers.projectBudgetExhausted", true)
+    return dropLimitedClassifications(
+      args.preclassified,
+      new Set(args.preclassified.classifications.map((item) => item.flaggerSlug)),
+    )
+  })
 
 const EMPTY_MAP: ReadonlyMap<string, SessionFlaggerDecision> = new Map()
 

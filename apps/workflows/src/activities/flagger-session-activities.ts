@@ -7,6 +7,9 @@ import {
   type DraftSessionFlaggerAnnotationResult,
   draftSessionFlaggerAnnotationWithBillingUseCase,
   FLAGGER_HINTED_RATE_LIMIT,
+  FLAGGER_PROJECT_BUDGET_TTL_SECONDS,
+  FLAGGER_PROJECT_DAILY_CLASSIFICATION_LIMIT,
+  FLAGGER_QUALITY_DAILY_SESSION_LIMIT,
   FLAGGER_SAMPLED_POSITIVE_RATE_LIMIT,
   FLAGGER_SAMPLED_RATE_LIMIT,
   type FlaggerAnnotateOutput,
@@ -24,7 +27,12 @@ import type { SafetyFindingKind } from "@domain/scores"
 import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { JevPreclassifierDecisionProviderLive, JevShadowDecisionProviderUnconfigured } from "@platform/ai-jev"
-import { checkRedisRateLimit, RedisBillingSpendReservationLive, RedisCacheStoreLive } from "@platform/cache-redis"
+import {
+  checkRedisRateLimit,
+  RedisBillingSpendReservationLive,
+  RedisCacheStoreLive,
+  reserveRedisBudget,
+} from "@platform/cache-redis"
 import {
   FlaggerScreeningDecisionRepositoryLive,
   JevPreclassifierObservationRepositoryLive,
@@ -142,6 +150,31 @@ export const screenSessionFlaggers = async (
     { ...input, attempt: currentActivityAttempt() },
     {
       checkRateLimit,
+      reserveQualityBudget: (reservation) =>
+        reserveRedisBudget(getRedisClient(), {
+          key: `org:${reservation.organizationId}:project:${reservation.projectId}:flagger-quality:${reservation.group}:${new Date().toISOString().slice(0, 10)}`,
+          reservationId: reservation.reservationId,
+          units: 1,
+          limit: FLAGGER_QUALITY_DAILY_SESSION_LIMIT,
+          ttlSeconds: FLAGGER_PROJECT_BUDGET_TTL_SECONDS,
+        }),
+      reserveProjectBudget: (reservation) =>
+        Effect.gen(function* () {
+          const configured = yield* parseEnvOptional("LAT_FLAGGER_PROJECT_DAILY_CLASSIFICATION_LIMIT", "number")
+          const limit = configured ?? FLAGGER_PROJECT_DAILY_CLASSIFICATION_LIMIT
+          if (!Number.isSafeInteger(limit) || limit < 0) {
+            yield* Effect.logWarning("Invalid project classification budget; skipping automatic classification")
+            return false
+          }
+          const day = new Date().toISOString().slice(0, 10)
+          return yield* reserveRedisBudget(getRedisClient(), {
+            key: `org:${reservation.organizationId}:project:${reservation.projectId}:flagger-budget:${day}`,
+            reservationId: reservation.reservationId,
+            units: reservation.classifications,
+            limit,
+            ttlSeconds: FLAGGER_PROJECT_BUDGET_TTL_SECONDS,
+          })
+        }).pipe(Effect.catch(() => Effect.succeed(false))),
       ...(jevPreclassifierEnabled ? { jevPreclassifier: { enabled: true, ...activityIdentity } } : {}),
     },
   )

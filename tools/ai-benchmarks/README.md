@@ -18,6 +18,10 @@ harness:
    **diffs against a baseline** committed at `baselines/<target>.json`, so
    prompt changes surface as a flip list.
 
+Public fixtures without a system prompt use a fixed synthetic general-purpose assistant context. The classifier requires inspected agent context; an empty context would skip generation and measure no model behavior. An explicit fixture system prompt takes precedence. These results do not reconstruct the upstream model's actual system prompt.
+
+The standard runner's token meter records successful logical generations only. It does not include all tokens spent on failed primary or fallback attempts. Do not use that estimate as provider cost per usable verdict without collecting provider-attempt usage as well.
+
 Fixtures are gitignored — they're regenerated from pinned upstream refs.
 Baselines and mappers are committed.
 

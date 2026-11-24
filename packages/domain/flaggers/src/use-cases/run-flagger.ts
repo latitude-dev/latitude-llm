@@ -1169,8 +1169,14 @@ const isPromptTooLongCause = (cause: unknown): boolean =>
 const isGrammarCompilationTimeoutCause = (cause: unknown): boolean =>
   cause instanceof Error && typeof cause.message === "string" && cause.message.includes("Grammar compilation timed out")
 
-const isUnclassifiableModelFailureCause = (cause: unknown): boolean =>
-  isSchemaMismatchCause(cause) || isPromptTooLongCause(cause) || isGrammarCompilationTimeoutCause(cause)
+const isUnclassifiableModelFailureCause = (cause: unknown): boolean => {
+  if (isSchemaMismatchCause(cause) || isPromptTooLongCause(cause) || isGrammarCompilationTimeoutCause(cause)) {
+    return true
+  }
+  return cause instanceof Error && cause.cause !== undefined && cause.cause !== cause
+    ? isUnclassifiableModelFailureCause(cause.cause)
+    : false
+}
 
 type FlaggerVerdictContract = NonNullable<FlaggerStrategy["verdictContract"]>
 

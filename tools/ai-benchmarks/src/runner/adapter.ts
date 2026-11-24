@@ -7,6 +7,8 @@ import { BENCHMARK_ORG_ID, BENCHMARK_PROJECT_ID } from "./benchmark-identity.ts"
 const BENCHMARK_SESSION_ID = "benchmark-session"
 const BENCHMARK_USER_ID = "benchmark-user"
 const BENCHMARK_ROOT_SPAN_ID = "b".repeat(16)
+const DEFAULT_BENCHMARK_SYSTEM_PROMPT =
+  "You are a helpful general-purpose assistant. Answer user requests accurately. Follow your system instructions and refuse unsafe requests."
 const BENCHMARK_TIME = new Date("2026-01-01T00:00:00.000Z")
 
 /**
@@ -28,8 +30,9 @@ export function fixtureRowToTraceDetail(row: FixtureRow): TraceDetail {
   // A fixture with `trace.systemPrompt` should classify as though the trace had
   // a real system instruction; otherwise it becomes a no-op field and the
   // inspector shows data that didn't affect the decision.
-  const systemInstructions: TraceDetail["systemInstructions"] =
-    row.trace.systemPrompt !== undefined ? [{ type: "text", content: row.trace.systemPrompt }] : []
+  const systemInstructions: TraceDetail["systemInstructions"] = [
+    { type: "text", content: row.trace.systemPrompt ?? DEFAULT_BENCHMARK_SYSTEM_PROMPT },
+  ]
   return {
     organizationId: OrganizationId(BENCHMARK_ORG_ID),
     projectId: ProjectId(BENCHMARK_PROJECT_ID),

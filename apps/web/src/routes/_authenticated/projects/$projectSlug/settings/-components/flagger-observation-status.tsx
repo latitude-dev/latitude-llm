@@ -1,4 +1,8 @@
-import type { FlaggerCoverageRow } from "@domain/flaggers"
+import {
+  FLAGGER_QUALITY_DAILY_SESSION_LIMIT,
+  FLAGGER_QUALITY_LIMITED_SLUGS,
+  type FlaggerCoverageRow,
+} from "@domain/flaggers"
 import { Button, Icon, Text, Tooltip } from "@repo/ui"
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
 import { useState } from "react"
@@ -61,6 +65,7 @@ const selectionSummary = (row: FlaggerCoverageRow): string => {
 
 const limitationSummary = (row: FlaggerCoverageRow): string | null => {
   const limitations = [
+    { label: "Failed analyses", count: row.failedSessions },
     { label: "Skipped", count: row.selectionPaths.skipped },
     { label: "Rate-limited", count: row.selectionPaths.rateLimited },
     { label: "Not yet screened", count: row.unscreenedSessions },
@@ -77,6 +82,21 @@ const recordingNote = (coverageWindow: FlaggerCoverageWindow): string | null => 
   return `Screening records start ${formatDay(coverageWindow.recordingSinceIso)}; ${formatCount(coverageWindow.sessionsBeforeRecording)} older sessions in the requested window are not counted`
 }
 
+function ObservationWarnings({
+  insufficientEvidence,
+  rateLimited,
+}: {
+  readonly insufficientEvidence: boolean
+  readonly rateLimited: boolean
+}) {
+  return (
+    <>
+      {insufficientEvidence ? <span className="text-warning-muted-foreground">· Insufficient evidence</span> : null}
+      {rateLimited ? <span className="text-warning-muted-foreground">· Rate limited</span> : null}
+    </>
+  )
+}
+
 export function FlaggerObservationStatus({
   flaggerSlug,
   coverage,
@@ -89,6 +109,8 @@ export function FlaggerObservationStatus({
   const [expanded, setExpanded] = useState(false)
   const detailsId = `${flaggerSlug}-observation-details`
   const rateLimited = coverage.selectionPaths.rateLimited > 0
+  const insufficientEvidence = coverage.eligibleSessions > 0 && coverage.readableSessions === 0
+  const qualityLimited = FLAGGER_QUALITY_LIMITED_SLUGS.some((slug) => slug === flaggerSlug)
   const limitations = limitationSummary(coverage)
   const note = recordingNote(coverageWindow)
   const observationSummary =
@@ -111,7 +133,7 @@ export function FlaggerObservationStatus({
             onClick={() => setExpanded((current) => !current)}
           >
             <span className="tabular-nums">{observationSummary}</span>
-            {rateLimited ? <span className="text-warning-muted-foreground">· Rate limited</span> : null}
+            <ObservationWarnings insufficientEvidence={insufficientEvidence} rateLimited={rateLimited} />
             <Icon icon={expanded ? ChevronDownIcon : ChevronRightIcon} size="xs" color="foregroundMuted" />
           </Button>
         }
@@ -119,6 +141,12 @@ export function FlaggerObservationStatus({
         Shows how much eligible traffic this flagger inspected; open for details.
       </Tooltip>
 
+      {qualityLimited ? (
+        <Text.H7 color="foregroundMuted">
+          Automatic checks are limited to {FLAGGER_QUALITY_DAILY_SESSION_LIMIT} sessions per day until validation is
+          complete.
+        </Text.H7>
+      ) : null}
       {expanded ? (
         <div id={detailsId} className="flex flex-col gap-3 border-t border-border pt-3">
           <div className="flex flex-row flex-wrap gap-x-8 gap-y-3">

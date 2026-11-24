@@ -19,6 +19,7 @@ export const flaggerCoverageRowSchema = z.object({
   eligibleSessions: coverageCountSchema,
   decidedSessions: coverageCountSchema,
   examinedSessions: coverageCountSchema,
+  failedSessions: coverageCountSchema,
   readableSessions: coverageCountSchema,
   readableShare: z.number().min(0).max(1),
   selectionPaths: flaggerSelectionPathCountsSchema,
@@ -50,6 +51,7 @@ export const emptyFlaggerCoverageRow = (input: {
   eligibleSessions: input.eligibleSessions,
   decidedSessions: 0,
   examinedSessions: 0,
+  failedSessions: 0,
   readableSessions: 0,
   readableShare: 0,
   selectionPaths: {

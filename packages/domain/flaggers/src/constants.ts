@@ -1,3 +1,9 @@
+export const FLAGGER_QUALITY_LIMITED_SLUGS = ["frustration", "jailbreaking", "pii-leakage"] as const
+export const FLAGGER_QUALITY_DAILY_SESSION_LIMIT = 5
+
+export const FLAGGER_PROJECT_DAILY_CLASSIFICATION_LIMIT = 200
+export const FLAGGER_PROJECT_BUDGET_TTL_SECONDS = 2 * 24 * 60 * 60
+
 export const FLAGGER_DEFAULT_SAMPLING = 10
 
 export const FLAGGER_SCORING_ARTIFACT_VERSION = "flagger-classification-v1"

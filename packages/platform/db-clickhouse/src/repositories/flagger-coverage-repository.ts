@@ -71,11 +71,12 @@ const coverageRowsQuery = `
   SELECT
     flagger_slug,
     count() AS decided_sessions,
-    countIf(selected AND outcome IS NOT NULL AND outcome != 'error') AS examined_sessions,
+    countIf(selected AND outcome IS NOT NULL AND outcome NOT IN ('error', 'indeterminate', 'notApplicable')) AS examined_sessions,
+    countIf(selected AND outcome IN ('error', 'indeterminate')) AS failed_sessions,
     countIf(
       selected
       AND outcome IS NOT NULL
-      AND outcome != 'error'
+      AND outcome NOT IN ('error', 'indeterminate', 'notApplicable')
       AND reason NOT IN ('skipped', 'rate-limited')
       AND inclusion_probability IS NOT NULL
       AND inclusion_probability > 0
@@ -97,7 +98,7 @@ const coverageRowsQuery = `
     countIf(
       selected
       AND outcome IS NOT NULL
-      AND outcome != 'error'
+      AND outcome NOT IN ('error', 'indeterminate', 'notApplicable')
       AND (inclusion_probability IS NULL OR inclusion_probability <= 0)
     ) AS unknown_selection_probability
   FROM newest_decisions
@@ -119,6 +120,7 @@ interface CoverageRow {
   readonly flagger_slug: string
   readonly decided_sessions: string
   readonly examined_sessions: string
+  readonly failed_sessions: string
   readonly readable_sessions: string
   readonly deterministic: string
   readonly hinted: string
@@ -141,6 +143,7 @@ const toCoverageRow = (row: CoverageRow, eligibleSessions: number): FlaggerCover
     eligibleSessions,
     decidedSessions,
     examinedSessions: toCount(row.examined_sessions),
+    failedSessions: toCount(row.failed_sessions),
     readableSessions,
     readableShare: eligibleSessions > 0 ? readableSessions / eligibleSessions : 0,
     selectionPaths: {

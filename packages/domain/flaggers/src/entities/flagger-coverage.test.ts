@@ -9,6 +9,7 @@ describe("flagger coverage", () => {
       eligibleSessions: 12,
       decidedSessions: 0,
       examinedSessions: 0,
+      failedSessions: 0,
       readableSessions: 0,
       readableShare: 0,
       selectionPaths: {

@@ -179,6 +179,11 @@ const groupAssessmentItems = (
 }
 
 const COVERAGE_LIMITATION_LABELS: Readonly<Record<string, string>> = {
+  executionFailed: "some automated checks failed",
+  rateLimited: "automatic checks were limited",
+  pending: "some checks are pending",
+  notSelected: "some checks were not selected",
+  skipped: "some checks were skipped",
   missingPricing: "some spend could not be priced",
   missingContent: "some model input was not captured",
   truncatedContent: "some model input was too large to read",
@@ -845,6 +850,10 @@ export function SessionAssessmentContent({
     (reader) => reader.status === "partiallyExamined" || reader.status === "notExamined",
   )
   const incompleteReaderCount = incompleteReaders.length
+  const insufficientEvidence =
+    incompleteReaderCount > 0 ||
+    assessment.dimensions.some((dimension) => dimension.coverage !== "complete") ||
+    !assessment.coverage.readers.some((reader) => reader.status === "examined")
   const coverageReasons = [
     ...new Set(
       incompleteReaders.flatMap((reader) =>
@@ -882,7 +891,9 @@ export function SessionAssessmentContent({
         ))
       ) : (
         <div className="rounded-xl bg-secondary/40 px-4 py-4">
-          <Text.H6 color="foregroundMuted">No findings were detected for this session.</Text.H6>
+          <Text.H6 color="foregroundMuted">
+            {insufficientEvidence ? "Insufficient evidence" : "No findings were detected in the completed checks."}
+          </Text.H6>
         </div>
       )}
       {incompleteReaderCount > 0 ? (

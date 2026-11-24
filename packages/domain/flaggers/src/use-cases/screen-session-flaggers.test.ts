@@ -129,7 +129,7 @@ interface RunOptions {
   readonly flaggers: readonly Flagger[]
   readonly momentLabels?: readonly SessionMomentLabel[]
   readonly analyses?: readonly ReturnType<typeof analyzedAnalysis>[]
-  readonly deps: ReturnType<typeof makeDeps>["deps"]
+  readonly deps: ScreenSessionFlaggersDeps
   readonly attempt?: number
   readonly jevPreclassifier?: ScreenSessionFlaggersDeps["jevPreclassifier"]
   readonly jevProbabilities?: Readonly<Record<string, number | "bad">>
@@ -240,6 +240,95 @@ describe("screenSessionFlaggersUseCase", () => {
 
   beforeEach(() => {
     fakeDeps = makeDeps()
+  })
+
+  it.each([true, false])(
+    "limits validation probes for hinted checks and the full safety suite: %s",
+    async (allowed) => {
+      const groups: string[] = []
+      const { result, screeningDecisions } = await runScreening({
+        session: makeSessionDetail([user("I already told you the deadline."), assistant("Sorry.")]),
+        flaggers: [
+          makeFlagger("frustration", 0),
+          makeFlagger("jailbreaking", 100),
+          makeFlagger("pii-leakage", 100),
+          makeFlagger("task-failure", 100),
+        ],
+        deps: {
+          ...fakeDeps.deps,
+          reserveQualityBudget: (reservation) =>
+            Effect.sync(() => {
+              expect(reservation).toMatchObject({
+                organizationId: ORG_ID,
+                projectId: PROJECT_ID,
+                reservationId: expect.stringMatching(/^[a-f0-9]{64}$/),
+              })
+              groups.push(reservation.group)
+              return allowed
+            }),
+        },
+      })
+      expect(groups.sort()).toEqual(["frustration", "safety-suite"])
+      for (const slug of ["frustration", "jailbreaking", "pii-leakage"]) {
+        expect(result.classifications.some((item) => item.flaggerSlug === slug)).toBe(allowed)
+        expect(screeningDecisions.find((decision) => decision.flaggerSlug === slug)).toMatchObject({
+          selected: allowed,
+          ...(allowed ? {} : { reason: "rate-limited" }),
+        })
+      }
+      expect(result.classifications.some((item) => item.flaggerSlug === "task-failure")).toBe(true)
+    },
+  )
+
+  it.each([true, false])("reserves a hinted batch and keeps coverage honest when denied: %s", async (allowed) => {
+    const reservations: Array<{ classifications: number; reservationId: string }> = []
+    const { result, screeningDecisions } = await runScreening({
+      session: makeSessionDetail([user("I already told you the deadline."), assistant("Sorry.")]),
+      flaggers: [makeFlagger("frustration", 0)],
+      deps: {
+        ...fakeDeps.deps,
+        reserveProjectBudget: (reservation) =>
+          Effect.sync(() => {
+            expect(reservation).toMatchObject({ organizationId: ORG_ID, projectId: PROJECT_ID })
+            reservations.push(reservation)
+            return allowed
+          }),
+      },
+    })
+
+    expect(reservations).toEqual([
+      {
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        classifications: 1,
+        reservationId: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+    ])
+    expect(result.classifications).toHaveLength(allowed ? 1 : 0)
+    expect(screeningDecisions.find((decision) => decision.flaggerSlug === "frustration")).toMatchObject({
+      selected: allowed,
+      reason: allowed ? "hinted" : "rate-limited",
+    })
+  })
+
+  it("does not split the safety suite when the project budget is exhausted", async () => {
+    const { result } = await runScreening({
+      session: makeSessionDetail([user("Hello."), assistant("Hello.")]),
+      flaggers: [makeFlagger("jailbreaking", 100), makeFlagger("pii-leakage", 100), makeFlagger("empty-response", 100)],
+      deps: {
+        ...fakeDeps.deps,
+        reserveProjectBudget: ({ classifications }) => {
+          expect(classifications).toBe(2)
+          return Effect.succeed(false)
+        },
+      },
+    })
+
+    expect(result.classifications).toEqual([])
+    for (const slug of ["jailbreaking", "pii-leakage"]) {
+      expect(decisionFor(result.decisions, slug)).toMatchObject({ action: "dropped", reason: "rate-limited" })
+    }
+    expect(decisionFor(result.decisions, "empty-response")).toMatchObject({ action: "dropped", reason: "unmatched" })
   })
 
   it("gates only above-threshold LLM dimensions and keeps partial failures isolated", async () => {

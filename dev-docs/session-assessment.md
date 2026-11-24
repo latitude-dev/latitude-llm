@@ -55,6 +55,8 @@ Reader states are:
 
 Flagger screening decisions distinguish known sampling loss, rate limiting, execution failure, and pending work. Internal policy reasons such as disabled, suppressed, missing flagger, and missing context all surface as `skipped`. Dimension coverage is derived only from readers relevant to that dimension; there is no assessment-wide completeness flag.
 
+An empty Scores panel shows “Insufficient evidence” if any reader is incomplete, any dimension has incomplete coverage, or no reader was examined. “No findings were detected in the completed checks” is reserved for complete examined coverage. Failed, limited, and pending checks remain explicit limitations; no model failure becomes a clean assessment.
+
 Outcome issue reach uses the issue reader's observation probability and the task-outcome endpoint's inclusion probability as distinct inputs. Independent draws multiply; evidence produced by the endpoint's own score shares that draw and applies it once. Direct findings contribute an issue probability of one, so only a genuinely sampled endpoint can expand their failed-reach estimate.
 
 ## Source boundaries
