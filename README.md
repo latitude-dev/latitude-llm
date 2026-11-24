@@ -81,18 +81,21 @@ This example uses OpenAI; replace it with the LLM SDK your app already imports.
 
 ```ts
 import { Latitude } from "@latitude-data/telemetry";
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai";
 import OpenAI from "openai";
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 });
 
+await latitude.ready;
 const client = new OpenAI();
 
 await client.chat.completions.create({
-  model: "gpt-4o",
+  model: "gpt-6-luna",
+  reasoning_effort: "none",
   messages: [{ role: "user", content: "Hello" }],
 });
 
