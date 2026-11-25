@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.127 - 2026-11-25
+
+### Automatic analysis
+
+- Added a daily project allowance of 200 analysis units, including paid Jev preclassification, with atomic reservations and a configurable limit (ref: #4962).
+- Limited frustration, jailbreaking, and PII checks to five validation session analyses per project per day until a reviewed quality benchmark passes. Kept the Safety pair together (ref: #4962).
+- Preserved model failure causes so invalid or truncated output becomes an indeterminate result instead of repeated workflow retries (ref: #4962).
+
+### Evidence and reliability
+
+- Excluded failed, indeterminate, and inapplicable analyses from examined coverage. Reported failed analyses and showed “Insufficient evidence” for incomplete assessments (ref: #4962).
+- Fixed PostgreSQL transaction completion after interruption and propagated transaction setup failures, preventing stalled transactions and retained connections (ref: #4952).
+
+### Deployment and operations
+
+- Added optional ClickHouse request and response compression, smaller configured ECS task sizes, and validated Fargate resource allocation (ref: #4950).
+- Retired the staging application by default and gated staging deployments while retaining account security and audit resources (ref: #4951).
+
 ## v0.3.126 - 2026-11-03
 
 ### Flaggers
