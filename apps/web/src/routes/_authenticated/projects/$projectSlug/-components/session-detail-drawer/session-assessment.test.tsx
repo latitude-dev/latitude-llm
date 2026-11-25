@@ -294,40 +294,55 @@ describe("SessionAssessmentContent", () => {
     expect(screen.queryByText("Recovered tool-call defects")).toBeNull()
   })
 
-  it("does not imply a positive result when nothing meaningful was evaluated", () => {
-    const notEvaluated: SessionAssessment = {
-      ...assessment,
-      items: [],
-      dimensions: assessment.dimensions.map((summary) => {
-        if (summary.scoreDimension === "outcome") return { ...summary, taskOutcome: undefined }
-        if (summary.scoreDimension === "reliability") return { ...summary, completion: "undetermined" as const }
-        if (summary.scoreDimension === "cost") {
-          return {
-            ...summary,
-            measuredAvoidableMicrocents: undefined,
-            estimatedAvoidableMicrocents: undefined,
-            families: summary.families.map((family) => ({
-              ...family,
-              measurementState: "notApplicable" as const,
-            })),
+  it.each(["executionFailed", "rateLimited", "pending"] as const)(
+    "does not imply a clean result when coverage is %s",
+    (limitation) => {
+      const notEvaluated: SessionAssessment = {
+        ...assessment,
+        items: [],
+        coverage: {
+          readers: [
+            {
+              readerId: "flagger:frustration",
+              label: "Frustration",
+              scoreDimensions: ["outcome"],
+              status: "notExamined",
+              limitation,
+            },
+          ],
+        },
+        dimensions: assessment.dimensions.map((summary) => {
+          if (summary.scoreDimension === "outcome") return { ...summary, taskOutcome: undefined }
+          if (summary.scoreDimension === "reliability") return { ...summary, completion: "undetermined" as const }
+          if (summary.scoreDimension === "cost") {
+            return {
+              ...summary,
+              measuredAvoidableMicrocents: undefined,
+              estimatedAvoidableMicrocents: undefined,
+              families: summary.families.map((family) => ({
+                ...family,
+                measurementState: "notApplicable" as const,
+              })),
+            }
           }
-        }
-        if (summary.scoreDimension === "speed") {
-          return { ...summary, measuredAvoidableNs: undefined, estimatedAvoidableNs: undefined }
-        }
-        if (summary.scoreDimension === "safety") {
-          return { ...summary, successfulDefenseCount: 0, coverage: "notExamined" as const }
-        }
-        return summary
-      }),
-    }
+          if (summary.scoreDimension === "speed") {
+            return { ...summary, measuredAvoidableNs: undefined, estimatedAvoidableNs: undefined }
+          }
+          if (summary.scoreDimension === "safety") {
+            return { ...summary, successfulDefenseCount: 0, coverage: "notExamined" as const }
+          }
+          return summary
+        }),
+      }
 
-    render(<SessionAssessmentContent assessment={notEvaluated} />)
+      render(<SessionAssessmentContent assessment={notEvaluated} />)
 
-    expect(screen.getByText("No findings were detected for this session.")).toBeTruthy()
-    expect(screen.queryByText("Positive evidence")).toBeNull()
-    expect(screen.queryByText("No harm observed")).toBeNull()
-  })
+      expect(screen.getByText("Insufficient evidence")).toBeTruthy()
+      expect(screen.queryByText("No findings were detected in the completed checks.")).toBeNull()
+      expect(screen.queryByText("Positive evidence")).toBeNull()
+      expect(screen.queryByText("No harm observed")).toBeNull()
+    },
+  )
 
   it("shows hostile exposure under needs attention beside confirmed harm", () => {
     const exposed = {

@@ -22,6 +22,7 @@ export const redisCacheAdapter = {
   type: "redis" as const,
 }
 
+export { reserveRedisBudget } from "./budget.ts"
 export type { RedisClient } from "./client.ts"
 export { buildRedisConnectionOptions, createRedisClient, waitForRedisClientReady } from "./client.ts"
 export type { RedisConnection } from "./connection.ts"

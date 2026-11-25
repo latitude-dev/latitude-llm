@@ -1456,56 +1456,63 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate).toHaveLength(0)
   })
 
-  it("propagates AI generation errors for LLM-classified flaggers", async () => {
-    const { repository } = createFakeTraceRepository({
-      findByTraceId: () =>
-        Effect.succeed(
-          makeTraceDetail([
-            {
-              role: "user",
-              parts: [{ type: "text", content: "Can you help me with this task?" }],
-            },
-            {
-              role: "assistant",
-              parts: [{ type: "text", content: "I'd be happy to help with that." }],
-            },
-          ]),
-        ),
-    })
+  it.each([null, 429, 503, "cycle"] as const)(
+    "propagates temporary provider errors through a fallback wrapper: %s",
+    async (statusCode) => {
+      const { repository } = createFakeTraceRepository({
+        findByTraceId: () =>
+          Effect.succeed(
+            makeTraceDetail([
+              {
+                role: "user",
+                parts: [{ type: "text", content: "Can you help me with this task?" }],
+              },
+              {
+                role: "assistant",
+                parts: [{ type: "text", content: "I'd be happy to help with that." }],
+              },
+            ]),
+          ),
+      })
 
-    const { layer: aiLayer } = createFakeAI({
-      generate: () => Effect.fail(new AIError({ message: "Model unavailable", cause: null })),
-    })
+      const providerError = Object.assign(new Error("Temporary provider failure"), { statusCode })
+      const wrapper = new Error("Both model attempts failed", { cause: providerError })
+      if (statusCode === "cycle") providerError.cause = wrapper
+      const { layer: aiLayer } = createFakeAI({
+        generate: () =>
+          Effect.fail(new AIError({ message: "Model unavailable", cause: statusCode === null ? null : wrapper })),
+      })
 
-    const exit = await Effect.runPromise(
-      Effect.exit(
-        runFlaggerUseCase({ ...INPUT, flaggerSlug: "refusal" }).pipe(
-          Effect.provide(
-            Layer.mergeAll(
-              Layer.succeed(TraceRepository, repository),
-              Layer.succeed(
-                ChSqlClient,
-                createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
+      const exit = await Effect.runPromise(
+        Effect.exit(
+          runFlaggerUseCase({ ...INPUT, flaggerSlug: "refusal" }).pipe(
+            Effect.provide(
+              Layer.mergeAll(
+                Layer.succeed(TraceRepository, repository),
+                Layer.succeed(
+                  ChSqlClient,
+                  createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
+                ),
+                Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+                Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+                aiLayer,
+                defaultCacheLayer,
               ),
-              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-              Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
-              aiLayer,
-              defaultCacheLayer,
             ),
           ),
         ),
-      ),
-    )
+      )
 
-    expect(exit._tag).toBe("Failure")
-    if (exit._tag === "Failure") {
-      const errOpt = Cause.findErrorOption(exit.cause)
-      expect(errOpt._tag).toBe("Some")
-      if (errOpt._tag === "Some") {
-        expect(errOpt.value).toBeInstanceOf(AIError)
+      expect(exit._tag).toBe("Failure")
+      if (exit._tag === "Failure") {
+        const errOpt = Cause.findErrorOption(exit.cause)
+        expect(errOpt._tag).toBe("Some")
+        if (errOpt._tag === "Some") {
+          expect(errOpt.value).toBeInstanceOf(AIError)
+        }
       }
-    }
-  })
+    },
+  )
 
   it("recovers to matched=false when the AI returns output that fails schema validation", async () => {
     const { repository } = createFakeTraceRepository({
@@ -1612,7 +1619,12 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate[1].prompt).toContain("No jailbreaking behavior detected")
   })
 
-  it("recovers to matched=false for length-truncated structured output missing feedback", async () => {
+  it.each([
+    [false, "AI_NoOutputGeneratedError"],
+    [true, "AI_NoOutputGeneratedError"],
+    [false, "AI_NoObjectGeneratedError"],
+    [true, "AI_NoObjectGeneratedError"],
+  ] as const)("recovers from invalid output with wrapper %s and error %s", async (wrapped, errorName) => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>
         Effect.succeed(
@@ -1631,14 +1643,14 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
 
     const truncatedOutput = '{"matched":true,"messageIndex":"1"'
     const sdkError = new Error(`No output generated. Output: ${truncatedOutput}`)
-    sdkError.name = "AI_NoOutputGeneratedError"
+    sdkError.name = errorName
 
     const { calls, layer: aiLayer } = createFakeAI({
       generate: () =>
         Effect.fail(
           new AIError({
             message: `AI generation failed (${FLAGGER_DEFAULT_CLASSIFIER_MODEL.provider}/${FLAGGER_DEFAULT_CLASSIFIER_MODEL.model}): No output generated.`,
-            cause: sdkError,
+            cause: wrapped ? new Error("Both model attempts failed", { cause: sdkError }) : sdkError,
           }),
         ),
     })

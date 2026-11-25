@@ -261,6 +261,30 @@ describe("AIGenerateLive", () => {
     expect(result.servedBy).toEqual({ provider: "amazon-bedrock", model: "openai.gpt-oss-120b-1:0" })
   })
 
+  it("preserves the fallback failure cause for callers that classify terminal output errors", async () => {
+    const fallbackError = Object.assign(new Error("No output generated"), { name: "AI_NoOutputGeneratedError" })
+    generateTextMock.mockRejectedValueOnce(new Error("Primary failed")).mockRejectedValueOnce(fallbackError)
+
+    const outcome = await Effect.runPromise(
+      Effect.gen(function* () {
+        const ai = yield* AIGenerate
+        return yield* ai.generate({
+          provider: "amazon-bedrock",
+          model: "minimax.minimax-m2.5",
+          system: "Return JSON.",
+          prompt: "Say ok.",
+          schema: { parse: (value: unknown) => value } as never,
+        })
+      }).pipe(Effect.provide(AIGenerateLive), Effect.result),
+    )
+
+    expect(outcome._tag).toBe("Failure")
+    if (Result.isFailure(outcome)) {
+      expect(outcome.failure).toMatchObject({ cause: { cause: fallbackError } })
+    }
+    expect(generateTextMock).toHaveBeenCalledTimes(2)
+  })
+
   it("reports the requested model as the model that served a normal call", async () => {
     generateTextMock.mockResolvedValueOnce({
       output: { ok: true },

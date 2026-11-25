@@ -126,6 +126,7 @@ describe("FlaggerCoverageRepositoryLive", () => {
         eligibleSessions: 4,
         decidedSessions: 1,
         examinedSessions: 0,
+        failedSessions: 0,
         readableSessions: 0,
         readableShare: 0,
         selectionPaths: {
@@ -146,6 +147,7 @@ describe("FlaggerCoverageRepositoryLive", () => {
         eligibleSessions: 4,
         decidedSessions: 4,
         examinedSessions: 2,
+        failedSessions: 0,
         readableSessions: 1,
         readableShare: 0.25,
         selectionPaths: {
@@ -162,6 +164,39 @@ describe("FlaggerCoverageRepositoryLive", () => {
         unscreenedSessions: 0,
       },
     ])
+  })
+
+  it("keeps failed, indeterminate, pending, and inapplicable results out of examined evidence", async () => {
+    const sessions = ["latest-failed", "indeterminate", "failed", "pending", "inapplicable", "clean"]
+    await ch.client.insert({ table: "sessions", values: sessions.map((id) => sessionRow(id)), format: "JSONEachRow" })
+    await ch.client.insert({
+      table: "flagger_screening_decisions",
+      values: [
+        decisionRow("a", "latest-failed", { outcome: "unmatched", version: 1 }),
+        decisionRow("a", "latest-failed", { outcome: "error", version: 2 }),
+        decisionRow("b", "indeterminate", { outcome: "indeterminate" }),
+        decisionRow("c", "failed", { outcome: "error" }),
+        decisionRow("d", "pending", { outcome: null }),
+        decisionRow("e", "inapplicable", { outcome: "notApplicable" }),
+        decisionRow("f", "clean", { outcome: "unmatched" }),
+      ],
+      format: "JSONEachRow",
+    })
+    const report = await run(
+      Effect.gen(function* () {
+        const repository = yield* FlaggerCoverageRepository
+        return yield* repository.getProjectCoverage({ organizationId, projectId, from, to })
+      }),
+    )
+    expect(report.rows).toHaveLength(1)
+    expect(report.rows[0]).toMatchObject({
+      decidedSessions: 6,
+      examinedSessions: 1,
+      readableSessions: 1,
+      failedSessions: 3,
+      positiveFindings: 0,
+      unknownSelectionProbability: 0,
+    })
   })
 
   it("measures coverage from the oldest screened session instead of the requested window", async () => {

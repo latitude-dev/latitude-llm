@@ -129,7 +129,7 @@ interface RunOptions {
   readonly flaggers: readonly Flagger[]
   readonly momentLabels?: readonly SessionMomentLabel[]
   readonly analyses?: readonly ReturnType<typeof analyzedAnalysis>[]
-  readonly deps: ReturnType<typeof makeDeps>["deps"]
+  readonly deps: ScreenSessionFlaggersDeps
   readonly attempt?: number
   readonly jevPreclassifier?: ScreenSessionFlaggersDeps["jevPreclassifier"]
   readonly jevProbabilities?: Readonly<Record<string, number | "bad">>
@@ -152,6 +152,7 @@ const runScreening = async (options: RunOptions) => {
     createFakeFlaggerScreeningDecisionRepository()
   const outboxEvents: unknown[] = []
   const jevObservations: JevPreclassifierObservation[] = []
+  let jevCalls = 0
 
   const layer = Layer.mergeAll(
     Layer.succeed(SessionRepository, sessionRepo),
@@ -164,8 +165,9 @@ const runScreening = async (options: RunOptions) => {
     Layer.succeed(FlaggerScreeningDecisionRepository, screeningDecisionRepo),
     Layer.succeed(JevShadowDecisionProvider, {
       decide: () => Effect.die("Jev single-question path must not run"),
-      decideMany: ({ questions }) =>
-        options.jevProviderFails
+      decideMany: ({ questions }) => {
+        jevCalls++
+        return options.jevProviderFails
           ? Effect.die("provider failed")
           : Effect.succeed(
               Object.fromEntries(
@@ -197,7 +199,8 @@ const runScreening = async (options: RunOptions) => {
                   ]
                 }),
               ),
-            ),
+            )
+      },
     }),
     Layer.succeed(JevPreclassifierObservationRepository, {
       saveMany: (observations) =>
@@ -229,7 +232,7 @@ const runScreening = async (options: RunOptions) => {
     ).pipe(Effect.provide(layer)),
   )
 
-  return { result, scores, screeningDecisions, outboxEvents, jevObservations }
+  return { result, scores, screeningDecisions, outboxEvents, jevObservations, jevCalls }
 }
 
 const decisionFor = (decisions: readonly SessionFlaggerDecision[], slug: string) =>
@@ -240,6 +243,149 @@ describe("screenSessionFlaggersUseCase", () => {
 
   beforeEach(() => {
     fakeDeps = makeDeps()
+  })
+
+  it.each([true, false])(
+    "limits validation probes for hinted checks and the full safety suite: %s",
+    async (allowed) => {
+      const groups: string[] = []
+      const { result, screeningDecisions } = await runScreening({
+        session: makeSessionDetail([user("I already told you the deadline."), assistant("Sorry.")]),
+        flaggers: [
+          makeFlagger("frustration", 0),
+          makeFlagger("jailbreaking", 100),
+          makeFlagger("pii-leakage", 100),
+          makeFlagger("task-failure", 100),
+        ],
+        deps: {
+          ...fakeDeps.deps,
+          reserveQualityBudget: (reservation) =>
+            Effect.sync(() => {
+              expect(reservation).toMatchObject({
+                organizationId: ORG_ID,
+                projectId: PROJECT_ID,
+                reservationId: expect.stringMatching(/^[a-f0-9]{64}$/),
+              })
+              groups.push(reservation.group)
+              return allowed
+            }),
+        },
+      })
+      expect(groups.sort()).toEqual(["frustration", "safety-suite"])
+      for (const slug of ["frustration", "jailbreaking", "pii-leakage"]) {
+        expect(result.classifications.some((item) => item.flaggerSlug === slug)).toBe(allowed)
+        expect(screeningDecisions.find((decision) => decision.flaggerSlug === slug)).toMatchObject({
+          selected: allowed,
+          ...(allowed ? {} : { reason: "rate-limited" }),
+        })
+      }
+      expect(result.classifications.some((item) => item.flaggerSlug === "task-failure")).toBe(true)
+    },
+  )
+
+  it.each([true, false])("reserves a hinted batch and keeps coverage honest when denied: %s", async (allowed) => {
+    const reservations: Array<{ units: number; reservationId: string }> = []
+    const { result, screeningDecisions } = await runScreening({
+      session: makeSessionDetail([user("I already told you the deadline."), assistant("Sorry.")]),
+      flaggers: [makeFlagger("frustration", 0)],
+      deps: {
+        ...fakeDeps.deps,
+        reserveProjectBudget: (reservation) =>
+          Effect.sync(() => {
+            expect(reservation).toMatchObject({ organizationId: ORG_ID, projectId: PROJECT_ID })
+            reservations.push(reservation)
+            return allowed
+          }),
+      },
+    })
+
+    expect(reservations).toEqual([
+      {
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        units: 1,
+        reservationId: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+    ])
+    expect(result.classifications).toHaveLength(allowed ? 1 : 0)
+    expect(screeningDecisions.find((decision) => decision.flaggerSlug === "frustration")).toMatchObject({
+      selected: allowed,
+      reason: allowed ? "hinted" : "rate-limited",
+    })
+  })
+
+  it("does not split the safety suite when the project budget is exhausted", async () => {
+    const { result } = await runScreening({
+      session: makeSessionDetail([user("Hello."), assistant("Hello.")]),
+      flaggers: [makeFlagger("jailbreaking", 100), makeFlagger("pii-leakage", 100), makeFlagger("empty-response", 100)],
+      deps: {
+        ...fakeDeps.deps,
+        reserveProjectBudget: ({ units }) => {
+          expect(units).toBe(2)
+          return Effect.succeed(false)
+        },
+      },
+    })
+
+    expect(result.classifications).toEqual([])
+    for (const slug of ["jailbreaking", "pii-leakage"]) {
+      expect(decisionFor(result.decisions, slug)).toMatchObject({ action: "dropped", reason: "rate-limited" })
+    }
+    expect(decisionFor(result.decisions, "empty-response")).toMatchObject({ action: "dropped", reason: "unmatched" })
+  })
+
+  it.each([true, false])("reserves the project allowance before paid Jev work: %s", async (allowed) => {
+    const reservations: number[] = []
+    const { jevCalls, result } = await runScreening({
+      session: makeSessionDetail([user("Hello."), assistant("Hello.")]),
+      flaggers: [makeFlagger("frustration", 0)],
+      deps: {
+        ...fakeDeps.deps,
+        reserveProjectBudget: ({ units }) =>
+          Effect.sync(() => {
+            reservations.push(units)
+            return allowed
+          }),
+      },
+      jevPreclassifier: {
+        enabled: true,
+        workflowId: "workflow",
+        workflowRunId: "run",
+        activityId: "activity",
+        activityAttempt: 1,
+      },
+      jevProbabilities: { "flagger.frustration": 0.8 },
+    })
+    expect(jevCalls).toBe(allowed ? 1 : 0)
+    expect(reservations).toEqual(allowed ? [1, 1] : [1])
+    expect(result.classifications).toHaveLength(allowed ? 1 : 0)
+  })
+
+  it("preserves certainty for a Jev selection rejected by the classification budget", async () => {
+    let reservations = 0
+    const { result, screeningDecisions } = await runScreening({
+      session: makeSessionDetail([user("Hello."), assistant("Hello.")]),
+      flaggers: [makeFlagger("frustration", 0)],
+      deps: {
+        ...fakeDeps.deps,
+        reserveProjectBudget: () => Effect.sync(() => ++reservations === 1),
+      },
+      jevPreclassifier: {
+        enabled: true,
+        workflowId: "workflow",
+        workflowRunId: "run",
+        activityId: "activity",
+        activityAttempt: 1,
+      },
+      jevProbabilities: { "flagger.frustration": 0.8 },
+    })
+    expect(reservations).toBe(2)
+    expect(result.classifications).toEqual([])
+    expect(screeningDecisions.find((decision) => decision.flaggerSlug === "frustration")).toMatchObject({
+      selected: false,
+      reason: "rate-limited",
+      inclusionProbability: 1,
+    })
   })
 
   it("gates only above-threshold LLM dimensions and keeps partial failures isolated", async () => {
@@ -1208,6 +1354,30 @@ describe("Safety suite selection", () => {
     expect(decisionFor(result.decisions, "pii-leakage")).toMatchObject({ action: "dropped", reason: "rate-limited" })
     expect(result.classifications).toEqual([])
   })
+
+  it.each(["quality", "project"] as const)(
+    "preserves shared selection probability after a %s budget rejection",
+    async (budget) => {
+      const deps = makeDeps()
+      const { result, screeningDecisions } = await runScreening({
+        session: INJECTION_SESSION,
+        flaggers: suiteFlaggers(0, 0),
+        deps: {
+          ...deps.deps,
+          reserveQualityBudget: () => Effect.succeed(budget !== "quality"),
+          reserveProjectBudget: () => Effect.succeed(budget !== "project"),
+        },
+      })
+      expect(result.classifications).toEqual([])
+      for (const slug of ["jailbreaking", "pii-leakage"]) {
+        expect(selectionFor(screeningDecisions, slug)).toMatchObject({
+          selected: false,
+          reason: "rate-limited",
+          inclusionProbability: 1,
+        })
+      }
+    },
+  )
 
   it("carries the unhinted member along at certainty when its partner is hinted", async () => {
     const deps = makeDeps()

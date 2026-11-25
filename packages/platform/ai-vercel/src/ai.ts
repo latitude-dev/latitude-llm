@@ -549,6 +549,7 @@ export const AIGenerateLive = Layer.effect(
                 throw new Error(
                   `Primary model ${input.provider}/${input.model} failed: ${formatGenerateError(primaryError)}; ` +
                     `fallback model ${fallback.provider}/${fallback.model} failed: ${formatGenerateError(fallbackError)}`,
+                  { cause: fallbackError },
                 )
               }
             }

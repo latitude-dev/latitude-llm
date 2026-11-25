@@ -11,6 +11,7 @@ const coverage: FlaggerCoverageRow = {
   eligibleSessions: 1_000,
   decidedSessions: 1_000,
   examinedSessions: 120,
+  failedSessions: 0,
   readableSessions: 110,
   readableShare: 0.11,
   selectionPaths: {
@@ -66,6 +67,20 @@ describe("FlaggerObservationStatus", () => {
     )
 
     expect(screen.getByText("· Rate limited").className).toContain("text-warning-muted-foreground")
+  })
+
+  it("shows insufficient evidence and failed analyses instead of implying a clean result", () => {
+    render(
+      <FlaggerObservationStatus
+        flaggerSlug="frustration"
+        coverage={{ ...coverage, examinedSessions: 0, failedSessions: 980, readableSessions: 0, readableShare: 0 }}
+        coverageWindow={coverageWindow}
+      />,
+    )
+    expect(screen.getByText("· Insufficient evidence")).toBeDefined()
+    expect(screen.getByText(/Automatic checks are limited to 5 sessions/)).toBeDefined()
+    fireEvent.click(screen.getByRole("button", { name: /Observed 0/ }))
+    expect(screen.getByText(/Failed analyses 980/)).toBeDefined()
   })
 
   it("labels the window screening records actually cover, not the one requested", () => {
