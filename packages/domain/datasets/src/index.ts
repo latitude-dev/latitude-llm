@@ -17,7 +17,13 @@ export {
   type DatasetVersion,
   datasetColumnSchema,
 } from "./entities/dataset.ts"
-export type { DatasetRow, RowFieldValue } from "./entities/dataset-row.ts"
+export {
+  type DatasetRow,
+  type InsertRowFieldValue,
+  insertRowFieldValueSchema,
+  type RowFieldValue,
+  rowFieldValueSchema,
+} from "./entities/dataset-row.ts"
 export {
   DatasetColumnNotFoundError,
   DatasetNotFoundError,
